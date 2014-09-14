@@ -37,7 +37,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 #endif
 				/// Returns a set of font families available in this collection.
-				std::set<FontFamily>&& families() const;
+				void families(std::set<FontFamily>& output) const;
 				/**
 				 * Returns the fontset matches the given description.
 				 * @param description The font description
@@ -60,6 +60,7 @@ namespace ascension {
 					const FontDescription& description,
 					const AffineTransform& transform = AffineTransform(),
 					boost::optional<Scalar> sizeAdjust = boost::none) const;
+
 			private:
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 				cg::Reference<CTFontCollectionRef> nativeObject_;
