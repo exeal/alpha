@@ -370,13 +370,13 @@ namespace ascension {
 namespace ascension {
 	namespace graphics {
 		namespace detail {
-			template<> font::FontDescription&& fromNative<font::FontDescription>(const LOGFONTW& object) {
+			template<> font::FontDescription fromNative<font::FontDescription>(const LOGFONTW& object) {
 				return font::FontDescription(font::FontFamily(object.lfFaceName), -object.lfHeight * 72 / defaultDpiY(),
 					font::FontProperties(static_cast<font::FontWeight>(object.lfWeight),
 						font::FontStretch::NORMAL, win32::boole(object.lfItalic) ? font::FontStyle::ITALIC : font::FontStyle::NORMAL));
 			}
 
-			LOGFONTW&& toNative(const font::FontDescription& object, const LOGFONTW* /* = nullptr */) {
+			LOGFONTW toNative(const font::FontDescription& object, const LOGFONTW* /* = nullptr */) {
 				makeLogFont(win32::detail::screenDC(), object, geometry::makeIdentityTransform(), boost::none);
 				win32::AutoZero<LOGFONT> result;
 				LONG orientation = 0;
