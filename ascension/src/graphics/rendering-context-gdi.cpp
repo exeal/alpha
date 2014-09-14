@@ -13,6 +13,7 @@
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <boost/core/null_deleter.hpp>
+#include <boost/math/constants/constants.hpp>		// boost.math.constants.pi
 #include <boost/math/special_functions/round.hpp>	// boost.iround
 
 namespace ascension {
@@ -40,7 +41,7 @@ namespace ascension {
 
 		namespace {
 			inline FLOAT radianToDegree(double radian) BOOST_NOEXCEPT {
-				return static_cast<FLOAT>(radian * 180 / 3.14159);
+				return static_cast<FLOAT>(radian * 180. / boost::math::constants::pi<double>());
 			}
 		}
 
@@ -66,7 +67,7 @@ namespace ascension {
 			return *this;
 		}
 
-		font::FontCollection&& RenderingContext2D::availableFonts() const {
+		font::FontCollection RenderingContext2D::availableFonts() const {
 			return font::FontCollection(nativeObject_);
 		}
 
@@ -412,7 +413,7 @@ namespace ascension {
 			return std::unique_ptr<const font::FontMetrics<Scalar>>(new GdiFontMetrics(nativeObject_, font->native()));
 		}
 
-		font::FontRenderContext&& RenderingContext2D::fontRenderContext() const BOOST_NOEXCEPT {
+		font::FontRenderContext RenderingContext2D::fontRenderContext() const BOOST_NOEXCEPT {
 			XFORM xf;
 			if(!win32::boole(::GetWorldTransform(nativeObject_.get(), &xf)))
 				throw makePlatformError();

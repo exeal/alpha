@@ -161,7 +161,6 @@ namespace ascension {
 			win32::com::SmartPointer<ID2D1RenderTarget> native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 			explicit RenderingContext2D(QPainter& nativeObject);	// weak ref.
-			explicit RenderingContext2D(std::unique_ptr<QPainter> nativeObject);
 			explicit RenderingContext2D(std::shared_ptr<QPainter> nativeObject);
 			QPainter& native();
 			const QPainter& native() const;
@@ -170,8 +169,7 @@ namespace ascension {
 			win32::Handle<HDC>::Type native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 			explicit RenderingContext2D(Gdiplus::Graphics& nativeObject);	// weak ref.
-			explicit RenderingContext2D(std::unique_ptr<Gdiplus::Graphics> nativeObject);
-			explicit RenderingContext2D(std::shared_ptr<Gdiplus::Graphics> nativeObject);
+^			explicit RenderingContext2D(std::shared_ptr<Gdiplus::Graphics> nativeObject);
 			Gdiplus::Graphics& native();
 			const Gdiplus::Graphics& native() const;
 #endif
@@ -179,7 +177,7 @@ namespace ascension {
 			/// Move-constructor.
 			RenderingContext2D(RenderingContext2D&& other) BOOST_NOEXCEPT;
 			/// Returns the available fonts in this rendering context.
-			font::FontCollection&& availableFonts() const;
+			font::FontCollection availableFonts() const;
 			/**
 			 * Returns the font metrics for the specified font.
 			 * @param font The font to get metrics. If this is @c null, this method returns the
@@ -189,7 +187,7 @@ namespace ascension {
 			 */
 			std::unique_ptr<const font::FontMetrics<Scalar>> fontMetrics(
 				std::shared_ptr<const font::Font> font = nullptr) const;
-			font::FontRenderContext&& fontRenderContext() const BOOST_NOEXCEPT;
+			font::FontRenderContext fontRenderContext() const BOOST_NOEXCEPT;
 
 			/// @name Back-Reference to the Canvas
 			/// @{
@@ -771,6 +769,7 @@ namespace ascension {
 			RenderingContext2D& arc(const Point& p, Scalar radius,
 				double startAngle, double endAngle, bool counterClockwise = false);
 			/// @}
+
 		private:
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 			Cairo::RefPtr<Cairo::Context> nativeObject_;
