@@ -190,12 +190,12 @@ namespace ascension {
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
 				win32::Handle<HFONT>::Type nativeObject_;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-				std::unique_ptr<detail::IdeographicVariationSequences> ivs_;
+				std::shared_ptr<detail::IdeographicVariationSequences> ivs_;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				std::shared_ptr<Gdiplus::Font> nativeObject_;
 #endif
-				std::unique_ptr<const FontDescription> description_;
+				std::shared_ptr<const FontDescription> description_;
 			};
 
 			/**
