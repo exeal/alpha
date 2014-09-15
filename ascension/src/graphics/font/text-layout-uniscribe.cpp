@@ -2728,24 +2728,25 @@ namespace ascension {
 			 * an area consisting of the union of the bounding boxes of the all of the characters in the range.
 			 * The result region can be disjoint.
 			 * @param characterRange The character range
-			 * @return The native polygon object encompasses the black box bounds
+			 * @param[out] bounds The polygon object encompasses the black box bounds
 			 * @throw IndexOutOfBoundsException @a range intersects with the outside of the line
 			 * @see #bounds(void), #bounds(Index, Index), #lineBounds, #lineStartEdge
 			 */
-			boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& TextLayout::blackBoxBounds(const boost::integer_range<Index>& characterRange) const {
+			void TextLayout::blackBoxBounds(const boost::integer_range<Index>& characterRange,
+					boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& bounds) const {
 				const Index firstCharacter = std::min(*characterRange.begin(), *characterRange.end());
 				const Index lastCharacter = std::max(*characterRange.begin(), *characterRange.end());
 				if(lastCharacter > numberOfCharacters())
 					throw IndexOutOfBoundsException("characterRange");
-				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>> result;
+				std::remove_reference<decltype(bounds)>::type result;
 
 				// handle empty line
 				if(isEmpty())
-					return std::move(result);
+					return std::swap(result, bounds);
 
 				// traverse all text runs intersect with 'characterRange'
 				const boost::integer_range<Index> lines(lineAt(firstCharacter), lineAt(lastCharacter) + 1);
-				LineMetricsIterator lm(lineMetrics(lines.front()));
+				LineMetricsIterator lm(*this, lines.front());
 				BOOST_FOREACH(Index line, lines) {
 					// move to line-left edge of the line
 					Point runTypographicOrigin = lm.baselineOffsetInPhysicalCoordinates();
@@ -2793,7 +2794,7 @@ namespace ascension {
 							geometry::y(runTypographicOrigin) -= allocationMeasure(**run);
 					}
 				}
-				return std::move(result);
+				return std::swap(result, bounds);
 			}
 
 			/**
@@ -2813,20 +2814,20 @@ namespace ascension {
 
 				if(isEmpty()) {	// empty line
 					result.start() = result.end() = 0;
-					const LineMetricsIterator lm(lineMetrics(0));
-					result.before() = -lm.ascent();
-					result.after() = lm.descent() + lm.leading();
+					const LineMetrics& lm(lineMetrics(0));
+					result.before() = -lm.ascent;
+					result.after() = lm.descent + lm.leading;
 				} else if(orderedCharacterRange.empty()) {	// an empty rectangle for an empty range
-					const LineMetricsIterator lm(lineMetrics(lineAt(orderedCharacterRange.front())));
+					const LineMetrics& lm(lineMetrics(lineAt(orderedCharacterRange.front())));
 					const presentation::AbstractTwoAxes<Scalar> leading(hitToPoint(TextHit<>::leading(orderedCharacterRange.front())));
 					presentation::FlowRelativeFourSides<Scalar> sides;
-					sides.before() = leading.bpd() - lm.ascent();
-					sides.after() = leading.bpd() + lm.descent() + lm.leading();
+					sides.before() = leading.bpd() - lm.ascent;
+					sides.after() = leading.bpd() + lm.descent + lm.leading;
 					sides.start() = sides.end() = leading.ipd();
 					return sides;
 				} else {
 					const Index firstLine = lineAt(*orderedCharacterRange.begin()), lastLine = lineAt(*orderedCharacterRange.end());
-					const LineMetricsIterator firstLineMetrics(lineMetrics(firstLine)), lastLineMetrics(lineMetrics(lastLine));
+					const LineMetricsIterator firstLineMetrics(*this, firstLine), lastLineMetrics(*this, lastLine);
 
 					// calculate the block-progression-edges ('before' and 'after'; it's so easy)
 					result.before() = firstLineMetrics.baselineOffset() - firstLineMetrics.ascent();
@@ -2937,7 +2938,7 @@ namespace ascension {
 					geometry::translate(boundsToPaint, originDistance);
 					const presentation::FlowRelativeFourSides<Scalar> abstractBoundsToPaint(	// relative to the alignment point of this layout
 						presentation::mapPhysicalToFlowRelative<Scalar>(writingMode(), PhysicalFourSides<Scalar>(boundsToPaint)));
-					for(LineMetricsIterator line(lineMetrics(linesToPaint.front())); line.line() != *linesToPaint.end(); ++line) {
+					for(LineMetricsIterator line(*this, linesToPaint.front()); line.line() != *linesToPaint.end(); ++line) {
 						const Scalar bpd = line.baselineOffset();
 						const Scalar lineBeforeEdge = bpd - line.ascent();
 						const Scalar lineAfterEdge = bpd + line.descent();
@@ -2964,7 +2965,7 @@ namespace ascension {
 				// 2. paint backgrounds and borders
 				const bool horizontalLayout = isHorizontal(writingMode().blockFlowDirection);
 				std::vector<std::tuple<const std::reference_wrapper<const TextRunImpl>, const graphics::Rectangle, const Point>> textRunsToPaint;
-				for(LineMetricsIterator line(lineMetrics(linesToPaint.front())); line.line() != *linesToPaint.end(); ++line) {
+				for(LineMetricsIterator line(*this, linesToPaint.front()); line.line() != *linesToPaint.end(); ++line) {
 					Point p(origin);	// a point at which baseline and (logical) 'line-left' edge of 'allocation-rectangle' of text run
 					Scalar over, under;		// 'over' and 'under' edges of this line (x for vertical layout or y for horizontal layout)
 

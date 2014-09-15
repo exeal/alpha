@@ -90,6 +90,17 @@ namespace ascension {
 			class TextLayout : private boost::noncopyable {
 			public:
 				/// 
+				struct LineMetrics {
+					/// Ascent is distance from the baseline to before-edge of the line, in user units.
+					Scalar ascent;
+					/// Descent is distance from the baseline to after-edge of the line, in user units.
+					Scalar descent;
+					/// Leading is distance from after-edge of the line to before-edge of the next line, in user units.
+					Scalar leading;
+//					Scalar advance;
+				};
+
+				/// 
 				class LineMetricsIterator : public boost::iterator_facade<LineMetricsIterator, std::nullptr_t, boost::bidirectional_traversal_tag> {
 				public:
 					LineMetricsIterator() BOOST_NOEXCEPT;
@@ -105,7 +116,7 @@ namespace ascension {
 					Index line() const BOOST_NOEXCEPT;
 				private:
 					bool isDone() const BOOST_NOEXCEPT {
-						return layout_ == nullptr || line() >= layout_->numberOfLines();	// $friendly-access$
+						return layout_ == nullptr || line() >= layout_->numberOfLines();
 					}
 					bool isNegativeVertical() const {
 						const presentation::WritingMode& writingMode = layout_->writingMode();
@@ -115,11 +126,13 @@ namespace ascension {
 							return presentation::resolveTextOrientation(writingMode) != presentation::SIDEWAYS_LEFT;
 						return false;
 					}
+					void resetBaselineOffset();
 					// boost.iterator_facade
 					void decrement();
 					difference_type distance_to(const LineMetricsIterator& other) const;
 					bool equal(const LineMetricsIterator& other) const;
 					void increment();
+
 				private:
 					const TextLayout* layout_;
 					Index line_;
@@ -169,13 +182,13 @@ namespace ascension {
 				Index lineAt(Index offset) const;
 				Index lineLength(Index line) const;
 				Index lineOffset(Index line) const;
-				std::vector<Index>&& lineOffsets() const BOOST_NOEXCEPT;
+				void lineOffsets(std::vector<Index>& offsets) const BOOST_NOEXCEPT;
 				Index numberOfLines() const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Metrics
 				/// @{
-				LineMetricsIterator&& lineMetrics(Index line) const;
+				const LineMetrics& lineMetrics(Index line) const;
 				boost::integer_range<Scalar> extent() const;
 				boost::integer_range<Scalar> extent(const boost::integer_range<Index>& lines) const;
 				Scalar measure() const BOOST_NOEXCEPT;
@@ -184,9 +197,8 @@ namespace ascension {
 
 				/// @name Bounds
 				/// @{
-				boost::geometry::model::multi_polygon<
-					boost::geometry::model::polygon<Point>
-				>&& blackBoxBounds(const boost::integer_range<Index>& range) const;
+				void blackBoxBounds(const boost::integer_range<Index>& range,
+					boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& bounds) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds() const BOOST_NOEXCEPT;
 				presentation::FlowRelativeFourSides<Scalar> bounds(Index line) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds(const boost::integer_range<Index>& characterRange) const;
@@ -195,17 +207,17 @@ namespace ascension {
 
 				/// @name Highlight Shapes
 				/// @{
-				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
-					logicalHighlightShape(const boost::integer_range<Index>& range, const boost::optional<Rectangle>& bounds) const;
-				std::vector<boost::integer_range<Index>>&& logicalRangesForVisualSelection(const boost::integer_range<TextHit<>>& range) const;
-				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
-					visualHighlightShape(const boost::integer_range<TextHit<>>& range, const boost::optional<Rectangle>& bounds) const;
+				void logicalHighlightShape(const boost::integer_range<Index>& range,
+					const boost::optional<Rectangle>& bounds, boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& shape) const;
+				void logicalRangesForVisualSelection(const boost::integer_range<TextHit<>>& visualSelection, std::vector<boost::integer_range<Index>>& ranges) const;
+				void visualHighlightShape(const boost::integer_range<TextHit<>>& range,
+					const boost::optional<Rectangle>& bounds, boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& shape) const;
 				/// @}
 
 				/// @name Hit Test
 				/// @{
-				TextHit<>&& hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, bool* outOfBounds = nullptr) const;
-				TextHit<>&& hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, const presentation::FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds = nullptr) const;
+				TextHit<> hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, bool* outOfBounds = nullptr) const;
+				TextHit<> hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, const presentation::FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds = nullptr) const;
 				presentation::AbstractTwoAxes<Scalar> hitToPoint(const TextHit<>& hit) const;
 				/// @}
 
@@ -217,7 +229,7 @@ namespace ascension {
 				boost::optional<TextHit<>> nextRightHit(Index offset) const;
 //				boost::optional<TextHit<>> nextRightHit(Index offset, CaretPolicy policy) const;
 				boost::optional<TextHit<>> nextRightHit(const TextHit<>& hit) const;
-				TextHit<>&& visualOtherHit(const TextHit<>& hit) const;
+				TextHit<> visualOtherHit(const TextHit<>& hit) const;
 				/// @}
 
 				/// @name Other Coordinates
@@ -252,7 +264,7 @@ namespace ascension {
 				//       and 'per-inline-height-rectangle' for each 'line-area'?
 
 			private:
-				TextHit<>&& internalHitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
+				TextHit<> internalHitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const;
 //				void buildLineMetrics(Index line);
 				void expandTabsWithoutWrapping(const TabExpander& tabExpander) BOOST_NOEXCEPT;
@@ -263,7 +275,6 @@ namespace ascension {
 				bool isEmpty() const BOOST_NOEXCEPT {return runs_.empty();}
 				void justify(Scalar lineMeasure, presentation::TextJustification method) BOOST_NOEXCEPT;
 				Point lineLeft(Index line) const;
-				typedef std::tuple<Scalar, Scalar, Scalar/*, Scalar*/> LineMetrics;	// ascent, descent, leading/*, advance*/
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				const LineMetrics& lineMetrics(Index line) const;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
@@ -329,37 +340,10 @@ namespace ascension {
 					throw IndexOutOfBoundsException("offset");
 				if(numberOfLines() == 1)
 					return 0;
-				const std::vector<Index> offsets(lineOffsets());
+				std::vector<Index> offsets;
+				lineOffsets(offsets);
 				return *ascension::detail::searchBound(std::begin(offsets), std::end(offsets) - 1, offset);
 			}
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			/**
-			 * Returns the metrics for the specified line.
-			 * @param line The line number
-			 * @return The line metrics
-			 * @throw BadPositionException @a line is greater than the count of lines
-			 */
-			inline const TextLayout::LineMetrics& TextLayout::lineMetrics(Index line) const {
-				if(line >= numberOfLines())
-					throw kernel::BadPositionException(kernel::Position(line, 0));
-				if(lineMetrics_.get() == nullptr)
-					const_cast<TextLayout*>(this)->lineMetrics_.reset(new std::unique_ptr<LineMetrics>[numberOfLines()]);
-				if(lineMetrics_[line] == nullptr)
-					const_cast<TextLayout*>(this)->buildLineMetrics(line);
-				return *lineMetrics_[line];
-			}
-#else
-			/**
-			 * Returns the metrics for the specified line.
-			 * @param line The line number
-			 * @return The line metrics
-			 * @throw IndexOutOfBoundsException @a line is greater than the count of lines
-			 */
-			inline TextLayout::LineMetricsIterator&& TextLayout::lineMetrics(Index line) const {
-				return LineMetricsIterator(*this, line);	// this may throw IndexOutOfBoundsException
-			}
-#endif
 			/**
 			 * Returns the length of the specified visual line.
 			 * @param line The visual line
@@ -369,6 +353,19 @@ namespace ascension {
 			inline Index TextLayout::lineLength(Index line) const {
 				return (line < numberOfLines_ - 1 ?
 					lineOffset(line + 1) : numberOfCharacters()) - lineOffset(line);
+			}
+
+			/**
+			 * Returns the metrics for the specified line.
+			 * @param line The line number
+			 * @return The line metrics
+			 * @throw IndexOutOfBoundsException @a line &gt;= numberOfLines()
+			 */
+			inline const TextLayout::LineMetrics& TextLayout::lineMetrics(Index line) const {
+				if(line >= numberOfLines())
+					throw IndexOutOfBoundsException("line");
+				assert(lineMetrics_.get() != nullptr);
+				return lineMetrics_[line];
 			}
 
 			/// Returns the number of characters represented by this @c TextLayout.
@@ -406,7 +403,7 @@ namespace ascension {
 			inline Scalar TextLayout::LineMetricsIterator::ascent() const {
 				if(isDone())
 					throw NoSuchElementException();
-				return std::get<0>(layout_->lineMetrics_[line_]);	// $friendly-access$
+				return layout_->lineMetrics(line_).ascent;
 			}
 
 			/// Returns the baseline of the current line.
@@ -452,7 +449,7 @@ namespace ascension {
 			inline Scalar TextLayout::LineMetricsIterator::descent() const {
 				if(isDone())
 					throw NoSuchElementException();
-				return std::get<1>(layout_->lineMetrics_[line_]);	// $friendly-access$
+				return layout_->lineMetrics(line_).descent;
 			}
 
 			/// @internal Implements relational and subtract operators.
@@ -501,7 +498,7 @@ namespace ascension {
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::height() const {
 //				const boost::integer_range<Scalar> e(ordered(extent()));
-				const boost::integer_range<Scalar> e(extent());
+				const boost::integer_range<Scalar> e(extent());	// may throw NoSuchElementException
 				return *e.end() - *e.begin();
 			}
 
@@ -514,7 +511,7 @@ namespace ascension {
 			inline Scalar TextLayout::LineMetricsIterator::leading() const {
 				if(isDone())
 					throw NoSuchElementException();
-				return std::get<2>(layout_->lineMetrics_[line_]);	// $friendly-access$
+				return layout_->lineMetrics(line_).leading;
 			}
 
 			/// Returns the line number of the current line.

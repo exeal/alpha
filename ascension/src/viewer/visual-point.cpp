@@ -737,7 +737,7 @@ namespace ascension {
 					np.offsetInLine = layout->hitTestCharacter(
 						presentation::AbstractTwoAxes<graphics::Scalar>(
 							presentation::_ipd = *p.positionInVisualLine_ - graphics::font::lineStartEdge(*layout, renderer.viewport()->contentMeasure()),
-							presentation::_bpd = layout->lineMetrics(visualLine.subline).baselineOffset())).insertionIndex();
+							presentation::_bpd = graphics::font::TextLayout::LineMetricsIterator(*layout, visualLine.subline).baselineOffset())).insertionIndex();
 					if(layout->lineAt(np.offsetInLine) != visualLine.subline)
 						np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 				}

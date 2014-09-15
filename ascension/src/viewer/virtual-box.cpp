@@ -50,7 +50,7 @@ namespace ascension {
 			std::unique_ptr<const graphics::font::TextLayout> isolatedLayout;
 			if(layout == nullptr)
 				layout = (isolatedLayout = viewer_.textRenderer().layouts().createIsolatedLayout(line.line)).get();
-			const graphics::Scalar baseline = layout->lineMetrics(line.subline).baselineOffset();
+			const graphics::Scalar baseline = graphics::font::TextLayout::LineMetricsIterator(*layout, line.subline).baselineOffset();
 			graphics::Scalar first = *ipds_.begin(), second = *ipds_.end();
 			const graphics::Scalar lineStartOffset = viewer_.textRenderer().lineStartEdge(graphics::font::VisualLine(line.line, 0));
 			first -= lineStartOffset;

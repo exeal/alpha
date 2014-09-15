@@ -1538,11 +1538,11 @@ namespace ascension {
 			graphics::font::BaselineIterator baseline(*textRenderer().viewport(), graphics::font::VisualLine(*lines.begin(), 0));
 			std::get<0>(beforeAndAfter) = *baseline;
 			if(std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::min() && std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::max())
-				std::get<0>(beforeAndAfter) -= *textRenderer().layouts().at(baseline.line()->line)->lineMetrics(0).extent().begin();
+				std::get<0>(beforeAndAfter) -= *graphics::font::TextLayout::LineMetricsIterator(*textRenderer().layouts().at(baseline.line()->line), 0).extent().begin();
 			baseline = graphics::font::BaselineIterator(*textRenderer().viewport(), graphics::font::VisualLine(*lines.end(), 0));
 			std::get<1>(beforeAndAfter) = *baseline;
 			if(std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::min() && std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::max())
-				std::get<1>(beforeAndAfter) += *textRenderer().layouts().at(baseline.line()->line)->lineMetrics(0).extent().end();
+				std::get<1>(beforeAndAfter) += *graphics::font::TextLayout::LineMetricsIterator(*textRenderer().layouts().at(baseline.line()->line), 0).extent().end();
 			assert(std::get<0>(beforeAndAfter) <= std::get<1>(beforeAndAfter));
 
 			namespace geometry = graphics::geometry;
@@ -2030,7 +2030,10 @@ namespace ascension {
 				const graphics::font::TextLayout* layout = textRenderer().layouts().at(p.line);
 				abstractScrollOffsetInPixels.bpd() = 0;
 				while(layout != nullptr && p < firstVisibleLineBeforeScroll) {
-					abstractScrollOffsetInPixels.bpd() -= static_cast<std::uint32_t>(layout->lineMetrics(p.subline).height());
+					const graphics::font::TextLayout::LineMetrics& lm = layout->lineMetrics(p.subline);
+					abstractScrollOffsetInPixels.bpd() -= static_cast<std::uint32_t>(lm.ascent);
+					abstractScrollOffsetInPixels.bpd() -= static_cast<std::uint32_t>(lm.descent);
+					abstractScrollOffsetInPixels.bpd() -= static_cast<std::uint32_t>(lm.leading);
 					if(p.subline < layout->numberOfLines() - 1)
 						++p.subline;
 					else if(p.line < document().numberOfLines() - 1) {
@@ -2047,7 +2050,10 @@ namespace ascension {
 						p.subline = layout->numberOfLines() - 1;
 					} else
 						break;
-					abstractScrollOffsetInPixels.bpd() += static_cast<std::uint32_t>(layout->lineMetrics(p.subline).height());
+					const graphics::font::TextLayout::LineMetrics& lm = layout->lineMetrics(p.subline);
+					abstractScrollOffsetInPixels.bpd() += static_cast<std::uint32_t>(lm.ascent);
+					abstractScrollOffsetInPixels.bpd() += static_cast<std::uint32_t>(lm.descent);
+					abstractScrollOffsetInPixels.bpd() += static_cast<std::uint32_t>(lm.leading);
 				}
 				if(p != firstVisibleLineBeforeScroll)
 					layout = nullptr;

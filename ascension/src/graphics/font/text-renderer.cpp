@@ -215,17 +215,18 @@ namespace ascension {
 					if(lines.begin()->subline == lines.end()->subline)
 						return 0;
 					const TextLayout& layout = self.layouts().at(lines.begin()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-					return layout.lineMetrics(lines.end()->subline).baselineOffset() - layout.lineMetrics(lines.begin()->subline).baselineOffset();
+					return TextLayout::LineMetricsIterator(layout, lines.end()->subline).baselineOffset()
+						- TextLayout::LineMetricsIterator(layout, lines.begin()->subline).baselineOffset();
 				} else {
 					const TextLayout* layout = &self.layouts().at(lines.begin()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-					Scalar bpd = *layout->extent().end() - layout->lineMetrics(lines.begin()->subline).baselineOffset();
+					Scalar bpd = *layout->extent().end() - TextLayout::LineMetricsIterator(*layout, lines.begin()->subline).baselineOffset();
 					for(Index line = lines.begin()->line + 1; line < lines.end()->line; ++line) {
 //						bpd += layouts().at(line).height();
 						const boost::integer_range<Scalar> lineExtent(ordered(self.layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT).extent()));
 						bpd += *lineExtent.end() - *lineExtent.begin();
 					}
 					layout = &self.layouts().at(lines.end()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-					return bpd += layout->lineMetrics(lines.end()->subline).baselineOffset() - layout->extent().front();
+					return bpd += TextLayout::LineMetricsIterator(*layout, lines.end()->subline).baselineOffset() - layout->extent().front();
 				}
 			}
 

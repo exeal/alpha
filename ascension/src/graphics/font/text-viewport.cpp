@@ -285,10 +285,10 @@ namespace ascension {
 						layout = viewport.textRenderer().layouts().at(line.line);
 						negativeVertical = isNegativeVertical(*layout);
 					}
-					const TextLayout::LineMetricsIterator lineMetrics(layout->lineMetrics(line.subline));
+					const TextLayout::LineMetrics& lineMetrics = layout->lineMetrics(line.subline);
 					const boost::integer_range<Scalar> lineExtent(
-						*baseline - (!negativeVertical ? lineMetrics.ascent() : lineMetrics.descent()),
-						*baseline + (!negativeVertical ? lineMetrics.descent() : lineMetrics.ascent()) + lineMetrics.leading());
+						*baseline - (!negativeVertical ? lineMetrics.ascent : lineMetrics.descent),
+						*baseline + (!negativeVertical ? lineMetrics.descent : lineMetrics.ascent) + lineMetrics.leading);
 					if(includes(lineExtent, bpd)) {
 						if(snapped != nullptr)
 							*snapped = false;
@@ -638,7 +638,7 @@ namespace ascension {
 				const VisualLine firstVisibleLine(viewport().firstVisibleLine());
 				const TextLayout* const layout = viewport().textRenderer().layouts().at(firstVisibleLine.line);
 				assert(layout != nullptr);
-				const Scalar baseline = layout->lineMetrics(firstVisibleLine.subline).ascent();
+				const Scalar baseline = layout->lineMetrics(firstVisibleLine.subline).ascent;
 				Point axis;
 				const Rectangle bounds(boost::geometry::make_zero<Point>(), geometry::size(viewport().boundsInView()));
 				switch(viewport().textRenderer().computedBlockFlowDirection()) {
@@ -694,7 +694,7 @@ namespace ascension {
 				auto newBaseline = **this;
 				difference_type n = 0;
 				const TextLayout* layout = /*tracksOutOfViewport() ? &renderer.layouts()[newLine.line] :*/ renderer.layouts().at(newLine.line);
-				TextLayout::LineMetricsIterator lineMetrics(layout->lineMetrics(newLine.subline));
+				TextLayout::LineMetricsIterator lineMetrics(*layout, newLine.subline);
 				bool negativeVertical = isNegativeVertical(*layout);
 				if(forward) {
 					while((to != nullptr && newLine < *to) || (delta != boost::none && n < delta)) {
@@ -710,7 +710,7 @@ namespace ascension {
 						// move to forward visual line
 						if(newLine.subline == layout->numberOfLines() - 1) {
 							layout = renderer.layouts().at(++newLine.line);
-							lineMetrics = layout->lineMetrics(newLine.subline = 0);
+							lineMetrics = TextLayout::LineMetricsIterator(*layout, newLine.subline = 0);
 							negativeVertical = isNegativeVertical(*layout);
 						} else {
 							++newLine.subline;
@@ -734,7 +734,7 @@ namespace ascension {
 						// move to backward visual line
 						if(newLine.subline == 0) {
 							layout = renderer.layouts().at(--newLine.line);
-							lineMetrics = layout->lineMetrics(newLine.subline = layout->numberOfLines() - 1);
+							lineMetrics = TextLayout::LineMetricsIterator(*layout, newLine.subline = layout->numberOfLines() - 1);
 							negativeVertical = isNegativeVertical(*layout);
 						} else {
 							--newLine.subline;
@@ -1059,7 +1059,7 @@ namespace ascension {
 				Index line = firstVisibleLine().line, nlines = 0;
 				LineLayoutVector& layouts = const_cast<TextViewport*>(this)->textRenderer().layouts();
 				const TextLayout* layout = &layouts.at(line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-				for(TextLayout::LineMetricsIterator lm(layout->lineMetrics(firstVisibleLine().subline)); ; ) {
+				for(TextLayout::LineMetricsIterator lm(*layout, firstVisibleLine().subline); ; ) {
 					const Scalar lineExtent = lm.height();
 					if(lineExtent >= bpd)
 						return nlines + bpd / lineExtent;
@@ -1069,7 +1069,7 @@ namespace ascension {
 						if(line == textRenderer().presentation().document().numberOfLines() - 1)
 							return static_cast<float>(nlines);
 						layout = &layouts[++line];
-						lm = layout->lineMetrics(0);
+						lm = TextLayout::LineMetricsIterator(*layout, 0);
 					} else
 						++lm;
 				}
@@ -1351,7 +1351,7 @@ namespace ascension {
 						const Scalar bpd = isHorizontal(textRenderer().computedBlockFlowDirection()) ? geometry::dy(boundsInView()) : geometry::dx(boundsInView());
 						Index line = firstVisibleLine().line;
 						const TextLayout* layout = &layouts.at(line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-						TextLayout::LineMetricsIterator lineMetrics(layout->lineMetrics(firstVisibleLine().subline));
+						TextLayout::LineMetricsIterator lineMetrics(*layout, firstVisibleLine().subline);
 						Scalar bpdInPage = 0;
 						while(true) {
 							if(lineMetrics.line() > 0) {
@@ -1359,9 +1359,9 @@ namespace ascension {
 									++lineMetrics;
 							} else if(line > 0) {
 								layout = &layouts.at(--line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-								if(bpdInPage += (lineMetrics = layout->lineMetrics(layout->numberOfLines() - 1)).height() > bpd) {
+								if(bpdInPage += (lineMetrics = TextLayout::LineMetricsIterator(*layout, layout->numberOfLines() - 1)).height() > bpd) {
 									layout = &layouts.at(++line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-									lineMetrics = layout->lineMetrics(0);
+									lineMetrics = TextLayout::LineMetricsIterator(*layout, 0);
 								}
 							} else
 								break;
