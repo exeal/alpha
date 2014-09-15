@@ -110,22 +110,27 @@ namespace ascension {
 		 * @see Widget#on_button_press_event
 		 */
 		bool TextViewer::on_button_press_event(GdkEventButton* event) {
+			widgetapi::setFocus(*this);
+			if(::gdk_event_triggers_context_menu(reinterpret_cast<GdkEvent*>(event)) != 0) {
+				doShowContextMenu(event);
+				return true;
+			}
+
 			widgetapi::event::MouseButtonInput input(makeMouseButtonInput(*event));
 			if(input.button() != widgetapi::event::LocatedUserInput::NO_BUTTON) {
 				switch(event->type) {
-					case GDK_BUTTON_PRESS:
+					case Gdk::BUTTON_PRESS:
 						mousePressed(input);
 						break;
-					case GDK_2BUTTON_PRESS:
+					case Gdk::DOUBLE_BUTTON_PRESS:
 						mouseDoubleClicked(input);
 						break;
-					case GDK_3BUTTON_PRESS:
+					case Gdk::TRIPLE_BUTTON_PRESS:
 						mouseTripleClicked(input);
 						break;
 				}
 			}
-			return Gtk::Widget::on_button_press_event(event);
-//			return input.isConsumed();
+			return input.isConsumed() || Gtk::Widget::on_button_press_event(event);
 		}
 
 		/**
@@ -136,8 +141,7 @@ namespace ascension {
 			widgetapi::event::MouseButtonInput input(makeMouseButtonInput(*event));
 			if(input.button() != widgetapi::event::LocatedUserInput::NO_BUTTON && event->type == GDK_BUTTON_RELEASE)
 				mouseReleased(input);
-			return Gtk::Widget::on_button_release_event(event);
-//			return input.isConsumed();
+			return input.isConsumed() || Gtk::Widget::on_button_release_event(event);
 		}
 
 		/**
