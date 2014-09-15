@@ -2810,41 +2810,39 @@ namespace ascension {
 				if(*orderedCharacterRange.end() > numberOfCharacters())
 					throw IndexOutOfBoundsException("characterRange");
 
-				presentation::FlowRelativeFourSides<Scalar> result;
+				Scalar before, after, start, end;	// results
 
 				if(isEmpty()) {	// empty line
-					result.start() = result.end() = 0;
+					start = end = 0;
 					const LineMetrics& lm(lineMetrics(0));
-					result.before() = -lm.ascent;
-					result.after() = lm.descent + lm.leading;
+					before = -lm.ascent;
+					after = lm.descent + lm.leading;
 				} else if(orderedCharacterRange.empty()) {	// an empty rectangle for an empty range
 					const LineMetrics& lm(lineMetrics(lineAt(orderedCharacterRange.front())));
 					const presentation::AbstractTwoAxes<Scalar> leading(hitToPoint(TextHit<>::leading(orderedCharacterRange.front())));
-					presentation::FlowRelativeFourSides<Scalar> sides;
-					sides.before() = leading.bpd() - lm.ascent;
-					sides.after() = leading.bpd() + lm.descent + lm.leading;
-					sides.start() = sides.end() = leading.ipd();
-					return sides;
+					before = leading.bpd() - lm.ascent;
+					after = leading.bpd() + lm.descent + lm.leading;
+					start = end = leading.ipd();
 				} else {
 					const Index firstLine = lineAt(*orderedCharacterRange.begin()), lastLine = lineAt(*orderedCharacterRange.end());
 					const LineMetricsIterator firstLineMetrics(*this, firstLine), lastLineMetrics(*this, lastLine);
 
 					// calculate the block-progression-edges ('before' and 'after'; it's so easy)
-					result.before() = firstLineMetrics.baselineOffset() - firstLineMetrics.ascent();
-					result.after() = lastLineMetrics.baselineOffset() + lastLineMetrics.descent() + lastLineMetrics.leading();
+					before = firstLineMetrics.baselineOffset() - firstLineMetrics.ascent();
+					after = lastLineMetrics.baselineOffset() + lastLineMetrics.descent() + lastLineMetrics.leading();
 
 					// calculate start-edge and end-edge of fully covered lines
 					const bool firstLineIsFullyCovered = includes(orderedCharacterRange,
 						boost::irange(lineOffset(firstLine), lineOffset(firstLine) + lineLength(firstLine)));
 					const bool lastLineIsFullyCovered = includes(orderedCharacterRange,
 						boost::irange(lineOffset(lastLine), lineOffset(lastLine) + lineLength(lastLine)));
-					result.start() = std::numeric_limits<Scalar>::max();
-					result.end() = std::numeric_limits<Scalar>::min();
+					start = std::numeric_limits<Scalar>::max();
+					end = std::numeric_limits<Scalar>::min();
 					for(Index line = firstLine + firstLineIsFullyCovered ? 0 : 1;
 							line < lastLine + lastLineIsFullyCovered ? 1 : 0; ++line) {
 						const Scalar lineStart = lineStartEdge(line);
-						result.start() = std::min(lineStart, result.start());
-						result.end() = std::max(lineStart + measure(line), result.end());
+						start = std::min(lineStart, start);
+						end = std::max(lineStart + measure(line), end);
 					}
 
 					// calculate start and end-edge of partially covered lines
@@ -2854,7 +2852,6 @@ namespace ascension {
 					if(!lastLineIsFullyCovered && (partiallyCoveredLines.empty() || partiallyCoveredLines[0] != lastLine))
 						partiallyCoveredLines.push_back(lastLine);
 					if(!partiallyCoveredLines.empty()) {
-						Scalar start = result.start(), end = result.end();
 						const StringPiece effectiveCharacterRange(textString_.data() + orderedCharacterRange.front(), orderedCharacterRange.size());
 						BOOST_FOREACH(Index line, partiallyCoveredLines) {
 							const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line));
@@ -2871,13 +2868,11 @@ namespace ascension {
 							assert(i != InlineProgressionDimensionRangeIterator());
 							end = std::max(*i->end(), end);
 						}
-
-						result.start() = start;
-						result.end() = end;
 					}
 				}
 
-				return result;
+				return presentation::FlowRelativeFourSides<Scalar>(
+					presentation::_before = before, presentation::_after = after, presentation::_start = start, presentation::_end = end);
 			}
 
 			namespace {
