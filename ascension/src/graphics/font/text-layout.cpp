@@ -332,14 +332,14 @@ namespace ascension {
 
 			/**
 			 * Returns extent (block-progression-dimension) of the specified lines.
-			 * @param lines A range of the lines
+			 * @param lines A range of the lines. This can be empty
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 * @throw IndexOutOfBoundsException
 			 * @see LineMetricsIterator#extent
 			 */
 			boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
 				if(lines.empty()) {
-					const Scalar baseline = lineMetrics(lines.front()).baselineOffset();
+					const Scalar baseline = lineMetrics(*lines.begin()).baselineOffset();
 					return boost::irange(baseline, baseline);
 				} else if(lines.size() == 1)
 					return lineMetrics(lines.front()).extent();
@@ -1085,13 +1085,19 @@ namespace ascension {
 			 * @param line The line number. Can be @c layout.numberOfLines()
 			 * @throw IndexOutOfBoundsException @a line &gt; @c layout.numberOfLines()
 			 */
-			TextLayout::LineMetricsIterator::LineMetricsIterator(const TextLayout& layout, Index line) : layout_(&layout), line_(line) {
+			TextLayout::LineMetricsIterator::LineMetricsIterator(const TextLayout& layout, Index line) : layout_(&layout), line_(line), baselineOffset_(0) {
 				if(line > layout.numberOfLines())
 					throw IndexOutOfBoundsException("line");
 
-				const Index i = (line != layout.numberOfLines()) ? line : (line - 1);
-				baselineOffset_ = layout_->extent(boost::irange<Index>(0, i)).front();
-				baselineOffset_ += !isNegativeVertical() ? std::get<0>(layout_->lineMetrics_[i]) : std::get<1>(layout_->lineMetrics_[i]);
+				if(line != 0) {
+					const std::unique_ptr<TextLayout::LineMetrics[]>& lineMetrics = layout_->lineMetrics_;
+					const bool negativeVertical = isNegativeVertical();
+					for(Index i = 0; i != line; ++i) {
+						baselineOffset_ += !negativeVertical ? std::get<1>(lineMetrics[i]) : std::get<0>(lineMetrics[i]);
+						baselineOffset_ += std::get<2>(lineMetrics[i]);
+						baselineOffset_ += !negativeVertical ? std::get<0>(lineMetrics[i + 1]) : std::get<1>(lineMetrics[i + 1]);
+					}
+				}
 			}
 
 			/// Implements decrement operators.
