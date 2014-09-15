@@ -119,7 +119,8 @@ namespace ascension {
 							boost::optional<boost::integer_range<Index>> range(selectedRangeOnVisualLine(viewer.caret(), graphics::font::VisualLine(line, subline)));
 							if(range) {
 								range = boost::irange(*range->begin(), std::min(viewer.document().lineLength(line), *range->end()));
-								auto region(layout.blackBoxBounds(*range));
+								boost::geometry::model::multi_polygon<boost::geometry::model::polygon<graphics::Point>> region;
+								layout.blackBoxBounds(*range, region);
 								geometry::translate(region,
 									graphics::Dimension(geometry::_dx = indent - geometry::left(selectionBounds), geometry::_dy = y - geometry::top(selectionBounds)));
 								context->setFillStyle(std::make_shared<graphics::SolidColor>(graphics::Color::OPAQUE_WHITE));
