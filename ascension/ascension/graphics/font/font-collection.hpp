@@ -51,13 +51,14 @@ namespace ascension {
 					boost::optional<Scalar> sizeAdjust = boost::none) const;
 				/**
 				 * Returns the fontset for last resort fallback.
-				 * @param description The font description
+				 * @param pointSize The size in points
+				 * @param properties The font properties
 				 * @param transform The transform associated with the font
 				 * @param sizeAdjust The 'font-size-adjust' value. Set @c boost#none for 'none'
 				 * @return The font has the requested property
 				 */
 				std::shared_ptr<const Font> lastResortFallback(
-					const FontDescription& description,
+					double pointSize, const FontProperties& properties,
 					const AffineTransform& transform = AffineTransform(),
 					boost::optional<Scalar> sizeAdjust = boost::none) const;
 
