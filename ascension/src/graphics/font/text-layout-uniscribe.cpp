@@ -565,7 +565,7 @@ namespace ascension {
 #if defined(BOOST_COMP_MSVC) && 0
 					AttributedCharacterRange& operator=(AttributedCharacterRange&& other) BOOST_NOEXCEPT {
 						position = other.position;
-						attribute = move(other.attribute);
+						attribute = std::move(other.attribute);
 						return *this;
 					}
 #endif
@@ -1762,7 +1762,7 @@ namespace ascension {
 								if(std::find_if(textString, textString + length(), surrogates::isSurrogate) != textString + length()) {
 									ASCENSION_MAKE_TEXT_STRING_SAFE();
 								}
-								for(FailedFonts::iterator i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {
+								for(FailedFonts::iterator i(std::begin(failedFonts)), e(std::end(failedFonts)); i != e; ++i) {
 									if(i->second == numeric_limits<int>::max()) {
 										font_.reset();
 										dc.selectObject((font_ = i->first)->handle().get());
@@ -1779,8 +1779,8 @@ namespace ascension {
 							if(hr != S_OK) {
 								// select the font which generated the least missing glyphs
 								assert(!failedFonts.empty());
-								FailedFonts::const_iterator bestFont(failedFonts.begin());
-								for(FailedFonts::const_iterator i(bestFont + 1), e(failedFonts.end()); i != e; ++i) {
+								FailedFonts::const_iterator bestFont(std::begin(failedFonts));
+								for(FailedFonts::const_iterator i(bestFont + 1), e(std::end(failedFonts)); i != e; ++i) {
 									if(i->second < bestFont->second)
 										bestFont = i;
 								}
@@ -1842,7 +1842,7 @@ namespace ascension {
 						}
 						if(nextRun != nullptr && nextRun->length() > 1) {
 							const CodePoint variationSelector = surrogates::decodeFirst(
-								layoutString.begin() + nextRun->beginning(), layoutString.begin() + nextRun->beginning() + 2);
+								std::begin(layoutString) + nextRun->beginning(), std::begin(layoutString) + nextRun->beginning() + 2);
 							if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 								const CodePoint baseCharacter = surrogates::decodeLast(
 									layoutString.data() + beginning(), layoutString.data() + end());
@@ -2148,7 +2148,7 @@ namespace ascension {
 							nextScriptRun((numberOfScriptRuns > 1) ?
 								std::begin(textString) + scriptRuns[1].iCharPos : textString.end(), scriptRun.attribute + 1);
 						// style cursors
-						detail::ComputedStyledTextRunEnumerator styledTextRunEnumerator(textString, move(textRunStyles));
+						detail::ComputedStyledTextRunEnumerator styledTextRunEnumerator(textString, std::move(textRunStyles));
 						assert(!styledTextRunEnumerator.isDone());
 						AttributedCharacterRange<ComputedTextRunStyle> styleRun, nextStyleRun;
 						styledTextRunEnumerator.style(styleRun.attribute);
@@ -2296,7 +2296,7 @@ namespace ascension {
 						layoutString.beginning() + nextScriptRun.attribute->iCharPos : layoutString.end();
 
 					// style cursors
-					detail::ComputedStyledTextRunEnumerator styleEnumerator(layoutString, move(styles));
+					detail::ComputedStyledTextRunEnumerator styleEnumerator(layoutString, std::move(styles));
 					AttributedCharacterRange<ComputedTextRunStyle> styleRun;
 					assert(!styleEnumerator.isDone());
 					styleRun.position = styleEnumerator.position();
@@ -2377,7 +2377,7 @@ namespace ascension {
 						}
 						if(forwardStyleRun) {
 							assert(nextStyleRun.position < layoutString.end());
-							styleRun = move(nextStyleRun);
+							styleRun = std::move(nextStyleRun);
 							calculatedStyles.push_back(styleRun.attribute);
 							assert(!styleEnumerator.isDone());
 							styleEnumerator.next();
@@ -2637,14 +2637,6 @@ namespace ascension {
 			TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& lineStyle,
 					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles, const FontCollection& fontCollection, const FontRenderContext& fontRenderContext)
 					: textString_(textString), lineStyle_(lineStyle), numberOfLines_(0) {
-
-				// handle logically empty line
-				if(textString_.empty()) {
-					numberOfLines_ = 1;
-					maximumMeasure_ = 0.0f;
-					assert(isEmpty());
-					return;
-				}
 #if 0
 				// calculate the wrapping width
 				if(layoutInformation.layoutSettings().lineWrap.wraps()) {
@@ -2665,23 +2657,34 @@ namespace ascension {
 				// 6. justify each text runs if specified
 				// 7. stack the lines
 
+				const bool emptyLine = textString_.empty();
+				if(emptyLine) {	// handle logically empty line
+					numberOfLines_ = 1;
+					maximumMeasure_ = 0.0f;
+					assert(isEmpty());
+				}
+
 				// 2. split each script runs into text runs with StyledRunIterator
 				std::vector<TextRunImpl*> textRuns;
 				std::vector<AttributedCharacterRange<ComputedTextRunStyle>> calculatedStyles;
-				TextRunImpl::generate(textString_, lineStyle_, move(textRunStyles), fontCollection, fontRenderContext, textRuns, calculatedStyles);
-//				runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
-//				std::copy(textRuns.begin(), textRuns.end(), runs_.get());
-//				shrinkToFit(styledRanges_);
+				if(!emptyLine) {
+					TextRunImpl::generate(textString_, lineStyle_, std::move(textRunStyles), fontCollection, fontRenderContext, textRuns, calculatedStyles);
+//					runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
+//					std::copy(textRuns.begin(), textRuns.end(), runs_.get());
+//					shrinkToFit(styledRanges_);
+				}
 
 				// 3. generate glyphs for each text runs
 				const RenderingContext2D context(win32::detail::screenDC());
-				BOOST_FOREACH(TextRunImpl* run, textRuns)
-					run->shape(context.native());
-				TextRunImpl::substituteGlyphs(boost::make_iterator_range(textRuns));
+				if(!emptyLine) {
+					BOOST_FOREACH(TextRunImpl* run, textRuns)
+						run->shape(context.native());
+					TextRunImpl::substituteGlyphs(boost::make_iterator_range(textRuns));
 
-				// 4. position glyphs for each text runs
-				for(auto run(std::begin(textRuns)), b(std::begin(textRuns)), e(std::end(textRuns)); run != e; ++run)
-					(*run)->positionGlyphs(context.native(), calculatedStyles[run - b].attribute);
+					// 4. position glyphs for each text runs
+					for(auto run(std::begin(textRuns)), b(std::begin(textRuns)), e(std::end(textRuns)); run != e; ++run)
+						(*run)->positionGlyphs(context.native(), calculatedStyles[run - b].attribute);
+				}
 
 				// 5. position each text runs
 				const FontDescription nominalFontDescription(
@@ -2690,33 +2693,35 @@ namespace ascension {
 				const boost::optional<Scalar> nominalFontSizeAdjust(lineStyle.nominalFont.sizeAdjust);
 				const std::shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontDescription,
 					fontRotationForWritingMode(writingMode().blockFlowDirection), nominalFontSizeAdjust));
-				// wrap into visual lines and reorder runs in each lines
-				if(runs_.empty() || !wrapsText(lineStyle.whiteSpace)) {
-					numberOfLines_ = 1;
-					assert(firstRunsInLines_.get() == nullptr);
-					// 5-1. expand horizontal tabs (with logical ordered runs)
-					if(const std::shared_ptr<const TabExpander> tabExpander = lineStyle.tabExpander)
-						expandTabsWithoutWrapping(*tabExpander);
-					else
-						expandTabsWithoutWrapping(FixedWidthTabExpander(context.fontMetrics(nominalFont)->averageCharacterWidth() * 8));
-					// 5-2. reorder each text runs
-					reorder();
-					// 5-3. reexpand horizontal tabs
-//					expandTabsWithoutWrapping();
-				} else {
-					// 5-1. expand horizontal tabs and wrap into lines
-					if(const std::shared_ptr<const TabExpander> tabExpander = lineStyle.tabExpander)
-						wrap(lineStyle.measure, *tabExpander);
-					else
-						// create default tab expander
-						wrap(lineStyle.measure, FixedWidthTabExpander(context.fontMetrics(nominalFont)->averageCharacterWidth() * 8));
-					// 5-2. reorder each text runs
-					reorder();
-					// 5-3. reexpand horizontal tabs
-					// TODO: not implemented.
-					// 6. justify each text runs if specified
-					if(lineStyle.justification != presentation::TextJustification::NONE)
-						justify(lineStyle.measure, lineStyle.justification);
+				if(!emptyLine) {
+					// wrap into visual lines and reorder runs in each lines
+					if(runs_.empty() || !wrapsText(lineStyle.whiteSpace)) {
+						numberOfLines_ = 1;
+						assert(firstRunsInLines_.get() == nullptr);
+						// 5-1. expand horizontal tabs (with logical ordered runs)
+						if(const std::shared_ptr<const TabExpander> tabExpander = lineStyle.tabExpander)
+							expandTabsWithoutWrapping(*tabExpander);
+						else
+							expandTabsWithoutWrapping(FixedWidthTabExpander(context.fontMetrics(nominalFont)->averageCharacterWidth() * 8));
+						// 5-2. reorder each text runs
+						reorder();
+						// 5-3. reexpand horizontal tabs
+//						expandTabsWithoutWrapping();
+					} else {
+						// 5-1. expand horizontal tabs and wrap into lines
+						if(const std::shared_ptr<const TabExpander> tabExpander = lineStyle.tabExpander)
+							wrap(lineStyle.measure, *tabExpander);
+						else
+							// create default tab expander
+							wrap(lineStyle.measure, FixedWidthTabExpander(context.fontMetrics(nominalFont)->averageCharacterWidth() * 8));
+						// 5-2. reorder each text runs
+						reorder();
+						// 5-3. reexpand horizontal tabs
+						// TODO: not implemented.
+						// 6. justify each text runs if specified
+						if(lineStyle.justification != presentation::TextJustification::NONE)
+							justify(lineStyle.measure, lineStyle.justification);
+					}
 				}
 
 				// 7. stack the lines
@@ -3308,12 +3313,13 @@ namespace ascension {
 					if(FAILED(hr))
 						throw makePlatformError(hr);
 					for(RunVector::const_iterator i(runsInLine.begin()); i != runsInLine.end(); ++i)
-						reordered[runsInLine.begin() - begin(runs_) + log2vis[i - runsInLine.begin()]] = i->get();
+						reordered[runsInLine.begin() - std::begin(runs_) + log2vis[i - runsInLine.begin()]] = i->get();
 				}
 
 				// commit
-				for(RunVector::iterator i(begin(runs_)), e(end(runs_)); i != e; ++i)
-					i->release();
+				BOOST_FOREACH(RunVector::reference run, runs_)
+//				for(RunVector::iterator i(std::begin(runs_)), e(std::end(runs_)); i != e; ++i)
+					run.release();
 				for(RunVector::size_type i = 0, c(runs_.size()); i < c; ++i)
 					runs_[i].reset(reordered[i]);
 			}
@@ -3445,8 +3451,9 @@ namespace ascension {
 				assert(numberOfLines() > 1);	// ???
 				firstRunsInLines_.reset(new RunVector::const_iterator[firstRunsInLines.size()]);
 
-				for(auto i(begin(runs_)), e(end(runs_)); i != e; ++i)
-					i->release();
+				BOOST_FOREACH(RunVector::reference run, runs_)
+//				for(auto i(std::begin(runs_)), e(std::end(runs_)); i != e; ++i)
+					run.release();
 				for(RunVector::size_type i = 0, c = runs.size(); i < c; ++i)
 					newRuns[i].reset(runs[i]);
 				runs_ = std::move(newRuns);
