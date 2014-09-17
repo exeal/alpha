@@ -31,7 +31,8 @@
 namespace ascension {
 	namespace graphics {
 		namespace {
-			LOGFONT&& makeLogFont(win32::Handle<HDC>::Type deviceContext, const font::FontDescription& description, const AffineTransform& transform, boost::optional<Scalar> sizeAdjust) {
+			void fillLogFont(win32::Handle<HDC>::Type deviceContext,
+					const font::FontDescription& description, const AffineTransform& transform, boost::optional<Scalar> sizeAdjust, LOGFONT& out) {
 				const String& familyName = description.family().name();
 				if(familyName.length() >= LF_FACESIZE)
 					throw std::length_error("description.family().name()");
@@ -57,14 +58,15 @@ namespace ascension {
 				else if(orientation == 900 || orientation == 2700)
 					dpi = ::GetDeviceCaps(deviceContext.get(), LOGPIXELSX);
 				else
-					dpi = static_cast<int>(sqrt(
+					dpi = static_cast<int>(std::sqrt(
 						std::pow(static_cast<float>(::GetDeviceCaps(deviceContext.get(), LOGPIXELSX)), 2)
 						+ std::pow(static_cast<float>(::GetDeviceCaps(deviceContext.get(), LOGPIXELSY)), 2)));
 				::SetMapMode(deviceContext.get(), oldMapMode);
 
 				// TODO: handle properties.orientation().
 
-				win32::AutoZero<LOGFONTW> lf;
+				LOGFONTW lf;
+				std::memset(&lf, 0, sizeof(decltype(lf)));
 				lf.lfHeight = -font::round(description.pointSize() * dpi / 72.0);
 				lf.lfEscapement = lf.lfOrientation = orientation;
 				lf.lfWeight = boost::underlying_cast<LONG>(description.properties().weight);
@@ -86,7 +88,7 @@ namespace ascension {
 						font::FontDescription adjustedDescription(description);
 						adjustedDescription.setPointSize(std::max(description.pointSize() * (boost::get(sizeAdjust) / aspect), 1.0));
 						::SelectObject(deviceContext.get(), oldFont.get());
-						return makeLogFont(deviceContext, adjustedDescription, transform, boost::none);
+						return fillLogFont(deviceContext, adjustedDescription, transform, boost::none, out);
 					}
 					::SelectObject(deviceContext.get(), oldFont.get());
 				}
@@ -95,13 +97,13 @@ namespace ascension {
 				if(description.properties().stretch != font::FontStretch::NORMAL) {
 					// TODO: this implementation is too simple...
 					win32::Handle<HFONT>::Type font(::CreateFontIndirectW(&lf), &::DeleteObject);
-					if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
+					if(::GetObjectW(font.get(), sizeof(decltype(lf)), &lf) > 0) {
 						static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
 						lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[boost::underlying_cast<std::size_t>(description.properties().stretch)], 1000);
 					}
 				}
 
-				return std::move(lf);
+				std::swap(lf, out);
 			}
 		}
 
@@ -303,7 +305,8 @@ namespace ascension {
 			}
 
 			std::shared_ptr<const Font> FontCollection::get(const FontDescription& description, const AffineTransform& transform, boost::optional<Scalar> sizeAdjust) const {
-				const LOGFONT lf(makeLogFont(deviceContext_, description, transform, sizeAdjust));
+				LOGFONT lf;
+				fillLogFont(deviceContext_, description, transform, sizeAdjust, lf);
 				struct LogFontHash {
 					std::size_t operator()(const LOGFONTW& v) const {
 						std::size_t n = boost::hash_value(v.lfHeight);
@@ -340,23 +343,24 @@ namespace ascension {
 				return newFont;
 			}
 
-			std::shared_ptr<const Font> FontCollection::lastResortFallback(const FontDescription& description, const AffineTransform& transform, boost::optional<Scalar> sizeAdjust) const {
+			std::shared_ptr<const Font> FontCollection::lastResortFallback(double pointSize,
+					const FontProperties& properties, const AffineTransform& transform, boost::optional<Scalar> sizeAdjust) const {
 				static String familyName;
 				// TODO: 'familyName' should update when system property changed.
 				if(familyName.empty()) {
 					LOGFONTW lf;
-					if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(LOGFONTW), &lf) != 0)
+					if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(decltype(lf)), &lf) != 0)
 						familyName = lf.lfFaceName;
 					else {
 						win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
-						if(!win32::boole(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0)))
+						if(!win32::boole(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(decltype(ncm)), &ncm, 0)))
 							throw makePlatformError();
 						familyName = ncm.lfMessageFont.lfFaceName;
 					}
 				}
 
-				FontDescription modified(description);
-				return get(modified.setFamilyName(FontFamily(familyName)), transform, sizeAdjust);
+				const FontDescription description(FontFamily(familyName), pointSize, properties);
+				return get(description, transform, sizeAdjust);
 			}
 		}
 	}
@@ -377,7 +381,7 @@ namespace ascension {
 			}
 
 			LOGFONTW toNative(const font::FontDescription& object, const LOGFONTW* /* = nullptr */) {
-				makeLogFont(win32::detail::screenDC(), object, geometry::makeIdentityTransform(), boost::none);
+//				fillLogFont(win32::detail::screenDC(), object, geometry::makeIdentityTransform(), boost::none);
 				win32::AutoZero<LOGFONT> result;
 				LONG orientation = 0;
 #if 0
@@ -388,7 +392,7 @@ namespace ascension {
 				result.lfWeight = boost::underlying_cast<LONG>(object.properties().weight);
 				result.lfItalic = object.properties().style != font::FontStyle::ITALIC || object.properties().style != font::FontStyle::OBLIQUE;
 				std::wcsncpy(result.lfFaceName, object.family().name().c_str(), std::extent<decltype(result.lfFaceName)>::value);
-				return std::move(result);
+				return result;
 			}
 		}
 	}
