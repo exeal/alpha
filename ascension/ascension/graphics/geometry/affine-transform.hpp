@@ -70,7 +70,7 @@ namespace ascension {
 			 */
 			/// 
 			BOOST_PARAMETER_FUNCTION(
-					(AffineTransform&&), makeAffineTransform, tag,
+					(AffineTransform), makeAffineTransform, tag,
 					(required (sx, *) (sy, *) (shx, *) (shy, *) (tx, *) (ty, *))) {
 				return AffineTransform(
 					sx, shx, tx,	// m00 m01 m02
@@ -167,7 +167,7 @@ namespace ascension {
 			 * @return An @c AffineTransform object that scales coordinates by the specified factors
 			 */
 			BOOST_PARAMETER_FUNCTION(
-					(AffineTransform&&), makeScalingTransform, tag,
+					(AffineTransform), makeScalingTransform, tag,
 					(required (sx, *) (sy, *))) {
 				return AffineTransform(boost::geometry::strategy::transform::scale_transformer<double, 2, 2>(sx, sy));
 			}
@@ -182,7 +182,7 @@ namespace ascension {
 			 * @return An @c AffineTransform object that shears coordinates by the specified multipliers
 			 */
 			BOOST_PARAMETER_FUNCTION(
-					(AffineTransform&&), makeShearingTransform, tag,
+					(AffineTransform), makeShearingTransform, tag,
 					(required (shx, *) (shy, *))) {
 				return makeAffineTransform(_sx = 1.0, _shx = shx, _shy = shy, _sy = 1.0, _tx = 0.0, _ty = 0.0);
 			}
@@ -195,7 +195,7 @@ namespace ascension {
 			 * @return An @c AffineTransform object that represents a translation transformation, created with the specified vector
 			 */
 			BOOST_PARAMETER_FUNCTION(
-					(AffineTransform&&), makeTranslationTransform, tag,
+					(AffineTransform), makeTranslationTransform, tag,
 					(required (tx, *) (ty, *))) {
 				return makeAffineTransform(_sx = 1.0, _sy = 1.0, _shx = 0.0, _shy = 0.0, _tx = tx, _ty = ty);
 			}
