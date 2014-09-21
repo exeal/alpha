@@ -302,12 +302,12 @@ namespace ascension {
 		/// @{
 		/**
 		 * [Copied from CSS3] This property transforms text for styling purposes.
-		 * @see CSS Text Level 3, 2.1. Transforming Text: the ‘text-transform’ property
+		 * @see CSS Text Level 3, 2.1. Case Transforms: the ‘text-transform’ property
 		 *      (http://www.w3.org/TR/css3-text/#text-transform)
 		 * @see XSL 1.1, 7.17.6 "text-transform" (http://www.w3.org/TR/xsl/#text-transform)
 		 */
 		ASCENSION_SCOPED_ENUMS_BEGIN(TextTransform)
-			NONE, CAPITALIZE, UPPERCASE, LOWERCASE, FULL_WIDTH, FULL_SIZE_KANA
+			NONE, CAPITALIZE, UPPERCASE, LOWERCASE, FULL_WIDTH/*, FULL_SIZE_KANA*/
 		ASCENSION_SCOPED_ENUMS_END;
 
 		/**
