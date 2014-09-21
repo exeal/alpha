@@ -29,9 +29,14 @@ namespace ascension {
 		template<typename T, typename U> struct Select<false, T, U> {typedef U Type;};
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 
-		/// @c Type2Type type form Loki library.
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+		/**
+		 * @c Type2Type type form Loki library.
+		 * @deprecated 0.8 Use @c boost#mpl#identity instead.
+		 */
 		template<typename T>
 		struct Type2Type {typedef T Type;};
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 		/// Generates signed numeral types.
 		template<typename T> struct RemoveSigned;
