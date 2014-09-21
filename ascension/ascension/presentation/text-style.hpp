@@ -187,7 +187,7 @@ namespace ascension {
 					sp::NotInherited
 				> style;
 
-				struct WidthTypeSpec : public detail::Type2Type<Length> {
+				struct WidthTypeSpec : public boost::mpl::identity<Length> {
 					static const Length& initialValue() {return MEDIUM;}
 				};
 				/**

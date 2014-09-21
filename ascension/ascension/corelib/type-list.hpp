@@ -8,6 +8,7 @@
 #ifndef ASCENSION_TYPE_LIST_HPP
 #define ASCENSION_TYPE_LIST_HPP
 #include <ascension/corelib/future/type-traits.hpp>
+#include <boost/mpl/identity.hpp>
 
 namespace ascension {
 	/**
@@ -26,16 +27,16 @@ namespace ascension {
 		};
 
 		/// Returns the first type of the given type list.
-		template<typename T> struct Car : public detail::Type2Type<T> {};
-		template<typename T, typename U> struct Car<Cat<T, U>> : public detail::Type2Type<T> {};
+		template<typename T> struct Car : public boost::mpl::identity<T> {};
+		template<typename T, typename U> struct Car<Cat<T, U>> : public boost::mpl::identity<T> {};
 
 		/// Returns the types other than the first one of the given type list.
-		template<typename T> struct Cdr : public detail::Type2Type<void> {};
-		template<typename T, typename U> struct Cdr<Cat<T, U>> : public detail::Type2Type<U> {};
+		template<typename T> struct Cdr : public boost::mpl::identity<void> {};
+		template<typename T, typename U> struct Cdr<Cat<T, U>> : public boost::mpl::identity<U> {};
 
 		/// Returns the length of the type list.
 		template<typename Types> struct Length {
-			static const unsigned value = 1 + Length<typename Cdr<Types>::Type>::value;
+			static const unsigned value = 1 + Length<typename Cdr<Types>::type>::value;
 		};
 		template<> struct Length<void> {static const unsigned value = 0;};
 /*
@@ -52,40 +53,40 @@ namespace ascension {
 */
 		/// Removes the first type @a T in the given type list.
 		template<typename Types, typename T> struct RemoveFirst;
-		template<typename Cdr, typename T> struct RemoveFirst<Cat<T, Cdr>, T> {typedef Cdr Type;};
+		template<typename Cdr, typename T> struct RemoveFirst<Cat<T, Cdr>, T> {typedef Cdr type;};
 		template<typename Car, typename Cdr, typename T>
-		struct RemoveFirst<Cat<Car, Cdr>, T> {typedef Cat<Car, typename RemoveFirst<Cdr, T>::Type> Type;};
-		template<typename T> struct RemoveFirst<void, T> : public detail::Type2Type<void> {};
+		struct RemoveFirst<Cat<Car, Cdr>, T> {typedef Cat<Car, typename RemoveFirst<Cdr, T>::type> type;};
+		template<typename T> struct RemoveFirst<void, T> : public boost::mpl::identity<void> {};
 
 		/// Removes the duplicated types in the given type list.
 		template<typename Types> class Unique {
-			typedef typename Unique<typename Types::Cdr>::Type Temp1_;
-			typedef typename RemoveFirst<Temp1_, typename Types::Car>::Type Temp2_;
+			typedef typename Unique<typename Types::Cdr>::type Temp1_;
+			typedef typename RemoveFirst<Temp1_, typename Types::Car>::type Temp2_;
 		public:
-			typedef Cat<typename Types::Car, Temp2_> Type;
+			typedef Cat<typename Types::Car, Temp2_> type;
 		};
 		template<> class Unique<void> {
 		public:
-			typedef void Type;
+			typedef void type;
 		};
 
 		/// Retuens the most derived (from type @a T) type in the given type list.
 		template<typename Types, typename T> class MostDerived;
 		template<typename Car, typename Cdr, typename T> class MostDerived<Cat<Car, Cdr>, T> {
-			typedef typename MostDerived<Cdr, T>::Type Candidate_;
+			typedef typename MostDerived<Cdr, T>::type Candidate_;
 		public:
 			typedef typename std::conditional<
 				std::is_base_of<Candidate_, Car>::value, Car, Candidate_
-			>::type Type;
+			>::type type;
 		};
 		template<typename T> class MostDerived<void, T> {
 		public:
-			typedef T Type;
+			typedef T type;
 		};
 
 		/// Returns true if the type @a T is the most derived in the given type list.
 		template<typename Types, typename T> struct IsMostDerived {
-			static const bool value = std::is_same<typename MostDerived<Types, T>::Type, T>::value;
+			static const bool value = std::is_same<typename MostDerived<Types, T>::type, T>::value;
 		};
 
 	}
@@ -95,30 +96,30 @@ namespace ascension {
 			typedef typename std::conditional<
 				typelist::IsMostDerived<
 					Types,
-					typename typelist::Car<Current>::Type
+					typename typelist::Car<Current>::type
 				>::value,
 				typename typelist::Cat<
-					typename typelist::Car<Current>::Type,
+					typename typelist::Car<Current>::type,
 					typename RemoveBasesImpl<
 						Types,
-						typename typelist::Cdr<Current>::Type
-					>::Type
+						typename typelist::Cdr<Current>::type
+					>::type
 				>,
 				typename RemoveBasesImpl<
 					Types,
-					typename typelist::Cdr<Current>::Type
-				>::Type
-			>::type Type;
+					typename typelist::Cdr<Current>::type
+				>::type
+			>::type type;
 		};
 		template<typename Types> struct RemoveBasesImpl<Types, void> {
-			typedef void Type;
+			typedef void type;
 		};
 	}
 
 	namespace typelist {
 		/// Removes the all types not most derived in the given type list.
 		template<typename Types> struct RemoveBases {
-			typedef typename detail::RemoveBasesImpl<Types, Types>::Type Type;
+			typedef typename detail::RemoveBasesImpl<Types, Types>::type type;
 		};
 	}
 } // namespace ascension.typelist
