@@ -111,6 +111,9 @@
     <Filter Include="ascension\Header Files\graphics\geometry">
       <UniqueIdentifier>{b45b59ef-1f6d-49a6-9164-19a2776da6f6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\presentation\styles">
+      <UniqueIdentifier>{59d0696a-79f4-42c8-b8ca-a6a29e6bda95}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -921,6 +924,45 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\affine-transform.hpp">
       <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\color.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\background.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\box.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\text-decor.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\text.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\inline.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\fonts.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\auxiliary.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\writing-modes.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\number-substitution.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-line-style.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-toplevel-style.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-run-style.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
