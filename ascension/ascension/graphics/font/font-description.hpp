@@ -66,10 +66,10 @@ namespace ascension {
 			}
 
 			/**
-			 * [Copied from CSS3] The Åefont-weightÅf property specifies weight of glyphs in the
-			 * font, their degree of blackness or stroke thickness.
+			 * [Copied from CSS3] The Åefont-weightÅf property specifies the weight of glyphs in the font, their degree
+			 * of blackness or stroke thickness.
 			 * @see CSS Fonts Module Level 3, 3.2 Font weight: the font-weight property
-			 *      (http://www.w3.org/TR/css3-fonts/#generic-font-families)
+			 *      (http://www.w3.org/TR/css3-fonts/#font-weight-prop)
 			 * @see Extensible Stylesheet Language (XSL) Version 1.1, 7.9.9 "font-weight"
 			 *      (http://www.w3.org/TR/xsl/#font-weight)
 			 * @see Fonts - SVG 1.1 (Second Edition), 20.8.3 The Åefont-faceÅf element
@@ -98,8 +98,8 @@ namespace ascension {
 			ASCENSION_SCOPED_ENUMS_END
 
 			/**
-			 * [Copied from CSS3] This property selects a normal, condensed, or expanded face from
-			 * a font family.
+			 * [Copied from CSS3] The Åefont-stretchÅf property selects a normal, condensed, or expanded face from a font
+			 * family.
 			 * @see CSS Fonts Module Level 3, 3.3 Font width: the font-stretch property
 			 *      (http://www.w3.org/TR/css3-fonts/#font-stretch-prop)
 			 * @see Extensible Stylesheet Language (XSL) Version 1.1, 7.9.5 "font-stretch"
@@ -122,7 +122,8 @@ namespace ascension {
 			ASCENSION_SCOPED_ENUMS_END
 
 			/**
-			 * [Copied from CSS3] This property allows italic or oblique faces to be selected.
+			 * [Copied from CSS3] The Åefont-styleÅf property allows italic or oblique faces to be selected. Italic forms
+			 * are generally cursive in nature while oblique faces are typically sloped versions of the regular face.
 			 * @see CSS Fonts Module Level 3, 3.4 Font style: the font-style property
 			 *      (http://www.w3.org/TR/css3-fonts/#font-style-prop)
 			 * @see Extensible Stylesheet Language (XSL) Version 1.1, 7.9.7 "font-style"
@@ -131,10 +132,14 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/SVG11/fonts.html#FontFaceElementFontStyleAttribute)
 			 */
 			ASCENSION_SCOPED_ENUMS_BEGIN(FontStyle)
-				NORMAL,		///< Selects a face that is classified as 'normal'.
-				ITALIC,		///< Selects a face that is labeled 'italic' or 'oblique'.
-				OBLIQUE,	///< Selects a face that is labeled 'oblique'.
-				BACKSLANT	///< Selects a face that is labeled 'backslant'.
+				/// selects a face that is classified as a normal face, one that is neither italic or obliqued
+				NORMAL,
+				/// selects a font that is labeled as an italic face, or an oblique face if one is not
+				ITALIC,
+				/// selects a font that is labeled as an oblique face, or an italic face if one is not
+				OBLIQUE,
+				/// Selects a face that is labeled 'backslant'. This is not part of CSS level 3.
+				BACKSLANT
 			ASCENSION_SCOPED_ENUMS_END
 
 //			ASCENSION_SCOPED_ENUMS_BEGIN(FontSynthesis)
