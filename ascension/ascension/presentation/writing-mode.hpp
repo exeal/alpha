@@ -19,10 +19,10 @@
 namespace ascension {
 	namespace presentation {
 		/**
-		 * Orientation of the text layout.
-		 * @see TextLineStyle#readingDirection, defaultReadingDirection,
-		 * @see "CSS Writing Modes Module Level 3, 2.1. Specifying Directionality: the ‘direction’
-		 *      property" (http://www.w3.org/TR/css3-writing-modes/#direction)
+		 * [Copied from CSS3] This property specifies the inline base direction or directionality of any bidi
+		 * paragraph, embedding, isolate, or override established by the box.
+		 * @see CSS Writing Modes Level 3, 2.1 Specifying Directionality: the ‘direction’ property
+		 *      (http://www.w3.org/TR/css-writing-modes-3/#direction)
 		 * @see SVG 1.1 (Second Edition), 10.7.4 Relationship with bidirectionality
 		 *      (http://www.w3.org/TR/SVG/text.html#DirectionProperty)
 		 * @see XSL 1.1, 7.29.1 "direction" (http://www.w3.org/TR/xsl/#direction)
@@ -53,17 +53,18 @@ namespace ascension {
 		ReadingDirection defaultReadingDirection(const Presentation& presentation);
 
 		/**
-		 * Defines block flow directions.
-		 * @see "CSS Writing Modes Module Level 3, 3.1. Block Flow Direction: the ‘writing-mode’
-		 *      property" (http://www.w3.org/TR/css3-writing-modes/#writing-mode)
+		 * [Copied from CSS3] This property specifies whether lines of text are laid out horizontally or vertically and
+		 * the direction in which blocks progress.
+		 * @see CSS Writing Modes Level 3, 3.1. Block Flow Direction: the ‘writing-mode’ property
+		 *      (http://www.w3.org/TR/css-writing-modes-3/#writing-mode)
 		 * @see "SVG 1.1 (Second Edition), 10.7.2 Setting the inline-progression-direction"
 		 *      (http://www.w3.org/TR/SVG/text.html#WritingModeProperty)
 		 * @see "XSL 1.1, 7.29.7 "writing-mode"" (http://www.w3.org/TR/xsl/#writing-mode)
 		 */
 		enum BlockFlowDirection {
-			HORIZONTAL_TB,	///< Top-to-bottom block flow. The writing mode is horizontal.
-			VERTICAL_RL,	///< Right-to-left block flow. The writing mode is vertical.
-			VERTICAL_LR		///< Left-to-right block flow. The writing mode is vertical.
+			HORIZONTAL_TB,	///< Top-to-bottom block flow direction. The writing mode is horizontal.
+			VERTICAL_RL,	///< Right-to-left block flow direction. The writing mode is vertical.
+			VERTICAL_LR		///< Left-to-right block flow direction. The writing mode is vertical.
 		};
 
 		/**
@@ -89,20 +90,39 @@ namespace ascension {
 		inline bool isVertical(BlockFlowDirection direction) {return !isHorizontal(direction);}
 
 		/**
-		 * Defines the orientation of characters within a line.
+		 * [Copied from CSS3] This property specifies the orientation of text within a line. Current values only have
+		 * an effect in vertical writing modes; the property has no effect on boxes in horizontal writing modes.
 		 * @see resolveTextOrientation
-		 * @see "CSS Writing Modes Module Level 3, 5.1. Orienting Text: the ‘text-orientation’
-		 *      property" (http://www.w3.org/TR/css3-writing-modes/#text-orientation)
+		 * @see CSS Writing Modes Level 3, 5.1. Orienting Text: the ‘text-orientation’ property
+		 *      (http://www.w3.org/TR/css-writing-modes-3/#text-orientation)
 		 * @see "SVG 1.1 (Second Edition), 10.7.3 Glyph orientation within a text run"
 		 *      (http://www.w3.org/TR/SVG/text.html#GlyphOrientation)
 		 */
 		enum TextOrientation {
-			MIXED_RIGHT, UPRIGHT, SIDEWAYS_RIGHT, SIDEWAYS_LEFT, SIDEWAYS, USE_GLYPH_ORIENTATION
+			/// In vertical writing modes, characters from horizontal-only scripts are set sideways, i.e. 90° clockwise
+			/// from their standard orientation in horizontal text. 
+			MIXED,
+			/// In vertical writing modes, characters from horizontal-only scripts are rendered upright, i.e. in their
+			/// standard horizontal orientation.
+			UPRIGHT,
+			/// In vertical writing modes, this causes text to be set as if in a horizontal layout, but rotated 90°
+			/// clockwise.
+			SIDEWAYS_RIGHT,
+			/// In vertical writing modes, this causes text to be set as if in a horizontal layout, but rotated 90°
+			/// counter-clockwise.
+			SIDEWAYS_LEFT,
+			/// This value is equivalent to ‘sideways-right’ in ‘vertical-rl’ writing mode and equivalent to
+			/// ‘sideways-left’ in ‘vertical-lr’ writing mode.
+			SIDEWAYS,
+			/// [SVG11] defines ‘glyph-orientation-vertical’ and ‘glyph-orientation-horizontal’ properties that were
+			/// intended to control text orientation. These properties are <em>deprecated</em> and do not apply to
+			/// non-SVG elements.
+			USE_GLYPH_ORIENTATION
 		};
 
 		/**
 		 * @c WritingMode.
-		 * @see "CSS Writing Modes Module Level 3" (http://www.w3.org/TR/css3-writing-modes/)
+		 * @see CSS Writing Modes Level 3 (http://www.w3.org/TR/css-writing-modes-3/)
 		 * @see "SVG 1.1 (Second Edition), 10.7 Text layout"
 		 *      (http://www.w3.org/TR/SVG/text.html#TextLayout)
 		 * @see "XSL 1.1, 7.29 Writing-mode-related Properties"
@@ -122,7 +142,7 @@ namespace ascension {
 			explicit WritingMode(
 				ReadingDirection inlineFlowDirection = LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
 				BlockFlowDirection blockFlowDirection = HORIZONTAL_TB,
-				TextOrientation textOrientation = MIXED_RIGHT) BOOST_NOEXCEPT :
+				TextOrientation textOrientation = MIXED) BOOST_NOEXCEPT :
 				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection),
 				textOrientation(textOrientation) {}
 			/// Equality operator.
@@ -157,7 +177,7 @@ namespace ascension {
 					else
 						return SIDEWAYS;
 				case USE_GLYPH_ORIENTATION:
-					return MIXED_RIGHT;
+					return MIXED;
 				default:
 					return writingMode.textOrientation;
 			}
