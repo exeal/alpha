@@ -369,6 +369,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-metrics.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\line-layout-vector.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\number-substitution.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-alignment.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-hit.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout-styles.hpp" />
@@ -396,7 +397,19 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\style-property.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\auxiliary.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\background.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\box.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\color.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\fonts.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\inline.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\text-decor.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\text.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\writing-modes.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-line-style.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-run-style.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\text-style.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-toplevel-style.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode-mappings.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp" />
