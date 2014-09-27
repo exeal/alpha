@@ -31,10 +31,12 @@ namespace ascension {
 	}
 
 	namespace presentation {
-		// TODO: these value are changed later.
-		const Length Border::THIN(0.05f, Length::EM_HEIGHT);
-		const Length Border::MEDIUM(0.10f, Length::EM_HEIGHT);
-		const Length Border::THICK(0.20f, Length::EM_HEIGHT);
+		namespace styles {
+			// TODO: these value are changed later.
+			const Length Border::THIN(0.05f, Length::EM_HEIGHT);
+			const Length Border::MEDIUM(0.10f, Length::EM_HEIGHT);
+			const Length Border::THICK(0.20f, Length::EM_HEIGHT);
+		}
 
 		/**
 		 * @param base The base style
@@ -202,6 +204,18 @@ namespace ascension {
 			resolveProperty(&TextLineStyle::numberSubstitutionMethod, *defaultStyle, precomputed);
 		
 			result.writingMode = WritingMode(precomputed.direction.getOrInitial(), toplevel.writingMode.getOrInitial(), precomputed.textOrientation.getOrInitial());
+			{
+				std::shared_ptr<const TextRunStyle> defaultRunStyle(precomputed.defaultRunStyle);
+				if(defaultRunStyle.get() == nullptr)
+					defaultRunStyle = defaultTextRunStyle(*defaultStyle);
+				assert(defaultRunStyle.get() != nullptr);
+				result.nominalFont.families = defaultRunStyle->fontFamily.getOrInitial();
+				result.nominalFont.properties.weight = defaultRunStyle->fontWeight.getOrInitial();
+				result.nominalFont.properties.stretch = defaultRunStyle->fontStretch.getOrInitial();
+				result.nominalFont.properties.style = defaultRunStyle->fontStyle.getOrInitial();
+				result.nominalFont.pointSize = defaultRunStyle->fontSize.getOrInitial();
+				result.nominalFont.sizeAdjust = defaultRunStyle->fontSizeAdjust.getOrInitial();
+			}
 			result.lineBoxContain = precomputed.lineBoxContain.getOrInitial();
 			result.whiteSpace = precomputed.whiteSpace.getOrInitial();
 			precomputed.tabSize.getOrInitial();
