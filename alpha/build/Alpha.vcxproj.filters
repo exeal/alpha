@@ -114,6 +114,9 @@
     <Filter Include="ascension\Header Files\presentation\styles">
       <UniqueIdentifier>{59d0696a-79f4-42c8-b8ca-a6a29e6bda95}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Source Files\presentation">
+      <UniqueIdentifier>{7293e282-7b3c-4594-a2ec-f839519329cf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -259,9 +262,6 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ascension\src\presentation.cpp">
-      <Filter>ascension\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\text-editor\session.cpp">
       <Filter>ascension\Source Files\text-editor</Filter>
@@ -436,6 +436,9 @@
     </ClCompile>
     <ClCompile Include="..\src\editor-panes.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\presentation\presentation.cpp">
+      <Filter>ascension\Source Files\presentation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
