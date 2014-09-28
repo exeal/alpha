@@ -88,8 +88,8 @@ namespace ascension {
 			inline std::size_t hash_value(const NumberSubstitution& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
 				boost::hash_combine(seed, object.localeOverride);
-				boost::hash_combine(seed, object.localeSource);
-				boost::hash_combine(seed, object.method);
+				boost::hash_combine<int>(seed, boost::native_value(object.localeSource));
+				boost::hash_combine<int>(seed, boost::native_value(object.method));
 				return seed;
 			}
 		}
