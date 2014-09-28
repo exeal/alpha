@@ -11,14 +11,18 @@
 
 #ifndef ASCENSION_TEXT_LINE_STYLE_HPP
 #define ASCENSION_TEXT_LINE_STYLE_HPP
+#ifndef FUSION_MAX_VECTOR_SIZE
+#	define FUSION_MAX_VECTOR_SIZE 30
+#endif
 
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
+#include <ascension/corelib/memory.hpp>
 #include <ascension/presentation/styles/auxiliary.hpp>
 #include <ascension/presentation/styles/box.hpp>
 #include <ascension/presentation/styles/inline.hpp>
 #include <ascension/presentation/styles/text.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
-#include <boost/fusion/adapted/mpl.hpp>
+#include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
 #include <boost/mpl/placeholders.hpp>
 #include <boost/mpl/transform.hpp>
@@ -72,10 +76,14 @@ namespace ascension {
 
 		std::shared_ptr<const DeclaredTextRunStyle> defaultTextRunStyle(const DeclaredTextLineStyle& lineStyle);
 
-		typedef boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type SpecifiedTextLineStyle;
-		typedef boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type ComputedTextLineStyle;
+		typedef boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
+		>::type SpecifiedTextLineStyle;
+		typedef boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type
+		>::type ComputedTextLineStyle;
 
-		void computedValuesFromSpecifiedValues(const SpecifiedTextLineStyle& specifiedValues, ComputedTextLineStyle& computedValues);
+		void computeTextLineStyle(const SpecifiedTextLineStyle& specifiedValues, ComputedTextLineStyle& computedValues);
 	}
 } // namespace ascension.presentation
 

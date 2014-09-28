@@ -215,6 +215,7 @@
     <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\length.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\presentation.cpp" />
+    <ClCompile Include="..\..\ascension\src\presentation\text-line-style.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\lexical-partitioning.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\scanner.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp" />
