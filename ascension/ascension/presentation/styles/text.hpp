@@ -113,8 +113,13 @@ namespace ascension {
 				Multiple<
 					boost::variant<unsigned int, Length>,
 					unsigned int, 8
-				>, Inherited<true>
+				>,
+				Inherited<true>,
+				boost::variant<unsigned int, graphics::Scalar>
 			> TabSize;
+
+			static_assert(!std::is_same<unsigned int, graphics::Scalar>::value,
+				"TabSize expects that unsigned int and graphics.Scalar are different types.");
 
 			/// Enumerated values for @c LineBreak. The documentation of the members are copied from CSS 3.
 			ASCENSION_SCOPED_ENUMS_BEGIN(LineBreakEnums)

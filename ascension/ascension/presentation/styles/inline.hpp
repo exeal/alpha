@@ -81,7 +81,9 @@ namespace ascension {
 				Multiple<
 					boost::variant<LineHeightEnums, graphics::Scalar, Length>,
 					LineHeightEnums, LineHeightEnums::NORMAL
-				>, Inherited<true>
+				>,
+				Inherited<true>,
+				boost::optional<graphics::Scalar>
 			> LineHeight;
 
 			/// @see graphics#font#LineBoxContain
