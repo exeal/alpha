@@ -23,9 +23,7 @@ namespace ascension {
 		/**
 		 * [Copied from CSS3] Lengthes refer to distance measurements.
 		 * @see CSS Values and Units Module Level 3, 5. Distance Units: the ‘<length>’ type
-		 *      (http://www.w3.org/TR/2012/CR-css3-values-20120828/#lengths)
-		 * @see CSS Values and Units Module Level 3, Percentages: the ‘<percentage>’ type
-		 *      (http://www.w3.org/TR/2012/CR-css3-values-20120828/#percentages)
+		 *      (http://www.w3.org/TR/css3-values/#lengths)
 		 * @see 4.2 Basic data types - SVG (Second Edition)
 		 *      (http://www.w3.org/TR/SVG/types.html#DataTypeLength)
 		 * @see 4.5.11 Interface SVGLength - SVG (Second Edition)
@@ -37,63 +35,87 @@ namespace ascension {
 
 			/// Units in this class.
 			enum Unit {
-				/// [Copied from SVG 1.1] The unit type is not one of predefined unit types.
+				/**
+				 * @name SVG 1.1
+				 * @note The description of values are copied from SVG11.
+				 * @{
+				 */
+				/// The unit type is not one of predefined unit types.
 				/// @note Ascension does not support this value at all.
-				UNKNOWN,
-				/// [Copied from SVG 1.1] No unit type was provided (i.e., a unitless value was
-				/// specified), which indicates a value in user units.
+				UNKNOWN = 0x00,
+				/// No unit type was provided (i.e., a unitless value was specified), which indicates a value in user
+				/// units.
 				/// @note Ascension does not support this value at all.
-				NUMBER,
+				NUMBER = 0x01,
+				/// @}
 
-				/// @name Relative Length Units
-				/// @{
-
-				/// [Copied from CSS3] Equal to the computed value of the ‘font-size’ property of
-				/// the element on which it is used.
-				EM_HEIGHT,
-				/// [Copied from CSS3] Equal to the font's x-height.
+				/**
+				 * @name Relative Length Units
+				 * @note The description of values are copied from CSS3.
+				 * @see CSS Values and Units Module Level 3, 5.1. Relative lengths
+				 *      (http://www.w3.org/TR/css3-values/#relative-lengths)
+				 * @{
+				 */
+				/// Equal to the computed value of the ‘font-size’ property of the element on which it is used.
+				EM_HEIGHT = 0x10,
+				/// Equal to the font's x-height.
 				X_HEIGHT,
-				/// [Copied from CSS3] Equal to the advance measure of the "0" (ZERO, U+0030) glyph
-				/// found in the font used to render it.
+				/// Equal to the advance measure of the "0" (ZERO, U+0030) glyph found in the font used to render it.
 				/// @note The average character width is used by Ascension if not found.
 				CHARACTERS,
-				/// [Copied from CSS3] Equal to the computed value of ‘font-size’ on the root
-				/// element.
+				/// Equal to the computed value of ‘font-size’ on the root element.
 				/// @note Refers to the global primary font in Ascension.
 				ROOT_EM_HEIGHT,
-				/// [Copied from CSS3] Equal to 1% of the width of the initial containing block.
+				/// Equal to 1% of the width of the initial containing block.
 				VIEWPORT_WIDTH,
-				/// [Copied from CSS3] Equal to 1% of the height of the initial containing block.
+				/// Equal to 1% of the height of the initial containing block.
 				VIEWPORT_HEIGHT,
-				/// [Copied from CSS3] Equal to the smaller of ‘vw’ or ‘vh’.
+				/// Equal to the smaller of ‘vw’ or ‘vh’.
 				VIEWPORT_MINIMUM,
-				/// [Copied from CSS3] Equal to the larger of ‘vw’ or ‘vh’.
+				/// Equal to the larger of ‘vw’ or ‘vh’.
 				VIEWPORT_MAXIMUM,
 //				GRIDS,			///< The grid.
 				/// @}
 
-				/// @name Absolute Length Units
-				/// @{
-
-				/// [Copied from CSS3] Centimeters.
-				CENTIMETERS,
-				/// [Copied from CSS3] Millimeters.
+				/**
+				 * @name Absolute Length Units
+				 * @note The description of values are copied from CSS3.
+				 * @see CSS Values and Units Module Level 3, 5.2. Absolute lengths: the ‘cm’, ‘mm’, ‘in’, ‘pt’, ‘pc’,
+				 *      ‘px’ units (http://www.w3.org/TR/css3-values/#absolute-lengths)
+				 * @{
+				 */
+				/// Centimeters.
+				CENTIMETERS = 0x20,
+				/// Millimeters.
 				MILLIMETERS,
-				/// [Copied from CSS3] Inches; 1 in is equal to 2.54 cm.
+				/// Inches; 1 in is equal to 2.54 cm.
 				INCHES,
-				/// [Copied from CSS3] Pixels; 1 px is equal to 1 / 96th of 1 in.
+				/// Pixels; 1 px is equal to 1 / 96th of 1 in.
 				/// @note <strong>Relative</strong> to the viewing device in Ascension.
 				PIXELS,
-				/// [Copied from CSS3] Points; 1 pt is equal to 1 / 72nd of 1 in.
+				/// Points; 1 pt is equal to 1 / 72nd of 1 in.
 				POINTS,
-				/// [Copied from CSS3] Picas; 1 pc is equal to 12 pt.
+				/// Picas; 1 pc is equal to 12 pt.
 				PICAS,
 				/// @}
 
-				// used in DirectWrite
+				/**
+				 * @name DirectWrite
+				 * @see DIP and Device-Independent Pixels (Windows)
+				 *      (http://msdn.microsoft.com/en-us/library/windows/desktop/ff684173.aspx)
+				 * @{
+				 */
 				DEVICE_INDEPENDENT_PIXELS, ///< Device independent pixels; 1 DIP is equal to 1 / 96th of 1 in.
-				// percentages (exactly not a length)
-				PERCENTAGE,		///< Percentage.
+				/// @}
+
+				/**
+				 * @name Percentages (exactly not a length)
+				 * @see CSS Values and Units Module Level 3, 4.3. Percentages: the ‘<percentage>’ type
+				 *      (http://www.w3.org/TR/css3-values/#percentages)
+				 * @{
+				 */
+				PERCENTAGE,	///< Percentage.
+				/// @}
 #if 0
 				// abbreviations
 				EM = EM_HEIGHT,
@@ -154,7 +176,7 @@ namespace ascension {
 			static bool isValidUnit(Unit unit) BOOST_NOEXCEPT;
 
 		private:
-			graphics::Scalar valueInSpecifiedUnits_;
+			graphics::Scalar valueInSpecifiedUnits_;std::ratio
 			Unit unit_;
 			Mode mode_;
 			///
@@ -168,21 +190,19 @@ namespace ascension {
 		}
 
 		/**
-		 * [Copied from SVG 1.1 documentation] Preserves the same underlying stored value, but
-		 * resets the stored unit identifier to the given @a unitType. Object attributes
-		 * @c #unitType(), @c #valueInSpecifiedUnits() and @c #valueAsString() might be modified as
-		 * a result of this method. For example, if the original value were "0.5cm" and the method
-		 * was invoked to convert to millimeters, then the unitType would be changed to
-		 * @c #MILIMIETERS, @c #valueInSpecifiedUnits() would be changed to the numeric value 5 and
-		 * @c #valueAsString() would be changed to "5mm".
+		 * [Copied from SVG 1.1 documentation] Preserves the same underlying stored value, but resets the stored unit
+		 * identifier to the given @a unitType. Object attributes @c #unitType(), @c #valueInSpecifiedUnits() and
+		 * @c #valueAsString() might be modified as a result of this method. For example, if the original value were
+		 * "0.5cm" and the method was invoked to convert to millimeters, then the unitType would be changed to
+		 * @c #MILIMIETERS, @c #valueInSpecifiedUnits() would be changed to the numeric value 5 and @c #valueAsString()
+		 * would be changed to "5mm".
 		 * @param unitType The unit type to switch to
-		 * @param context The rendering context used to resolve relative value. Can be @c null if both
-		 *                @c #unitType() and @a unitType are absolute
+		 * @param context The rendering context used to resolve relative value. Can be @c null if both @c #unitType()
+		 *                and @a unitType are absolute
 		 * @param contextSize The size used to resolve percentage value. Can be @c null
-		 * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other
-		 *                          @c #Unit constants defined on this class)
-		 * @throw NullPointerException @a context is @c null although @c #unitType() and/or
-		 *                             @a unitType is relative
+		 * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other @c #Unit constants
+		 *                          defined on this class)
+		 * @throw NullPointerException @a context is @c null although @c #unitType() and/or @a unitType is relative
 		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__convertToSpecifiedUnits
 		 */
 		inline void Length::convertToSpecifiedUnits(Unit unitType, const Context& context) {
@@ -197,8 +217,8 @@ namespace ascension {
 		}
 
 		/**
-		 * [Copied from SVG 1.1 documentation] Resets the value as a number with an associated
-		 * @a unitType, thereby replacing the values for all of the attributes on the object.
+		 * [Copied from SVG 1.1 documentation] Resets the value as a number with an associated @a unitType, thereby
+		 * replacing the values for all of the attributes on the object.
 		 * @param unitType The unit type for the value
 		 * @param valueInSpecifiedUnits The new value
 		 * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other
@@ -213,9 +233,9 @@ namespace ascension {
 		}
 
 		/**
-		 * [Copied from SVG 1.1 documentation] Sets the value as a floating point value, in the
-		 * units expressed by @c #unitType(). Setting this attribute will cause @c #value() and
-		 * @c #valueAsString() to be updated automatically to reflect this setting.
+		 * [Copied from SVG 1.1 documentation] Sets the value as a floating point value, in the units expressed by
+		 * @c #unitType(). Setting this attribute will cause @c #value() and @c #valueAsString() to be updated
+		 * automatically to reflect this setting.
 		 * @param value The new value
 		 * @see #valueInSpecifiedUnits
 		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__valueInSpecifiedUnits
@@ -225,8 +245,8 @@ namespace ascension {
 		}
 
 		/**
-		 * [Copied from SVG 1.1 documentation] Returns the type of the value by one of the @c #Unit
-		 * constants defined on this class.
+		 * [Copied from SVG 1.1 documentation] Returns the type of the value by one of the @c #Unit constants defined
+		 * on this class.
 		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__unitType
 		 */
 		inline Length::Unit Length::unitType() const BOOST_NOEXCEPT {
@@ -234,15 +254,14 @@ namespace ascension {
 		}
 
 		/**
-		 * [Copied from SVG 1.1 documentation] Returns the value as a floating point value, in the
-		 * units expressed by @c #unitType().
+		 * [Copied from SVG 1.1 documentation] Returns the value as a floating point value, in the units expressed by
+		 * @c #unitType().
 		 * @see #setValueInSpecifiedUnits
 		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__valueInSpecifiedUnits
 		 */
 		inline graphics::Scalar Length::valueInSpecifiedUnits() const BOOST_NOEXCEPT {
 			return valueInSpecifiedUnits_;
 		}
-
 	}
 } // namespace ascension.presentation
 
