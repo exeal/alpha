@@ -85,8 +85,8 @@ namespace ascension {
 				BasicRectangle(const Origin& origin, const BasicDimension<SizeCoordinate>& size,
 						typename detail::EnableIfTagIs<Origin, boost::geometry::point_tag>::type* = nullptr)
 					: BasicRectangleBase<Coordinate>((
-						_left = x(origin), _top = y(origin),
-						_right = x(origin) + dx(size), _bottom = y(origin) + dy(size))) {}
+						_left = boost::geometry::get<0>(origin), _top = boost::geometry::get<1>(origin),
+						_right = boost::geometry::get<0>(origin) + dx(size), _bottom = boost::geometry::get<1>(origin) + dy(size))) {}
 				/// Constructor creates a rectangle described by the two ranges in x and y-coordinates.
 				template<typename ScalarType>
 				BasicRectangle(const boost::integer_range<ScalarType>& xrange, const boost::integer_range<ScalarType>& yrange)
