@@ -58,13 +58,14 @@ namespace ascension {
 				/// Default constructor does not initialize anything.
 				BasicPoint() {}
 				/// Copy-constructor.
-				BasicPoint(const BasicPoint& other) : BasicPointBase<Coordinate>((_x = x(other), _y = y(other))) {}
+				BasicPoint(const BasicPoint& other) : BasicPointBase<Coordinate>((_x = other.x_, _y = other.y_)) {}
 				/// Copy-constructor for different template parameter.
 				template<typename U>
-				BasicPoint(const BasicPoint<U>& other) : BasicPointBase<Coordinate>((_x = x(other), _y = y(other))) {}
+				BasicPoint(const BasicPoint<U>& other) : BasicPointBase<Coordinate>((_x = other.x_, _y = other.y_)) {}
 				/// Copy-constructor for different point type.
 				template<typename Other>
-				BasicPoint(const Other& other) : BasicPointBase<Coordinate>((_x = x(other), _y = y(other))) {}
+				BasicPoint(const Other& other, typename detail::EnableIfTagIs<Other, boost::geometry::point_tag>::type* = nullptr)
+					: BasicPointBase<Coordinate>((_x = boost::geometry::get<0>(other), _y = boost::geometry::get<1>(other))) {}
 				BOOST_PARAMETER_CONSTRUCTOR(
 					BasicPoint, (BasicPointBase<Coordinate>), tag,
 					(required
