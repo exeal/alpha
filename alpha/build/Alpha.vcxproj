@@ -394,6 +394,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\absolute-length.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\length.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />

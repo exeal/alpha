@@ -7,8 +7,9 @@
 
 #include <ascension/corelib/basic-exceptions.hpp>	// NullPointerException
 #include <ascension/graphics/rendering-context.hpp>
-#include <ascension/graphics/rendering-device.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/geometry/algorithm.hpp>
+#include <ascension/presentation/absolute-length.hpp>
 #include <ascension/presentation/length.hpp>
 
 
@@ -17,12 +18,24 @@ namespace ascension {
 		namespace {
 			inline graphics::Scalar pixelsPerInch(const graphics::RenderingContext2D* graphics2D, Length::Mode mode) {
 #if 1
+				return static_cast<graphics::Scalar>(Inches::Scale::num) / Inches::Scale::den;
+#elif 0
 				return (mode != Length::HEIGHT) ? graphics::defaultDpiX() : graphics::defaultDpiY();
 #else
 				if(graphics2D == nullptr)
 					throw NullPointerException("context.graphics2D");
 				return (mode != Length::HEIGHT) ? graphics2D->logicalDpiX() : graphics2D->logicalDpiY();
 #endif
+			}
+
+			template<typename AbsoluteLengthType>
+			inline BOOST_CONSTEXPR graphics::Scalar fromPixels(graphics::Scalar pixels, const graphics::RenderingContext2D*, Length::Mode) BOOST_NOEXCEPT {
+				return pixels / AbsoluteLengthType::Scale::num * AbsoluteLengthType::Scale::den;
+			}
+
+			template<typename AbsoluteLengthType>
+			inline BOOST_CONSTEXPR graphics::Scalar toPixels(graphics::Scalar length, const graphics::RenderingContext2D*, Length::Mode) BOOST_NOEXCEPT {
+				return length * AbsoluteLengthType::Scale::num / AbsoluteLengthType::Scale::den;
 			}
 		}
 
@@ -31,8 +44,8 @@ namespace ascension {
 		 * @param valueInSpecifiedUnits The initial value
 		 * @param unitType The initial unit type for the value
 		 * @param mode The initial mode
-		 * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other
-		 *                          @c #Unit constants defined on this class)
+		 * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other @c #Unit constants
+		 *                          defined on this class)
 		 */
 		Length::Length(graphics::Scalar valueInSpecifiedUnits /* = 0.0 */, Unit unitType /* = PIXELS */, Mode mode /* = OTHER */) : mode_(mode) {
 			newValueSpecifiedUnits(unitType, valueInSpecifiedUnits);	// may throw NotSupportedError
@@ -66,8 +79,8 @@ namespace ascension {
 						throw NullPointerException("context.graphics2D");
 					valueInSpecifiedUnits_ = value / context.graphics2D->fontMetrics()->averageCharacterWidth();
 					break;
-		//		case GRIDS:
-		//		case ROOT_EM_HEIGHT:
+//				case GRIDS:
+//				case ROOT_EM_HEIGHT:
 				case VIEWPORT_WIDTH:
 					if(context.viewport == nullptr)
 						throw NullPointerException("context.viewport");
@@ -89,25 +102,25 @@ namespace ascension {
 					valueInSpecifiedUnits_ = value / std::max(graphics::geometry::dx(*context.viewport), graphics::geometry::dy(*context.viewport));
 					break;
 				case CENTIMETERS:
-					valueInSpecifiedUnits_ = value / pixelsPerInch(context.graphics2D, mode_) * 2.54f;
+					valueInSpecifiedUnits_ = fromPixels<Centimeters>(value, context.graphics2D, mode_);
 					break;
 				case MILLIMETERS:
-					valueInSpecifiedUnits_ = value / pixelsPerInch(context.graphics2D, mode_) * 25.4f;
+					valueInSpecifiedUnits_ = fromPixels<Millimeters>(value, context.graphics2D, mode_);
 					break;
 				case INCHES:
-					valueInSpecifiedUnits_ = value / pixelsPerInch(context.graphics2D, mode_);
+					valueInSpecifiedUnits_ = fromPixels<Inches>(value, context.graphics2D, mode_);
 					break;
 				case PIXELS:
-					valueInSpecifiedUnits_ = value;
+					valueInSpecifiedUnits_ = fromPixels<Pixels>(value, context.graphics2D, mode_);
 					break;
 				case POINTS:
-					valueInSpecifiedUnits_ = value / pixelsPerInch(context.graphics2D, mode_) * 72;
+					valueInSpecifiedUnits_ = fromPixels<Points>(value, context.graphics2D, mode_);
 					break;
 				case PICAS:
-					valueInSpecifiedUnits_ = value / pixelsPerInch(context.graphics2D, mode_) * 72 / 12;
+					valueInSpecifiedUnits_ = fromPixels<Picas>(value, context.graphics2D, mode_);
 					break;
 				case DEVICE_INDEPENDENT_PIXELS:
-					valueInSpecifiedUnits_ = value / pixelsPerInch(context.graphics2D, mode_) * 96;
+					valueInSpecifiedUnits_ = fromPixels<DeviceIndependentPixels>(value, context.graphics2D, mode_);
 					break;
 				case PERCENTAGE:
 					if(context.viewport == nullptr)
@@ -167,19 +180,19 @@ namespace ascension {
 						throw NullPointerException("context.viewport");
 					return valueInSpecifiedUnits() * std::max(graphics::geometry::dx(*context.viewport), graphics::geometry::dy(*context.viewport));
 				case CENTIMETERS:
-					return valueInSpecifiedUnits() * pixelsPerInch(context.graphics2D, mode_) / 2.54f;
+					return toPixels<Centimeters>(valueInSpecifiedUnits(), context.graphics2D, mode_);
 				case MILLIMETERS:
-					return valueInSpecifiedUnits() * pixelsPerInch(context.graphics2D, mode_) / 25.4f;
+					return toPixels<Millimeters>(valueInSpecifiedUnits(), context.graphics2D, mode_);
 				case INCHES:
-					return valueInSpecifiedUnits() * pixelsPerInch(context.graphics2D, mode_);
+					return toPixels<Inches>(valueInSpecifiedUnits(), context.graphics2D, mode_);
 				case PIXELS:
-					return valueInSpecifiedUnits();
+					return toPixels<Pixels>(valueInSpecifiedUnits(), context.graphics2D, mode_);
 				case POINTS:
-					return valueInSpecifiedUnits() * pixelsPerInch(context.graphics2D, mode_) / 72;
+					return toPixels<Points>(valueInSpecifiedUnits(), context.graphics2D, mode_);
 				case PICAS:
-					return valueInSpecifiedUnits() * pixelsPerInch(context.graphics2D, mode_) / 72 * 12;
+					return toPixels<Picas>(valueInSpecifiedUnits(), context.graphics2D, mode_);
 				case DEVICE_INDEPENDENT_PIXELS:
-					return valueInSpecifiedUnits() * pixelsPerInch(context.graphics2D, mode_) / 96;
+					return toPixels<DeviceIndependentPixels>(valueInSpecifiedUnits(), context.graphics2D, mode_);
 				case PERCENTAGE: {
 					if(context.viewport == nullptr)
 						throw NullPointerException("context.viewport");
