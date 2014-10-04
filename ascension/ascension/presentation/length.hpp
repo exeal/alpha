@@ -176,7 +176,7 @@ namespace ascension {
 			static bool isValidUnit(Unit unit) BOOST_NOEXCEPT;
 
 		private:
-			graphics::Scalar valueInSpecifiedUnits_;std::ratio
+			graphics::Scalar valueInSpecifiedUnits_;
 			Unit unit_;
 			Mode mode_;
 			///

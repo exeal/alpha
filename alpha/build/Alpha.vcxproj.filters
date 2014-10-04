@@ -970,6 +970,9 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\text-run-style.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\absolute-length.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
