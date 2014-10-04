@@ -10,13 +10,15 @@
 #include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/graphics/color.hpp>
+#include <ascension/graphics/font/font.hpp>
+#include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/geometry/affine-transform.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/geometry/rectangle.hpp>
 #include <ascension/graphics/object.hpp>
-#include <ascension/presentation/text-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
 #include <memory>
+#include <boost/geometry/algorithms/make.hpp>	// boost.geometry.make_zero
 #include <boost/optional.hpp>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <cairomm/context.h>
@@ -90,11 +92,11 @@ namespace ascension {
 		ASCENSION_SCOPED_ENUMS_END
 
 		ASCENSION_SCOPED_ENUMS_BEGIN(TextAlignment)
-			START = presentation::TextAlignment::START,
-			END = presentation::TextAlignment::END,
-			LEFT = presentation::TextAlignment::LEFT,
-			RIGHT = presentation::TextAlignment::RIGHT,
-			CENTER = presentation::TextAlignment::CENTER
+			START = font::TextAlignment::START,
+			END = font::TextAlignment::END,
+			LEFT = font::TextAlignment::LEFT,
+			RIGHT = font::TextAlignment::RIGHT,
+			CENTER = font::TextAlignment::CENTER
 		ASCENSION_SCOPED_ENUMS_END
 
 		class ImageData : private boost::noncopyable {
@@ -679,7 +681,7 @@ namespace ascension {
 			 * @return The current baseline alignment settings
 			 * @see #setTextBaseline, #textAlignment
 			 */
-			presentation::AlignmentBaseline textBaseline() const;
+			font::AlignmentBaseline textBaseline() const;
 			/**
 			 * Sets the baseline alignment settings.
 			 * @param textAlignment The new baseline alignment settings
@@ -687,7 +689,7 @@ namespace ascension {
 			 * @throw UnknownValueException
 			 * @see #setTextAlignment, #textBaseline
 			 */
-			RenderingContext2D& setTextBaseline(presentation::AlignmentBaseline baseline);
+			RenderingContext2D& setTextBaseline(font::AlignmentBaseline baseline);
 			/// @}
 
 			/// @name Shared Path API Methods (CanvasPathMethods Interface)
