@@ -35,7 +35,10 @@ namespace ascension {
 			public:
 				typedef std::invalid_argument NotSupportedError;
 
-				/// Units in this class.
+				/**
+				 * Units in this class.
+				 * @note Values are not same as @c SVGLength interface in SVG 1.1.
+				 */
 				enum Unit {
 					/**
 					 * @name SVG 1.1
@@ -44,11 +47,11 @@ namespace ascension {
 					 */
 					/// The unit type is not one of predefined unit types.
 					/// @note Ascension does not support this value at all.
-					UNKNOWN = 0x00,
+					UNKNOWN,
 					/// No unit type was provided (i.e., a unitless value was specified), which indicates a value in
 					/// user units.
 					/// @note Ascension does not support this value at all. Use @c Number.
-					NUMBER = 0x01,
+					NUMBER,
 					/// @}
 
 					/**
@@ -59,7 +62,7 @@ namespace ascension {
 					 * @{
 					 */
 					/// Equal to the computed value of the ‘font-size’ property of the element on which it is used.
-					EM_HEIGHT = 0x10,
+					EM_HEIGHT,
 					/// Equal to the font's x-height.
 					X_HEIGHT,
 					/// Equal to the advance measure of the "0" (ZERO, U+0030) glyph found in the font used to render
@@ -85,10 +88,11 @@ namespace ascension {
 					 * @note The description of values are copied from CSS3.
 					 * @see CSS Values and Units Module Level 3, 5.2. Absolute lengths: the ‘cm’, ‘mm’, ‘in’, ‘pt’,
 					 *      ‘pc’, ‘px’ units (http://www.w3.org/TR/css3-values/#absolute-lengths)
+					 * @see AbsoluteLength, absolute-length.hpp
 					 * @{
 					 */
 					/// Centimeters.
-					CENTIMETERS = 0x20,
+					CENTIMETERS,
 					/// Millimeters.
 					MILLIMETERS,
 					/// Inches; 1 in is equal to 2.54 cm.
@@ -106,11 +110,12 @@ namespace ascension {
 					 * @name DirectWrite
 					 * @see DIP and Device-Independent Pixels (Windows)
 					 *      (http://msdn.microsoft.com/en-us/library/windows/desktop/ff684173.aspx)
+					 * @note Ascension treats these units as absolute.
 					 * @{
 					 */
 					DEVICE_INDEPENDENT_PIXELS, ///< Device independent pixels; 1 DIP is equal to 1 / 96th of 1 in.
 					/// @}
-
+#if 0
 					/**
 					 * @name Percentages (exactly not a length)
 					 * @see CSS Values and Units Module Level 3, 4.3. Percentages: the ‘<percentage>’ type
@@ -119,6 +124,7 @@ namespace ascension {
 					 */
 					PERCENTAGE,	///< Percentage.
 					/// @}
+#endif
 #if 0
 					// abbreviations
 					EM = EM_HEIGHT,
@@ -216,7 +222,7 @@ namespace ascension {
 
 			/// Returns @c true if the specified @c #Unit value is valid.
 			inline bool Length::isValidUnit(Length::Unit unit) BOOST_NOEXCEPT {
-				return unit >= EM_HEIGHT && unit <= PERCENTAGE;
+				return unit >= EM_HEIGHT && unit <= DEVICE_INDEPENDENT_PIXELS;
 			}
 
 			/**
