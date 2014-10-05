@@ -12,8 +12,9 @@
 #define ASCENSION_STYLES_BOX_HPP
 
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
-#include <ascension/presentation/length.hpp>
+#include <ascension/presentation/absolute-length.hpp>
 #include <ascension/presentation/style-property.hpp>
+#include <ascension/presentation/styles/length.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/variant.hpp>
 
@@ -38,7 +39,9 @@ namespace ascension {
 				Multiple<
 					boost::variant<PaddingEnums, Length>,
 					Length, 0
-				>, Inherited<false>
+				>,
+				Inherited<false>,
+				boost::variant<float, boost::optional<Pixels>>	// boost.none means 'auto' keyword
 			> PaddingSide;
 
 			/// Enumerated values for @c MarginSide.
@@ -59,7 +62,9 @@ namespace ascension {
 				Multiple<
 					boost::variant<MarginEnums, Length>,
 					Length, 0
-				>, Inherited<false>
+				>,
+				Inherited<false>,
+				boost::variant<float, boost::optional<Pixels>>	// boost.none means 'auto' keyword
 			> MarginSide;
 
 			/**
@@ -70,7 +75,9 @@ namespace ascension {
 			typedef StyleProperty<
 				Complex<
 					boost::optional<Length>
-				>, Inherited<false>
+				>,
+				Inherited<false>,
+				boost::optional<Pixels>
 			> Measure;
 			/// @}
 		}

@@ -13,7 +13,7 @@
 #define ASCENSION_STYLE_PROPERTY_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
 #include <ascension/corelib/future/type-traits.hpp>	// detail.Type2Type
-#include <ascension/presentation/length.hpp>
+#include <ascension/presentation/styles/length.hpp>
 #include <boost/mpl/identity.hpp>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>

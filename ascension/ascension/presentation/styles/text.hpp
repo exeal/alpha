@@ -13,8 +13,8 @@
 
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
-#include <ascension/presentation/length.hpp>
 #include <ascension/presentation/style-property.hpp>
+#include <ascension/presentation/styles/length.hpp>
 #include <tuple>
 #include <boost/functional/hash/extensions.hpp>
 #include <boost/functional/hash/hash.hpp>
@@ -111,15 +111,12 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<unsigned int, Length>,
-					unsigned int, 8
+					boost::variant<Integer, Length>,
+					Integer, 8
 				>,
 				Inherited<true>,
-				boost::variant<unsigned int, graphics::Scalar>
+				boost::variant<Integer, Pixels>
 			> TabSize;
-
-			static_assert(!std::is_same<unsigned int, graphics::Scalar>::value,
-				"TabSize expects that unsigned int and graphics.Scalar are different types.");
 
 			/// Enumerated values for @c LineBreak. The documentation of the members are copied from CSS 3.
 			ASCENSION_SCOPED_ENUMS_BEGIN(LineBreakEnums)
@@ -373,8 +370,9 @@ namespace ascension {
 			 */
 #if 1
 			typedef StyleProperty<
-				Complex<boost::optional<Length>>,
-				Inherited<true>
+				Complex<boost::optional<Length>>,	// boost.none means 'normal' keyword
+				Inherited<true>,
+				Pixels
 			> WordSpacing;
 #else
 			typedef SpacingLimit<
@@ -396,8 +394,9 @@ namespace ascension {
 			 */
 #if 1
 			typedef StyleProperty<
-				Complex<boost::optional<Length>>,
-				Inherited<true>
+				Complex<boost::optional<Length>>,	// boost.none means 'normal' keyword
+				Inherited<true>,
+				Pixels
 			> LetterSpacing;
 #else
 			typedef SpacingLimit<
@@ -463,7 +462,9 @@ namespace ascension {
 			typedef StyleProperty<
 				Complex<
 					BasicTextIndent<Length, bool>
-				>, Inherited<true>
+				>,
+				Inherited<true>,
+				BasicTextIndent<Pixels, bool>
 			> TextIndent;
 			
 			/// Enumerated values for @c HangingPunctuation. The documentation of the members are copied from CSS 3.

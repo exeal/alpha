@@ -15,8 +15,9 @@
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/font/font-description.hpp>
 #include <ascension/graphics/font/font-family.hpp>
-#include <ascension/presentation/length.hpp>
+#include <ascension/presentation/absolute-length.hpp>
 #include <ascension/presentation/style-property.hpp>
+#include <ascension/presentation/styles/length.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 //#include <map>
 #include <vector>
@@ -92,7 +93,9 @@ namespace ascension {
 				Multiple<
 					boost::variant<AbsoluteFontSize, RelativeFontSize, Length>,
 					AbsoluteFontSize, AbsoluteFontSize::MEDIUM
-				>, Inherited<true>
+				>,
+				Inherited<true>,
+				Pixels
 			> FontSize;
 
 			/**
@@ -114,7 +117,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Complex<
-					boost::optional<graphics::Scalar>
+					boost::optional<Number>
 				>, Inherited<true>
 			> FontSizeAdjust;
 

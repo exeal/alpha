@@ -11,8 +11,9 @@
 #ifndef ASCENSION_STYLES_BACKGROUND_HPP
 #define ASCENSION_STYLES_BACKGROUND_HPP
 
-#include <ascension/presentation/styles/color.hpp>
 #include <ascension/graphics/paint.hpp>	// graphics.Paint
+#include <ascension/presentation/absolute-length.hpp>
+#include <ascension/presentation/styles/color.hpp>
 #include <ascension/presentation/style-property.hpp>
 #include <memory>						// std.unique_ptr
 #include <boost/mpl/identity.hpp>
@@ -131,7 +132,7 @@ namespace ascension {
 					StyleProperty<
 						WidthTypeSpec,
 						Inherited<false>,
-						graphics::Scalar	// in pixels
+						Pixels
 					> width;
 				};
 				FlowRelativeFourSides<Side> sides;
