@@ -123,6 +123,7 @@ namespace ascension {
 					case DEVICE_INDEPENDENT_PIXELS:
 						valueInSpecifiedUnits_ = fromPixels<DeviceIndependentPixels>(value, context.graphics2D, mode_);
 						break;
+#if 0
 					case PERCENTAGE:
 						if(context.viewport == nullptr)
 							throw NullPointerException("context.viewport");
@@ -135,6 +136,7 @@ namespace ascension {
 								graphics::geometry::dx(*context.viewport) * graphics::geometry::dx(*context.viewport)
 								+ graphics::geometry::dy(*context.viewport) * graphics::geometry::dy(*context.viewport)) / 2) * 100;
 						break;
+#endif
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
@@ -194,6 +196,7 @@ namespace ascension {
 						return toPixels<Picas>(valueInSpecifiedUnits(), context.graphics2D, mode_);
 					case DEVICE_INDEPENDENT_PIXELS:
 						return toPixels<DeviceIndependentPixels>(valueInSpecifiedUnits(), context.graphics2D, mode_);
+#if 0
 					case PERCENTAGE: {
 						if(context.viewport == nullptr)
 							throw NullPointerException("context.viewport");
@@ -206,6 +209,7 @@ namespace ascension {
 								graphics::geometry::dx(*context.viewport) * graphics::geometry::dx(*context.viewport)
 								+ graphics::geometry::dy(*context.viewport) * graphics::geometry::dy(*context.viewport)) / 2) / 100;
 					}
+#endif
 				}
 				ASCENSION_ASSERT_NOT_REACHED();
 			}
