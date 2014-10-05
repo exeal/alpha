@@ -65,22 +65,22 @@ namespace ascension {
 
 			/// Compound assignment @c += operator.
 			AbsoluteLength& operator+=(const AbsoluteLength& other) {
-				value_ += other.value();
+				return (value_ += other.value()), *this;
 			}
 
 			/// Compound assignment @c -= operator.
 			AbsoluteLength& operator-=(const AbsoluteLength& other) {
-				value_ -= other.value();
+				return (value_ -= other.value()), *this;
 			}
 
 			/// Compound assignment @c *= operator.
 			AbsoluteLength& operator*=(const Representation& other) {
-				value_ *= other;
+				return (value_ *= other), *this;
 			}
 
 			/// Compound assignment @c /= operator.
 			AbsoluteLength& operator/=(const Representation& other) {
-				value_ /= other;
+				return (value_ /= other), *this;
 			}
 
 			/// Equality operator.
