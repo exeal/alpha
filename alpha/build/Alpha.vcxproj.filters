@@ -278,9 +278,6 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\length.cpp">
-      <Filter>ascension\Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
@@ -441,6 +438,9 @@
       <Filter>ascension\Source Files\presentation</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\presentation\text-line-style.cpp">
+      <Filter>ascension\Source Files\presentation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\presentation\length.cpp">
       <Filter>ascension\Source Files\presentation</Filter>
     </ClCompile>
   </ItemGroup>
@@ -681,9 +681,6 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character-property.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\presentation\length.hpp">
-      <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\ruler.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
@@ -974,6 +971,9 @@
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\numeric-data-types.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\length.hpp">
       <Filter>ascension\Header Files\presentation\styles</Filter>
     </ClInclude>
   </ItemGroup>
