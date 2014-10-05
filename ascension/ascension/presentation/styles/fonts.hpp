@@ -91,7 +91,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<AbsoluteFontSize, RelativeFontSize, Length>,
+					boost::variant<AbsoluteFontSize, RelativeFontSize, Length, Percentage>,
 					AbsoluteFontSize, AbsoluteFontSize::MEDIUM
 				>,
 				Inherited<true>,

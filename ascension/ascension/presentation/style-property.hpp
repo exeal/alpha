@@ -23,7 +23,7 @@ namespace ascension {
 		namespace styles {
 			template<typename T, int _initialValue>	// decltype(_initialValue) should be T...
 			struct Enumerated : public boost::mpl::identity<T> {
-				static type initialValue() {return static_cast<Type>(_initialValue);}
+				static type initialValue() {return static_cast<type>(_initialValue);}
 			};
 
 			template<int _initialValue, Length::Unit initialUnit>
@@ -33,7 +33,7 @@ namespace ascension {
 
 			template<typename T>
 			struct Complex : public boost::mpl::identity<T> {
-				static type initialValue() {return Type();}
+				static type initialValue() {return type();}
 			};
 
 			template<typename Variant, typename InitialType, int _initialValue>	// decltype(_initialValue) should be InitialType...

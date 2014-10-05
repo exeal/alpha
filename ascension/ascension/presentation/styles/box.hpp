@@ -16,6 +16,7 @@
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/styles/length.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/rational.hpp>
 #include <boost/variant.hpp>
 
 namespace ascension {
@@ -37,11 +38,11 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<PaddingEnums, Length>,
+					boost::variant<Length, Percentage, PaddingEnums>,
 					Length, 0
 				>,
 				Inherited<false>,
-				boost::variant<float, boost::optional<Pixels>>	// boost.none means 'auto' keyword
+				boost::variant<Pixels, Percentage, boost::none_t>	// boost.none means 'auto' keyword
 			> PaddingSide;
 
 			/// Enumerated values for @c MarginSide.
@@ -60,11 +61,11 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<MarginEnums, Length>,
+					boost::variant<Length, Percentage, MarginEnums>,
 					Length, 0
 				>,
 				Inherited<false>,
-				boost::variant<float, boost::optional<Pixels>>	// boost.none means 'auto' keyword
+				boost::variant<Pixels, Percentage, boost::none_t>	// boost.none means 'auto' keyword
 			> MarginSide;
 
 			/**
@@ -73,11 +74,12 @@ namespace ascension {
 			 * @see CSS basic box model, 9. The width and height properties (http://dev.w3.org/csswg/css-box/#width)
 			 */
 			typedef StyleProperty<
-				Complex<
-					boost::optional<Length>
+				Multiple<
+					boost::variant<Length, Percentage, boost::none_t>,
+					boost::none_t, 0
 				>,
 				Inherited<false>,
-				boost::optional<Pixels>
+				boost::variant<Pixels, Percentage, boost::none_t>
 			> Measure;
 			/// @}
 		}

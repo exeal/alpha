@@ -1,7 +1,6 @@
 /**
  * @file numeric-data-types.hpp
  * Defines numeric data types in CSS level 3.
- * &lt;percentage&gt; type is not defined by this header file. See length.hpp.
  * @note Precision and ranges of types defined by this header file depend on the compiler and the other systems.
  * @author exeal
  * @date 2014-10-05 Created.
@@ -10,6 +9,8 @@
 
 #ifndef ASCENSION_STYLES_NUMERIC_DATA_TYPES_HPP
 #define ASCENSION_STYLES_NUMERIC_DATA_TYPES_HPP
+
+#include <boost/rational.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -27,6 +28,13 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-values/#numbers)
 			 */
 			typedef float Number;
+
+			/**
+			 * @c Percentage represents &lt;percentage&gt; numeric data type in CSS level 3.
+			 * @see CSS Values and Units Module Level 3, 4.3. Percentages: the Åe<percentage>Åf type
+			 *      (http://www.w3.org/TR/css3-values/#percentages)
+			 */
+			typedef boost::rational<Integer> Percentage;
 		}
 	}
 }
