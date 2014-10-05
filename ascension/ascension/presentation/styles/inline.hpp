@@ -14,8 +14,8 @@
 
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
-#include <ascension/presentation/length.hpp>
 #include <ascension/presentation/style-property.hpp>
+#include <ascension/presentation/styles/length.hpp>
 #include <boost/variant.hpp>
 
 namespace ascension {
@@ -51,7 +51,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<TextHeightEnums, graphics::Scalar>,
+					boost::variant<TextHeightEnums, Number>,
 					TextHeightEnums, TextHeightEnums::AUTO
 				>, Inherited<true>
 			> TextHeight;
@@ -79,11 +79,16 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<LineHeightEnums, graphics::Scalar, Length>,
+					boost::variant<LineHeightEnums, Number, Length>,
 					LineHeightEnums, LineHeightEnums::NORMAL
 				>,
 				Inherited<true>,
-				boost::optional<graphics::Scalar>
+				boost::variant<
+					Number,			// for 'normal' and <number>
+					Length,			// for <length>
+					Pixels,			// for <percentage>
+					boost::none_t	// for 'none' keyword
+				>
 			> LineHeight;
 
 			/// @see graphics#font#LineBoxContain
@@ -134,7 +139,7 @@ namespace ascension {
 				Multiple<
 					boost::variant<AlignmentAdjustEnums, Length>,
 					AlignmentAdjustEnums, AlignmentAdjustEnums::AUTO
-				>, Inherited<false>
+				>, Inherited<false>	// TODO: Define the computed value type.
 			> AlignmentAdjust;
 
 			/// Enumerated values for @c BaselineShift. The documentation of the members are copied from CSS 3.
@@ -158,7 +163,7 @@ namespace ascension {
 				Multiple<
 					boost::variant<BaselineShiftEnums, Length>,
 					BaselineShiftEnums, BaselineShiftEnums::BASELINE
-				>, Inherited<false>
+				>, Inherited<false>	// TODO: Define the computed value type.
 			> BaselineShift;
 
 			/// Enumerated values for @c InlineBoxAlignment. The documentation of the members are copied from CSS 3.

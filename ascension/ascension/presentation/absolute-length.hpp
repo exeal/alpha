@@ -9,7 +9,7 @@
 #ifndef ASCENSION_ABSOLUTE_LENGTH_HPP
 #define ASCENSION_ABSOLUTE_LENGTH_HPP
 
-#include <ascension/graphics/geometry/common.hpp>
+#include <ascension/presentation/styles/numeric-data-types.hpp>
 #include <boost/operators.hpp>
 #define BOOST_RATIO_EXTENSIONS
 #include <boost/ratio.hpp>
@@ -128,13 +128,13 @@ namespace ascension {
 			Representation value_;
 		};
 
-		typedef AbsoluteLength<graphics::Scalar> Pixels;
-		typedef AbsoluteLength<graphics::Scalar, boost::ratio_multiply<Pixels::Scale, boost::ratio<96>>::type> Inches;	// 1 in = 96 px
-		typedef AbsoluteLength<graphics::Scalar, boost::ratio_divide<Inches::Scale, boost::ratio<254, 1000>>::type> Millimeters;	// 1 mm = 1/25.4 in
-		typedef AbsoluteLength<graphics::Scalar, boost::ratio_multiply<Millimeters::Scale, boost::ratio<10>>::type> Centimeters;	// 1 cm = 10 mm
-		typedef AbsoluteLength<graphics::Scalar, boost::ratio_divide<Inches::Scale, boost::ratio<72>>::type> Points;	// 1 pt = 1/72 in
-		typedef AbsoluteLength<graphics::Scalar, boost::ratio_multiply<Points::Scale, boost::ratio<12>>::type> Picas;	// 1 pc = 12 pt
-		typedef AbsoluteLength<graphics::Scalar, boost::ratio_divide<Inches::Scale, boost::ratio<96>>::type> DeviceIndependentPixels;	// 1 dip = 1/96 in
+		typedef AbsoluteLength<styles::Number> Pixels;
+		typedef AbsoluteLength<styles::Number, boost::ratio_multiply<Pixels::Scale, boost::ratio<96>>::type> Inches;	// 1 in = 96 px
+		typedef AbsoluteLength<styles::Number, boost::ratio_divide<Inches::Scale, boost::ratio<254, 1000>>::type> Millimeters;	// 1 mm = 1/25.4 in
+		typedef AbsoluteLength<styles::Number, boost::ratio_multiply<Millimeters::Scale, boost::ratio<10>>::type> Centimeters;	// 1 cm = 10 mm
+		typedef AbsoluteLength<styles::Number, boost::ratio_divide<Inches::Scale, boost::ratio<72>>::type> Points;	// 1 pt = 1/72 in
+		typedef AbsoluteLength<styles::Number, boost::ratio_multiply<Points::Scale, boost::ratio<12>>::type> Picas;	// 1 pc = 12 pt
+		typedef AbsoluteLength<styles::Number, boost::ratio_divide<Inches::Scale, boost::ratio<96>>::type> DeviceIndependentPixels;	// 1 dip = 1/96 in
 	}
 }
 
