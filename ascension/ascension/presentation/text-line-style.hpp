@@ -83,7 +83,8 @@ namespace ascension {
 			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type
 		>::type ComputedTextLineStyle;
 
-		void computeTextLineStyle(const SpecifiedTextLineStyle& specifiedValues, ComputedTextLineStyle& computedValues);
+		void computeTextLineStyle(const SpecifiedTextLineStyle& specifiedValues,
+			const styles::Length::Context& context, ComputedTextLineStyle& computedValues);
 	}
 } // namespace ascension.presentation
 
