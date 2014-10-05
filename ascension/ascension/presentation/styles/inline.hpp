@@ -79,7 +79,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<LineHeightEnums, Number, Length>,
+					boost::variant<LineHeightEnums, Number, Length, Percentage>,
 					LineHeightEnums, LineHeightEnums::NORMAL
 				>,
 				Inherited<true>,
@@ -137,7 +137,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<AlignmentAdjustEnums, Length>,
+					boost::variant<AlignmentAdjustEnums, Percentage, Length>,
 					AlignmentAdjustEnums, AlignmentAdjustEnums::AUTO
 				>, Inherited<false>	// TODO: Define the computed value type.
 			> AlignmentAdjust;
@@ -161,7 +161,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<BaselineShiftEnums, Length>,
+					boost::variant<BaselineShiftEnums, Percentage, Length>,
 					BaselineShiftEnums, BaselineShiftEnums::BASELINE
 				>, Inherited<false>	// TODO: Define the computed value type.
 			> BaselineShift;
@@ -182,7 +182,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<InlineBoxAlignmentEnums, Index>,
+					boost::variant<InlineBoxAlignmentEnums, Integer>,
 					InlineBoxAlignmentEnums, InlineBoxAlignmentEnums::LAST
 				>, Inherited<false>
 			> InlineBoxAlignment;

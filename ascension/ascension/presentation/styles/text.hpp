@@ -79,22 +79,21 @@ namespace ascension {
 				PRE_LINE	= 0 << 0 | 1 << 1 | 1 << 2
 			ASCENSION_SCOPED_ENUMS_END;
 
-			inline bool collapsesNewLines(WhiteSpaceEnums value) BOOST_NOEXCEPT {
+			inline BOOST_CONSTEXPR bool collapsesNewLines(WhiteSpaceEnums value) BOOST_NOEXCEPT {
 				return (boost::native_value(value) & (1 << 0)) != 0;
 			}
 
-			inline bool collapsesSpacesAndTabs(WhiteSpaceEnums value) BOOST_NOEXCEPT {
+			inline BOOST_CONSTEXPR bool collapsesSpacesAndTabs(WhiteSpaceEnums value) BOOST_NOEXCEPT {
 				return (boost::native_value(value) & (1 << 1)) != 0;
 			}
 
-			inline bool wrapsText(WhiteSpaceEnums value) BOOST_NOEXCEPT {
+			inline BOOST_CONSTEXPR bool wrapsText(WhiteSpaceEnums value) BOOST_NOEXCEPT {
 				return (boost::native_value(value) & (1 << 2)) != 0;
 			}
 
 			/**
-			 * [Copied from CSS3] This property specifies two things: whether and how white space
-			 * inside the element is collapsed, and whether lines may wrap at unforced soft wrap
-			 * opportunities.
+			 * [Copied from CSS3] This property specifies two things: whether and how white space inside the element is
+			 * collapsed, and whether lines may wrap at unforced soft wrap opportunities.
 			 * @see CSS Text Module Level 3, 3. White Space and Wrapping: the ‘white-space’ property
 			 *      (http://www.w3.org/TR/css3-text/#white-space)
 			 */			
@@ -370,7 +369,10 @@ namespace ascension {
 			 */
 #if 1
 			typedef StyleProperty<
-				Complex<boost::optional<Length>>,	// boost.none means 'normal' keyword
+				Multiple<
+					boost::variant<boost::none_t, Length, Percentage>,	// boost.none means 'normal' keyword
+					boost::none_t, 0
+				>,
 				Inherited<true>,
 				Pixels
 			> WordSpacing;
@@ -461,10 +463,10 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Complex<
-					BasicTextIndent<Length, bool>
+					BasicTextIndent<boost::variant<Length, Percentage>, bool>
 				>,
 				Inherited<true>,
-				BasicTextIndent<Pixels, bool>
+				BasicTextIndent<boost::variant<Percentage, Pixels>, bool>
 			> TextIndent;
 			
 			/// Enumerated values for @c HangingPunctuation. The documentation of the members are copied from CSS 3.
