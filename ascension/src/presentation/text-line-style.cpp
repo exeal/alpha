@@ -59,6 +59,26 @@ namespace ascension {
 				}
 				computeTabSize(styles::TabSize::initialValue(), context, computedValue);
 			}
+
+			void computeTextIndent(const styles::SpecifiedValueType<styles::TextIndent>::type& specifiedValue,
+					const styles::Length::Context& context, styles::ComputedValueType<styles::TextIndent>::type& computedValue) {
+				bool illegal = true;
+				if(const styles::Percentage* const percentage = boost::get<styles::Percentage>(&specifiedValue.length)) {
+					computedValue.length = *percentage;
+					illegal = false;
+				} else if(const styles::Length* const length = boost::get<styles::Length>(&specifiedValue.length)) {
+					if(styles::Length::isValidUnit(length->unitType())) {
+						computedValue.length = Pixels(length->value(context));
+						illegal = false;
+					}
+				}
+
+				if(!illegal) {
+					computedValue.hanging = specifiedValue.hanging;
+					computedValue.eachLine = specifiedValue.eachLine;
+				} else
+					computeTextIndent(styles::TextIndent::initialValue(), context, computedValue);
+			}
 		}
 
 		/**
@@ -92,7 +112,10 @@ namespace ascension {
 //			computeAsSpecified<styles::TextAlignment>(specifiedValues, computedValues);
 			computeAsSpecified<styles::TextAlignmentLast>(specifiedValues, computedValues);
 			computeAsSpecified<styles::TextJustification>(specifiedValues, computedValues);
-//			computeAsSpecified<styles::TextIndent>(specifiedValues, computedValues);
+			computeTextIndent(
+				*boost::fusion::find<styles::SpecifiedValueType<styles::TextIndent>::type>(specifiedValues),
+				context,
+				*boost::fusion::find<styles::ComputedValueType<styles::TextIndent>::type>(computedValues));
 			computeAsSpecified<styles::HangingPunctuation>(specifiedValues, computedValues);
 
 //			computeAsSpecified<styles::Measure>(specifiedValues, computedValues);
