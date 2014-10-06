@@ -109,7 +109,7 @@ namespace ascension {
 			computeAsSpecified<styles::LineBreak>(specifiedValues, computedValues);
 			computeAsSpecified<styles::WordBreak>(specifiedValues, computedValues);
 			computeAsSpecified<styles::OverflowWrap>(specifiedValues, computedValues);
-//			computeAsSpecified<styles::TextAlignment>(specifiedValues, computedValues);
+			computeAsSpecified<styles::TextAlignment>(specifiedValues, computedValues);	// TODO: Handle 'match-parent' keyword correctly.
 			computeAsSpecified<styles::TextAlignmentLast>(specifiedValues, computedValues);
 			computeAsSpecified<styles::TextJustification>(specifiedValues, computedValues);
 			computeTextIndent(
