@@ -237,6 +237,52 @@ namespace ascension {
 			 */
 			struct TextShadow {};
 			/// @}
+
+			template<> struct SpecifiedValueType<TextDecoration> {
+				typedef struct {
+					SpecifiedValueType<decltype(TextDecoration().lines)>::type lines;
+					SpecifiedValueType<decltype(TextDecoration().color)>::type color;
+					SpecifiedValueType<decltype(TextDecoration().style)>::type style;
+					SpecifiedValueType<decltype(TextDecoration().skip)>::type skip;
+					SpecifiedValueType<decltype(TextDecoration().underlinePosition)>::type underlinePosition;
+				} type;
+			};
+
+			template<> struct ComputedValueType<TextDecoration> {
+				typedef struct {
+					ComputedValueType<decltype(TextDecoration().lines)>::type lines;
+					ComputedValueType<decltype(TextDecoration().color)>::type color;
+					ComputedValueType<decltype(TextDecoration().style)>::type style;
+					ComputedValueType<decltype(TextDecoration().skip)>::type skip;
+					ComputedValueType<decltype(TextDecoration().underlinePosition)>::type underlinePosition;
+				} type;
+			};
+
+			template<> struct SpecifiedValueType<TextEmphasis> {
+				typedef struct {
+					SpecifiedValueType<decltype(TextEmphasis().style)>::type style;
+					SpecifiedValueType<decltype(TextEmphasis().color)>::type color;
+					SpecifiedValueType<decltype(TextEmphasis().position)>::type position;
+				} type;
+			};
+
+			template<> struct ComputedValueType<TextEmphasis> {
+				typedef struct {
+					ComputedValueType<decltype(TextEmphasis().style)>::type style;
+					ComputedValueType<decltype(TextEmphasis().color)>::type color;
+					ComputedValueType<decltype(TextEmphasis().position)>::type position;
+				} type;
+			};
+
+			template<> struct SpecifiedValueType<TextShadow> {
+				typedef struct {
+				} type;
+			};
+
+			template<> struct ComputedValueType<TextShadow> {
+				typedef struct {
+				} type;
+			};
 		}
 	}
 }
