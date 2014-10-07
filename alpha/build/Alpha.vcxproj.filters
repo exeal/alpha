@@ -443,6 +443,9 @@
     <ClCompile Include="..\..\ascension\src\presentation\length.cpp">
       <Filter>ascension\Source Files\presentation</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\presentation\text-run-style.cpp">
+      <Filter>ascension\Source Files\presentation</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
