@@ -138,6 +138,46 @@ namespace ascension {
 				FlowRelativeFourSides<Side> sides;
 			};
 			/// @}
+
+			template<> struct SpecifiedValueType<Background> {
+				typedef struct {
+					SpecifiedValueType<decltype(Background().color)>::type color;
+				} type;
+			};
+
+			template<> struct ComputedValueType<Background> {
+				typedef struct {
+					ComputedValueType<decltype(Background().color)>::type color;
+				} type;
+			};
+
+			template<> struct SpecifiedValueType<Border::Side> {
+				typedef struct {
+					SpecifiedValueType<decltype(Border::Side().color)>::type color;
+					SpecifiedValueType<decltype(Border::Side().style)>::type style;
+					SpecifiedValueType<decltype(Border::Side().width)>::type width;
+				} type;
+			};
+
+			template<> struct ComputedValueType<Border::Side> {
+				typedef struct {
+					ComputedValueType<decltype(Border::Side().color)>::type color;
+					ComputedValueType<decltype(Border::Side().style)>::type style;
+					ComputedValueType<decltype(Border::Side().width)>::type width;
+				} type;
+			};
+
+			template<> struct SpecifiedValueType<Border> {
+				typedef struct {
+					FlowRelativeFourSides<decltype(Border().sides)> sides;
+				} type;
+			};
+
+			template<> struct ComputedValueType<Border> {
+				typedef struct {
+					FlowRelativeFourSides<decltype(Border().sides)> sides;
+				} type;
+			};
 		}
 	}
 }
