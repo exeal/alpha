@@ -109,12 +109,12 @@ namespace ascension {
 			 * - If this property is 'inherited', set the inherit flag to @c true.
 			 * - Otherwise, initializes the property value with the initial value.
 			 */
-			StyleProperty() : value_(initialValue()), inherits_(INHERITED) {}
+			StyleProperty() : value_(initialValue()), inherits_(INHERITED ? &styles::INHERIT : nullptr) {}
 			/**
 			 * Constructor initializes the property value with the given value, ignores property's
 			 * initial value and 'inherited' attribute.
 			 */
-			StyleProperty(const value_type& value) : value_(value), inherits_(false) {}
+			StyleProperty(const value_type& value) : value_(value), defaultingKeyword_(nullptr) {}
 
 			/// Constructor sets 'initial' keyword.
 			StyleProperty(const styles::InitialTag&) : defaultingKeyword_(&styles::INITIAL) {}
