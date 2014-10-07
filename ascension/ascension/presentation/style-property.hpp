@@ -11,6 +11,7 @@
 
 #ifndef ASCENSION_STYLE_PROPERTY_HPP
 #define ASCENSION_STYLE_PROPERTY_HPP
+#include <ascension/directions.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
 #include <ascension/corelib/future/type-traits.hpp>	// detail.Type2Type
 #include <ascension/presentation/styles/length.hpp>
@@ -73,12 +74,21 @@ namespace ascension {
 			 */
 			template<typename Property>
 			struct SpecifiedValueType : boost::mpl::identity<typename Property::value_type> {};
+
+			template<typename Property>
+			struct SpecifiedValueType<FlowRelativeFourSides<Property>>
+				: boost::mpl::identity<FlowRelativeFourSides<typename SpecifiedValueType<Property>::type>> {};
+
 			/**
 			 * Returns "Computed Value" type of the given property.
 			 * @tparam Property @c StyleProperty class template
 			 */
 			template<typename Property>
 			struct ComputedValueType : boost::mpl::identity<typename Property::_ComputedValueType> {};
+
+			template<typename Property>
+			struct ComputedValueType<FlowRelativeFourSides<Property>>
+				: boost::mpl::identity<FlowRelativeFourSides<typename ComputedValueType<Property>::type>> {};
 		}
 
 		/**
@@ -109,7 +119,7 @@ namespace ascension {
 			 * - If this property is 'inherited', set the inherit flag to @c true.
 			 * - Otherwise, initializes the property value with the initial value.
 			 */
-			StyleProperty() : value_(initialValue()), inherits_(INHERITED ? &styles::INHERIT : nullptr) {}
+			StyleProperty() : value_(initialValue()), defaultingKeyword_(INHERITED ? &styles::INHERIT : nullptr) {}
 			/**
 			 * Constructor initializes the property value with the given value, ignores property's
 			 * initial value and 'inherited' attribute.
