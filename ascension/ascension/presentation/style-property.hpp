@@ -89,6 +89,20 @@ namespace ascension {
 			template<typename Property>
 			struct ComputedValueType<FlowRelativeFourSides<Property>>
 				: boost::mpl::identity<FlowRelativeFourSides<typename ComputedValueType<Property>::type>> {};
+
+			/**
+			 * Computes the given "Specified Value" as specified.
+			 * @tparam Property The style property
+			 * @tparam SpecifiedStyles The type of @a specifiedValues
+			 * @tparam ComputedStyles The type of @a computedValues
+			 * @param specifiedValues The set of the "Specified Value"s which contains the style property to compute
+			 * @param[out] computedValues The set of the "Computed Value"s
+			 */
+			template<typename Property, typename SpecifiedStyles, typename ComputedStyles>
+			inline void computeAsSpecified(const SpecifiedStyles& specifiedValues, ComputedStyles& computedValues) {
+				*boost::fusion::find<typename styles::ComputedValueType<Property>::type>(computedValues)
+					= *boost::fusion::find<typename styles::SpecifiedValueType<Property>::type>(specifiedValues);
+			}
 		}
 
 		/**

@@ -9,12 +9,6 @@
 namespace ascension {
 	namespace presentation {
 		namespace {
-			template<typename Property>
-			inline void computeAsSpecified(const SpecifiedTextLineStyle& specifiedValues, ComputedTextLineStyle& computedValues) {
-				*boost::fusion::find<styles::ComputedValueType<Property>::type>(computedValues)
-					= *boost::fusion::find<styles::SpecifiedValueType<Property>::type>(specifiedValues);
-			}
-
 			void computeLineHeight(const styles::SpecifiedValueType<styles::LineHeight>::type& specifiedValue,
 					const Pixels& computedFontSize, styles::ComputedValueType<styles::LineHeight>::type& computedValue) {
 				if(const styles::LineHeightEnums* const keyword = boost::get<styles::LineHeightEnums>(&specifiedValue)) {
@@ -89,38 +83,38 @@ namespace ascension {
 		 */
 		void computeTextLineStyle(const SpecifiedTextLineStyle& specifiedValues,
 				const styles::Length::Context& context, ComputedTextLineStyle& computedValues) {
-			computeAsSpecified<styles::Direction>(specifiedValues, computedValues);
-//			computeAsSpecified<styles::UnicodeBidi>(specifiedValues, computedValues);
-			computeAsSpecified<styles::TextOrientation>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::Direction>(specifiedValues, computedValues);
+//			styles::computeAsSpecified<styles::UnicodeBidi>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::TextOrientation>(specifiedValues, computedValues);
 
 			computeLineHeight(
 				*boost::fusion::find<styles::SpecifiedValueType<styles::LineHeight>::type>(specifiedValues),
 				Pixels(styles::Length(1, styles::Length::EM_HEIGHT).value(context)),
 				*boost::fusion::find<styles::ComputedValueType<styles::LineHeight>::type>(computedValues));
-			computeAsSpecified<styles::LineBoxContain>(specifiedValues, computedValues);
-			computeAsSpecified<styles::DominantBaseline>(specifiedValues, computedValues);
-			computeAsSpecified<styles::InlineBoxAlignment>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::LineBoxContain>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::DominantBaseline>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::InlineBoxAlignment>(specifiedValues, computedValues);
 
-			computeAsSpecified<styles::WhiteSpace>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::WhiteSpace>(specifiedValues, computedValues);
 			computeTabSize(
 				*boost::fusion::find<styles::SpecifiedValueType<styles::TabSize>::type>(specifiedValues),
 				context,
 				*boost::fusion::find<styles::ComputedValueType<styles::TabSize>::type>(computedValues));
-			computeAsSpecified<styles::LineBreak>(specifiedValues, computedValues);
-			computeAsSpecified<styles::WordBreak>(specifiedValues, computedValues);
-			computeAsSpecified<styles::OverflowWrap>(specifiedValues, computedValues);
-			computeAsSpecified<styles::TextAlignment>(specifiedValues, computedValues);	// TODO: Handle 'match-parent' keyword correctly.
-			computeAsSpecified<styles::TextAlignmentLast>(specifiedValues, computedValues);
-			computeAsSpecified<styles::TextJustification>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::LineBreak>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::WordBreak>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::OverflowWrap>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::TextAlignment>(specifiedValues, computedValues);	// TODO: Handle 'match-parent' keyword correctly.
+			styles::computeAsSpecified<styles::TextAlignmentLast>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::TextJustification>(specifiedValues, computedValues);
 			computeTextIndent(
 				*boost::fusion::find<styles::SpecifiedValueType<styles::TextIndent>::type>(specifiedValues),
 				context,
 				*boost::fusion::find<styles::ComputedValueType<styles::TextIndent>::type>(computedValues));
-			computeAsSpecified<styles::HangingPunctuation>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::HangingPunctuation>(specifiedValues, computedValues);
 
-//			computeAsSpecified<styles::Measure>(specifiedValues, computedValues);
+//			styles::computeAsSpecified<styles::Measure>(specifiedValues, computedValues);
 
-			computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
 		}
 	}
 }
