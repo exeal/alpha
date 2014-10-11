@@ -42,6 +42,12 @@ namespace ascension {
 				static InitialType initialValue() {return static_cast<InitialType>(_initialValue);}
 			};
 
+			template<typename Variant, typename N>
+			struct MultipleWithInitialIndex : public boost::mpl::identity<Variant> {
+				typedef typename boost::mpl::at<typename Variant::types, N>::type InitialType;
+				static InitialType initialValue() {return InitialType();}
+			};
+
 			/**
 			 * A tag which specifies that the property is "Inherited Property" or not.
 			 * @tparam yesOrNo Set @c true for "Inherited Property", otherwise @c false
