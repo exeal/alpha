@@ -162,11 +162,16 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css-text-decor-3/#emphasis-marks)
 			 */
 			struct TextEmphasis {
-				/// Enumerated values for @c #style. The documentation of the members are copied from CSS 3 and modified.
-				/// Prefix @c FILLED_ means the shape is filled with solid color, @c OPEN_ means the shape is hollow.
+				/**
+				 * Enumerated values for @c #style. The documentation of the members are copied from CSS 3 and
+				 * modified. Prefix @c FILLED_ means the shape is filled with solid color, @c OPEN_ means the shape is
+				 * hollow.
+				 * @note This does not define a value for 'none' as enumerated one. Use @c boost#none for "no emphasis
+				 *       mark" meaning.
+				 */
 				enum StyleEnums {
-					/// No emphasis marks.
-					NONE = 0,
+//					/// No emphasis marks.
+//					NONE = 0,
 					/// Display small circles as marks. The filled dot is U+2022 ‘•’.
 					FILLED_DOT = 0x2022u,
 					/// Display small circles as marks. The open dot is U+25E6 ‘◦’.
@@ -196,11 +201,12 @@ namespace ascension {
 				 *      (http://www.w3.org/TR/css-text-decor-3/#text-emphasis-style-property)
 				 */
 				StyleProperty<
-					Multiple<
-						boost::variant<StyleEnums, CodePoint>,
-						StyleEnums, NONE
+					MultipleWithInitialIndex<
+						boost::variant<boost::none_t, StyleEnums, CodePoint>,
+						boost::mpl::int_<0>
 					>,
-					Inherited<true>
+					Inherited<true>,
+					boost::optional<CodePoint>
 				> style;
 
 				/**
