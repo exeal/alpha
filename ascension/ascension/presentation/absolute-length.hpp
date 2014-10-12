@@ -32,6 +32,9 @@ namespace ascension {
 			/// The number of CSS-pixels per unit.
 			typedef ScaleType Scale;
 
+			/// Default constructor which does not initialize the internal value.
+			AbsoluteLength() {}
+
 			/**
 			 * @tparam OtherRepresentation The type of @a value
 			 * @param value The length value in @c Scale
