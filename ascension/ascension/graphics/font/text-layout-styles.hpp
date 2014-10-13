@@ -82,9 +82,9 @@ namespace ascension {
 			/// Computed values of core properties of @c presentation#TextRunStyle.
 			struct ComputedTextRunStyleCore : private boost::equality_comparable<ComputedTextRunStyleCore> {
 				/// Computed value of @c TextRunStyle#color property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextRunStyle().color)
-				>::Type::value_type color;
+				>::type::value_type color;
 				/// Computed value of @c TextRunStyle#background property.
 				std::shared_ptr<const Paint> background;
 				/// Computed value of @c TextRunStyle#border property.
@@ -132,38 +132,38 @@ namespace ascension {
 				/// Computed value of @c TextRunStyle#lineHeight property.
 				Scalar lineHeight;
 				/// Computed value of @c TextRunStyle#dominantBaseline property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextRunStyle().dominantBaseline)
-				>::Type dominantBaseline;
+				>::type dominantBaseline;
 				/// Computed value of @c TextRunStyle#alignmentBaseline property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextRunStyle().alignmentBaseline)
-				>::Type alignmentBaseline;
+				>::type alignmentBaseline;
 				/// Computed value of @c TextRunStyle#alignmentAdjustment property.
 				Scalar alignmentAdjustment;
 				/// Computed value of @c TextRunStyle#baselineShift property.
 				Scalar baselineShift;
 				
 				/// Computed value of @c TextRunStyle#textTransform property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextRunStyle().textTransform)
-				>::Type textTransform;
+				>::type textTransform;
 				/// Computed value of @c TextRunStyle#hyphens property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextRunStyle().hyphens)
-				>::Type hyphens;
+				>::type hyphens;
 				/// Computed value of @c TextRunStyle#wordSpacing property.
-				presentation::SpacingLimit<Scalar> wordSpacing;
+				presentation::styles::SpacingLimit<Scalar> wordSpacing;
 				/// Computed value of @c TextRunStyle#letterSpacing property.
-				presentation::SpacingLimit<Scalar> letterSpacing;
+				presentation::styles::SpacingLimit<Scalar> letterSpacing;
 
 //				RubyProperties rubyProperties;
 
 //				Effects effects;
 				/// Computed value of @c TextRunStyle#shapingEnabled.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextRunStyle().shapingEnabled)
-				>::Type shapingEnabled;
+				>::type shapingEnabled;
 
 				/// Default constructor initializes nothing.
 				ComputedTextRunStyle() {}
@@ -207,55 +207,55 @@ namespace ascension {
 				ComputedFontSpecification nominalFont;
 
 				/// Computed value of @c TextLineStyle#lineBoxContain property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextLineStyle().lineBoxContain)
-				>::Type lineBoxContain;
+				>::type lineBoxContain;
 				/// Computed value of @c TextLineStyle#whiteSpace property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextLineStyle().whiteSpace)
-				>::Type whiteSpace;
+				>::type whiteSpace;
 				/// Computed value of @c TextLineStyle#tabSize property.
 				std::shared_ptr<TabExpander> tabExpander;
 				/// Computed value of @c TextLineStyle#lineBreak property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextLineStyle().lineBreak)
-				>::Type lineBreak;
+				>::type lineBreak;
 				/// Computed value of @c TextLineStyle#wordBreak property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextLineStyle().wordBreak)
-				>::Type wordBreak;
+				>::type wordBreak;
 				/// Computed value of @c TextLineStyle#overflowWrap property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextLineStyle().overflowWrap)
-				>::Type overflowWrap;
+				>::type overflowWrap;
 				/// Computed value of @c TextLineStyle#textAlignment property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextLineStyle().textAlignment)
-				>::Type alignment;
+				>::type alignment;
 				/// Computed value of @c TextLineStyle#textAlignmentLast property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextLineStyle().textAlignmentLast)
-				>::Type alignmentLast;
+				>::type alignmentLast;
 				/// Computed value of @c TextLineStyle#textJustification property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextLineStyle().textJustification)
-				>::Type justification;
+				>::type justification;
 				/// Computed value of @c TextLineStyle#textIndent property.
-				presentation::TextIndent<Scalar, bool> indent;
+				presentation::styles::BasicTextIndent<Scalar, bool> indent;
 				/// Computed value of @c TextLineStyle#hangingPunctuation property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextLineStyle().hangingPunctuation)
-				>::Type hangingPunctuation;
+				>::type hangingPunctuation;
 				/// Computed value of @c TextLineStyle#dominantBaseline property.
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextLineStyle().dominantBaseline)
-				>::Type dominantBaseline;
+				>::type dominantBaseline;
 				/// Computed value of @c TextLineStyle#lineHeight property.
 				Scalar lineHeight;
 				/// Computed value of @c TextLineStyle#measure property.
 				Scalar measure;
 				/// Computed value of @c TextLineStyle#numberSubstitution property.
-				presentation::NumberSubstitution numberSubstitution;
+				presentation::styles::NumberSubstitution numberSubstitution;
 
 				/**
 				 * Set @c true to shape zero width control characters as representative glyphs.
@@ -370,6 +370,9 @@ namespace ascension {
 					const StringPiece& textString_;
 					Index position_;	// beginning of current run
 				};
+
+				class Font;
+				class FontCollection;
 	
 				std::shared_ptr<const graphics::font::Font> findMatchingFont(
 					const StringPiece& textRun, const graphics::font::FontCollection& collection,

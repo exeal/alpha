@@ -9,35 +9,6 @@
 namespace ascension {
 	namespace presentation {
 		namespace {
-			void computeLineHeight(const styles::SpecifiedValueType<styles::LineHeight>::type& specifiedValue,
-					const Pixels& computedFontSize, styles::ComputedValueType<styles::LineHeight>::type& computedValue) {
-				if(const styles::LineHeightEnums* const keyword = boost::get<styles::LineHeightEnums>(&specifiedValue)) {
-					if(*keyword == styles::LineHeightEnums::NORMAL) {
-						computedValue = static_cast<styles::Number>(1.1f);	// [CSS3-INLINE] recommends between 1.0 to 1.2
-						return;
-					} else if(*keyword == styles::LineHeightEnums::NONE) {
-						computedValue = boost::none;
-						return;
-					}
-				} else if(const styles::Length* const length = boost::get<styles::Length>(&specifiedValue)) {
-					if(styles::Length::isValidUnit(length->unitType()) && length->valueInSpecifiedUnits() >= 0) {
-						computedValue = *length;
-						return;
-					}
-				} else if(const styles::Number* const number = boost::get<styles::Number>(&specifiedValue)) {
-					if(*number >= 0) {
-						computedValue = *number;
-						return;
-					}
-				} else if(const styles::Percentage* const percentage = boost::get<styles::Percentage>(&specifiedValue)) {
-					const styles::Number r = boost::rational_cast<styles::Number>(*percentage);
-					if(r >= 0) {
-						computedValue = computedFontSize * r;
-						return;
-					}
-				}
-			}
-
 			void computeTabSize(const styles::SpecifiedValueType<styles::TabSize>::type& specifiedValue,
 					const styles::Length::Context& context, styles::ComputedValueType<styles::TabSize>::type& computedValue) {
 				if(const styles::Integer* const integer = boost::get<styles::Integer>(&specifiedValue)) {
@@ -87,7 +58,7 @@ namespace ascension {
 //			styles::computeAsSpecified<styles::UnicodeBidi>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::TextOrientation>(specifiedValues, computedValues);
 
-			computeLineHeight(
+			styles::detail::computeLineHeight(
 				*boost::fusion::find<styles::SpecifiedValueType<styles::LineHeight>::type>(specifiedValues),
 				Pixels(styles::Length(1, styles::Length::EM_HEIGHT).value(context)),
 				*boost::fusion::find<styles::ComputedValueType<styles::LineHeight>::type>(computedValues));
