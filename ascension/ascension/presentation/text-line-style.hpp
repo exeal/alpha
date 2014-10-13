@@ -75,13 +75,21 @@ namespace ascension {
 		};
 
 		std::shared_ptr<const DeclaredTextRunStyle> defaultTextRunStyle(const DeclaredTextLineStyle& lineStyle);
-
+#if 1
+		struct SpecifiedTextLineStyle : boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
+		>::type {};
+		struct ComputedTextLineStyle : boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type
+		>::type {};
+#else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
 		>::type SpecifiedTextLineStyle;
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type
 		>::type ComputedTextLineStyle;
+#endif
 
 		void computeTextLineStyle(const SpecifiedTextLineStyle& specifiedValues,
 			const styles::Length::Context& context, ComputedTextLineStyle& computedValues);

@@ -5,6 +5,8 @@
  */
 
 #include <ascension/presentation/text-line-style.hpp>
+#include <ascension/presentation/text-run-style.hpp>
+#include <boost/core/null_deleter.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -86,6 +88,18 @@ namespace ascension {
 //			styles::computeAsSpecified<styles::Measure>(specifiedValues, computedValues);
 
 			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
+		}
+
+		/**
+		 * Returns the default line style of the given "Declared" line style.
+		 * @param lineStyle The "Declared" line style
+		 * @return lineStyle.defaultRunStyle, of a default-constructed @c TextRunStyle instance if @c null
+		 * @see defaultTextLineStyle
+		 */
+		std::shared_ptr<const DeclaredTextRunStyle> defaultTextRunStyle(const DeclaredTextLineStyle& lineStyle) {
+			static const DeclaredTextRunStyle defaultInstance;
+			return (lineStyle.defaultRunStyle.get() != nullptr) ?
+				lineStyle.defaultRunStyle : std::shared_ptr<const DeclaredTextRunStyle>(&defaultInstance, boost::null_deleter());
 		}
 	}
 }
