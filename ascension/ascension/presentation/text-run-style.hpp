@@ -82,6 +82,9 @@ namespace ascension {
 */		> TextRunStyle;
 
 		// TODO: Check uniqueness of the members of TextRunStyle.
+
+		struct DeclaredTextRunStyle : public TextRunStyle,
+			public FastArenaObject<DeclaredTextRunStyle>, std::enable_shared_from_this<DeclaredTextRunStyle> {};
 #if 0
 		/**
 		 * A @c StyledTextRun represents a text range with declared style. @c #beginning and
