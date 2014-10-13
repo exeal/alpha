@@ -127,7 +127,7 @@ namespace ascension {
 			private boost::equality_comparable<StyleProperty<TypeSpec, InheritedTag, ComputedValueType>, styles::UnsetTag> {
 		public:
 			typedef typename TypeSpec::type value_type;	///< The type of property value.
-			static_assert(std::is_same<value_type, typename styles::SpecifiedValueType<StyleProperty>::type>::value, "");
+//			static_assert(std::is_same<value_type, typename styles::SpecifiedValueType<StyleProperty>::type>::value, "");
 			typedef typename std::conditional<
 				!std::is_same<ComputedValueType, void>::value,
 				ComputedValueType, value_type>::type _ComputedValueType;

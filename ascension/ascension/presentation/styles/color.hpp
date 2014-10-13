@@ -33,16 +33,18 @@ namespace ascension {
 			 */
 #ifndef BOOST_NO_TEMPLATE_ALIASES
 			template<typename InheritedOrNot> using Color =
-				StyleProperty<Complex<boost::optional<graphics::Color>>, InheritedOrNot>;
+				StyleProperty<Complex<boost::optional<graphics::Color>>, InheritedOrNot, graphics::Color>;
 #else
 			template<typename InheritedOrNot>
 			class Color : public StyleProperty<
 				Complex<
 					boost::optional<graphics::Color>
-				>, InheritedOrNot
+				>,
+				InheritedOrNot,
+				graphics::Color
 			> {
 			private:
-				typedef StyleProperty<Complex<boost::optional<graphics::Color>>, InheritedOrNot> Base;
+				typedef StyleProperty<Complex<boost::optional<graphics::Color>>, InheritedOrNot, graphics::Color> Base;
 			public:
 				Color() : Base() {}
 				Color(const value_type& value) : Base(value) {}
