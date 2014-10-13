@@ -805,9 +805,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout-styles.hpp">
-      <Filter>ascension\Header Files\graphics\font</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>

@@ -375,7 +375,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\tab-expander.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-alignment.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-hit.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout-styles.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-paint-override.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer-observers.hpp" />

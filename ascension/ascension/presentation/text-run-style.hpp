@@ -76,8 +76,10 @@ namespace ascension {
 			styles::TextEmphasis,						// 'text-emphasis' properties
 			styles::TextShadow,							// 'text-shadow' property
 			// Auxiliary
-			styles::ShapingEnabled						// 'shaping-enabled' property
-		> TextRunStyle;
+			styles::ShapingEnabled/*,					// 'shaping-enabled' property
+			styles::DeprecatedFormatCharactersDisabled,	// 'deprecated-format-characters-disabled' property
+			styles::SymmetricSwappingInhibited			// 'symmetric-swapping-inhibited' property
+*/		> TextRunStyle;
 
 		// TODO: Check uniqueness of the members of TextRunStyle.
 #if 0
@@ -144,6 +146,23 @@ namespace ascension {
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextRunStyle, styles::ComputedValueType<boost::mpl::_1>>::type
 		>::type ComputedTextRunStyle;
+
+		/**
+		 * @see TextLayout#TextLayout, presentation#StyledTextRunIterator
+		 */
+		class ComputedStyledTextRunIterator {
+		public:
+			/// Destructor.
+			virtual ~ComputedStyledTextRunIterator() BOOST_NOEXCEPT {}
+			/**
+			 */
+			virtual boost::integer_range<Index> currentRange() const = 0;
+			/**
+			 */
+			virtual void currentStyle(ComputedTextRunStyle& style) const = 0;
+			virtual bool isDone() const BOOST_NOEXCEPT = 0;
+			virtual void next() = 0;
+		};
 
 		void computeTextRunStyle(const SpecifiedTextRunStyle& specifiedValues,
 			const styles::Length::Context& context, const ComputedTextRunStyle& parentComputedValues, ComputedTextRunStyle& computedValues);
