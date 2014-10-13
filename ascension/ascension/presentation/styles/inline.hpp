@@ -139,7 +139,9 @@ namespace ascension {
 				Multiple<
 					boost::variant<AlignmentAdjustEnums, Percentage, Length>,
 					AlignmentAdjustEnums, AlignmentAdjustEnums::AUTO
-				>, Inherited<false>	// TODO: Define the computed value type.
+				>,
+				Inherited<false>,
+				Pixels	// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
 			> AlignmentAdjust;
 
 			/// Enumerated values for @c BaselineShift. The documentation of the members are copied from CSS 3.
@@ -163,7 +165,9 @@ namespace ascension {
 				Multiple<
 					boost::variant<BaselineShiftEnums, Percentage, Length>,
 					BaselineShiftEnums, BaselineShiftEnums::BASELINE
-				>, Inherited<false>	// TODO: Define the computed value type.
+				>,
+				Inherited<false>,
+				Pixels	// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
 			> BaselineShift;
 
 			/// Enumerated values for @c InlineBoxAlignment. The documentation of the members are copied from CSS 3.
@@ -187,6 +191,34 @@ namespace ascension {
 				>, Inherited<false>
 			> InlineBoxAlignment;
 			/// @}
+
+			namespace detail {
+				inline void computeLineHeight(const SpecifiedValueType<LineHeight>::type& specifiedValue,
+						const Pixels& computedFontSize, ComputedValueType<LineHeight>::type& computedValue) {
+					if(const LineHeightEnums* const keyword = boost::get<LineHeightEnums>(&specifiedValue)) {
+						if(*keyword == LineHeightEnums::NONE) {
+							computedValue = boost::none;
+							return;
+						}
+					} else if(const Length* const length = boost::get<Length>(&specifiedValue)) {
+						if(Length::isValidUnit(length->unitType()) && length->valueInSpecifiedUnits() >= 0) {
+							computedValue = *length;
+							return;
+						}
+					} else if(const Number* const number = boost::get<Number>(&specifiedValue)) {
+						if(*number >= 0) {
+							computedValue = *number;
+							return;
+						}
+					} else if(const Percentage* const percentage = boost::get<Percentage>(&specifiedValue)) {
+						if(*percentage >= 0) {
+							computedValue = computedFontSize * boost::rational_cast<Number>(*percentage);
+							return;
+						}
+					}
+					computedValue = static_cast<Number>(1.1f);	// [CSS3-INLINE] recommends between 1.0 to 1.2 for 'normal'
+				}
+			}
 		}
 	}
 }

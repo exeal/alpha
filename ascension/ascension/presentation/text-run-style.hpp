@@ -146,7 +146,7 @@ namespace ascension {
 		>::type ComputedTextRunStyle;
 
 		void computeTextRunStyle(const SpecifiedTextRunStyle& specifiedValues,
-			const styles::Length::Context& context, ComputedTextRunStyle& computedValues);
+			const styles::Length::Context& context, const ComputedTextRunStyle& parentComputedValues, ComputedTextRunStyle& computedValues);
 	}
 } // namespace ascension.presentation
 
