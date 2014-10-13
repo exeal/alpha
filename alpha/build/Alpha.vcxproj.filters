@@ -979,6 +979,12 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\length.hpp">
       <Filter>ascension\Header Files\presentation\styles</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\tab-expander.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-paint-override.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
