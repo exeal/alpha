@@ -369,9 +369,9 @@ namespace ascension {
 			 */
 #if 1
 			typedef StyleProperty<
-				Multiple<
+				MultipleWithInitialIndex<
 					boost::variant<boost::none_t, Length, Percentage>,	// boost.none means 'normal' keyword
-					boost::none_t, 0
+					boost::mpl::int_<0>
 				>,
 				Inherited<true>,
 				Pixels
