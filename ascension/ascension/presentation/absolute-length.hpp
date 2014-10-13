@@ -13,10 +13,27 @@
 #include <boost/operators.hpp>
 #define BOOST_RATIO_EXTENSIONS
 #include <boost/ratio.hpp>
+#include <limits>
 #include <type_traits>
 
 namespace ascension {
 	namespace presentation {
+		/**
+		 * @c AbsoluteLength#max, @c AbsoluteLength#min and @c AbsoluteLength#zero methods call this specializable
+		 * class template.
+		 * @tparam Representation See the description of @c AbsoluteLength class template
+		 * @note This design is based on @c std#chrono#duration_values class template.
+		 */
+		template<typename Representation>
+		struct AbsoluteLengthValues {
+			/// Returns the largest possible representation.
+			static BOOST_CONSTEXPR Representation max() {return std::numeric_limits<Representation>::max();}
+			/// Returns the smallest possible representation.
+			static BOOST_CONSTEXPR Representation min() {return std::numeric_limits<Representation>::lowest();}
+			/// Returns zero-length representation.
+			static BOOST_CONSTEXPR Representation zero() {return Representation(0);}
+		};
+
 		/**
 		 * @tparam RepresentationType The arithmetic type represents the number of CSS-pixels
 		 * @tparam ScaleType @c boost#ratio or @c std#ratio which is the number of CSS-pixels per unit
@@ -124,8 +141,17 @@ namespace ascension {
 				return other <= *this;
 			}
 
+			/// Returns a @c AbsoluteLength with the largest possible value.
+			static BOOST_CONSTEXPR AbsoluteLength max() {return AbsoluteLength(AbsoluteLengthValues<Representation>::max());}
+
+			/// Returns a @c AbsoluteLength with the smallest possible value.
+			static BOOST_CONSTEXPR AbsoluteLength min() {return AbsoluteLength(AbsoluteLengthValues<Representation>::min());}
+
 			/// Returns the value as a floating point.
-			BOOST_CONSTEXPR Representation value() const BOOST_NOEXCEPT {return value_;}
+			BOOST_CONSTEXPR Representation value() const {return value_;}
+
+			/// Returns a @c AbsoluteLength with zero-length.
+			static BOOST_CONSTEXPR AbsoluteLength zero() {return AbsoluteLength(AbsoluteLengthValues<Representation>::zero());}
 
 		private:
 			Representation value_;
