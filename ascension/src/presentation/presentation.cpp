@@ -6,7 +6,6 @@
  */
 
 #include <ascension/corelib/range.hpp>
-#include <ascension/graphics/font/text-layout-styles.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/presentation/text-style.hpp>
@@ -36,28 +35,6 @@ namespace ascension {
 			const Length Border::THIN(0.05f, Length::EM_HEIGHT);
 			const Length Border::MEDIUM(0.10f, Length::EM_HEIGHT);
 			const Length Border::THICK(0.20f, Length::EM_HEIGHT);
-		}
-
-		/**
-		 * @param base The base style
-		 * @param baseIsRoot Set @c true if @a base is the root style
-		 * @return This object
-		 */
-		TextRunStyle& TextRunStyle::resolveInheritance(const TextRunStyle& base, bool baseIsRoot) {
-			// TODO: not implemented.
-			return *this;
-		}
-
-		/**
-		 * Returns the default line style of the specified line style.
-		 * @param lineStyle The line style
-		 * @return lineStyle.defaultRunStyle, of a default-constructed @c TextRunStyle instance if @c null
-		 * @see defaultTextLineStyle
-		 */
-		std::shared_ptr<const TextRunStyle> defaultTextRunStyle(const TextLineStyle& lineStyle) {
-			static const TextRunStyle defaultInstance;
-			return (lineStyle.defaultRunStyle.get() != nullptr) ?
-				lineStyle.defaultRunStyle : std::shared_ptr<const TextRunStyle>(&defaultInstance, boost::null_deleter());
 		}
 
 		/**
@@ -155,8 +132,8 @@ namespace ascension {
 		 * @throw BadPositionException @a line is outside of the document
 		 * @throw NullPointerException Internal @c Length#value call may throw this exception
 		 */
-		void Presentation::computeTextLineStyle(Index line, const Length::Context& lengthContext,
-				const GlobalTextStyleSwitch* globalSwitch, graphics::font::ComputedTextLineStyle& result) const {
+		void Presentation::computeTextLineStyle(Index line,
+				const styles::Length::Context& lengthContext, const GlobalTextStyleSwitch* globalSwitch, ComputedTextLineStyle& result) const {
 			if(line >= document_.numberOfLines())
 				throw kernel::BadPositionException(kernel::Position(line, 0));
 		
