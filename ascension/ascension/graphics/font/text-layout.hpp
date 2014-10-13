@@ -84,7 +84,7 @@ namespace ascension {
 //			class ComputedStyledTextRunIterator;
 //			struct ComputedTextLineStyle;
 //			class TextPaintOverride;
-//			class TabExpander;
+			class TabExpander;
 			class TextRun;
 
 			class TextLayout : private boost::noncopyable {

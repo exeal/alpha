@@ -20,32 +20,6 @@ namespace ascension {
 		class Paint;
 
 		namespace font {
-			/**
-			 * @see TextLayout#TextLayout
-			 * @note This interface is designed based on @c TabExpander interface of Java.
-			 */
-			class TabExpander {
-			public:
-				/// Destructor.
-				virtual ~TabExpander() BOOST_NOEXCEPT {}
-				/**
-				 * Returns the next tab stop position given a reference position.
-				 * @param ipd The position in pixels
-				 * @param tabOffset The position within the underlying text that the tab occured
-				 * @return The next tab stop. Should be greater than @a ipd
-				 */
-				virtual Scalar nextTabStop(Scalar ipd, Index tabOffset) const = 0;
-			};
-
-			/// Standard implementation of @c TabExpander with fixed width tabulations.
-			class FixedWidthTabExpander : public TabExpander {
-			public:
-				explicit FixedWidthTabExpander(Scalar width) BOOST_NOEXCEPT;
-				Scalar nextTabStop(Scalar ipd, Index tabOffset) const;
-			private:
-				const Scalar width_;
-			};
-
 			class TextPaintOverride {
 			public:
 				struct Segment {
