@@ -16,8 +16,10 @@
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/glyph-metrics.hpp>
+#include <ascension/graphics/font/tab-expander.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-layout-styles.hpp>
+#include <ascension/graphics/font/text-override.hpp>
 #include <ascension/graphics/font/text-run.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/corelib/range.hpp>	// ascension.includes
@@ -2687,12 +2689,15 @@ namespace ascension {
 				}
 
 				// 5. position each text runs
-				const FontDescription nominalFontDescription(
-					!lineStyle.nominalFont.families.empty() ? lineStyle.nominalFont.families.front() : FontFamily(String()),
-					lineStyle.nominalFont.pointSize, lineStyle.nominalFont.properties);
-				const boost::optional<Scalar> nominalFontSizeAdjust(lineStyle.nominalFont.sizeAdjust);
-				const std::shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontDescription,
-					fontRotationForWritingMode(writingMode().blockFlowDirection), nominalFontSizeAdjust));
+				std::shared_ptr<const Font> nominalFont;
+				if(!lineStyle.nominalFont.families.empty()) {
+					const FontDescription nominalFontDescription(lineStyle.nominalFont.families.front(),
+						lineStyle.nominalFont.pointSize, lineStyle.nominalFont.properties);
+					nominalFont = fontCollection.get(nominalFontDescription,
+						fontRotationForWritingMode(writingMode().blockFlowDirection), lineStyle.nominalFont.sizeAdjust);
+				} else
+					nominalFont = fontCollection.lastResortFallback(lineStyle.nominalFont.pointSize,
+						lineStyle.nominalFont.properties, geometry::makeIdentityTransform(), lineStyle.nominalFont.sizeAdjust);
 				if(!emptyLine) {
 					// wrap into visual lines and reorder runs in each lines
 					if(runs_.empty() || !wrapsText(lineStyle.whiteSpace)) {

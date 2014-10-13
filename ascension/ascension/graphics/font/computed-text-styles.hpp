@@ -22,30 +22,30 @@ namespace ascension {
 		class PaintContext;
 
 		namespace font {
-			/// Computed value of @c presentation#Border#Side.
+			/// Computed value of @c presentation#styles#Border#Side.
 			struct ComputedBorderSide : private boost::equality_comparable<ComputedBorderSide> {
-				presentation::sp::IntrinsicType<
-					decltype(presentation::Border().sides.start().color)
-				>::Type::value_type color;
-				presentation::sp::IntrinsicType<
-					decltype(presentation::Border().sides.start().style)
-				>::Type style;
+				presentation::styles::ComputedValueType<
+					decltype(presentation::styles::Border().sides.start().color)
+				>::type::value_type color;
+				presentation::styles::ComputedValueType<
+					decltype(presentation::styles::Border().sides.start().style)
+				>::type style;
 				Scalar width;
 
 				/// Default constructor.
 				ComputedBorderSide() BOOST_NOEXCEPT :
-					color(Color::TRANSPARENT_BLACK), style(presentation::Border::NONE), width(0) {}
+					color(Color::TRANSPARENT_BLACK), style(presentation::styles::Border::NONE), width(0) {}
 				/// Equality operator.
 				bool operator==(const ComputedBorderSide& other) const BOOST_NOEXCEPT {
 					return color == other.color && style == other.style && width == other.width;
 				}
 				/// Returns the computed width in device units.
 				Scalar computedWidth() const BOOST_NOEXCEPT {
-					return (style != presentation::Border::NONE) ? width : 0;
+					return (style != presentation::styles::Border::NONE) ? width : 0;
 				}
 				/// Returns @c true if this side has visible style (but may or may not consume place).
 				bool hasVisibleStyle() const BOOST_NOEXCEPT {
-					return style != presentation::Border::NONE && style != presentation::Border::HIDDEN;
+					return style != presentation::styles::Border::NONE && style != presentation::styles::Border::HIDDEN;
 				}
 				/// Returns @c true if the computed thickness of this side is zero.
 				bool isAbsent() const BOOST_NOEXCEPT {
@@ -66,17 +66,17 @@ namespace ascension {
 			 * @see ComputedTextRunStyle
 			 */
 			struct ComputedFontSpecification : private boost::equality_comparable<ComputedFontSpecification> {
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextRunStyle().fontFamily)
-				>::Type families;
+				>::type families;
 				double pointSize;
-//				presentation::sp::IntrinsicType<
+//				presentation::styles::ComputedValueType<
 //					decltype(presentation::TextRunStyle().fontSize)
-//				> pointSize;
+//				>::type pointSize;
 				FontProperties properties;
-				presentation::sp::IntrinsicType<
+				presentation::styles::ComputedValueType<
 					decltype(presentation::TextRunStyle().fontSizeAdjust)
-				>::Type sizeAdjust;
+				>::type sizeAdjust;
 
 				/// Equality operator.
 				bool operator==(const ComputedFontSpecification& other) const BOOST_NOEXCEPT {
@@ -97,31 +97,31 @@ namespace ascension {
 				return seed;
 			}
 
-			/// Computed value of @c presentation#TextDecoration.
+			/// Computed value of @c presentation#styles#TextDecoration.
 			struct ComputedTextDecoration : private boost::equality_comparable<ComputedTextDecoration> {
-				presentation::sp::IntrinsicType<
-					decltype(presentation::TextDecoration().lines)
-				>::Type lines;
-				presentation::sp::IntrinsicType<
-					decltype(presentation::TextDecoration().color)
-				>::Type::value_type color;
-				presentation::sp::IntrinsicType<
-					decltype(presentation::TextDecoration().style)
-				>::Type style;
-				presentation::sp::IntrinsicType<
-					decltype(presentation::TextDecoration().skip)
-				>::Type skip;
-				presentation::sp::IntrinsicType<
-					decltype(presentation::TextDecoration().underlinePosition)
-				>::Type underlinePosition;
+				presentation::styles::ComputedValueType<
+					decltype(presentation::styles::TextDecoration().lines)
+				>::type lines;
+				presentation::styles::ComputedValueType<
+					decltype(presentation::styles::TextDecoration().color)
+				>::type::value_type color;
+				presentation::styles::ComputedValueType<
+					decltype(presentation::styles::TextDecoration().style)
+				>::type style;
+				presentation::styles::ComputedValueType<
+					decltype(presentation::styles::TextDecoration().skip)
+				>::type skip;
+				presentation::styles::ComputedValueType<
+					decltype(presentation::styles::TextDecoration().underlinePosition)
+				>::type underlinePosition;
 
 				/// Default constructor initializes the members with initial values.
 				ComputedTextDecoration() BOOST_NOEXCEPT :
-					lines(presentation::TextDecoration::Line::NONE),
+					lines(presentation::styles::TextDecoration::Line::NONE),
 					color(Color::TRANSPARENT_BLACK),
-					style(presentation::TextDecoration::Style::SOLID),
-					skip(presentation::TextDecoration::Skip::OBJECTS),
-					underlinePosition(presentation::TextDecoration::UnderlinePosition::AUTO) {}
+					style(presentation::styles::TextDecoration::Style::SOLID),
+					skip(presentation::styles::TextDecoration::Skip::OBJECTS),
+					underlinePosition(presentation::styles::TextDecoration::UnderlinePosition::AUTO) {}
 				/// Equality operator.
 				bool operator==(const ComputedTextDecoration& other) const BOOST_NOEXCEPT {
 					return lines == other.lines && color == other.color
@@ -142,20 +142,20 @@ namespace ascension {
 
 			/// Computed value of @c presentation#TextEmphasis.
 			struct ComputedTextEmphasis : private boost::equality_comparable<ComputedTextEmphasis> {
-				presentation::sp::IntrinsicType<
-					decltype(presentation::TextEmphasis().style)
-				>::Type style;
-				presentation::sp::IntrinsicType<
-					decltype(presentation::TextEmphasis().color)
-				>::Type::value_type color;
-				presentation::sp::IntrinsicType<
-					decltype(presentation::TextEmphasis().position)
-				>::Type position;
+				presentation::styles::ComputedValueType<
+					decltype(presentation::styles::TextEmphasis().style)
+				>::type style;
+				presentation::styles::ComputedValueType<
+					decltype(presentation::styles::TextEmphasis().color)
+				>::type::value_type color;
+				presentation::styles::ComputedValueType<
+					decltype(presentation::styles::TextEmphasis().position)
+				>::type position;
 
 				/// Default constructor initializes the members with initial values.
 				ComputedTextEmphasis() BOOST_NOEXCEPT :
-					style(presentation::TextEmphasis::NONE), color(Color::TRANSPARENT_BLACK),
-					position(presentation::TextEmphasis::ABOVE | presentation::TextEmphasis::RIGHT) {}
+					style(presentation::styles::TextEmphasis::NONE), color(Color::TRANSPARENT_BLACK),
+					position(presentation::styles::TextEmphasis::OVER | presentation::styles::TextEmphasis::RIGHT) {}
 				/// Equality operator.
 				bool operator==(const ComputedTextEmphasis& other) const BOOST_NOEXCEPT {
 					return style == other.style && color == other.color && position == other.position;
@@ -172,7 +172,7 @@ namespace ascension {
 			}
 
 			namespace detail {
-				void paintBorder(PaintContext& context, const Rectangle& rectangle,
+				void paintBorder(PaintContext& context, const int& rectangle,
 					const PhysicalFourSides<ComputedBorderSide>& style, const presentation::WritingMode& writingMode);
 			}
 		}

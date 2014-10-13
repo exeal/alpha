@@ -372,10 +372,12 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\line-layout-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\number-substitution.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\tab-expander.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-alignment.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-hit.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout-styles.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-paint-override.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-run.hpp" />

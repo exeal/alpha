@@ -83,7 +83,7 @@ namespace ascension {
 
 //			class ComputedStyledTextRunIterator;
 //			struct ComputedTextLineStyle;
-//			class TextPaintOverride;
+			class TextPaintOverride;
 			class TabExpander;
 			class TextRun;
 
