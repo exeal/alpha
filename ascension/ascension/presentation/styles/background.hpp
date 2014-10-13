@@ -136,6 +136,26 @@ namespace ascension {
 					> width;
 				};
 				FlowRelativeFourSides<Side> sides;
+
+				/**
+				 * Returns @c true if this side has visible style (but may or may not consume place).
+				 * @tparam BorderSide The type of @a side
+				 * @param side The border side to check
+				 */
+				template<typename BorderSide>
+				static BOOST_CONSTEXPR bool hasVisibleStyle(const BorderSide& side) BOOST_NOEXCEPT {
+					return side.style != Border::NONE && side.style != Border::HIDDEN;
+				}
+				/**
+				 * Returns @c true if the computed thickness of this side is zero.
+				 * @tparam BorderSide The type of @a side
+				 * @param side The border side to check
+				 * @see Strictly speaking, the used width is needed to check if absent
+				 */
+				template<typename BorderSide>
+				static BOOST_CONSTEXPR bool isAbsent(const BorderSide& side) BOOST_NOEXCEPT {
+					return side.width == 0;
+				}
 			};
 			/// @}
 
