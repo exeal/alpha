@@ -11,7 +11,6 @@
 #define ASCENSION_RULER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
-#include <ascension/graphics/font/computed-text-styles.hpp>
 #include <boost/utility/value_init.hpp>
 
 

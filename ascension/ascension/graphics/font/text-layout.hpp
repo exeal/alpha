@@ -13,7 +13,6 @@
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
-#include <ascension/graphics/font/text-layout-styles.hpp>
 #include <memory>	// std.unique_ptr
 #include <vector>
 #include <boost/flyweight.hpp>
