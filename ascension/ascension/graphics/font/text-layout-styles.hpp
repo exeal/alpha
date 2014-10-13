@@ -19,105 +19,6 @@ namespace ascension {
 		class Paint;
 
 		namespace font {
-			/// Computed values of core properties of @c presentation#TextRunStyle.
-			struct ComputedTextRunStyleCore : private boost::equality_comparable<ComputedTextRunStyleCore> {
-				/// Computed value of @c TextRunStyle#color property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextRunStyle().color)
-				>::type::value_type color;
-				/// Computed value of @c TextRunStyle#background property.
-				std::shared_ptr<const Paint> background;
-				/// Computed value of @c TextRunStyle#border property.
-				presentation::FlowRelativeFourSides<ComputedBorderSide> border;
-				///Computed value of @c TextRunStyle#padding property.
-				presentation::FlowRelativeFourSides<Scalar> padding;
-				///Computed value of @c TextRunStyle#margin property.
-				presentation::FlowRelativeFourSides<Scalar> margin;
-				/// Computed value of @c TextRunStyle#textDecoration property.
-				ComputedTextDecoration textDecoration;
-				/// Computed value of @c TextRunStyle#textEmphasis property.
-				ComputedTextEmphasis textEmphasis;
-//				TextShadow textShadow;
-
-				/// Default constructor initializes the all properties with their default values.
-				ComputedTextRunStyleCore() : color(0, 0, 0), background(nullptr), border() {}
-				/// Equality operator.
-				bool operator==(const ComputedTextRunStyleCore& other) const BOOST_NOEXCEPT {
-					return color == other.color && background == other.background
-						&& border == other.border && padding == other.padding && margin == other.margin
-						&& textDecoration == other.textDecoration && textEmphasis == other.textEmphasis;
-				}
-			};
-
-			/// Specialization of @c boost#hash_value function template for @c ComputedTextRunStyleCore.
-			inline std::size_t hash_value(const ComputedTextRunStyleCore& object) BOOST_NOEXCEPT {
-				std::size_t seed = 0;
-				boost::hash_combine(seed, object.color);
-				boost::hash_combine(seed, object.background);
-				boost::hash_combine(seed, object.border);
-				boost::hash_combine(seed, object.padding);
-				boost::hash_combine(seed, object.margin);
-				boost::hash_combine(seed, object.textDecoration);
-				boost::hash_combine(seed, object.textEmphasis);
-				return seed;
-			}
-
-			/// Computed values of @c presentation#TextRunStyle.
-			struct ComputedTextRunStyle : public ComputedTextRunStyleCore, private boost::equality_comparable<ComputedTextRunStyle> {
-				/// Computed values of font specification of @c TextRunStyle.
-				ComputedFontSpecification font;
-
-				/// Computed value of @c TextRunStyle#textHeight property.
-				Scalar textHeight;
-				/// Computed value of @c TextRunStyle#lineHeight property.
-				Scalar lineHeight;
-				/// Computed value of @c TextRunStyle#dominantBaseline property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextRunStyle().dominantBaseline)
-				>::type dominantBaseline;
-				/// Computed value of @c TextRunStyle#alignmentBaseline property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextRunStyle().alignmentBaseline)
-				>::type alignmentBaseline;
-				/// Computed value of @c TextRunStyle#alignmentAdjustment property.
-				Scalar alignmentAdjustment;
-				/// Computed value of @c TextRunStyle#baselineShift property.
-				Scalar baselineShift;
-				
-				/// Computed value of @c TextRunStyle#textTransform property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextRunStyle().textTransform)
-				>::type textTransform;
-				/// Computed value of @c TextRunStyle#hyphens property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextRunStyle().hyphens)
-				>::type hyphens;
-				/// Computed value of @c TextRunStyle#wordSpacing property.
-				presentation::styles::SpacingLimit<Scalar> wordSpacing;
-				/// Computed value of @c TextRunStyle#letterSpacing property.
-				presentation::styles::SpacingLimit<Scalar> letterSpacing;
-
-//				RubyProperties rubyProperties;
-
-//				Effects effects;
-				/// Computed value of @c TextRunStyle#shapingEnabled.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextRunStyle().shapingEnabled)
-				>::type shapingEnabled;
-
-				/// Default constructor initializes nothing.
-				ComputedTextRunStyle() {}
-				/// Equality operator.
-				bool operator==(const ComputedTextRunStyle& other) const BOOST_NOEXCEPT {
-					return font == other.font
-						&& textHeight == other.textHeight && lineHeight == other.lineHeight
-						&& dominantBaseline == other.dominantBaseline && alignmentBaseline == other.alignmentBaseline
-						&& alignmentAdjustment == other.alignmentAdjustment && baselineShift == other.baselineShift
-						&& textTransform == other.textTransform && hyphens == other.hyphens
-						&& wordSpacing == other.wordSpacing && letterSpacing == other.letterSpacing;
-				}
-			};
-
 			/**
 			 * @see TextLayout#TextLayout, presentation#StyledTextRunIterator
 			 */
@@ -134,101 +35,7 @@ namespace ascension {
 				virtual bool isDone() const BOOST_NOEXCEPT = 0;
 				virtual void next() = 0;
 			};
-
-			/// Computed values of @c presentation#TextLineStyle.
-			struct ComputedTextLineStyle : private boost::equality_comparable<ComputedTextLineStyle> {
-				/// Computed value of writing modes properties of @c TextToplevelStyle.
-				presentation::WritingMode writingMode;
-
-				/// Computed value of @c TextLineStyle#defaultRunStyle#background property.
-				std::shared_ptr<const Paint> background;
-
-				/// Computed value of @c TextLineStyle#defaultRunStyle#fontXxxx properties.
-				ComputedFontSpecification nominalFont;
-
-				/// Computed value of @c TextLineStyle#lineBoxContain property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextLineStyle().lineBoxContain)
-				>::type lineBoxContain;
-				/// Computed value of @c TextLineStyle#whiteSpace property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextLineStyle().whiteSpace)
-				>::type whiteSpace;
-				/// Computed value of @c TextLineStyle#tabSize property.
-				std::shared_ptr<TabExpander> tabExpander;
-				/// Computed value of @c TextLineStyle#lineBreak property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextLineStyle().lineBreak)
-				>::type lineBreak;
-				/// Computed value of @c TextLineStyle#wordBreak property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextLineStyle().wordBreak)
-				>::type wordBreak;
-				/// Computed value of @c TextLineStyle#overflowWrap property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextLineStyle().overflowWrap)
-				>::type overflowWrap;
-				/// Computed value of @c TextLineStyle#textAlignment property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextLineStyle().textAlignment)
-				>::type alignment;
-				/// Computed value of @c TextLineStyle#textAlignmentLast property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextLineStyle().textAlignmentLast)
-				>::type alignmentLast;
-				/// Computed value of @c TextLineStyle#textJustification property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextLineStyle().textJustification)
-				>::type justification;
-				/// Computed value of @c TextLineStyle#textIndent property.
-				presentation::styles::BasicTextIndent<Scalar, bool> indent;
-				/// Computed value of @c TextLineStyle#hangingPunctuation property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextLineStyle().hangingPunctuation)
-				>::type hangingPunctuation;
-				/// Computed value of @c TextLineStyle#dominantBaseline property.
-				presentation::styles::ComputedValueType<
-					decltype(presentation::TextLineStyle().dominantBaseline)
-				>::type dominantBaseline;
-				/// Computed value of @c TextLineStyle#lineHeight property.
-				Scalar lineHeight;
-				/// Computed value of @c TextLineStyle#measure property.
-				Scalar measure;
-				/// Computed value of @c TextLineStyle#numberSubstitution property.
-				presentation::styles::NumberSubstitution numberSubstitution;
-
-				/**
-				 * Set @c true to shape zero width control characters as representative glyphs.
-				 * The default value is @c false.
-				 */
-				bool displayShapingControls;
-				/**
-				 * Set @c true to make the deprecated format characters (NADS, NODS, ASS and ISS)
-				 * not effective. The default value is @c false.
-				 */
-				bool disableDeprecatedFormatCharacters;
-				/**
-				 * Set @c true to inhibit from generating mirrored glyphs. The default value is
-				 * @c false.
-				 */
-				bool inhibitSymmetricSwapping;
-
-				/// Equality operator.
-				bool operator==(const ComputedTextLineStyle& other) const BOOST_NOEXCEPT {
-					return writingMode == other.writingMode
-						&& background == other.background && nominalFont == other.nominalFont
-						&& lineBoxContain == other.lineBoxContain && whiteSpace == other.whiteSpace
-						&& tabExpander == other.tabExpander && lineBreak == other.lineBreak && wordBreak == other.wordBreak
-						&& overflowWrap == other.overflowWrap
-						&& alignment == other.alignment && alignmentLast == other.alignmentLast
-						&& justification == other.justification && indent == other.indent
-						&& hangingPunctuation == other.hangingPunctuation
-						&& dominantBaseline == other.dominantBaseline
-						&& lineHeight == other.lineHeight && measure == other.measure
-						&& numberSubstitution == other.numberSubstitution;
-				}
-			};
-
+/*
 			/// Specialization of @c boost#hash_value function template for @c ComputedTextLineStyle.
 			inline std::size_t hash_value(const ComputedTextLineStyle& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
@@ -255,7 +62,7 @@ namespace ascension {
 				boost::hash_combine(seed, object.inhibitSymmetricSwapping);
 				return true;
 			}
-
+*/
 			namespace detail {
 				class ComputedStyledTextRunEnumerator {
 				public:
