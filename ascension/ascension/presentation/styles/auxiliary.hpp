@@ -29,6 +29,18 @@ namespace ascension {
 				Inherited<false>
 			> ShapingEnabled;
 
+			/// Set @c true to make the deprecated format characters (NADS, NODS, ASS and ISS) not effective.
+			typedef StyleProperty<
+				Enumerated<bool, false>,
+				Inherited<false>
+			> DeprecatedFormatCharactersDisabled;
+
+			/// Set @c true to inhibit from generating mirrored glyphs.
+			typedef StyleProperty<
+				Enumerated<bool, false>,
+				Inherited<false>
+			> SymmetricSwappingInhibited;
+
 			/// @see graphics#font#NumberSubstitution
 			typedef StyleProperty<
 				Complex<
