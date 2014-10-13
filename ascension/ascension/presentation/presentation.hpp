@@ -11,17 +11,13 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/kernel/document.hpp>
-#include <ascension/presentation/length.hpp>	// Length.Context
+#include <ascension/presentation/styles/length.hpp>	// Length.Context
 #include <boost/range/irange.hpp>
 
 namespace ascension {
 
 	namespace graphics {
 		class Color;
-		namespace font {
-			struct ComputedTextLineStyle;
-			class ComputedStyledTextRunIterator;
-		}
 	}
 
 	namespace rules {
@@ -29,7 +25,6 @@ namespace ascension {
 	}
 
 	namespace presentation {
-
 		struct TextLineStyle;
 		struct TextToplevelStyle;
 
@@ -172,6 +167,7 @@ namespace ascension {
 			};
 		} // namespace hyperlink
 
+		struct ComputedTextLineStyle;
 		class GlobalTextStyleSwitch;
 		class TextRunStyleDeclarator;
 		struct WritingMode;
@@ -205,10 +201,10 @@ namespace ascension {
 
 			/// @name Styles Computation
 			/// @{
-			void computeTextLineStyle(Index line, const Length::Context& lengthContext,
-				const GlobalTextStyleSwitch* globalSwitch, graphics::font::ComputedTextLineStyle& result) const;
-			std::unique_ptr<graphics::font::ComputedStyledTextRunIterator>
-				computeTextRunStyles(Index line, const Length::Context& lengthContext) const;
+			void computeTextLineStyle(Index line, const styles::Length::Context& lengthContext,
+				const GlobalTextStyleSwitch* globalSwitch, ComputedTextLineStyle& result) const;
+			std::unique_ptr<ComputedStyledTextRunIterator>
+				computeTextRunStyles(Index line, const styles::Length::Context& lengthContext) const;
 			WritingMode computeWritingMode(const GlobalTextStyleSwitch* globalSwitch) const;
 			/// @}
 

@@ -1,6 +1,5 @@
 /**
  * @file text-layout-styles.hpp
- * @see computed-text-styles.hpp, text-alignment.hpp, presentation/text-style.hpp
  * @date 2003-2006 was LineLayout.h
  * @date 2006-2010, 2014
  * @date 2010-11-20 renamed from ascension/layout.hpp
