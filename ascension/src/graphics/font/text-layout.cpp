@@ -165,21 +165,6 @@ namespace ascension {
 			}
 
 
-			// FixedWidthTabExpander //////////////////////////////////////////////////////////////////////////////////
-
-			/**
-			 * Constructor.
-			 * @param width The fixed width in pixels
-			 */
-			FixedWidthTabExpander::FixedWidthTabExpander(Scalar width) BOOST_NOEXCEPT : width_(width) {
-			}
-
-			/// @see TabExpander#nextTabStop
-			Scalar FixedWidthTabExpander::nextTabStop(Scalar ipd, Index) const BOOST_NOEXCEPT {
-				return ipd - static_cast<long>(ipd) % static_cast<long>(width_) + width_;
-			}
-
-
 			// TextLayout /////////////////////////////////////////////////////////////////////////////////////////////
 
 			namespace {
