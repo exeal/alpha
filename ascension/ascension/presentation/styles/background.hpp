@@ -169,13 +169,21 @@ namespace ascension {
 
 			template<> struct SpecifiedValueType<Border> {
 				typedef struct {
-					FlowRelativeFourSides<decltype(Border().sides)> sides;
+					FlowRelativeFourSides<
+						SpecifiedValueType<
+							std::decay<decltype(Border().sides[0])>::type
+						>::type
+					> sides;
 				} type;
 			};
 
 			template<> struct ComputedValueType<Border> {
 				typedef struct {
-					FlowRelativeFourSides<decltype(Border().sides)> sides;
+					FlowRelativeFourSides<
+						ComputedValueType<
+							std::decay<decltype(Border().sides[0])>::type
+						>::type
+					> sides;
 				} type;
 			};
 		}
