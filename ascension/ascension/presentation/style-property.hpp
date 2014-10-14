@@ -249,6 +249,18 @@ namespace ascension {
 
 		namespace styles {
 			/**
+			 * Implements "Cascading" describe by CSS Cascading and Inheritance Level 3.
+			 * @tparam Property @c StyleProperty class template
+			 * @param declaredValue The "Declared Value" to process
+			 * @param[out] cascadedValue The "Cascaded Value"
+			 */
+			template<typename Property>
+			inline void cascade(const boost::optional<Property>& declaredValue, boost::optional<Property>& cascadedValue) {
+				// TODO: This code is temporary.
+				cascadedValue = declaredValue;
+			}
+
+			/**
 			 * Calculates a "Specified Value" from the given "Cascaded Value" with the defaulting process.
 			 * @tparam Property @c StyleProperty class template
 			 * @param cascadedValue The "Cascaded Value" to process, or @c boost#none if not present
