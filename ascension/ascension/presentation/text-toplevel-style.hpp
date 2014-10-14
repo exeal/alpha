@@ -12,8 +12,9 @@
 #ifndef ASCENSION_TEXT_TOP_LEVEL_STYLE_HPP
 #define ASCENSION_TEXT_TOP_LEVEL_STYLE_HPP
 
+#include <ascension/corelib/memory.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
-#include <boost/fusion/adapted/mpl.hpp>
+#include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
 #include <boost/mpl/placeholders.hpp>
 #include <boost/mpl/transform.hpp>
@@ -47,10 +48,22 @@ namespace ascension {
 		};
 
 		std::shared_ptr<const DeclaredTextLineStyle> defaultTextLineStyle(const DeclaredTextToplevelStyle& toplevelStyle);
+#if 1
+		struct SpecifiedTextToplevelStyle : boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
+		>::type {};
+		struct ComputedTextToplevelStyle : boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextToplevelStyle, styles::ComputedValueType<boost::mpl::_1>>::type
+		>::type {};
+#else
+		typedef boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
+		>::type SpecifiedTextToplevelStyle;
+		typedef boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextToplevelStyle, styles::ComputedValueType<boost::mpl::_1>>::type
+		>::type ComputedTextToplevelStyle;
+#endif
 
-		typedef boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type SpecifiedTextToplevelStyle;
-		typedef boost::mpl::transform<TextToplevelStyle, styles::ComputedValueType<boost::mpl::_1>>::type ComputedTextToplevelStyle;
-				
 		/**
 		 * @see Presentation#computeTextLineStyle
 		 */
