@@ -90,16 +90,54 @@ namespace ascension {
 			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
 		}
 
+		/// @c boost#hash_value for @c ComputedTextLineStyle.
+		std::size_t hash_value(const ComputedTextLineStyle& style) {
+			std::size_t seed = 0;
+
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::Direction>::type>(style));
+//			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::UnicodeBidi>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::TextOrientation>::type>(style));
+
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::LineHeight>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::LineBoxContain>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::DominantBaseline>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::InlineBoxAlignment>::type>(style));
+
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::WhiteSpace>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::TabSize>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::LineBreak>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::WordBreak>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::OverflowWrap>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::TextAlignment>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::TextAlignmentLast>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::TextJustification>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::TextIndent>::type>(style));
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::HangingPunctuation>::type>(style));
+
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::Measure>::type>(style));
+
+			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValueType<styles::NumberSubstitution>::type>(style));
+
+			return seed;
+		}
+
+		/// Default constructor.
+		DeclaredTextLineStyle::DeclaredTextLineStyle() {
+			setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle>());
+		}
+
 		/**
-		 * Returns the default line style of the given "Declared" line style.
-		 * @param lineStyle The "Declared" line style
-		 * @return lineStyle.defaultRunStyle, of a default-constructed @c TextRunStyle instance if @c null
-		 * @see defaultTextLineStyle
+		 * Sets the default @c DeclaredTextRunStyle of this line element.
+		 * @param newStyle The style collection to set. If @c null, this @c DeclaredTextLineStyle holds a
+		 *                 default-constructed @c DeclaredTextRunStyle
 		 */
-		std::shared_ptr<const DeclaredTextRunStyle> defaultTextRunStyle(const DeclaredTextLineStyle& lineStyle) {
-			static const DeclaredTextRunStyle defaultInstance;
-			return (lineStyle.defaultRunStyle.get() != nullptr) ?
-				lineStyle.defaultRunStyle : std::shared_ptr<const DeclaredTextRunStyle>(&defaultInstance, boost::null_deleter());
+		void DeclaredTextLineStyle::setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle> newStyle) BOOST_NOEXCEPT {
+			if(newStyle.get() != nullptr)
+				runsStyle_ = newStyle;
+			else {
+				static const DeclaredTextRunStyle DEFAULT_INSTANCE;
+				runsStyle_ = std::shared_ptr<const DeclaredTextRunStyle>(&DEFAULT_INSTANCE, boost::null_deleter());
+			}
 		}
 	}
 }
