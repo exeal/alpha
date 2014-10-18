@@ -206,6 +206,25 @@ namespace ascension {
 					> sides;
 				} type;
 			};
+
+			/// Extends @c boost#hash_value for computed @c Background.
+			inline std::size_t hash_value(const ComputedValueType<Background>::type& background) {
+				return hash_value(background.color);
+			}
+
+			/// Extends @c boost#hash_value for computed @c Border#Side.
+			inline std::size_t hash_value(const ComputedValueType<Border::Side>::type& borderSide) {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, borderSide.color);
+				boost::hash_combine(seed, borderSide.style);
+				boost::hash_combine(seed, borderSide.width);
+				return seed;
+			}
+
+			/// Extends @c boost#hash_value for computed @c Border.
+			inline std::size_t hash_value(const ComputedValueType<Border>::type& border) {
+				return boost::hash_range(std::begin(border.sides), std::end(border.sides));
+			}
 		}
 	}
 }
