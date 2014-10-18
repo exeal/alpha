@@ -13,6 +13,7 @@
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/presentation/styles/numeric-data-types.hpp>
 #include <stdexcept>			// std.invalid_argument
+#include <boost/functional/hash/hash.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable
 
 namespace ascension {
@@ -183,6 +184,15 @@ namespace ascension {
 				/// @}
 
 				static bool isValidUnit(Unit unit) BOOST_NOEXCEPT;
+
+				/// Extends @c boost#hash_value for @c Length.
+				friend std::size_t hash_value(const Length& length) {
+					std::size_t seed = 0;
+					boost::hash_combine(seed, length.valueInSpecifiedUnits_);
+					boost::hash_combine(seed, length.unit_);
+					boost::hash_combine(seed, length.mode_);
+					return seed;
+				}
 
 			private:
 				Number valueInSpecifiedUnits_;
