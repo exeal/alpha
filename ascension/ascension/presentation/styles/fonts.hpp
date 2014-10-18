@@ -46,19 +46,19 @@ namespace ascension {
 
 			/// @see graphics#font#FontWeight
 			typedef StyleProperty<
-				Enumerated<graphics::font::FontWeight, graphics::font::FontWeight::NORMAL>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::FontWeight), graphics::font::FontWeight::NORMAL>,
 				Inherited<true>
 			> FontWeight;
 
 			/// @see @c graphics#font#FontStretch
 			typedef StyleProperty<
-				Enumerated<graphics::font::FontStretch, graphics::font::FontStretch::NORMAL>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::FontStretch), graphics::font::FontStretch::NORMAL>,
 				Inherited<true>
 			> FontStretch;
 
 			/// @see @c graphics#font#FontStyle
 			typedef StyleProperty<
-				Enumerated<graphics::font::FontStyle, graphics::font::FontStyle::NORMAL>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::FontStyle), graphics::font::FontStyle::NORMAL>,
 				Inherited<true>
 			> FontStyle;
 
@@ -91,8 +91,13 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<AbsoluteFontSize, RelativeFontSize, Length, Percentage>,
-					AbsoluteFontSize, AbsoluteFontSize::MEDIUM
+					boost::variant<
+						BOOST_SCOPED_ENUM_NATIVE(AbsoluteFontSize),
+						BOOST_SCOPED_ENUM_NATIVE(RelativeFontSize),
+						Length,
+						Percentage
+					>,
+					BOOST_SCOPED_ENUM_NATIVE(AbsoluteFontSize), AbsoluteFontSize::MEDIUM
 				>,
 				Inherited<true>,
 				Pixels

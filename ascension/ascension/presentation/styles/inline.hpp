@@ -73,41 +73,42 @@ namespace ascension {
 			 * [Copied from CSS3] The line-height property controls the amount of leading space which is added over and
 			 * under an inline box (including the root inline box) to determine the extended block-progression
 			 * dimension of the inline box.
+			 * The computed value can have a @c std#tuple&lt;&gt;, which means 'none' keyword.
 			 * @see CSS Inline Layout Module Level 3, 1.4.1 Line height adjustment: the line-height property
 			 *      (http://dev.w3.org/csswg/css-inline/#InlineBoxHeight)
 			 * @see XSL 1.1, 7.16.4 "line-height" (http://www.w3.org/TR/xsl/#line-height)
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<LineHeightEnums, Number, Length, Percentage>,
-					LineHeightEnums, LineHeightEnums::NORMAL
+					boost::variant<BOOST_SCOPED_ENUM_NATIVE(LineHeightEnums), Number, Length, Percentage>,
+					BOOST_SCOPED_ENUM_NATIVE(LineHeightEnums), LineHeightEnums::NORMAL
 				>,
 				Inherited<true>,
 				boost::variant<
 					Number,			// for 'normal' and <number>
 					Length,			// for <length>
 					Pixels,			// for <percentage>
-					boost::none_t	// for 'none' keyword
+					std::tuple<>	// for 'none' keyword
 				>
 			> LineHeight;
 
 			/// @see graphics#font#LineBoxContain
 			typedef StyleProperty<
 				Enumerated<
-					graphics::font::LineBoxContain,
+					BOOST_SCOPED_ENUM_NATIVE(graphics::font::LineBoxContain),
 					graphics::font::LineBoxContain::BLOCK | graphics::font::LineBoxContain::INLINE | graphics::font::LineBoxContain::REPLACED
 				>, Inherited<true>
 			> LineBoxContain;
 
 			/// @see graphics#font#DominantBaseline
 			typedef StyleProperty<
-				Enumerated<graphics::font::DominantBaseline, graphics::font::DominantBaseline::AUTO>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::DominantBaseline), graphics::font::DominantBaseline::AUTO>,
 				Inherited<false>
 			> DominantBaseline;
 
 			/// @see graphics#font#AlignmentBaseline
 			typedef StyleProperty<
-				Enumerated<graphics::font::AlignmentBaseline, graphics::font::AlignmentBaseline::BASELINE>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::AlignmentBaseline), graphics::font::AlignmentBaseline::BASELINE>,
 				Inherited<false>
 			> AlignmentBaseline;
 
@@ -137,8 +138,8 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<AlignmentAdjustEnums, Percentage, Length>,
-					AlignmentAdjustEnums, AlignmentAdjustEnums::AUTO
+					boost::variant<BOOST_SCOPED_ENUM_NATIVE(AlignmentAdjustEnums), Percentage, Length>,
+					BOOST_SCOPED_ENUM_NATIVE(AlignmentAdjustEnums), AlignmentAdjustEnums::AUTO
 				>,
 				Inherited<false>,
 				Pixels	// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
@@ -163,8 +164,8 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<BaselineShiftEnums, Percentage, Length>,
-					BaselineShiftEnums, BaselineShiftEnums::BASELINE
+					boost::variant<BOOST_SCOPED_ENUM_NATIVE(BaselineShiftEnums), Percentage, Length>,
+					BOOST_SCOPED_ENUM_NATIVE(BaselineShiftEnums), BaselineShiftEnums::BASELINE
 				>,
 				Inherited<false>,
 				Pixels	// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
@@ -186,8 +187,8 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<InlineBoxAlignmentEnums, Integer>,
-					InlineBoxAlignmentEnums, InlineBoxAlignmentEnums::LAST
+					boost::variant<BOOST_SCOPED_ENUM_NATIVE(InlineBoxAlignmentEnums), Integer>,
+					BOOST_SCOPED_ENUM_NATIVE(InlineBoxAlignmentEnums), InlineBoxAlignmentEnums::LAST
 				>, Inherited<false>
 			> InlineBoxAlignment;
 			/// @}
@@ -197,7 +198,7 @@ namespace ascension {
 						const Pixels& computedFontSize, ComputedValueType<LineHeight>::type& computedValue) {
 					if(const LineHeightEnums* const keyword = boost::get<LineHeightEnums>(&specifiedValue)) {
 						if(*keyword == LineHeightEnums::NONE) {
-							computedValue = boost::none;
+							computedValue = std::make_tuple();
 							return;
 						}
 					} else if(const Length* const length = boost::get<Length>(&specifiedValue)) {

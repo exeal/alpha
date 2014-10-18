@@ -33,16 +33,17 @@ namespace ascension {
 
 			/**
 			 * [Copied from CSS3] Sets the thickness of the padding area. The value may not be negative.
+			 * @c std#tuple&lt;&gt; means 'auto' keyword.
 			 * @see CSS basic box model, 7. The padding properties
 			 *      (http://dev.w3.org/csswg/css3-box/#the-padding-properties)
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<Length, Percentage, PaddingEnums>,
+					boost::variant<Length, Percentage, BOOST_SCOPED_ENUM_NATIVE(PaddingEnums)>,
 					Length, 0
 				>,
 				Inherited<false>,
-				boost::variant<Pixels, Percentage, boost::none_t>	// boost.none means 'auto' keyword
+				boost::variant<Pixels, Percentage, std::tuple<>>
 			> PaddingSide;
 
 			/// Enumerated values for @c MarginSide.
@@ -57,6 +58,7 @@ namespace ascension {
 
 			/**
 			 * [Copied from CSS3] These properties set the thickness of the margin area. The value may be negative.
+			 * @c std#tuple&lt;&gt; means 'auto' keyword.
 			 * @see CSS basic box model, 8. Margins (http://dev.w3.org/csswg/css3-box/#margins)
 			 */
 			typedef StyleProperty<
@@ -65,7 +67,7 @@ namespace ascension {
 					Length, 0
 				>,
 				Inherited<false>,
-				boost::variant<Pixels, Percentage, boost::none_t>	// boost.none means 'auto' keyword
+				boost::variant<Pixels, Percentage, std::tuple<>>
 			> MarginSide;
 
 			/**
@@ -74,12 +76,12 @@ namespace ascension {
 			 * @see CSS basic box model, 9. The width and height properties (http://dev.w3.org/csswg/css-box/#width)
 			 */
 			typedef StyleProperty<
-				Multiple<
-					boost::variant<Length, Percentage, boost::none_t>,
-					boost::none_t, 0
+				MultipleWithInitialIndex<
+					boost::variant<Length, Percentage, std::tuple<>>,
+					boost::mpl::int_<2>
 				>,
 				Inherited<false>,
-				boost::variant<Pixels, Percentage, boost::none_t>
+				boost::variant<Pixels, Percentage, std::tuple<>>
 			> Measure;
 			/// @}
 		}
