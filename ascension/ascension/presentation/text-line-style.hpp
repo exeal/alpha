@@ -30,10 +30,11 @@
 
 namespace ascension {
 	namespace presentation {
-		struct DeclaredTextRunStyle;
+		class DeclaredTextRunStyle;
 
 		/**
-		 * Declares the style of a text line. This object also gives the default text run style.
+		 * A text line style collection.
+		 * @see DeclaredTextLineStyle, SpecifiedTextLineStyle, ComputedTextLineStyle
 		 * @see TextRunStyle, TextToplevelStyle, TextLineStyleDirector
 		 */
 		typedef boost::fusion::vector<
@@ -65,27 +66,38 @@ namespace ascension {
 
 		// TODO: Check uniqueness of the members of TextLineStyle.
 
-		struct DeclaredTextLineStyle : public TextLineStyle,
+		/// "Declared Values" of @c TextLineStyle.
+		class DeclaredTextLineStyle : public TextLineStyle,
 			public FastArenaObject<DeclaredTextLineStyle>, std::enable_shared_from_this<DeclaredTextLineStyle> {
-			/**
-			 * The default text run style. The default value is @c null.
-			 * @see defaultTextRunStyle
-			 */
-			std::shared_ptr<const DeclaredTextRunStyle> defaultRunStyle;
+		public:
+			DeclaredTextLineStyle();
+			/// Returns the default @c DeclaredTextRunStyle of this line element.
+			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextRunStyle> linesStyle() const BOOST_NOEXCEPT {
+				return runsStyle_;
+			}
+			void setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle> newStyle) BOOST_NOEXCEPT;
+
+		private:
+			std::shared_ptr<const DeclaredTextRunStyle> runsStyle_;
 		};
 
-		std::shared_ptr<const DeclaredTextRunStyle> defaultTextRunStyle(const DeclaredTextLineStyle& lineStyle);
+		/// "Specified Values" of @c TextLineStyle.
 #if 1
 		struct SpecifiedTextLineStyle : boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
-		>::type {};
-		struct ComputedTextLineStyle : boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type
 		>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
 		>::type SpecifiedTextLineStyle;
+#endif
+
+		/// "Computed Values" of @c TextLineStyle.
+#if 1
+		struct ComputedTextLineStyle : boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type
+		>::type {};
+#else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type
 		>::type ComputedTextLineStyle;
@@ -93,6 +105,7 @@ namespace ascension {
 
 		void computeTextLineStyle(const SpecifiedTextLineStyle& specifiedValues,
 			const styles::Length::Context& context, ComputedTextLineStyle& computedValues);
+		std::size_t hash_value(const ComputedTextLineStyle& style);
 	}
 } // namespace ascension.presentation
 
