@@ -53,7 +53,7 @@ namespace ascension {
 				 * @see XSL 1.1, 7.17.4 "text-decoration" (http://www.w3.org/TR/xsl/#text-decoration)
 				 */
 				StyleProperty<
-					Enumerated<Line, Line::NONE>,
+					Enumerated<BOOST_SCOPED_ENUM_NATIVE(Line), Line::NONE>,
 					Inherited<false>
 				> lines;
 
@@ -81,7 +81,7 @@ namespace ascension {
 				 *      property (http://www.w3.org/TR/css-text-decor-3/#text-decoration-style-property)
 				 */
 				StyleProperty<
-					Enumerated<Style, Style::SOLID>,
+					Enumerated<BOOST_SCOPED_ENUM_NATIVE(Style), Style::SOLID>,
 					Inherited<false>
 				> style;
 
@@ -117,7 +117,7 @@ namespace ascension {
 				 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-decoration-skip-property)
 				 */
 				StyleProperty<
-					Enumerated<Skip, Skip::OBJECTS>,
+					Enumerated<BOOST_SCOPED_ENUM_NATIVE(Skip), Skip::OBJECTS>,
 					Inherited<true>
 				> skip;
 
@@ -150,7 +150,7 @@ namespace ascension {
 				 *      (http://www.w3.org/TR/css-text-decor-3/#text-underline-position-property)
 				 */
 				StyleProperty<
-					Enumerated<UnderlinePosition, UnderlinePosition::AUTO>,
+					Enumerated<BOOST_SCOPED_ENUM_NATIVE(UnderlinePosition), UnderlinePosition::AUTO>,
 					Inherited<true>
 				> underlinePosition;
 			};
@@ -196,13 +196,14 @@ namespace ascension {
 
 				/**
 				 * [Copied from CSS3] This property applies emphasis marks to the element's text.
+				 * @c std#tuple&lt;&gt; means 'none' keyword.
 				 * @see	CSS Text Decoration Module Level 3, 3.1. Emphasis Mark Style: the
 				 *      ‘text-emphasis-style’ property
 				 *      (http://www.w3.org/TR/css-text-decor-3/#text-emphasis-style-property)
 				 */
 				StyleProperty<
 					MultipleWithInitialIndex<
-						boost::variant<boost::none_t, StyleEnums, CodePoint>,
+						boost::variant<std::tuple<>, StyleEnums, CodePoint>,
 						boost::mpl::int_<0>
 					>,
 					Inherited<true>,
