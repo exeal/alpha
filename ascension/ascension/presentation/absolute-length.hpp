@@ -10,6 +10,7 @@
 #define ASCENSION_ABSOLUTE_LENGTH_HPP
 
 #include <ascension/presentation/styles/numeric-data-types.hpp>
+#include <boost/functional/hash/hash.hpp>
 #include <boost/operators.hpp>
 #define BOOST_RATIO_EXTENSIONS
 #include <boost/ratio.hpp>
@@ -156,6 +157,16 @@ namespace ascension {
 		private:
 			Representation value_;
 		};
+
+		/// Extends @c boost#hash_value for @c AbsoluteLength.
+		template<typename RepresentationType, typename ScaleType>
+		inline std::size_t hash_value(const AbsoluteLength<RepresentationType, ScaleType>& length) {
+			std::size_t seed = 0;
+			boost::hash_combine(seed, ScaleType::num);
+			boost::hash_combine(seed, ScaleType::den);
+			boost::hash_combine(seed, length.value());
+			return seed;
+		}
 
 		typedef AbsoluteLength<styles::Number> Pixels;
 		typedef AbsoluteLength<styles::Number, boost::ratio_multiply<Pixels::Scale, boost::ratio<96>>::type> Inches;	// 1 in = 96 px
