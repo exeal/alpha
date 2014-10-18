@@ -22,14 +22,13 @@
 
 namespace ascension {
 	namespace presentation {
-		struct DeclaredTextLineStyle;
+		class DeclaredTextLineStyle;
 
 		/**
-		 * 
-		 * The writing modes specified by this style may be overridden by
-		 * @c graphics#font#TextRenderer#writingMode.
-		 * @see TextRunStyle, TextLineStyle, Presentation#textToplevelStyle,
-		 *      Presentation#setTextToplevelStyle
+		 * A text toplevel style collection.
+		 * The writing modes specified by this style may be overridden by @c graphics#font#TextRenderer#writingMode.
+		 * @see DeclaredTextToplevelStyle, SpecifiedTextToplevelStyle, ComputedTextToplevelStyle
+		 * @see TextRunStyle, TextLineStyle, Presentation#textToplevelStyle, Presentation#setTextToplevelStyle
 		 */
 		typedef boost::fusion::vector<
 			// Writing Modes
@@ -38,31 +37,44 @@ namespace ascension {
 
 		// TODO: Check uniqueness of the members of TextToplevelStyle.
 
-		struct DeclaredTextToplevelStyle : public TextToplevelStyle,
+		/// "Declared Values" of @c TextToplevelStyle.
+		class DeclaredTextToplevelStyle : public TextToplevelStyle,
 			public FastArenaObject<DeclaredTextToplevelStyle>, public std::enable_shared_from_this<DeclaredTextToplevelStyle> {
-			/**
-			 * The default text line style. The default value is @c null.
-			 * @see defaultTextLineStyle
-			 */
-			std::shared_ptr<const DeclaredTextLineStyle> defaultLineStyle;
+		public:
+			DeclaredTextToplevelStyle();
+			/// Returns the default @c DeclaredTextLineStyle of this toplevel element.
+			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextLineStyle> linesStyle() const BOOST_NOEXCEPT {
+				return linesStyle_;
+			}
+			void setLinesStyle(std::shared_ptr<const DeclaredTextLineStyle> newStyle) BOOST_NOEXCEPT;
+
+		private:
+			std::shared_ptr<const DeclaredTextLineStyle> linesStyle_;
 		};
 
-		std::shared_ptr<const DeclaredTextLineStyle> defaultTextLineStyle(const DeclaredTextToplevelStyle& toplevelStyle);
+		/// "Specified Values" of @c TextToplevelStyle.
 #if 1
 		struct SpecifiedTextToplevelStyle : boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
-		>::type {};
-		struct ComputedTextToplevelStyle : boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextToplevelStyle, styles::ComputedValueType<boost::mpl::_1>>::type
 		>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
 		>::type SpecifiedTextToplevelStyle;
+#endif
+
+		/// "Computed Values" of @c TextToplevelStyle.
+#if 1
+		struct ComputedTextToplevelStyle : boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextToplevelStyle, styles::ComputedValueType<boost::mpl::_1>>::type
+		>::type {};
+#else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextToplevelStyle, styles::ComputedValueType<boost::mpl::_1>>::type
 		>::type ComputedTextToplevelStyle;
 #endif
+
+		std::size_t hash_value(const ComputedTextToplevelStyle& style);
 
 		/**
 		 * @see Presentation#computeTextLineStyle
@@ -119,7 +131,8 @@ namespace ascension {
 		};
 
 		inline void computedValuesFromSpecifiedValues(const SpecifiedTextToplevelStyle& specifiedValues, ComputedTextToplevelStyle& computedValues) {
-			*boost::fusion::find<style::WritingMode>(computedValues) = *boost::fusion::find<style::WritingMode>(specifiedValues);
+			*boost::fusion::find<styles::ComputedValueType<styles::WritingMode>::type>(computedValues)
+				= *boost::fusion::find<styles::SpecifiedValueType<styles::WritingMode>::type>(specifiedValues);
 		}
 	}
 } // namespace ascension.presentation
