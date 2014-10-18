@@ -10,6 +10,7 @@
 #ifndef ASCENSION_STYLES_NUMERIC_DATA_TYPES_HPP
 #define ASCENSION_STYLES_NUMERIC_DATA_TYPES_HPP
 
+#include <boost/functional/hash/hash.hpp>
 #include <boost/rational.hpp>
 
 namespace ascension {
@@ -35,7 +36,21 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-values/#percentages)
 			 */
 			typedef boost::rational<Integer> Percentage;
+
+			/// Extends @c boost#hash_value for @c Percentage.
+			inline std::size_t hash_value(const Percentage& percentage) {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, percentage.numerator());
+				boost::hash_combine(seed, percentage.denominator());
+				return seed;
+			}
 		}
+	}
+}
+
+namespace boost {
+	inline std::size_t hash_value(const ascension::presentation::styles::Percentage& v) {	// ???
+		return ascension::presentation::styles::hash_value(v);
 	}
 }
 
