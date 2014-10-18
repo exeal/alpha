@@ -290,6 +290,29 @@ namespace ascension {
 				typedef struct {
 				} type;
 			};
+
+			/// Extends @c boost#hash_value for computed @c TextDecoration.
+			inline std::size_t hash_value(const ComputedValueType<TextDecoration>::type& textDecoration) {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, textDecoration.lines);
+				boost::hash_combine(seed, textDecoration.color);
+				boost::hash_combine(seed, textDecoration.style);
+				boost::hash_combine(seed, textDecoration.skip);
+				boost::hash_combine(seed, textDecoration.underlinePosition);
+				return seed;
+			}
+
+			/// Extends @c boost#hash_value for computed @c TextEmphasis.
+			inline std::size_t hash_value(const ComputedValueType<TextEmphasis>::type& textEmphasis) {
+				std::size_t seed = 0;
+				if(textEmphasis.style != boost::none)
+					boost::hash_combine(seed, boost::get(textEmphasis.style));
+				else
+					boost::hash_combine(seed, std::make_tuple());
+				boost::hash_combine(seed, textEmphasis.color);
+				boost::hash_combine(seed, textEmphasis.position);
+				return seed;
+			}
 		}
 	}
 }
