@@ -51,8 +51,8 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<TextHeightEnums, Number>,
-					TextHeightEnums, TextHeightEnums::AUTO
+					boost::variant<BOOST_SCOPED_ENUM_NATIVE(TextHeightEnums), Number>,
+					BOOST_SCOPED_ENUM_NATIVE(TextHeightEnums), TextHeightEnums::AUTO
 				>, Inherited<true>
 			> TextHeight;
 
