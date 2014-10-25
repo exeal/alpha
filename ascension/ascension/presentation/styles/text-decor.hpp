@@ -16,6 +16,7 @@
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/styles/color.hpp>	// Border
 #include <ascension/presentation/styles/color.hpp>
+#include <boost/operators.hpp>
 #include <boost/variant.hpp>
 
 namespace ascension {
@@ -256,13 +257,17 @@ namespace ascension {
 			};
 
 			template<> struct ComputedValueType<TextDecoration> {
-				typedef struct {
+				struct type : private boost::equality_comparable<type> {
 					ComputedValueType<decltype(TextDecoration().lines)>::type lines;
 					ComputedValueType<decltype(TextDecoration().color)>::type color;
 					ComputedValueType<decltype(TextDecoration().style)>::type style;
 					ComputedValueType<decltype(TextDecoration().skip)>::type skip;
 					ComputedValueType<decltype(TextDecoration().underlinePosition)>::type underlinePosition;
-				} type;
+					bool operator==(const type& other) const BOOST_NOEXCEPT {
+						return lines == other.lines && color == other.color
+							&& style == other.style && skip == other.skip && underlinePosition == other.underlinePosition;
+					}
+				};
 			};
 
 			template<> struct SpecifiedValueType<TextEmphasis> {
@@ -274,11 +279,14 @@ namespace ascension {
 			};
 
 			template<> struct ComputedValueType<TextEmphasis> {
-				typedef struct {
+				struct type : private boost::equality_comparable<type> {
 					ComputedValueType<decltype(TextEmphasis().style)>::type style;
 					ComputedValueType<decltype(TextEmphasis().color)>::type color;
 					ComputedValueType<decltype(TextEmphasis().position)>::type position;
-				} type;
+					bool operator==(const type& other) const BOOST_NOEXCEPT {
+						return style == other.style && color == other.color && position == other.position;
+					}
+				};
 			};
 
 			template<> struct SpecifiedValueType<TextShadow> {
@@ -287,8 +295,11 @@ namespace ascension {
 			};
 
 			template<> struct ComputedValueType<TextShadow> {
-				typedef struct {
-				} type;
+				struct type : private boost::equality_comparable<type> {
+					bool operator==(const type& other) const BOOST_NOEXCEPT {
+						return true;
+					}
+				};
 			};
 
 			/// Extends @c boost#hash_value for computed @c TextDecoration.
