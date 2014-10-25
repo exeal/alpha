@@ -17,6 +17,7 @@
 #include <ascension/presentation/style-property.hpp>
 #include <memory>						// std.unique_ptr
 #include <boost/mpl/identity.hpp>
+#include <boost/operators.hpp>
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -166,9 +167,12 @@ namespace ascension {
 			};
 
 			template<> struct ComputedValueType<Background> {
-				typedef struct {
+				struct type : private boost::equality_comparable<type> {
 					ComputedValueType<decltype(Background().color)>::type color;
-				} type;
+					bool operator==(const type& other) const BOOST_NOEXCEPT {
+						return color == other.color;
+					}
+				};
 			};
 
 			template<> struct SpecifiedValueType<Border::Side> {
@@ -180,11 +184,14 @@ namespace ascension {
 			};
 
 			template<> struct ComputedValueType<Border::Side> {
-				typedef struct {
+				struct type : private boost::equality_comparable<type> {
 					ComputedValueType<decltype(Border::Side().color)>::type color;
 					ComputedValueType<decltype(Border::Side().style)>::type style;
 					ComputedValueType<decltype(Border::Side().width)>::type width;
-				} type;
+					bool operator==(const type& other) const BOOST_NOEXCEPT {
+						return color == other.color && style == other.style && width == other.width;
+					}
+				};
 			};
 
 			template<> struct SpecifiedValueType<Border> {
@@ -198,13 +205,16 @@ namespace ascension {
 			};
 
 			template<> struct ComputedValueType<Border> {
-				typedef struct {
+				struct type : private boost::equality_comparable<type> {
 					FlowRelativeFourSides<
 						ComputedValueType<
 							std::decay<decltype(Border().sides[0])>::type
 						>::type
 					> sides;
-				} type;
+					bool operator==(const type& other) const BOOST_NOEXCEPT {
+						return sides == other.sides;
+					}
+				};
 			};
 
 			/// Extends @c boost#hash_value for computed @c Background.
