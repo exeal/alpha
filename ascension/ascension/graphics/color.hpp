@@ -24,6 +24,8 @@
 
 namespace ascension {
 	namespace graphics {
+		//TODO: Use native-conversion.hpp.
+
 		/**
 		 * @c Color provides colors based on RGB values.
 		 * @see "CSS Color Module Level 3" (http://www.w3.org/TR/css3-color/)
@@ -33,6 +35,8 @@ namespace ascension {
 			static const Color TRANSPARENT_BLACK;
 			static const Color OPAQUE_BLACK, OPAQUE_WHITE;
 		public:
+			/// Creates a color value with uninitialized components.
+			Color() BOOST_NOEXCEPT {}
 			/// Creates a color value based on RGB values.
 			Color(Byte red, Byte green, Byte blue, Byte alpha = 255) BOOST_NOEXCEPT
 				: red_(red * 0x0101), green_(green * 0x0101), blue_(blue * 0x0101), alpha_(alpha * 0x0101) {}
