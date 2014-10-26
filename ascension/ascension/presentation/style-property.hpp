@@ -261,10 +261,37 @@ namespace ascension {
 			}
 
 			/**
+			 * Implements "Inheritance" process.
+			 * @tparam Property @c StyleProperty class template
+			 * @param parentComputedValue The "Computed Value" of the parent element, or @c null if the root element
+			 * @param[out] specifiedValue The calculated "Specified Value"
+			 */
+			template<typename Property>
+			inline void inherit(
+					const typename ComputedValueType<Property>::type* parentComputedValue,
+					typename SpecifiedValueType<Property>::type& specifiedValue) {
+				specifiedValue = (parentComputedValue != nullptr) ? *parentComputedValue : Property::initialValue();
+			}
+
+			/**
+			 * Implements "Inheritance" process.
+			 * @tparam Property @c StyleProperty class template
+			 * @tparam Function The type of @a parentComputedValueGenerator
+			 * @param parentComputedValueGenerator The function takes no parameter and returns the "Computed Value" of
+			 *                                     the parent element
+			 * @param[out] specifiedValue The calculated "Specified Value"
+			 */
+			template<typename Property, typename Function>
+			inline void inherit(Function parentComputedValueGenerator,
+					typename SpecifiedValueType<Property>::type& specifiedValue) {
+				specifiedValue = parentComputedValueGenerator();
+			}
+
+			/**
 			 * Calculates a "Specified Value" from the given "Cascaded Value" with the defaulting process.
 			 * @tparam Property @c StyleProperty class template
 			 * @param cascadedValue The "Cascaded Value" to process, or @c boost#none if not present
-			 * @param parentComputedValue The "Computed Value" of the parent element for inheritance
+			 * @param parentComputedValue The "Computed Value" of the parent element, or @c null if the root element
 			 * @param[out] specifiedValue The calculated "Specified Value"
 			 */
 			template<typename Property>
@@ -272,14 +299,17 @@ namespace ascension {
 					boost::optional<Property> cascadedValue,
 					const typename ComputedValueType<Property>::type& parentComputedValue,
 					typename SpecifiedValueType<Property>::type& specifiedValue) {
-				if(cascadedValue == boost::none || boost::get(cascadedValue) == UNSET)
-					specifiedValue = Property::INHERITED ? parentComputedValue : Property::initialValue();
-				else if(!cascadedValue->isDefaultingKeyword())
+				if(cascadedValue == boost::none || boost::get(cascadedValue) == UNSET) {
+					if(Property::INHERITED)
+						inherit(parentComputedValue, specifiedValue);
+					else
+						specifiedValue = Property::initialValue();
+				} else if(!cascadedValue->isDefaultingKeyword())
 					specifiedValue = cascadedValue.get();
 				else if(boost::get(cascadedValue) == INITIAL)
 					specifiedValue = Property::initialValue();
 				else if(boost::get(cascadedValue) == INHERIT)
-					specifiedValue = parentComputedValue;
+					inherit(specifiedValue, parentComputedValue);
 				else
 					ASCENSION_ASSERT_NOT_REACHED();
 			}
@@ -290,7 +320,7 @@ namespace ascension {
 			 * @tparam Function The type of @a parentComputedValueGenerator
 			 * @param cascadedValue The "Cascaded Value" to process, or @c boost#none if not present
 			 * @param parentComputedValueGenerator The function takes no parameter and returns the "Computed Value" of
-			 *                                     the parent element for inheritance
+			 *                                     the parent element
 			 * @param[out] specifiedValue The calculated "Specified Value"
 			 */
 			template<typename Property, typename Function>
@@ -298,14 +328,17 @@ namespace ascension {
 					boost::optional<Property> cascadedValue,
 					Function parentComputedValueGenerator,
 					typename SpecifiedValueType<Property>::type& specifiedValue) {
-				if(cascadedValue == boost::none || boost::get(cascadedValue) == UNSET)
-					specifiedValue = Property::INHERITED ? parentComputedValueGenerator() : Property::initialValue();
-				else if(!cascadedValue->isDefaultingKeyword())
+				if(cascadedValue == boost::none || boost::get(cascadedValue) == UNSET) {
+					if(Property::INHERITED)
+						inherit(parentComputedValueGenerator, specifiedValue);
+					else
+						specifiedValue = Property::initialValue();
+				} else if(!cascadedValue->isDefaultingKeyword())
 					specifiedValue = cascadedValue.get();
 				else if(boost::get(cascadedValue) == INITIAL)
 					specifiedValue = Property::initialValue();
 				else if(boost::get(cascadedValue) == INHERIT)
-					specifiedValue = parentComputedValueGenerator();
+					inherit(specifiedValue, parentComputedValueGenerator);
 				else
 					ASCENSION_ASSERT_NOT_REACHED();
 			}
