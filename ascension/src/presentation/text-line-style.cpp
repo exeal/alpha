@@ -7,6 +7,8 @@
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <boost/core/null_deleter.hpp>
+#include <boost/flyweight.hpp>
+#include <boost/fusion/sequence/comparison/equal_to.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -52,10 +54,12 @@ namespace ascension {
 		 * Computes @c TextLineStyle.
 		 * @param specifiedValues The "Specified Value"s to compute
 		 * @param context The length context
-		 * @param[out] computedValues The "Computed Value"s
+		 * @return The "Computed Value"s
 		 */
-		void computeTextLineStyle(const SpecifiedTextLineStyle& specifiedValues,
-				const styles::Length::Context& context, ComputedTextLineStyle& computedValues) {
+		boost::flyweight<ComputedTextLineStyle> compute(
+				const SpecifiedTextLineStyle& specifiedValues, const styles::Length::Context& context) {
+			ComputedTextLineStyle computedValues;
+
 			styles::computeAsSpecified<styles::Direction>(specifiedValues, computedValues);
 //			styles::computeAsSpecified<styles::UnicodeBidi>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::TextOrientation>(specifiedValues, computedValues);
@@ -88,6 +92,8 @@ namespace ascension {
 //			styles::computeAsSpecified<styles::Measure>(specifiedValues, computedValues);
 
 			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
+
+			return boost::flyweight<ComputedTextLineStyle>(computedValues);
 		}
 
 		/// @c boost#hash_value for @c ComputedTextLineStyle.

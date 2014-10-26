@@ -22,6 +22,7 @@
 #include <ascension/presentation/styles/inline.hpp>
 #include <ascension/presentation/styles/text.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
+#include <boost/flyweight/flyweight_fwd.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
 #include <boost/mpl/placeholders.hpp>
@@ -103,8 +104,8 @@ namespace ascension {
 		>::type ComputedTextLineStyle;
 #endif
 
-		void computeTextLineStyle(const SpecifiedTextLineStyle& specifiedValues,
-			const styles::Length::Context& context, ComputedTextLineStyle& computedValues);
+		boost::flyweight<ComputedTextLineStyle> compute(
+			const SpecifiedTextLineStyle& specifiedValues, const styles::Length::Context& context);
 		std::size_t hash_value(const ComputedTextLineStyle& style);
 	}
 } // namespace ascension.presentation
