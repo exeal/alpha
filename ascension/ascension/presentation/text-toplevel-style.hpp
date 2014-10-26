@@ -14,6 +14,7 @@
 
 #include <ascension/corelib/memory.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
+#include <boost/flyweight/flyweight_fwd.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
 #include <boost/mpl/placeholders.hpp>
@@ -130,10 +131,7 @@ namespace ascension {
 			friend class Presentation;
 		};
 
-		inline void computedValuesFromSpecifiedValues(const SpecifiedTextToplevelStyle& specifiedValues, ComputedTextToplevelStyle& computedValues) {
-			*boost::fusion::find<styles::ComputedValueType<styles::WritingMode>::type>(computedValues)
-				= *boost::fusion::find<styles::SpecifiedValueType<styles::WritingMode>::type>(specifiedValues);
-		}
+		boost::flyweight<ComputedTextToplevelStyle> compute(const SpecifiedTextToplevelStyle& specifiedValues);
 	}
 } // namespace ascension.presentation
 
