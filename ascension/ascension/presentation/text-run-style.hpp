@@ -24,17 +24,19 @@
 #include <ascension/presentation/styles/inline.hpp>
 #include <ascension/presentation/styles/text.hpp>
 #include <ascension/presentation/styles/text-decor.hpp>
+#include <boost/flyweight/flyweight_fwd.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
 #include <boost/mpl/placeholders.hpp>
 #include <boost/mpl/transform.hpp>
-#include <memory>
 #include <boost/range/irange.hpp>
+#include <memory>
 
 namespace ascension {
 	namespace presentation {
 		/**
-		 * Declares visual style settings of a text run.
+		 * A text run style collection.
+		 * @see DeclaredTextRunStyle, SpecifiedTextRunStyle, ComputedTextRunStyle
 		 * @see TextLineStyle, TextToplevelStyle, StyledTextRunIterator
 		 */
 		typedef boost::fusion::vector<
@@ -83,8 +85,8 @@ namespace ascension {
 
 		// TODO: Check uniqueness of the members of TextRunStyle.
 
-		struct DeclaredTextRunStyle : public TextRunStyle,
-			public FastArenaObject<DeclaredTextRunStyle>, std::enable_shared_from_this<DeclaredTextRunStyle> {};
+		class DeclaredTextRunStyle : public TextRunStyle,
+			public FastArenaObject<DeclaredTextRunStyle>, public std::enable_shared_from_this<DeclaredTextRunStyle> {};
 #if 0
 		/**
 		 * A @c StyledTextRun represents a text range with declared style. @c #beginning and
@@ -143,12 +145,27 @@ namespace ascension {
 			virtual void next() = 0;
 		};
 
+		/// "Specified Values" of @c TextRunStyle.
+#if 1
+		struct SpecifiedTextRunStyle : boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextRunStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
+		>::type {};
+#else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextRunStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
 		>::type SpecifiedTextRunStyle;
+#endif
+
+		/// "Computed Values" of @c TextRunStyle.
+#if 1
+		struct ComputedTextRunStyle : boost::fusion::result_of::as_vector<
+			boost::mpl::transform<TextRunStyle, styles::ComputedValueType<boost::mpl::_1>>::type
+		>::type {};
+#else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextRunStyle, styles::ComputedValueType<boost::mpl::_1>>::type
 		>::type ComputedTextRunStyle;
+#endif
 
 		/**
 		 * @see TextLayout#TextLayout, presentation#StyledTextRunIterator
@@ -167,8 +184,9 @@ namespace ascension {
 			virtual void next() = 0;
 		};
 
-		void computeTextRunStyle(const SpecifiedTextRunStyle& specifiedValues,
-			const styles::Length::Context& context, const ComputedTextRunStyle& parentComputedValues, ComputedTextRunStyle& computedValues);
+		boost::flyweight<ComputedTextRunStyle> compute(const SpecifiedTextRunStyle& specifiedValues,
+			const styles::Length::Context& context, const ComputedTextRunStyle& parentComputedValues);
+		std::size_t hash_value(const ComputedTextRunStyle& style);
 	}
 } // namespace ascension.presentation
 
