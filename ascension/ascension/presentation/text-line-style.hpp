@@ -84,9 +84,8 @@ namespace ascension {
 
 		/// "Specified Values" of @c TextLineStyle.
 #if 1
-		struct SpecifiedTextLineStyle : boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
-		>::type {};
+		struct SpecifiedTextLineStyle :
+			boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
@@ -95,9 +94,8 @@ namespace ascension {
 
 		/// "Computed Values" of @c TextLineStyle.
 #if 1
-		struct ComputedTextLineStyle : boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type
-		>::type {};
+		struct ComputedTextLineStyle :
+			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type
