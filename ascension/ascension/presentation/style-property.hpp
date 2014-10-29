@@ -290,25 +290,25 @@ namespace ascension {
 			/**
 			 * Calculates a "Specified Value" from the given "Cascaded Value" with the defaulting process.
 			 * @tparam Property @c StyleProperty class template
-			 * @param cascadedValue The "Cascaded Value" to process, or @c boost#none if not present
+			 * @param cascadedValue The "Cascaded Value" to process or any defaulting ketyword
 			 * @param parentComputedValue The "Computed Value" of the parent element, or @c null if the root element
 			 * @param[out] specifiedValue The calculated "Specified Value"
 			 */
 			template<typename Property>
 			inline void specifiedValueFromCascadedValue(
-					boost::optional<Property> cascadedValue,
+					const Property& cascadedValue,
 					const typename ComputedValueType<Property>::type& parentComputedValue,
 					typename SpecifiedValueType<Property>::type& specifiedValue) {
-				if(cascadedValue == boost::none || boost::get(cascadedValue) == UNSET) {
+				if(cascadedValue == UNSET) {
 					if(Property::INHERITED)
 						inherit(parentComputedValue, specifiedValue);
 					else
 						specifiedValue = Property::initialValue();
-				} else if(!cascadedValue->isDefaultingKeyword())
-					specifiedValue = cascadedValue.get();
-				else if(boost::get(cascadedValue) == INITIAL)
+				} else if(!cascadedValue.isDefaultingKeyword())
+					specifiedValue = cascadedValue;
+				else if(cascadedValue == INITIAL)
 					specifiedValue = Property::initialValue();
-				else if(boost::get(cascadedValue) == INHERIT)
+				else if(cascadedValue == INHERIT)
 					inherit(specifiedValue, parentComputedValue);
 				else
 					ASCENSION_ASSERT_NOT_REACHED();
@@ -318,26 +318,26 @@ namespace ascension {
 			 * Calculates a "Specified Value" from the given "Cascaded Value" with the defaulting process.
 			 * @tparam Property @c StyleProperty class template
 			 * @tparam Function The type of @a parentComputedValueGenerator
-			 * @param cascadedValue The "Cascaded Value" to process, or @c boost#none if not present
+			 * @param cascadedValue The "Cascaded Value" to process or any defaulting ketyword
 			 * @param parentComputedValueGenerator The function takes no parameter and returns the "Computed Value" of
 			 *                                     the parent element
 			 * @param[out] specifiedValue The calculated "Specified Value"
 			 */
 			template<typename Property, typename Function>
 			inline void specifiedValueFromCascadedValue(
-					boost::optional<Property> cascadedValue,
+					const Property& cascadedValue,
 					Function parentComputedValueGenerator,
 					typename SpecifiedValueType<Property>::type& specifiedValue) {
-				if(cascadedValue == boost::none || boost::get(cascadedValue) == UNSET) {
+				if(cascadedValue == UNSET) {
 					if(Property::INHERITED)
 						inherit(parentComputedValueGenerator, specifiedValue);
 					else
 						specifiedValue = Property::initialValue();
-				} else if(!cascadedValue->isDefaultingKeyword())
-					specifiedValue = cascadedValue.get();
-				else if(boost::get(cascadedValue) == INITIAL)
+				} else if(!cascadedValue.isDefaultingKeyword())
+					specifiedValue = cascadedValue;
+				else if(cascadedValue == INITIAL)
 					specifiedValue = Property::initialValue();
-				else if(boost::get(cascadedValue) == INHERIT)
+				else if(cascadedValue == INHERIT)
 					inherit(specifiedValue, parentComputedValueGenerator);
 				else
 					ASCENSION_ASSERT_NOT_REACHED();
