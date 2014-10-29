@@ -130,12 +130,11 @@ namespace ascension {
 			virtual boost::integer_range<Index> currentRange() const = 0;
 			/**
 			 * Returns the declared style of the current text run addressed by this iterator.
-			 * @return The style of the current text run this iterator addresses. If @c null, the default text run is
-			 *         used
+			 * @return The style of the current text run this iterator addresses. If @c null, the default style is used
 			 * @throw NoSuchElementException This iterator is done
 		 	 * @see #currentRange
 			 */
-			virtual std::shared_ptr<const TextRunStyle> currentStyle() const = 0;
+			virtual std::shared_ptr<const DeclaredTextRunStyle> currentStyle() const = 0;
 			/// Returns @c true if the iterator addresses the end of the range.
 			virtual bool isDone() const BOOST_NOEXCEPT = 0;
 			/**
@@ -147,9 +146,8 @@ namespace ascension {
 
 		/// "Specified Values" of @c TextRunStyle.
 #if 1
-		struct SpecifiedTextRunStyle : boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextRunStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
-		>::type {};
+		struct SpecifiedTextRunStyle :
+			boost::mpl::transform<TextRunStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextRunStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
@@ -158,9 +156,8 @@ namespace ascension {
 
 		/// "Computed Values" of @c TextRunStyle.
 #if 1
-		struct ComputedTextRunStyle : boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextRunStyle, styles::ComputedValueType<boost::mpl::_1>>::type
-		>::type {};
+		struct ComputedTextRunStyle :
+			boost::mpl::transform<TextRunStyle, styles::ComputedValueType<boost::mpl::_1>>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
 			boost::mpl::transform<TextRunStyle, styles::ComputedValueType<boost::mpl::_1>>::type
