@@ -13,13 +13,13 @@
 #ifndef ASCENSION_SCOPED_ENUMS_BEGIN
 #	if defined(BOOST_NO_SCOPED_ENUMS) || defined(BOOST_NO_CXX11_SCOPED_ENUMS)
 
-#		define ASCENSION_SCOPED_ENUMS_BEGIN(name) BOOST_SCOPED_ENUM_START(name) {
+#		define ASCENSION_SCOPED_ENUMS_BEGIN(name) BOOST_SCOPED_ENUM_DECLARE_BEGIN(name) {
 
 #		define ASCENSION_SCOPED_ENUMS_END										\
 			};																	\
 			self_type(enum_type v) : v_(v) {}									\
 			self_type& operator=(underlying_type v) {return (v_ = v), *this;}	\
-			BOOST_SCOPED_ENUM_END
+			BOOST_SCOPED_ENUM_DECLARE_END2()
 
 #	else
 
