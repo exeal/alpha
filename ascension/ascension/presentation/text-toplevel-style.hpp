@@ -17,6 +17,7 @@
 #include <boost/flyweight/flyweight_fwd.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
+#include <boost/fusion/sequence/comparison/equal_to.hpp>
 #include <boost/mpl/placeholders.hpp>
 #include <boost/mpl/transform.hpp>
 #include <memory>
@@ -48,8 +49,10 @@ namespace ascension {
 				return linesStyle_;
 			}
 			void setLinesStyle(std::shared_ptr<const DeclaredTextLineStyle> newStyle) BOOST_NOEXCEPT;
+			static const DeclaredTextToplevelStyle& unsetInstance();
 
 		private:
+			explicit DeclaredTextToplevelStyle(const styles::UnsetTag&);
 			std::shared_ptr<const DeclaredTextLineStyle> linesStyle_;
 		};
 

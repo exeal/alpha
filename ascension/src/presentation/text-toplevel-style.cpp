@@ -8,6 +8,7 @@
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/flyweight.hpp>
+#include <boost/preprocessor/repetition/enum.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -15,6 +16,14 @@ namespace ascension {
 		DeclaredTextToplevelStyle::DeclaredTextToplevelStyle() {
 			setLinesStyle(std::shared_ptr<const DeclaredTextLineStyle>());
 		}
+
+#define ASCENSION_IDENTITY(z, n, text) text
+
+		DeclaredTextToplevelStyle::DeclaredTextToplevelStyle(const styles::UnsetTag&) : TextToplevelStyle(BOOST_PP_ENUM(1, ASCENSION_IDENTITY, styles::UNSET)) {
+			setLinesStyle(std::shared_ptr<const DeclaredTextLineStyle>());
+		}
+
+#undef ASCENSION_IDENTITY
 
 		/**
 		 * Sets the default @c DeclaredTextLineStyle of this toplevel element.
@@ -28,6 +37,12 @@ namespace ascension {
 				static const DeclaredTextLineStyle DEFAULT_INSTANCE;
 				linesStyle_ = std::shared_ptr<const DeclaredTextLineStyle>(&DEFAULT_INSTANCE, boost::null_deleter());
 			}
+		}
+
+		/// Returns a @c DeclaredTextToplevelStyle instance filled with @c styles#UNSET values.
+		const DeclaredTextToplevelStyle& DeclaredTextToplevelStyle::unsetInstance() {
+			static const DeclaredTextToplevelStyle SINGLETON(styles::UNSET);
+			return SINGLETON;
 		}
 
 		inline boost::flyweight<ComputedTextToplevelStyle> compute(const SpecifiedTextToplevelStyle& specifiedValues) {
