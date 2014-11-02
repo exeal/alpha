@@ -132,6 +132,14 @@ namespace ascension {
 			setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle>());
 		}
 
+#define ASCENSION_IDENTITY(z, n, text) text
+
+		DeclaredTextLineStyle::DeclaredTextLineStyle(const styles::UnsetTag&) : TextLineStyle(BOOST_PP_ENUM(18, ASCENSION_IDENTITY, styles::UNSET)) {
+			setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle>());
+		}
+
+#undef ASCENSION_IDENTITY
+
 		/**
 		 * Sets the default @c DeclaredTextRunStyle of this line element.
 		 * @param newStyle The style collection to set. If @c null, this @c DeclaredTextLineStyle holds a
@@ -144,6 +152,12 @@ namespace ascension {
 				static const DeclaredTextRunStyle DEFAULT_INSTANCE;
 				runsStyle_ = std::shared_ptr<const DeclaredTextRunStyle>(&DEFAULT_INSTANCE, boost::null_deleter());
 			}
+		}
+
+		/// Returns a @c DeclaredTextLineStyle instance filled with @c styles#UNSET values.
+		const DeclaredTextLineStyle& DeclaredTextLineStyle::unsetInstance() {
+			static const DeclaredTextLineStyle SINGLETON(styles::UNSET);
+			return SINGLETON;
 		}
 	}
 }
