@@ -104,6 +104,11 @@ namespace ascension {
 		>::type ComputedTextLineStyle;
 #endif
 
+		namespace styles {
+			template<> struct SpecifiedValueType<TextLineStyle> : boost::mpl::identity<SpecifiedTextLineStyle> {};
+			template<> struct ComputedValueType<TextLineStyle> : boost::mpl::identity<ComputedTextLineStyle> {};
+		}
+
 		boost::flyweight<ComputedTextLineStyle> compute(
 			const SpecifiedTextLineStyle& specifiedValues, const styles::Length::Context& context);
 		std::size_t hash_value(const ComputedTextLineStyle& style);
