@@ -32,9 +32,9 @@ namespace ascension {
 				static type initialValue() {return Length(_initialValue, initialUnit);}
 			};
 
-			template<typename T>
+			template<typename T, T(*initialValueGenerator)(void) = nullptr>
 			struct Complex : public boost::mpl::identity<T> {
-				static type initialValue() {return type();}
+				static type initialValue() {return (initialValueGenerator != nullptr) ? (*initialValueGenerator)() : type();}
 			};
 
 			template<typename Variant, typename InitialType, int _initialValue>	// decltype(_initialValue) should be InitialType...
