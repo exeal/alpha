@@ -114,7 +114,9 @@ namespace ascension {
 
 			/// Defines &lt;line-width&gt; keywords.
 			namespace linewidthkeywords {
-				static const Length THIN, MEDIUM, THICK;
+				const Length THIN(0.05f, Length::EM_HEIGHT);
+				const Length MEDIUM(0.10f, Length::EM_HEIGHT);
+				const Length THICK(0.20f, Length::EM_HEIGHT);
 			}
 
 			namespace detail {
