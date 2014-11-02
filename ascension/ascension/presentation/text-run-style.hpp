@@ -12,7 +12,7 @@
 #ifndef ASCENSION_TEXT_RUN_STYLE_HPP
 #define ASCENSION_TEXT_RUN_STYLE_HPP
 #ifndef FUSION_MAX_VECTOR_SIZE
-#	define FUSION_MAX_VECTOR_SIZE 30
+#	define FUSION_MAX_VECTOR_SIZE 40
 #endif
 
 #include <ascension/directions.hpp>
@@ -29,8 +29,6 @@
 #include <boost/fusion/container/vector.hpp>
 #include <boost/mpl/placeholders.hpp>
 #include <boost/mpl/transform.hpp>
-#include <boost/range/irange.hpp>
-#include <memory>
 
 namespace ascension {
 	namespace presentation {
@@ -42,13 +40,15 @@ namespace ascension {
 		typedef boost::fusion::vector<
 			// Colors
 #if 1
-			styles::Color<styles::Inherited<true>>,		// 'color' property
+			styles::Color,								// 'color' property
 #else
 			std::shared_ptr<graphics::Paint>,			// text paint style
 #endif
 			// Backgrounds and Borders
-			styles::Background,							// 'background properties
-			styles::Border,								// 'border' properties
+			styles::BackgroundColor,					// 'background-color' properties
+			FlowRelativeFourSides<styles::BorderColor>,	// 'border-color' properties
+			FlowRelativeFourSides<styles::BorderStyle>,	// 'border-style' properties
+			FlowRelativeFourSides<styles::BorderWidth>,	// 'border-width' properties
 			// Basic Box Model
 			FlowRelativeFourSides<styles::PaddingSide>,	// 'padding' properties			
 			FlowRelativeFourSides<styles::MarginSide>,	// 'margin' properties
@@ -74,9 +74,15 @@ namespace ascension {
 			styles::WordSpacing,						// 'word-spacing' property
 			styles::LetterSpacing,						// 'letter-spacing' property
 			// Text Decoration
-			styles::TextDecoration,						// 'text-decoration' properties
-			styles::TextEmphasis,						// 'text-emphasis' properties
-			styles::TextShadow,							// 'text-shadow' property
+			styles::TextDecorationLine,					// 'text-decoration-line' properties
+			styles::TextDecorationColor,				// 'text-decoration-color' properties
+			styles::TextDecorationStyle,				// 'text-decoration-style' properties
+			styles::TextDecorationSkip,					// 'text-decoration-skip' properties
+			styles::TextUnderlinePosition,				// 'text-underline-position' properties
+			styles::TextEmphasisStyle,					// 'text-emphasis-style' properties
+			styles::TextEmphasisColor,					// 'text-emphasis-color' properties
+			styles::TextEmphasisPosition,				// 'text-emphasis-position' properties
+//			styles::TextShadow,							// 'text-shadow' property
 			// Auxiliary
 			styles::ShapingEnabled/*,					// 'shaping-enabled' property
 			styles::DeprecatedFormatCharactersDisabled,	// 'deprecated-format-characters-disabled' property
@@ -86,62 +92,17 @@ namespace ascension {
 		// TODO: Check uniqueness of the members of TextRunStyle.
 
 		class DeclaredTextRunStyle : public TextRunStyle,
-			public FastArenaObject<DeclaredTextRunStyle>, public std::enable_shared_from_this<DeclaredTextRunStyle> {};
-#if 0
-		/**
-		 * A @c StyledTextRun represents a text range with declared style. @c #beginning and
-		 * @c #end return pointers to characters in the line text string.
-		 * @note This class is not intended to be derived.
-		 * @see StyledTextRunIterator, StyledTextRunEnumerator
-		 */
-		struct StyledTextRun : public StringPiece, public FastArenaObject<StyledTextRun> {
-			/// The declared style in this text run.
-			std::shared_ptr<const TextRunStyle> style;
-			/// Default constructor.
-			StyledTextRun() BOOST_NOEXCEPT {}
-			/**
-			 * Constructor.
-			 * @param characterRange The range of the text run in the line
-			 * @param style The declared style of the text run. Can be @c null
-			 */
-			StyledTextRun(const StringPiece& characterRange,
-				std::shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT
-				: StringPiece(characterRange), style_(style) {}
-		};
-#endif
-		/**
-		 * Abstract input iterator to obtain @c TextRunStyle objects.
-		 * @see TextRunStyleDeclarator, graphics#font#ComputedStyledTextRunIterator
-		 */
-		class StyledTextRunIterator {
+				public FastArenaObject<DeclaredTextRunStyle>, public std::enable_shared_from_this<DeclaredTextRunStyle> {
 		public:
-			/// Destructor.
-			virtual ~StyledTextRunIterator() BOOST_NOEXCEPT {}
-			/**
-			 * Returns the range of the current text run addressed by this iterator.
-			 * @return The range of the current text run this iterator addresses in character offsets in the line.
-			 *         @c front() should be greater than or equal to @c back for the previous text run. If @c back is
-			 *         greater than the length of the line, the range is truncated. Otherwise if @c front() is greater
-			 *         than @c back() of the previous text run, treated as if there is a text run with the range
-			 *         [previous's @c back(), front()) and default style
-			 * @throw NoSuchElementException This iterator is done
-			 * @see #currentStyle
-			 */
-			virtual boost::integer_range<Index> currentRange() const = 0;
-			/**
-			 * Returns the declared style of the current text run addressed by this iterator.
-			 * @return The style of the current text run this iterator addresses. If @c null, the default style is used
-			 * @throw NoSuchElementException This iterator is done
-		 	 * @see #currentRange
-			 */
-			virtual std::shared_ptr<const DeclaredTextRunStyle> currentStyle() const = 0;
-			/// Returns @c true if the iterator addresses the end of the range.
-			virtual bool isDone() const BOOST_NOEXCEPT = 0;
-			/**
-			 * Moves the iterator to the next styled text run.
-			 * @throw NoSuchElementException This iterator is done.
-			 */
-			virtual void next() = 0;
+#ifndef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
+			DeclaredTextRunStyle() = default;
+#else
+			DeclaredTextRunStyle();
+#endif
+			static const DeclaredTextRunStyle& unsetInstance();
+
+		private:
+			explicit DeclaredTextRunStyle(const styles::UnsetTag&);
 		};
 
 		/// "Specified Values" of @c TextRunStyle.
@@ -163,23 +124,6 @@ namespace ascension {
 			boost::mpl::transform<TextRunStyle, styles::ComputedValueType<boost::mpl::_1>>::type
 		>::type ComputedTextRunStyle;
 #endif
-
-		/**
-		 * @see TextLayout#TextLayout, presentation#StyledTextRunIterator
-		 */
-		class ComputedStyledTextRunIterator {
-		public:
-			/// Destructor.
-			virtual ~ComputedStyledTextRunIterator() BOOST_NOEXCEPT {}
-			/**
-			 */
-			virtual boost::integer_range<Index> currentRange() const = 0;
-			/**
-			 */
-			virtual void currentStyle(ComputedTextRunStyle& style) const = 0;
-			virtual bool isDone() const BOOST_NOEXCEPT = 0;
-			virtual void next() = 0;
-		};
 
 		boost::flyweight<ComputedTextRunStyle> compute(const SpecifiedTextRunStyle& specifiedValues,
 			const styles::Length::Context& context, const ComputedTextRunStyle& parentComputedValues);
