@@ -23,34 +23,59 @@ namespace ascension {
 			/// @see CSS Color Module Level 3 - W3C Recommendation, 07 June 2011 (http://www.w3.org/TR/css3-color/)
 			/// @{
 			/**
-			 * Describes the foreground color of the text content. @c boost#none means 'currentColor' in CSS 3.
-			 * @tparam InheritedOrNot See same name parameter of @c StyleProperty class template
+			 * Base type of @c Color and other color-related properties. @c boost#none means 'currentColor' in CSS 3.
+			 * @tparam TypeSpec The tag type which has the two members: A boolean constant named @c INHERITED specifies
+			 *                  if this is "Inherited Property". And a static function named @c initialValue returns
+			 *                  the initial value as a @c boost#optional&lt;graphics#Color&gt;. Note that
+			 *                  @c TypedColor&lt;...&gt; should be unique in a @c boost#fusion#vector
+			 */
+#ifndef BOOST_NO_TEMPLATE_ALIASES
+			template<typename TypeSpec> using TypedColor =
+				StyleProperty<Complex<boost::optional<graphics::Color>>, InheritedOrNot, graphics::Color>;
+#else
+			template<typename TypeSpec>
+			class TypedColor : public StyleProperty<
+				Complex<
+					boost::optional<graphics::Color>,
+					&TypeSpec::initialValue
+				>,
+				Inherited<TypeSpec::INHERITED>,
+				graphics::Color
+			> {
+			private:
+				typedef StyleProperty<
+					Complex<boost::optional<graphics::Color>, &TypeSpec::initialValue>, Inherited<TypeSpec::INHERITED>, graphics::Color
+				> Base;
+			public:
+				TypedColor() : Base() {}
+				TypedColor(const value_type& value) : Base(value) {}
+				TypedColor(const styles::InitialTag&) : Base(styles::INITIAL) {}
+				TypedColor(const styles::InheritTag&) : Base(styles::INHERIT) {}
+				TypedColor(const styles::UnsetTag&) : Base(styles::UNSET) {}
+			};
+#endif
+			/**
+			 * The common base type of types for template parameter of @c TypedColor.
+			 * @tparam InheritedOrNot Specifies if this is "Inherited Property" or not. See @c StyleProperty.
+			 */
+			template<typename InheritedOrNot>
+			struct BasicColorSpec {
+				static const bool INHERITED = InheritedOrNot::value;
+				static boost::optional<graphics::Color> initialValue() BOOST_NOEXCEPT {
+					return boost::none;
+				}
+			};
+
+			/**
+			 * [Copied from CSS3] This property describes the foreground color of an element's text content.
 			 * @see CSS Color Module Level 3, 3.1. Foreground color: the ÅecolorÅf property
 			 *      (http://www.w3.org/TR/css3-color/#foreground)
 			 * @see SVG 1.1 (Second Edition), 12.2 The ÅecolorÅf property
 			 *      (http://www.w3.org/TR/SVG11/color.html#ColorProperty)
 			 * @see XSL 1.1, 7.18.1 "color" (http://www.w3.org/TR/xsl/#color)
 			 */
-#ifndef BOOST_NO_TEMPLATE_ALIASES
-			template<typename InheritedOrNot> using Color =
-				StyleProperty<Complex<boost::optional<graphics::Color>>, InheritedOrNot, graphics::Color>;
-#else
-			template<typename InheritedOrNot>
-			class Color : public StyleProperty<
-				Complex<
-					boost::optional<graphics::Color>
-				>,
-				InheritedOrNot,
-				graphics::Color
-			> {
-			private:
-				typedef StyleProperty<Complex<boost::optional<graphics::Color>>, InheritedOrNot, graphics::Color> Base;
-			public:
-				Color() : Base() {}
-				Color(const value_type& value) : Base(value) {}
-			};
-#endif
-
+			typedef TypedColor<BasicColorSpec<Inherited<true>>> Color;
+#if 0
 			/**
 			 * Computes the specified color properties with inheritance and defaulting.
 			 * @tparam InheritedOrNotForCurrentColor The template parameter for @a current
@@ -77,6 +102,7 @@ namespace ascension {
 					return boost::get_optional_value_or(graphics::SystemColors::get(
 						graphics::SystemColors::WINDOW_TEXT), graphics::Color::OPAQUE_BLACK);
 			}
+#endif
 			/// @}
 		}
 	}
