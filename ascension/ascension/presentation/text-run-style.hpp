@@ -125,6 +125,11 @@ namespace ascension {
 		>::type ComputedTextRunStyle;
 #endif
 
+		namespace styles {
+			template<> struct SpecifiedValueType<TextRunStyle> : boost::mpl::identity<SpecifiedTextRunStyle> {};
+			template<> struct ComputedValueType<TextRunStyle> : boost::mpl::identity<ComputedTextRunStyle> {};
+		}
+
 		boost::flyweight<ComputedTextRunStyle> compute(const SpecifiedTextRunStyle& specifiedValues,
 			const styles::Length::Context& context, const ComputedTextRunStyle& parentComputedValues);
 		std::size_t hash_value(const ComputedTextRunStyle& style);
