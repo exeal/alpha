@@ -985,6 +985,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-paint-override.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styled-text-run-iterator.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
