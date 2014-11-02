@@ -12,7 +12,7 @@
 #ifndef ASCENSION_TEXT_LINE_STYLE_HPP
 #define ASCENSION_TEXT_LINE_STYLE_HPP
 #ifndef FUSION_MAX_VECTOR_SIZE
-#	define FUSION_MAX_VECTOR_SIZE 30
+#	define FUSION_MAX_VECTOR_SIZE 40
 #endif
 
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
@@ -69,7 +69,7 @@ namespace ascension {
 
 		/// "Declared Values" of @c TextLineStyle.
 		class DeclaredTextLineStyle : public TextLineStyle,
-			public FastArenaObject<DeclaredTextLineStyle>, std::enable_shared_from_this<DeclaredTextLineStyle> {
+			public FastArenaObject<DeclaredTextLineStyle>, public std::enable_shared_from_this<DeclaredTextLineStyle> {
 		public:
 			DeclaredTextLineStyle();
 			/// Returns the default @c DeclaredTextRunStyle of this line element.
@@ -77,8 +77,10 @@ namespace ascension {
 				return runsStyle_;
 			}
 			void setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle> newStyle) BOOST_NOEXCEPT;
+			static const DeclaredTextLineStyle& unsetInstance();
 
 		private:
+			explicit DeclaredTextLineStyle(const styles::UnsetTag&);
 			std::shared_ptr<const DeclaredTextRunStyle> runsStyle_;
 		};
 
