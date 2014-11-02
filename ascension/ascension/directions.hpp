@@ -632,6 +632,13 @@ namespace ascension {
 					(after, (value_type))
 					(start, (value_type))
 					(end, (value_type))))
+			template<typename U>
+#if !defined(BOOST_COMP_MSVC) || BOOST_COMP_MSVC >= BOOST_VERSION_NUMBER(11, 0, 0)
+			FlowRelativeFourSides(const U& other, typename std::enable_if<std::is_constructible<T, const U&>::value>::type* = nullptr)
+#else
+			FlowRelativeFourSides(const U& other, typename std::enable_if<std::is_convertible<U, T>::value>::type* = nullptr)
+#endif
+				: FlowRelativeFourSidesBase<T>((_before = other, _after = other, _start = other, _end = other)) {}
 			/// Compound-add operator calls same operators of @c T for the all elements.
 			FlowRelativeFourSides& operator+=(const AbstractTwoAxes<T>& other) {
 				before() += other.bpd();
