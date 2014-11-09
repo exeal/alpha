@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-26 separated from unicode.hpp
- * @date 2012
+ * @date 2012-2014
  */
 
 #ifndef ASCENSION_NORMALIZER_HPP
@@ -25,8 +25,8 @@
 
 namespace ascension {
 	namespace text {
-		class Normalizer : public boost::iterator_facade<
-			Normalizer, const CodePoint, std::bidirectional_iterator_tag> {
+		class Normalizer : public boost::iterators::iterator_facade<
+			Normalizer, const CodePoint, boost::iterators::bidirectional_traversal_tag> {
 		public:
 			/// Normalization forms.
 			enum Form {
@@ -55,7 +55,7 @@ namespace ascension {
 			/// @}
 
 		private:
-			friend class boost::iterator_core_access;
+			friend class boost::iterators::iterator_core_access;
 			void nextClosure(Direction direction, bool initialize);
 			// boost.iterator_facade
 			/// Moves to the previous normalized character.

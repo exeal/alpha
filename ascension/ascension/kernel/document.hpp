@@ -154,13 +154,13 @@ namespace ascension {
 		class Bookmarker : private DocumentListener, private boost::noncopyable {
 		public:
 			/// A @c Bookmarker#Iterator enumerates the all marked lines.
-			class Iterator : public boost::iterator_facade<
-				Iterator, Index, std::bidirectional_iterator_tag, Index, std::ptrdiff_t> {
+			class Iterator : public boost::iterators::iterator_facade<
+				Iterator, Index, boost::bidirectional_traversal_tag, Index, std::ptrdiff_t> {
 			private:
 				Iterator(ascension::detail::GapVector<Index>::const_iterator impl) : impl_(impl) {}
 				ascension::detail::GapVector<Index>::const_iterator impl_;
-				// boost.iterator_facade requirements
-				friend class boost::iterator_core_access;
+				// boost.iterators.iterator_facade requirements
+				friend class boost::iterators::iterator_core_access;
 				void decrement() {--impl_;}
 				value_type dereference() const {return *impl_;}
 				bool equal(const Iterator& other) const {return impl_ == other.impl_;}

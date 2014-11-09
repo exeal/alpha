@@ -13,6 +13,7 @@
 #include <iterator>
 #include <locale>
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/iterator/iterator_traits.hpp>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #	error These class definitions and implementations are based on old version of Unicode.
@@ -56,15 +57,17 @@ namespace ascension {
 			 */
 			template<typename ConcreteIterator>
 			class BreakIteratorFacade :
-				public boost::iterator_facade<ConcreteIterator, Char, boost::random_access_traversal_tag> {
+				public boost::iterators::iterator_facade<ConcreteIterator, Char, boost::iterators::random_access_traversal_tag> {
 			private:
-				friend class boost::iterator_core_access;
-				void advance(difference_type n) {static_cast<ConcreteIterator*>(this)->next(n);}
+				friend class boost::iterators::iterator_core_access;
+				void advance(typename boost::iterators::iterator_difference<BreakIteratorFacade>::type n) {
+					static_cast<ConcreteIterator*>(this)->next(n);
+				}
 				void decrement() {return advance(-1);}
-				reference dereference() const {
+				typename boost::iterators::iterator_reference<BreakIteratorFacade>::type dereference() const {
 					return *static_cast<const ConcreteIterator*>(this)->tell();
 				}
-				difference_type distance_to(const ConcreteIterator& other) const {
+				typename boost::iterators::iterator_difference<BreakIteratorFacade>::type distance_to(const ConcreteIterator& other) const {
 					return static_cast<const ConcreteIterator*>(this)->tell() - other.tell();
 				}
 				bool equal(const ConcreteIterator& other) const {return distance_to(other) == 0;}
