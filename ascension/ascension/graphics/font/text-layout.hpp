@@ -100,7 +100,7 @@ namespace ascension {
 				};
 
 				/// 
-				class LineMetricsIterator : public boost::iterator_facade<LineMetricsIterator, std::nullptr_t, boost::bidirectional_traversal_tag> {
+				class LineMetricsIterator : public boost::iterators::iterator_facade<LineMetricsIterator, std::nullptr_t, boost::iterators::bidirectional_traversal_tag> {
 				public:
 					LineMetricsIterator() BOOST_NOEXCEPT;
 					LineMetricsIterator(const TextLayout& layout, Index line);
@@ -136,7 +136,7 @@ namespace ascension {
 					const TextLayout* layout_;
 					Index line_;
 					Scalar baselineOffset_;
-					friend class boost::iterator_core_access;
+					friend class boost::iterators::iterator_core_access;
 				};
 #if 0
 				/// Bidirectional iterator enumerates style runs in a line.

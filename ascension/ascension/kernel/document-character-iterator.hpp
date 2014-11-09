@@ -4,7 +4,7 @@
  * @date 2003-2006 (was EditDoc.h)
  * @date 2006-2010 (was document.hpp)
  * @date 2010-11-06 separated from document.hpp
- * @date 2012-2013
+ * @date 2012-2014
  */
 
 #ifndef ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
@@ -18,9 +18,9 @@ namespace ascension {
 	namespace kernel {
 		class DocumentCharacterIterator :
 			public text::CharacterIterator,
-			public boost::iterator_facade<
+			public boost::iterators::iterator_facade<
 				DocumentCharacterIterator, CodePoint,
-				std::bidirectional_iterator_tag, const CodePoint, std::ptrdiff_t
+				boost::iterators::bidirectional_traversal_tag, const CodePoint, std::ptrdiff_t
 			> {
 		public:
 			// constructors
@@ -41,6 +41,7 @@ namespace ascension {
 			CodePoint current() const BOOST_NOEXCEPT;
 			bool hasNext() const BOOST_NOEXCEPT;
 			bool hasPrevious() const BOOST_NOEXCEPT;
+
 		private:
 			void doAssign(const CharacterIterator& other);
 			std::unique_ptr<CharacterIterator> doClone() const;
@@ -50,8 +51,8 @@ namespace ascension {
 			bool doLess(const CharacterIterator& other) const;
 			void doNext();
 			void doPrevious();
-			// boost.iterator_facade
-			friend class boost::iterator_core_access;
+			// boost.iterators.iterator_facade
+			friend class boost::iterators::iterator_core_access;
 			CodePoint dereference() const {return current();}
 			void decrement() {previous();}
 			bool equal(const DocumentCharacterIterator& other) const {return equals(other);}

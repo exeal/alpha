@@ -3,7 +3,7 @@
  * Defines iterator classes traverse Unicode character sequence.
  * @author exeal
  * @date 2005-2010 was unicode.hpp
- * @date 2010-2013
+ * @date 2010-2014
  * @see utf-iterator.hpp
  */
 
@@ -132,6 +132,7 @@ namespace ascension {
 			virtual bool hasNext() const BOOST_NOEXCEPT = 0;
 			/// Returns @c true if the iterator is not first.
 			virtual bool hasPrevious() const BOOST_NOEXCEPT = 0;
+
 		private:
 			/// Called by @c #assign method.
 			virtual void doAssign(const CharacterIterator& other) = 0;
@@ -179,9 +180,9 @@ namespace ascension {
 		 */
 		class StringCharacterIterator :
 			public CharacterIterator,
-			public boost::iterator_facade<
+			public boost::iterators::iterator_facade<
 				StringCharacterIterator, CodePoint,
-				std::bidirectional_iterator_tag, const CodePoint, std::ptrdiff_t
+				boost::iterators::bidirectional_traversal_tag, const CodePoint, std::ptrdiff_t
 			> {
 		public:
 			StringCharacterIterator() BOOST_NOEXCEPT;
@@ -208,6 +209,7 @@ namespace ascension {
 			bool hasNext() const BOOST_NOEXCEPT {return tell() != end();}
 			/// @see CharacterIterator#hasPrevious
 			bool hasPrevious() const BOOST_NOEXCEPT {return tell() != end();}
+
 		private:
 			void doAssign(const CharacterIterator& other);
 			std::unique_ptr<CharacterIterator> doClone() const;
@@ -218,7 +220,7 @@ namespace ascension {
 			void doNext();
 			void doPrevious();
 			// boost.iterator_facade
-			friend class boost::iterator_core_access;
+			friend class boost::iterators::iterator_core_access;
 			CodePoint dereference() const {return current();}
 			void decrement() {previous();}
 			bool equal(const StringCharacterIterator& other) const {return equals(other);}

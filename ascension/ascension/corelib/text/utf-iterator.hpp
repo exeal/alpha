@@ -13,6 +13,7 @@
 #include <array>
 #include <utility>	// std.advance
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/iterator/iterator_traits.hpp>
 
 namespace ascension {
 	namespace text {
@@ -34,9 +35,9 @@ namespace ascension {
 			 * @see CharacterEncodeIterator, CharacterOutputIterator, makeCharacterDecodeIterator
 			 */
 			template<typename BaseIterator, typename UChar32 = CodePoint>
-			class CharacterDecodeIterator : public boost::iterator_facade<
+			class CharacterDecodeIterator : public boost::iterators::iterator_facade<
 				CharacterDecodeIterator<BaseIterator, UChar32>, UChar32,
-				std::bidirectional_iterator_tag, const UChar32,
+				boost::iterators::bidirectional_traversal_tag, const UChar32,
 				typename std::iterator_traits<BaseIterator>::difference_type
 			> {
 				ASCENSION_STATIC_ASSERT(sizeof(UChar32) == 4);
@@ -84,6 +85,7 @@ namespace ascension {
 				bool replacesMalformedInput() const BOOST_NOEXCEPT {return replacesMalformedInput_;}
 				/// Returns the current position.
 				BaseIterator tell() const {return base_;}
+
 			private:
 				template<std::size_t codeUnitSize> void decrement();
 				template<> void decrement<1>() {
@@ -154,13 +156,13 @@ namespace ascension {
 					extractedBytes_ = numberOfEncodedBytes<CODE_UNIT_SIZE>(cache_);
 				}
 				// boost.iterator_facade
-				friend class boost::iterator_core_access;
+				friend class boost::iterators::iterator_core_access;
 				void decrement() {
 					if(base_ == first_)
 						throw IllegalStateException("The iterator is first.");
 					decrement<CodeUnitSizeOf<BaseIterator>::value>();
 				}
-				value_type dereference() const {
+				typename boost::iterators::iterator_value<CharacterDecodeIterator>::type dereference() const {
 					if(extractedBytes_ == 0) {
 						if(base_ == last_)
 							throw IllegalStateException("The iterator is last.");
@@ -168,7 +170,7 @@ namespace ascension {
 					}
 					return cache_;
 				}
-				difference_type distance_to(const CharacterDecodeIterator<BaseIterator, UChar32>& other) const {
+				typename boost::iterators::iterator_difference<CharacterDecodeIterator>::type distance_to(const CharacterDecodeIterator<BaseIterator, UChar32>& other) const {
 					return base_ - other.base_;
 				}
 				bool equal(const CharacterDecodeIterator<BaseIterator, UChar32>& other) const {
@@ -195,9 +197,9 @@ namespace ascension {
 			 * @see CharacterDecodeIterator, CharacterOutputIterator, makeCharacterEncodeIterator
 			 */
 			template<typename BaseIterator, typename CodeUnit>
-			class CharacterEncodeIterator : public boost::iterator_facade<
+			class CharacterEncodeIterator : public boost::iterators::iterator_facade<
 				CharacterEncodeIterator<BaseIterator, CodeUnit>, CodeUnit,
-				std::bidirectional_iterator_tag, const CodeUnit,
+				boost::bidirectional_traversal_tag, const CodeUnit,
 				typename std::iterator_traits<BaseIterator>::difference_type
 			> {
 				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BaseIterator>::value == 4);
@@ -229,6 +231,7 @@ namespace ascension {
 				}
 				/// Returns the current position.
 				BaseIterator tell() const {return base_;}
+
 			private:
 				void extract() const {
 					CodeUnit* out = cache_.data();
@@ -239,7 +242,7 @@ namespace ascension {
 				}
 			private:
 				// boost.iterator_facade
-				friend class boost::iterator_core_access;
+				friend class boost::iterators::iterator_core_access;
 				void decrement() {
 					if(positionInCache_ != cache_.end() && positionInCache_ != cache_.begin())
 						--positionInCache_;
@@ -251,7 +254,7 @@ namespace ascension {
 							--positionInCache_;
 					}
 				}
-				value_type dereference() const {
+				typename boost::iterators::iterator_value<CharacterEncodeIterator>::type dereference() const {
 					if(positionInCache_ == cache_.end())
 						extract();
 					return *positionInCache_;
@@ -265,7 +268,7 @@ namespace ascension {
 					};
 					return ((offsets[0] - offsets[1]) & 1) == 0;
 				}
-				difference_type distance_to(const CharacterEncodeIterator& other) const {
+				typename boost::iterators::iterator_difference<CharacterEncodeIterator>::type distance_to(const CharacterEncodeIterator& other) const {
 					return base_ - other.base_;
 				}
 				void increment() {
@@ -293,7 +296,7 @@ namespace ascension {
 			 * @see CharacterEncodeIterator, CharacterDecodeIterator
 			 */
 			template<typename BaseIterator>
-			class CharacterOutputIterator : public boost::iterator_facade<
+			class CharacterOutputIterator : public boost::iterators::iterator_facade<
 				CharacterOutputIterator<BaseIterator>, void,
 				std::output_iterator_tag, CodePoint&, void
 			> {
@@ -318,7 +321,7 @@ namespace ascension {
 				BaseIterator tell() const {return base_;}
 			private:
 				// boost.iterator_facade
-				friend class boost::iterator_core_access;
+				friend class boost::iterators::iterator_core_access;
 				CharacterOutputIterator& dereference() const {return *this;}
 				void increment() {}
 			private:

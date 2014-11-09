@@ -158,8 +158,8 @@ namespace ascension {
 				TextViewport, &TextViewport::freezeNotification, &TextViewport::thawNotification
 			> TextViewportNotificationLocker;
 
-			class BaselineIterator : public boost::iterator_facade<
-				BaselineIterator, Scalar, std::random_access_iterator_tag, Scalar, std::ptrdiff_t
+			class BaselineIterator : public boost::iterators::iterator_facade<
+				BaselineIterator, Scalar, boost::iterators::random_access_traversal_tag, Scalar, std::ptrdiff_t
 			> {
 			public:
 				explicit BaselineIterator(const TextViewport& viewport/*, bool trackOutOfViewport*/);
@@ -190,7 +190,7 @@ namespace ascension {
 				const reference dereference() const;
 				bool equal(const BaselineIterator& other) const;
 				void increment();
-				friend class boost::iterator_core_access;
+				friend class boost::iterators::iterator_core_access;
 			private:
 				const TextViewport* viewport_;	// this is not a reference, for operator=
 				bool tracksOutOfViewport_;	// this is not const, for operator=. this is always false

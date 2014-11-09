@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2005-2009 (was gap-buffer.hpp)
  * @date 2010-10-20 Renamed GapBuffer to GapVector.
- * @date 2011-2013
+ * @date 2011-2014
  */
 
 #ifndef ASCENSION_GAP_VECTOR_HPP
@@ -19,6 +19,7 @@
 #include <memory>		// std.allocator, std.uninitialized_copy
 #include <stdexcept>	// std.length_error, std.out_of_range
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/iterator/iterator_traits.hpp>
 #include <boost/operators.hpp>
 
 namespace ascension {
@@ -47,9 +48,9 @@ namespace ascension {
 		}
 
 		template<typename Target, typename Pointer, typename Reference>
-		class GapVectorIterator : public boost::iterator_facade<
+		class GapVectorIterator : public boost::iterators::iterator_facade<
 			GapVectorIterator<Target, Pointer, Reference>, typename Target::value_type,
-			std::random_access_iterator_tag, Reference, typename Target::difference_type> {
+			boost::iterators::random_access_traversal_tag, Reference, typename Target::difference_type> {
 		public:
 			typedef GapVectorIterator<Target, Pointer, Reference> Self;
 			GapVectorIterator() BOOST_NOEXCEPT : target_(nullptr) {}
@@ -64,15 +65,16 @@ namespace ascension {
 				return *this;
 			}
 			const Pointer get() const BOOST_NOEXCEPT {return target()->first_ + current_;}
-			difference_type offset() const BOOST_NOEXCEPT {
+			typename boost::iterators::iterator_difference<Self>::type offset() const BOOST_NOEXCEPT {
 				return (get() <= target_->gapFirst_) ?
 					get() - target_->first_ :
 						get() - target_->gapLast_ + target_->gapFirst_ - target_->first_;
 			}
 			const Target* target() const BOOST_NOEXCEPT {return target_;}
+
 		private:
-			friend class boost::iterator_core_access;
-			void advance(difference_type n) {
+			friend class boost::iterators::iterator_core_access;
+			void advance(typename boost::iterators::iterator_difference<Self>::type n) {
 				if(get() + n >= target_->gapFirst_ && get() + n < target_->gapLast_)
 					n += target_->gap();
 				current_ += n;
@@ -83,10 +85,10 @@ namespace ascension {
 				else
 					current_ = (target()->gapFirst_ - target()->first_) - 1;
 			}
-			reference dereference() const BOOST_NOEXCEPT {
+			typename boost::iterators::iterator_reference<Self>::type dereference() const BOOST_NOEXCEPT {
 				return target_->first_[current_];
 			}
-			difference_type distance_to(const GapVectorIterator& other) const BOOST_NOEXCEPT {
+			typename boost::iterators::iterator_difference<Self>::type distance_to(const GapVectorIterator& other) const BOOST_NOEXCEPT {
 				return current_ - other.current_;
 			}
 			bool equal(const GapVectorIterator& other) const BOOST_NOEXCEPT {
@@ -100,7 +102,7 @@ namespace ascension {
 			}
 		private:
 			const Target* target_;
-			difference_type current_;
+			typename boost::iterators::iterator_difference<Self>::type current_;
 		};
 
 		/**

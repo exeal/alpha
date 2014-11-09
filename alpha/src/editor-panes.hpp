@@ -21,11 +21,11 @@ namespace alpha {
 	class EditorPanes : public Gtk::Paned, private boost::noncopyable {	// children may be either Gtk.Paned or EditorPane
 	private:
 		template<typename Derived, typename Value>
-		class InternalIterator : public boost::iterator_facade<Derived, Value, boost::bidirectional_traversal_tag> {
+		class InternalIterator : public boost::iterators::iterator_facade<Derived, Value, boost::iterators::bidirectional_traversal_tag> {
 		public:
 			InternalIterator(pointer pane);
 		private:
-			friend class boost::iterator_core_access;
+			friend class boost::iterators::iterator_core_access;
 			void decrement();
 			reference dereference() const;
 			bool equal(const InternalIterator& other) const;
