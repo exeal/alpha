@@ -458,7 +458,7 @@ namespace ascension {
 					return width.abcA < 0 || width.abcC < 0;
 				}
 
-				class LogicalClusterIterator : public boost::iterator_facade<LogicalClusterIterator, std::nullptr_t, boost::bidirectional_traversal_tag> {
+				class LogicalClusterIterator : public boost::iterators::iterator_facade<LogicalClusterIterator, std::nullptr_t, boost::iterators::bidirectional_traversal_tag> {
 				public:
 					LogicalClusterIterator() : clusters_(nullptr, nullptr), glyphIndices_(nullptr, nullptr), currentCluster_(nullptr, nullptr) {
 					}
@@ -506,6 +506,7 @@ namespace ascension {
 							throw std::invalid_argument("clusters");
 						return (clusters.front() <= clusters.back()) ? presentation::LEFT_TO_RIGHT : presentation::RIGHT_TO_LEFT;
 					}
+
 				private:
 					void assertNotDone() const BOOST_NOEXCEPT {
 						assert(!currentCluster().empty());
@@ -539,7 +540,7 @@ namespace ascension {
 					}
 					const boost::iterator_range<const WORD*> clusters_, glyphIndices_;
 					boost::iterator_range<const WORD*> currentCluster_;
-					friend class boost::iterator_core_access;
+					friend class boost::iterators::iterator_core_access;
 				};
 			} // namespace @0
 
@@ -2467,8 +2468,8 @@ namespace ascension {
 
 			namespace {
 				class InlineProgressionDimensionRangeIterator :
-					public boost::iterator_facade<InlineProgressionDimensionRangeIterator,
-						boost::integer_range<Scalar>, std::input_iterator_tag, boost::integer_range<Scalar>, ptrdiff_t
+					public boost::iterators::iterator_facade<InlineProgressionDimensionRangeIterator,
+						boost::integer_range<Scalar>, boost::iterators::forward_traversal_tag, boost::integer_range<Scalar>, ptrdiff_t
 					> {
 				public:
 					InlineProgressionDimensionRangeIterator() BOOST_NOEXCEPT
@@ -2504,7 +2505,7 @@ namespace ascension {
 					bool isDone() const BOOST_NOEXCEPT {return currentRun_ == lastRun_;}
 				private:
 					static const std::vector<std::unique_ptr<const TextRun>> dummy_;
-					friend class boost::iterator_core_access;
+					friend class boost::iterators::iterator_core_access;
 					/*const*/ presentation::ReadingDirection layoutDirection_;
 					/*const*/ StringPiece effectiveCharacterRange_;
 					std::vector<std::unique_ptr<const TextRun>>::const_iterator currentRun_;
