@@ -1027,6 +1027,9 @@
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-token-scanner.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\transition-rules.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

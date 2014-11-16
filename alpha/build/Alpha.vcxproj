@@ -428,6 +428,7 @@
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-token-scanner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token-scanner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\transition-rules.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\uri-detector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\input-sequence-checker.hpp" />

@@ -104,50 +104,6 @@ namespace ascension {
 #endif // !ASCENSION_NO_REGEX
 
 		/**
-		 * A rule for detecting patterns which begin new partition in document.
-		 * @see LexicalPartitioner
-		 */
-		class TransitionRule {
-		public:
-			virtual ~TransitionRule() BOOST_NOEXCEPT;
-			virtual std::unique_ptr<TransitionRule> clone() const = 0;
-			kernel::ContentType contentType() const BOOST_NOEXCEPT;
-			kernel::ContentType destination() const BOOST_NOEXCEPT;
-			virtual Index matches(const String& line, Index offsetInLine) const = 0;
-		protected:
-			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) BOOST_NOEXCEPT;
-		private:
-			const kernel::ContentType contentType_, destination_;
-		};
-
-		/// Implementation of @c TransitionRule uses literal string match.
-		class LiteralTransitionRule : public TransitionRule {
-		public:
-			LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
-				const String& pattern, Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
-			std::unique_ptr<TransitionRule> clone() const;
-			Index matches(const String& line, Index offsetInLine) const;
-		private:
-			const String pattern_;
-			const Char escapeCharacter_;
-			const bool caseSensitive_;
-		};
-		
-#ifndef ASCENSION_NO_REGEX
-		/// Implementation of @c TransitionRule uses regular expression match.
-		class RegexTransitionRule : public TransitionRule {
-		public:
-			RegexTransitionRule(kernel::ContentType contentType,
-				kernel::ContentType destination, std::unique_ptr<const regex::Pattern> pattern);
-			RegexTransitionRule(const RegexTransitionRule& other);
-			std::unique_ptr<TransitionRule> clone() const;
-			Index matches(const String& line, Index offsetInLine) const;
-		private:
-			std::unique_ptr<const regex::Pattern> pattern_;
-		};
-#endif // !ASCENSION_NO_REGEX
-
-		/**
 		 * @c LexicalPartitioner makes document partitions by using the specified lexical rules.
 		 * @note This class is not derivable.
 		 * @see kernel#Document
@@ -214,13 +170,6 @@ namespace ascension {
 			std::shared_ptr<const presentation::TextRunStyle> defaultStyle_;
 			const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle>> styles_;
 		};
-
-
-		/// Returns the content type.
-		inline kernel::ContentType TransitionRule::contentType() const BOOST_NOEXCEPT {return contentType_;}
-
-		/// Returns the content type of the transition destination.
-		inline kernel::ContentType TransitionRule::destination() const BOOST_NOEXCEPT {return destination_;}
 
 		/**
 		 * @tparam SinglePassReadableRange The type of @a rules
