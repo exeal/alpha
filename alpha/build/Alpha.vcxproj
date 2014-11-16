@@ -428,8 +428,8 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-partition-presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-partitioner.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\rules\lexical-partitioning.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-token-scanner.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\token-rules.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token-scanner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\transition-rules.hpp" />
@@ -484,7 +484,6 @@
     <ClInclude Include="..\src\ui.hpp" />
     <ClInclude Include="..\..\ascension\ascension\config.hpp" />
     <ClInclude Include="..\..\ascension\ascension\platforms.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\rules.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\dc.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\file.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\gdi-object.hpp" />
