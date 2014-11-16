@@ -389,9 +389,6 @@
     <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\rules\lexical-partitioning.cpp">
-      <Filter>ascension\Source Files\rules</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\caret-blinker.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
@@ -468,6 +465,12 @@
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\rules\token-scanner.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\lexical-partitioner.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\lexical-partitioning.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1028,6 +1031,12 @@
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\rules\transition-rules.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\lexical-partitioning.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\lexical-partitioner.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
   </ItemGroup>
