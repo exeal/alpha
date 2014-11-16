@@ -11,8 +11,8 @@
 
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/partition.hpp>
-#include <ascension/presentation/rules/token-scanner.hpp>
-#include <boost/corelib/noncopyable.hpp>
+#include <ascension/rules/token-scanner.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <forward_list>
 
 namespace ascension {
