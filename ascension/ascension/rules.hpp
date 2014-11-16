@@ -14,48 +14,11 @@
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <forward_list>
-#include <set>
 #include <boost/range/algorithm/for_each.hpp>
 
 namespace ascension {
 	/// Provides a framework for rule based text scanning and document partitioning.
 	namespace rules {
-		namespace detail {
-			class HashTable;
-		}
-
-		/**
-		 * A @c URIDetector detects and searches URI. This class conforms to the syntaxes of
-		 * <a href="http://www.ietf.org/rfc/rfc3986.txt">RFC 3986</a> and
-		 * <a href="http://www.ietf.org/rfc/rfc3987.txt">RFC 3987</a>.
-		 */
-		class URIDetector : private boost::noncopyable {
-		public:
-			explicit URIDetector() BOOST_NOEXCEPT;
-			~URIDetector() BOOST_NOEXCEPT;
-
-			/// @name Parsing
-			/// @{
-			StringPiece::const_iterator detect(const StringPiece& text) const;
-			StringPiece search(const StringPiece& text) const;
-			/// @}
-
-			/// @name Attribute
-			/// @{
-			URIDetector& setValidSchemes(const std::set<String>& schemes, bool caseSensitive = false);
-			URIDetector& setValidSchemes(const String& schemes, Char separator, bool caseSensitive = false);
-			/// @}
-
-			/// @name Default Instances
-			/// @{
-			static const URIDetector& defaultGenericInstance() BOOST_NOEXCEPT;
-			static const URIDetector& defaultIANAURIInstance() BOOST_NOEXCEPT;
-			/// @}
-
-		private:
-			detail::HashTable* validSchemes_;
-		};
-
 		/**
 		 * 
 		 * @see TokenScanner
