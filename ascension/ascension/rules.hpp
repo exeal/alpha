@@ -9,12 +9,10 @@
 #define ASCENSION_RULES_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_NO_REGEX
-#include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/corelib/regex.hpp>
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/kernel/document-character-iterator.hpp>
-#include <forward_list>
-#include <boost/range/algorithm/for_each.hpp>
+#include <ascension/rules/token.hpp>
+#include <memory>
 
 namespace ascension {
 	/// Provides a framework for rule based text scanning and document partitioning.
@@ -52,7 +50,7 @@ namespace ascension {
 				const String& startSequence, const String& endSequence,
 				Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
 			std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT;
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT override;
 		private:
 			const String startSequence_, endSequence_;
 			const Char escapeCharacter_;
@@ -64,7 +62,7 @@ namespace ascension {
 		public:
 			explicit NumberRule(Token::Identifier id) BOOST_NOEXCEPT;
 			std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT;
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT override;
 		};
 
 		/// A concrete rule detects URI strings.
@@ -73,7 +71,7 @@ namespace ascension {
 			URIRule(Token::Identifier id,
 				std::shared_ptr<const URIDetector> uriDetector) BOOST_NOEXCEPT;
 			std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT;
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT override;
 		private:
 			std::shared_ptr<const URIDetector> uriDetector_;
 		};
@@ -86,7 +84,7 @@ namespace ascension {
 			WordRule(Token::Identifier id,
 				const StringPiece& words, Char separator, bool caseSensitive = true);
 			std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT;
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT override;
 		private:
 			std::unique_ptr<detail::HashTable> words_;
 		};
@@ -97,33 +95,11 @@ namespace ascension {
 		public:
 			RegexRule(Token::Identifier id, std::unique_ptr<const regex::Pattern> pattern);
 			std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT;
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT override;
 		private:
 			std::unique_ptr<const regex::Pattern> pattern_;
 		};
 #endif // !ASCENSION_NO_REGEX
-
-		/**
-		 * Standard implementation of @c presentation#IPartitionPresentationReconstructor. This
-		 * implementation performs rule based lexical tokenization using the given @c TokenScanner.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class LexicalPartitionPresentationReconstructor : public presentation::PartitionPresentationReconstructor {
-		public:
-			explicit LexicalPartitionPresentationReconstructor(
-				const presentation::Presentation& presentation, std::unique_ptr<TokenScanner> tokenScanner,
-				const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle>>& styles,
-				std::shared_ptr<const presentation::TextRunStyle> defaultStyle = std::shared_ptr<const presentation::TextRunStyle>());
-		private:
-			// presentation.IPartitionPresentationReconstructor
-			std::unique_ptr<presentation::DeclaredStyledTextRunIterator> getPresentation(const kernel::Region& region) const BOOST_NOEXCEPT;
-		private:
-			class StyledTextRunIterator;
-			const presentation::Presentation& presentation_;
-			std::unique_ptr<TokenScanner> tokenScanner_;
-			std::shared_ptr<const presentation::TextRunStyle> defaultStyle_;
-			const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle>> styles_;
-		};
 	}
 } // namespace ascension.rules
 
