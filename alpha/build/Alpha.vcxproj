@@ -213,6 +213,8 @@
     <ClCompile Include="..\..\ascension\src\graphics\paint-cairo.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\paint-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp" />
+    <ClCompile Include="..\..\ascension\src\presentation\hyperlink\composite-hyperlink-detector.cpp" />
+    <ClCompile Include="..\..\ascension\src\presentation\hyperlink\uri-hyperlink-detector.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\length.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\presentation.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\text-line-style.cpp" />
@@ -398,6 +400,8 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\absolute-length.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\hyperlink\hyperlink-detector.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\hyperlink\hyperlink.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\style-property.hpp" />
