@@ -11,21 +11,12 @@
 #include <ascension/corelib/ustring.hpp>	// umemchr, umemcmp, ustrchr
 #include <ascension/rules/uri-detector.hpp>
 #include <boost/foreach.hpp>
+#include <boost/numeric/interval.hpp>
 #include <boost/range/iterator.hpp>
 #include <locale>
 
 namespace ascension {
 	namespace rules {
-		namespace {
-			// bad idea :(
-			template<typename T> inline bool inRange(T v, T b, T e) {return v >= b && v <= e;}
-			template<typename T> struct InRange : std::unary_function<T, bool> {
-				InRange(T first, T last) : f(first), l(last) {}
-				bool operator()(T v) const {return inRange(v, f, l);}
-				T f, l;
-			};
-		}
-
 		namespace detail {
 			class HashTable : private boost::noncopyable {
 			public:
@@ -217,16 +208,16 @@ namespace ascension {
 						return (++first < last && std::isdigit(*first, cl) && ++first < last && std::isdigit(*first, cl)) ? ++first : first;
 					else if(*first == '2') {
 						if(++first < last) {
-							if(inRange<Char>(*first, '0', '4')) {
+							if(boost::numeric::in(*first, boost::numeric::interval<Char>('0', '4'))) {
 								if(std::isdigit(*++first, cl))
 									++first;
 							} else if(*first == '5') {
-								if(inRange<Char>(*first, '0', '5'))
+								if(boost::numeric::in(*first, boost::numeric::interval<Char>('0', '5')))
 									++first;
 							}
 						}
 						return first;
-					} else if(inRange<Char>(*first, '3', '9'))
+					} else if(boost::numeric::in(*first, boost::numeric::interval<Char>('3', '9')))
 						return (++first < last && std::isdigit(*first, cl)) ? ++first : first;
 				}
 				return nullptr;
@@ -277,10 +268,11 @@ namespace ascension {
 			// iprivate = %xE000-F8FF / %xF0000-FFFFD / %x100000-10FFFD
 			inline const Char* handlePrivate(const Char* first, const Char* last) {
 				if(first < last) {
-					if(inRange<Char>(*first, 0xe000u, 0xf8ffu))
+					if(boost::numeric::in(*first, boost::numeric::interval<Char>(0xe000u, 0xf8ffu)))
 						return ++first;
 					const CodePoint c = text::utf::decodeFirst(first, last);
-					if(inRange<CodePoint>(c, 0xf0000u, 0xffffdu) || inRange<CodePoint>(c, 0x100000u, 0x10fffdu))
+					if(boost::numeric::in(c, boost::numeric::interval<CodePoint>(0xf0000u, 0xffffdu))
+							|| boost::numeric::in(c, boost::numeric::interval<CodePoint>(0x100000u, 0x10fffdu)))
 						return first += 2;
 				}
 				return nullptr;
@@ -294,7 +286,9 @@ namespace ascension {
 			//         / %xD0000-DFFFD / %xE1000-EFFFD
 			inline const Char* handleUcschar(const Char* first, const Char* last) {
 				if(first < last) {
-					if(inRange<Char>(*first, 0x00a0u, 0xd7ffu) || inRange<Char>(*first, 0xf900u, 0xfdcfu) || inRange<Char>(*first, 0xfdf0u, 0xffefu))
+					if(boost::numeric::in(*first, boost::numeric::interval<Char>(0x00a0u, 0xd7ffu))
+							|| boost::numeric::in(*first, boost::numeric::interval<Char>(0xf900u, 0xfdcfu))
+							|| boost::numeric::in(*first, boost::numeric::interval<Char>(0xfdf0u, 0xffefu)))
 						return ++first;
 					const CodePoint c = text::utf::decodeFirst(first, last);
 					if(c >= 0x10000u && c < 0xf0000u && (c & 0xffffu) >= 0x0000u && (c & 0xffffu) <= 0xfffdu) {
