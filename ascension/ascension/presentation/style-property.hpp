@@ -74,27 +74,29 @@ namespace ascension {
 			BOOST_CONSTEXPR_OR_CONST UnsetTag UNSET;
 			/// @}
 
+			/// @defgroup style_properties_metafunctions Style Properties Metafunctions
+			/// @{
 			/**
 			 * Returns "Specified Value" type of the given property.
 			 * @tparam Property @c StyleProperty class template
 			 */
 			template<typename Property>
-			struct SpecifiedValueType : boost::mpl::identity<typename Property::value_type> {};
+			struct SpecifiedValue : boost::mpl::identity<typename Property::value_type> {};
 
 			template<typename Property>
-			struct SpecifiedValueType<FlowRelativeFourSides<Property>>
-				: boost::mpl::identity<FlowRelativeFourSides<typename SpecifiedValueType<Property>::type>> {};
+			struct SpecifiedValue<FlowRelativeFourSides<Property>>
+				: boost::mpl::identity<FlowRelativeFourSides<typename SpecifiedValue<Property>::type>> {};
 
 			/**
 			 * Returns "Computed Value" type of the given property.
 			 * @tparam Property @c StyleProperty class template
 			 */
 			template<typename Property>
-			struct ComputedValueType : boost::mpl::identity<typename Property::_ComputedValueType> {};
+			struct ComputedValue : boost::mpl::identity<typename Property::_ComputedValueType> {};
 
 			template<typename Property>
-			struct ComputedValueType<FlowRelativeFourSides<Property>>
-				: boost::mpl::identity<FlowRelativeFourSides<typename ComputedValueType<Property>::type>> {};
+			struct ComputedValue<FlowRelativeFourSides<Property>>
+				: boost::mpl::identity<FlowRelativeFourSides<typename ComputedValue<Property>::type>> {};
 
 			/**
 			 * Computes the given "Specified Value" as specified.
@@ -106,9 +108,10 @@ namespace ascension {
 			 */
 			template<typename Property, typename SpecifiedStyles, typename ComputedStyles>
 			inline void computeAsSpecified(const SpecifiedStyles& specifiedValues, ComputedStyles& computedValues) {
-				*boost::fusion::find<typename styles::ComputedValueType<Property>::type>(computedValues)
-					= *boost::fusion::find<typename styles::SpecifiedValueType<Property>::type>(specifiedValues);
+				*boost::fusion::find<typename styles::ComputedValue<Property>::type>(computedValues)
+					= *boost::fusion::find<typename styles::SpecifiedValue<Property>::type>(specifiedValues);
 			}
+			/// @}
 		}
 
 		/**
@@ -120,134 +123,154 @@ namespace ascension {
 		 * @tparam ComputedValueType
 		 */
 		template<typename TypeSpec, typename InheritedTag, typename ComputedValueType = void>
-		class StyleProperty : public TypeSpec,
-			private boost::equality_comparable<StyleProperty<TypeSpec, InheritedTag, ComputedValueType>>,
-			private boost::equality_comparable<StyleProperty<TypeSpec, InheritedTag, ComputedValueType>, styles::InitialTag>,
-			private boost::equality_comparable<StyleProperty<TypeSpec, InheritedTag, ComputedValueType>, styles::InheritTag>,
-			private boost::equality_comparable<StyleProperty<TypeSpec, InheritedTag, ComputedValueType>, styles::UnsetTag> {
+		class StyleProperty : public TypeSpec {
 		public:
 			typedef typename TypeSpec::type value_type;	///< The type of property value.
-//			static_assert(std::is_same<value_type, typename styles::SpecifiedValueType<StyleProperty>::type>::value, "");
+//			static_assert(std::is_same<value_type, typename styles::SpecifiedValue<StyleProperty>::type>::value, "");
 			typedef typename std::conditional<
 				!std::is_same<ComputedValueType, void>::value,
 				ComputedValueType, value_type>::type _ComputedValueType;
 			/// @c true if this property is 'inherited'.
 			static const bool INHERITED = InheritedTag::value;
-		public:
-			/**
-			 * Default constructor does the following:
-			 * - If this property is 'inherited', set the inherit flag to @c true.
-			 * - Otherwise, initializes the property value with the initial value.
-			 */
-			StyleProperty() : value_(initialValue()), defaultingKeyword_(INHERITED ? &styles::INHERIT : nullptr) {}
-			/**
-			 * Constructor initializes the property value with the given value, ignores property's
-			 * initial value and 'inherited' attribute.
-			 */
-			StyleProperty(const value_type& value) : value_(value), defaultingKeyword_(nullptr) {}
-
-			/// Constructor sets 'initial' keyword.
-			StyleProperty(const styles::InitialTag&) : defaultingKeyword_(&styles::INITIAL) {}
-			/// Constructor sets 'inherit' keyword.
-			StyleProperty(const styles::InheritTag&) : defaultingKeyword_(&styles::INHERIT) {}
-			/// Constructor sets 'unset' keyword.
-			StyleProperty(const styles::UnsetTag&) : defaultingKeyword_(&styles::UNSET) {}
-
-			/**
-			 * Copy-assignment operator resets with the given "Specified Value" or "Computed Value".
-			 * @param other The "Specified Value" or "Computed Value" to set
-			 * @return This object
-			 */
-			StyleProperty& operator=(const value_type& other) {
-				return std::swap(*this, StyleProperty(other)), *this;
-			}
-			/**
-			 * Move-assignment operator resets with the given "Specified Value" or "Computed Value".
-			 * @param other The "Specified Value" or "Computed Value" to set
-			 * @return This object
-			 */
-			StyleProperty& operator=(const value_type&& other) {
-				return std::swap(*this, StyleProperty(other)), *this;
-			}
-			/// Sets 'initial' keyword.
-			StyleProperty& operator=(const styles::InitialTag&) {
-				StyleProperty temp(styles::INITIAL);
-				return std::swap(*this, temp), *this;
-			}
-			/// Sets 'inherit' keyword.
-			StyleProperty& operator=(const styles::InheritTag&) {
-				StyleProperty temp(styles::INHERIT);
-				return std::swap(*this, temp), *this;
-			}
-			/// Sets 'unset' keyword.
-			StyleProperty& operator=(const styles::UnsetTag&) {
-				StyleProperty temp(styles::UNSET);
-				return std::swap(*this, temp), *this;
-			}
-
-			/// Equality operator for @c StyleProperty class template.
-			template<typename InheritedOrNot2>
-			bool operator==(const StyleProperty<TypeSpec, InheritedOrNot2>& other) const {
-				if(isDefaultingKeyword())
-					return defaultingKeyword_ == other.defaultingKeyword_;
-				else if(other.isDefaultingKeyword())
-					return false;
-				return get() == other.get();
-			}
-			/// Equality operator returns @c true if this specifies 'initial' keyword.
-			bool operator==(const styles::InitialTag&) {
-				return defaultingKeyword_ == &styles::INITIAL;
-			}
-			/// Equality operator returns @c true if this specifies 'inherit' keyword.
-			bool operator==(const styles::InheritTag&) {
-				return defaultingKeyword_ == &styles::INHERIT;
-			}
-			/// Equality operator returns @c true if this specifies 'unset' keyword.
-			bool operator==(const styles::UnsetTag&) {
-				return defaultingKeyword_ == &styles::UNSET;
-			}
-
-			/**
-			 * Returns the "Specified Value" or "Computed Value".
-			 * @throw std#logic_error If @c #isDefaultingKeyword() returned @c true
-			 */
-			value_type& get() {
-				if(isDefaultingKeyword())
-					throw std::logic_error("");
-				return boost::get(value_);
-			}
-			/**
-			 * Returns the "Specified Value" or "Computed Value".
-			 * @throw std#logic_error If @c #isDefaultingKeyword() returned @c true
-			 */
-			const value_type& get() const {
-				if(isDefaultingKeyword())
-					throw std::logic_error("");
-				return boost::get(value_);
-			}
-			/// Returns the property value, or the @a defaultValue if this specifies defaulting keyword.
-			const value_type& getOr(const value_type& defaultValue) const {
-				return isDefaultingKeyword() ? defaultValue : boost::get(value_);
-			}
-			/// Returns the property value, or the initial value if this specifies defaulting keyword.
-			value_type getOrInitial() const {
-				return isDefaultingKeyword() ? initialValue() : boost::get(value_);
-			}
-			/// Returns the property value, or @c boost#none if inherits the parent.
-			boost::optional<value_type> getOrNone() const {
-				return isDefaultingKeyword() ? boost::none : value_;
-			}
-			/// Returns @c true if this is defaulting keyword.
-			bool isDefaultingKeyword() const BOOST_NOEXCEPT {
-				return defaultingKeyword_ != nullptr;
-			}
-
-		private:
-			boost::optional<value_type> value_;
-			const styles::DefaultingKeyword* defaultingKeyword_;
 		};
 
 		namespace styles {
+			/**
+			 * Represents a "Declared Value" and returns its type of the given property.
+			 * @tparam Property
+			 * @ingroup style_properties_metafunctions
+			 */
+			template<typename Property>
+			class DeclaredValue :
+				public boost::mpl::identity<DeclaredValue<Property>>,
+				private boost::equality_comparable<DeclaredValue<Property>>,
+				private boost::equality_comparable<DeclaredValue<Property>, InitialTag>,
+				private boost::equality_comparable<DeclaredValue<Property>, InheritTag>,
+				private boost::equality_comparable<DeclaredValue<Property>, UnsetTag> {
+			public:
+				typedef typename Property::value_type value_type;	///< The type of the contributed value.
+			public:
+#if 0
+				/**
+				 * Default constructor does the following:
+				 * - If this property is 'inherited', set the inherit flag to @c true.
+				 * - Otherwise, initializes the property value with the initial value.
+				 */
+				DeclaredValue() : value_(initialValue()), defaultingKeyword_(INHERITED ? &styles::INHERIT : nullptr) {}
+#else
+				/// Default constructor sets 'unset' keyword.
+				DeclaredValue() : defaultingKeyword_(&UNSET) {}
+#endif
+				/**
+				 * Constructor initializes the property value with the given value, ignores property's initial value
+				 * and 'inherited' attribute.
+				 */
+				DeclaredValue(const value_type& value) : value_(value), defaultingKeyword_(nullptr) {}
+				/// Constructor sets 'initial' keyword.
+				DeclaredValue(const InitialTag&) : defaultingKeyword_(&INITIAL) {}
+				/// Constructor sets 'inherit' keyword.
+				DeclaredValue(const InheritTag&) : defaultingKeyword_(&INHERIT) {}
+				/// Constructor sets 'unset' keyword.
+				DeclaredValue(const UnsetTag&) : defaultingKeyword_(&UNSET) {}
+
+				/**
+				 * Copy-assignment operator resets with the given "Specified Value" or "Computed Value".
+				 * @param other The "Specified Value" or "Computed Value" to set
+				 * @return This object
+				 */
+				DeclaredValue& operator=(const value_type& other) {
+					return std::swap(*this, DeclaredValue(other)), *this;
+				}
+				/**
+				 * Move-assignment operator resets with the given "Specified Value" or "Computed Value".
+				 * @param other The "Specified Value" or "Computed Value" to set
+				 * @return This object
+				 */
+				DeclaredValue& operator=(value_type&& other) {
+					return std::swap(*this, DeclaredValue(other)), *this;
+				}
+				/// Sets 'initial' keyword.
+				DeclaredValue& operator=(const InitialTag&) {
+					DeclaredValue temp(INITIAL);
+					return std::swap(*this, temp), *this;
+				}
+				/// Sets 'inherit' keyword.
+				DeclaredValue& operator=(const InheritTag&) {
+					DeclaredValue temp(INHERIT);
+					return std::swap(*this, temp), *this;
+				}
+				/// Sets 'unset' keyword.
+				DeclaredValue& operator=(const UnsetTag&) {
+					DeclaredValue temp(UNSET);
+					return std::swap(*this, temp), *this;
+				}
+
+				/// Equality operator for @c StyleProperty class template.
+				template<typename TypeSpec2, typename InheritedOrNot2>
+				bool operator==(const DeclaredValue<StyleProperty<TypeSpec2, InheritedOrNot2>>& other) const {
+					if(isDefaultingKeyword())
+						return defaultingKeyword_ == other.defaultingKeyword_;
+					else if(other.isDefaultingKeyword())
+						return false;
+					return get() == other.get();
+				}
+				/// Equality operator returns @c true if this specifies 'initial' keyword.
+				bool operator==(const InitialTag&) {
+					return defaultingKeyword_ == &INITIAL;
+				}
+				/// Equality operator returns @c true if this specifies 'inherit' keyword.
+				bool operator==(const InheritTag&) {
+					return defaultingKeyword_ == &INHERIT;
+				}
+				/// Equality operator returns @c true if this specifies 'unset' keyword.
+				bool operator==(const UnsetTag&) {
+					return defaultingKeyword_ == &UNSET;
+				}
+
+				/**
+				 * Returns the contributed value.
+				 * @throw std#logic_error If @c #isDefaultingKeyword() returned @c true
+				 */
+				value_type& get() {
+					if(isDefaultingKeyword())
+						throw std::logic_error("");
+					return boost::get(value_);
+				}
+				/**
+				 * Returns the contributed value.
+				 * @throw std#logic_error If @c #isDefaultingKeyword() returned @c true
+				 */
+				const value_type& get() const {
+					if(isDefaultingKeyword())
+						throw std::logic_error("");
+					return boost::get(value_);
+				}
+				/// Returns the property value, or the @a defaultValue if this specifies defaulting keyword.
+				const value_type& getOr(const value_type& defaultValue) const {
+					return isDefaultingKeyword() ? defaultValue : boost::get(value_);
+				}
+				/// Returns the property value, or the initial value if this specifies defaulting keyword.
+				value_type getOrInitial() const {
+					return isDefaultingKeyword() ? initialValue() : boost::get(value_);
+				}
+				/// Returns the property value, or @c boost#none if inherits the parent.
+				boost::optional<value_type> getOrNone() const {
+					return isDefaultingKeyword() ? boost::none : value_;
+				}
+				/// Returns @c true if this is defaulting keyword.
+				bool isDefaultingKeyword() const BOOST_NOEXCEPT {
+					return defaultingKeyword_ != nullptr;
+				}
+
+			private:
+				boost::optional<value_type> value_;
+				const styles::DefaultingKeyword* defaultingKeyword_;
+			};
+
+			template<typename Property>
+			class DeclaredValue<FlowRelativeFourSides<Property>>
+				: boost::mpl::identity<FlowRelativeFourSides<typename DeclaredValue<Property>::type>> {};
+
 			/**
 			 * Implements "Cascading" describe by CSS Cascading and Inheritance Level 3.
 			 * @tparam Property @c StyleProperty class template
@@ -268,8 +291,8 @@ namespace ascension {
 			 */
 			template<typename Property>
 			inline void inherit(
-					const typename ComputedValueType<Property>::type* parentComputedValue,
-					typename SpecifiedValueType<Property>::type& specifiedValue) {
+					const typename ComputedValue<Property>::type* parentComputedValue,
+					typename SpecifiedValue<Property>::type& specifiedValue) {
 				specifiedValue = (parentComputedValue != nullptr) ? *parentComputedValue : Property::initialValue();
 			}
 
@@ -283,7 +306,7 @@ namespace ascension {
 			 */
 			template<typename Property, typename Function>
 			inline void inherit(Function parentComputedValueGenerator,
-					typename SpecifiedValueType<Property>::type& specifiedValue) {
+					typename SpecifiedValue<Property>::type& specifiedValue) {
 				specifiedValue = parentComputedValueGenerator();
 			}
 
@@ -297,8 +320,8 @@ namespace ascension {
 			template<typename Property>
 			inline void specifiedValueFromCascadedValue(
 					const Property& cascadedValue,
-					const typename ComputedValueType<Property>::type& parentComputedValue,
-					typename SpecifiedValueType<Property>::type& specifiedValue) {
+					const typename ComputedValue<Property>::type& parentComputedValue,
+					typename SpecifiedValue<Property>::type& specifiedValue) {
 				if(cascadedValue == UNSET) {
 					if(Property::INHERITED)
 						inherit(parentComputedValue, specifiedValue);
@@ -327,7 +350,7 @@ namespace ascension {
 			inline void specifiedValueFromCascadedValue(
 					const Property& cascadedValue,
 					Function parentComputedValueGenerator,
-					typename SpecifiedValueType<Property>::type& specifiedValue) {
+					typename SpecifiedValue<Property>::type& specifiedValue) {
 				if(cascadedValue == UNSET) {
 					if(Property::INHERITED)
 						inherit(parentComputedValueGenerator, specifiedValue);

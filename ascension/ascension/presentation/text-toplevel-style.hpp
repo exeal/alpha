@@ -52,33 +52,32 @@ namespace ascension {
 			static const DeclaredTextToplevelStyle& unsetInstance();
 
 		private:
-			explicit DeclaredTextToplevelStyle(const styles::UnsetTag&);
 			std::shared_ptr<const DeclaredTextLineStyle> linesStyle_;
 		};
 
 		/// "Specified Values" of @c TextToplevelStyle.
 #if 1
 		struct SpecifiedTextToplevelStyle :
-			boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type {};
+			boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValue<boost::mpl::_1>>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
+			boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValue<boost::mpl::_1>>::type
 		>::type SpecifiedTextToplevelStyle;
 #endif
 
 		/// "Computed Values" of @c TextToplevelStyle.
 #if 1
 		struct ComputedTextToplevelStyle :
-			boost::mpl::transform<TextToplevelStyle, styles::ComputedValueType<boost::mpl::_1>>::type {};
+			boost::mpl::transform<TextToplevelStyle, styles::ComputedValue<boost::mpl::_1>>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextToplevelStyle, styles::ComputedValueType<boost::mpl::_1>>::type
+			boost::mpl::transform<TextToplevelStyle, styles::ComputedValue<boost::mpl::_1>>::type
 		>::type ComputedTextToplevelStyle;
 #endif
 
 		namespace styles {
-			template<> struct SpecifiedValueType<TextToplevelStyle> : boost::mpl::identity<SpecifiedTextToplevelStyle> {};
-			template<> struct ComputedValueType<TextToplevelStyle> : boost::mpl::identity<ComputedTextToplevelStyle> {};
+			template<> struct SpecifiedValue<TextToplevelStyle> : boost::mpl::identity<SpecifiedTextToplevelStyle> {};
+			template<> struct ComputedValue<TextToplevelStyle> : boost::mpl::identity<ComputedTextToplevelStyle> {};
 		}
 
 		boost::flyweight<ComputedTextToplevelStyle> compute(const SpecifiedTextToplevelStyle& specifiedValues);

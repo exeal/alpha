@@ -4,7 +4,7 @@
  * @date 2003-2006 was LineLayout.h
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 separated from presentation.hpp
- * @date 2012-2013
+ * @date 2012-2014
  */
 
 #ifndef ASCENSION_PRESENTATION_RECONSTRUCTOR_HPP
@@ -17,10 +17,9 @@
 
 namespace ascension {
 	namespace presentation {
-
 		class Presentation;
-		class StyledTextRunIterator;
-		struct TextRunStyle;
+		struct DeclaredStyledTextRunIterator;
+		class DeclaredTextRunStyle;
 
 		/**
 		 * Creates (reconstructs) styles of the document region. This is used by
@@ -37,7 +36,7 @@ namespace ascension {
 			 * @param region The region to reconstruct the new presentation
 			 * @return The presentation or @c null (filled by the presentation's default style)
 			 */
-			virtual std::unique_ptr<StyledTextRunIterator>
+			virtual std::unique_ptr<DeclaredStyledTextRunIterator>
 				presentation(const kernel::Region& region) const BOOST_NOEXCEPT = 0;
 			friend class PresentationReconstructor;
 		};
@@ -45,14 +44,13 @@ namespace ascension {
 		/// Reconstructs document presentation with single text style.
 		class SingleStyledPartitionPresentationReconstructor : public PartitionPresentationReconstructor {
 		public:
-			explicit SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT;
+			explicit SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const DeclaredTextRunStyle> style) BOOST_NOEXCEPT;
 		private:
 			// PartitionPresentationReconstructor
-			std::unique_ptr<StyledTextRunIterator>
-				presentation(Index line, const boost::integer_range<Index>& rangeInLine) const;
+			std::unique_ptr<DeclaredStyledTextRunIterator> presentation(const kernel::Region& region) const override;
 		private:
 			class Iterator;
-			const std::shared_ptr<const TextRunStyle> style_;
+			const std::shared_ptr<const DeclaredTextRunStyle> style_;
 		};
 
 		/**
@@ -71,7 +69,7 @@ namespace ascension {
 			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::unique_ptr<StyledTextRunIterator> declareTextRunStyle(Index line) const = 0;
+			virtual std::unique_ptr<DeclaredStyledTextRunIterator> declareTextRunStyle(Index line) const = 0;
 			friend class Presentation;
 		};
 
@@ -88,7 +86,7 @@ namespace ascension {
 				std::unique_ptr<PartitionPresentationReconstructor> reconstructor);
 		private:
 			// TextRunStyleDeclarator
-			std::unique_ptr<StyledTextRunIterator> declareTextRunStyle(Index line) const;
+			std::unique_ptr<DeclaredStyledTextRunIterator> declareTextRunStyle(Index line) const override;
 		private:
 			class Iterator;
 			Presentation& presentation_;

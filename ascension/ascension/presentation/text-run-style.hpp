@@ -100,34 +100,31 @@ namespace ascension {
 			DeclaredTextRunStyle();
 #endif
 			static const DeclaredTextRunStyle& unsetInstance();
-
-		private:
-			explicit DeclaredTextRunStyle(const styles::UnsetTag&);
 		};
 
 		/// "Specified Values" of @c TextRunStyle.
 #if 1
 		struct SpecifiedTextRunStyle :
-			boost::mpl::transform<TextRunStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type {};
+			boost::mpl::transform<TextRunStyle, styles::SpecifiedValue<boost::mpl::_1>>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextRunStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
+			boost::mpl::transform<TextRunStyle, styles::SpecifiedValue<boost::mpl::_1>>::type
 		>::type SpecifiedTextRunStyle;
 #endif
 
 		/// "Computed Values" of @c TextRunStyle.
 #if 1
 		struct ComputedTextRunStyle :
-			boost::mpl::transform<TextRunStyle, styles::ComputedValueType<boost::mpl::_1>>::type {};
+			boost::mpl::transform<TextRunStyle, styles::ComputedValue<boost::mpl::_1>>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextRunStyle, styles::ComputedValueType<boost::mpl::_1>>::type
+			boost::mpl::transform<TextRunStyle, styles::ComputedValue<boost::mpl::_1>>::type
 		>::type ComputedTextRunStyle;
 #endif
 
 		namespace styles {
-			template<> struct SpecifiedValueType<TextRunStyle> : boost::mpl::identity<SpecifiedTextRunStyle> {};
-			template<> struct ComputedValueType<TextRunStyle> : boost::mpl::identity<ComputedTextRunStyle> {};
+			template<> struct SpecifiedValue<TextRunStyle> : boost::mpl::identity<SpecifiedTextRunStyle> {};
+			template<> struct ComputedValue<TextRunStyle> : boost::mpl::identity<ComputedTextRunStyle> {};
 		}
 
 		boost::flyweight<ComputedTextRunStyle> compute(const SpecifiedTextRunStyle& specifiedValues,

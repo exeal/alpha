@@ -194,8 +194,8 @@ namespace ascension {
 			/// @}
 
 			namespace detail {
-				inline void computeLineHeight(const SpecifiedValueType<LineHeight>::type& specifiedValue,
-						const Pixels& computedFontSize, ComputedValueType<LineHeight>::type& computedValue) {
+				inline void computeLineHeight(const SpecifiedValue<LineHeight>::type& specifiedValue,
+						const Pixels& computedFontSize, ComputedValue<LineHeight>::type& computedValue) {
 					if(const LineHeightEnums* const keyword = boost::get<LineHeightEnums>(&specifiedValue)) {
 						if(*keyword == LineHeightEnums::NONE) {
 							computedValue = std::make_tuple();

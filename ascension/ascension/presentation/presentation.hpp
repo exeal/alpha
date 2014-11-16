@@ -3,7 +3,7 @@
  * Provides classes define appearance and presentation of a text editor user interface.
  * @author exeal
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2013
+ * @date 2006-2014
  */
 
 #ifndef ASCENSION_PRESENTATION_HPP
@@ -12,6 +12,9 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/kernel/document.hpp>
 #include <ascension/presentation/styles/length.hpp>	// Length.Context
+#include <boost/core/noncopyable.hpp>
+#include <boost/flyweight.hpp>
+#include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
 
 namespace ascension {
@@ -25,17 +28,17 @@ namespace ascension {
 	}
 
 	namespace presentation {
-		struct TextLineStyle;
-		struct TextToplevelStyle;
+		class DeclaredTextLineStyle;
 
 		/**
 		 * Interface for objects which declare style of a text line.
-		 * @see TextRunStyleDeclarator, TextLineStyle, Presentation#setTextLineStyleDeclarator
+		 * @see TextRunStyleDeclarator, DeclaredTextLineStyle, Presentation#setTextLineStyleDeclarator
 		 */
 		class TextLineStyleDeclarator {
 		public:
 			/// Destructor.
 			virtual ~TextLineStyleDeclarator() BOOST_NOEXCEPT {}
+
 		private:
 			/**
 			 * Returns the style of the specified text line in the document.
@@ -43,7 +46,7 @@ namespace ascension {
 			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::shared_ptr<const TextLineStyle> declareTextLineStyle(Index line) const = 0;
+			virtual std::shared_ptr<const DeclaredTextLineStyle> declareTextLineStyle(Index line) const = 0;
 			friend class Presentation;
 		};
 
@@ -61,11 +64,9 @@ namespace ascension {
 			/**
 			 * Returns the foreground and background colors of the text line.
 			 * @param line The line to be queried
-			 * @param[out] foreground The foreground color of the text line. If @c boost#none,
-			 *                        line color is not set
-			 * @param[out] background The background color of the text line. If @c boost#none,
-			 *                        line color is not set
-			 * @return the priority
+			 * @param[out] foreground The foreground color of the text line. If @c boost#none, line color is not set
+			 * @param[out] background The background color of the text line. If @c boost#none, line color is not set
+			 * @return The priority
 			 */
 			virtual Priority specifyTextLineColors(Index line,
 				boost::optional<graphics::Color>& foreground,
@@ -73,25 +74,23 @@ namespace ascension {
 			friend class Presentation;
 		};
 
-		struct TextRunStyle;
+		struct ComputedTextToplevelStyle;
 
 		/**
-		 * Interface for objects which are interested in change of the toplevel text style of
-		 * @c Presentation.
-		 * @see Presentation#addTextToplevelStyleListener,
-		 *      Presentation#removeTextToplevelStyleListener,
-		 *      font#ComputedBlockFlowDirectionListener
+		 * Interface for objects which are interested in change of the computed toplevel text style of @c Presentation.
+		 * @see Presentation#addComputedTextToplevelStyleListener,
+		 *      Presentation#removeComputedTextToplevelStyleListener, font#ComputedBlockFlowDirectionListener
 		 */
-		class TextToplevelStyleListener {
+		class ComputedTextToplevelStyleListener {
 		public:
 			/// Destructor.
-			virtual ~TextToplevelStyleListener() BOOST_NOEXCEPT {}
+			virtual ~ComputedTextToplevelStyleListener() BOOST_NOEXCEPT {}
 			/**
-			 * The toplevel text style of @c Presentation was changed.
-			 * @param used The old style used previously
-			 * @see Presentation#textToplevelStyle, Presentation#setTextToplevelStyle
+			 * The computed toplevel text style of @c Presentation was changed.
+			 * @param previous The old style used previously
+			 * @see Presentation#declaredTextToplevelStyle, Presentation#setDeclaredTextToplevelStyle
 			 */
-			virtual void textToplevelStyleChanged(std::shared_ptr<const TextToplevelStyle> used) = 0;
+			virtual void computedTextToplevelStyleChanged(std::shared_ptr<const ComputedTextToplevelStyle> previous) = 0;
 		};
 
 		/**
@@ -167,7 +166,10 @@ namespace ascension {
 			};
 		} // namespace hyperlink
 
+		struct ComputedStyledTextRunIterator;
 		struct ComputedTextLineStyle;
+		struct ComputedTextRunStyle;
+		class DeclaredTextToplevelStyle;
 		class GlobalTextStyleSwitch;
 		class TextRunStyleDeclarator;
 		struct WritingMode;
@@ -181,6 +183,7 @@ namespace ascension {
 		public:
 			explicit Presentation(kernel::Document& document) BOOST_NOEXCEPT;
 			~Presentation() BOOST_NOEXCEPT;
+
 			/// @name Attributes
 			/// @{
 			kernel::Document& document() BOOST_NOEXCEPT;
@@ -189,23 +192,30 @@ namespace ascension {
 
 			/// @name Styles Declaration
 			/// @{
-			void addTextToplevelStyleListener(TextToplevelStyleListener& listener);
-			void removeTextToplevelStyleListener(TextToplevelStyleListener& listener);
+			void addComputedTextToplevelStyleListener(ComputedTextToplevelStyleListener& listener);
+			const DeclaredTextToplevelStyle& declaredTextToplevelStyle() const BOOST_NOEXCEPT;
+			void removeComputedTextToplevelStyleListener(ComputedTextToplevelStyleListener& listener);
+			void setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle> newStyle);
 			void setTextLineStyleDeclarator(std::shared_ptr<TextLineStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
 			void setTextRunStyleDeclarator(std::shared_ptr<TextRunStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
-			void setTextToplevelStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
 			void textLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const;
-			const TextToplevelStyle& textToplevelStyle() const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Computed Toplevel Styles
+			/// @{
+			const ComputedTextLineStyle& computedTextLineStyle() const BOOST_NOEXCEPT;
+			const ComputedTextRunStyle& computedTextRunStyle() const BOOST_NOEXCEPT;
+			const ComputedTextToplevelStyle& computedTextToplevelStyle() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Styles Computation
 			/// @{
-			void computeTextLineStyle(Index line, const styles::Length::Context& lengthContext,
-				const GlobalTextStyleSwitch* globalSwitch, ComputedTextLineStyle& result) const;
+			void computeTextLineStyle(Index line,
+				const styles::Length::Context& lengthContext, ComputedTextLineStyle& result) const;
 			std::unique_ptr<ComputedStyledTextRunIterator>
 				computeTextRunStyles(Index line, const styles::Length::Context& lengthContext) const;
-			WritingMode computeWritingMode(const GlobalTextStyleSwitch* globalSwitch) const;
+			WritingMode computeWritingMode(boost::optional<Index> line = boost::none) const;
 			/// @}
 
 			/// @name Hyperlinks
@@ -221,6 +231,7 @@ namespace ascension {
 			void addTextLineColorSpecifier(std::shared_ptr<TextLineColorSpecifier> specifier);
 			void removeTextLineColorSpecifier(TextLineColorSpecifier& specifier) BOOST_NOEXCEPT;
 			/// @}
+
 		private:
 			void clearHyperlinksCache() BOOST_NOEXCEPT;
 			// kernel.DocumentListener
@@ -228,12 +239,13 @@ namespace ascension {
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 		private:
 			kernel::Document& document_;
-			static std::shared_ptr<const TextToplevelStyle> DEFAULT_TEXT_TOPLEVEL_STYLE;
-			std::shared_ptr<const TextToplevelStyle> textToplevelStyle_;
+			std::shared_ptr<const DeclaredTextToplevelStyle> declaredTextToplevelStyle_;
 			std::shared_ptr<TextLineStyleDeclarator> textLineStyleDeclarator_;
 			std::shared_ptr<TextRunStyleDeclarator> textRunStyleDeclarator_;
 			std::list<std::shared_ptr<TextLineColorSpecifier>> textLineColorSpecifiers_;
-			ascension::detail::Listeners<TextToplevelStyleListener> textToplevelStyleListeners_;
+			ascension::detail::Listeners<ComputedTextToplevelStyleListener> computedTextToplevelStyleListeners_;
+			struct ComputedStyles;
+			std::unique_ptr<ComputedStyles> computedStyles_;
 			std::shared_ptr<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
 			mutable std::list<Hyperlinks*> hyperlinks_;
@@ -241,13 +253,13 @@ namespace ascension {
 
 
 		/**
-		 * Returns the text toplevel style this object gives.
-		 * @return The text toplevel style
-		 * @see #setTextToplevelStyle
+		 * Returns the declared text toplevel style this object gives.
+		 * @return The declared text toplevel style
+		 * @see #setDeclaredTextToplevelStyle
 		 */
-		inline const TextToplevelStyle& Presentation::textToplevelStyle() const BOOST_NOEXCEPT {
-			assert(textToplevelStyle_ != nullptr);
-			return *textToplevelStyle_;
+		inline const DeclaredTextToplevelStyle& Presentation::declaredTextToplevelStyle() const BOOST_NOEXCEPT {
+			assert(declaredTextToplevelStyle_.get() != nullptr);
+			return *declaredTextToplevelStyle_;
 		}
 
 	}
