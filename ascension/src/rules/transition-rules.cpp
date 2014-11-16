@@ -6,7 +6,7 @@
  * @date 2014-01-13 separated from rules.cpp
  */
 
-#include <ascension/rules.hpp>
+#include <ascension/rules/transition-rules.hpp>
 #include <ascension/corelib/ustring.hpp>	// umemcmp
 
 
@@ -26,23 +26,6 @@ namespace ascension {
 		/// Destructor.
 		TransitionRule::~TransitionRule() BOOST_NOEXCEPT {
 		}
-		
-		/**
-		 * @fn TransitionRule::clone
-		 * Creates and returns a copy of the object.
-		 * @return A copy of the object
-		 */
-		
-		/**
-		 * @fn TransitionRule::matches
-		 * Returns @c true if the rule matches the specified text. Note that an implementation can't use
-		 * the partitioning of the document to generate the new partition.
-		 * @param line The target line text
-		 * @param offsetInLine The offset in the line at which match starts
-		 * @return The length of the matched pattern. If and only if the match failed, returns 0.
-		 *         If matched zero width text, returns 1
-		 * @todo This documentation is confusable.
-		 */
 
 
 		// LiteralTransitionRule //////////////////////////////////////////////////////////////////////////////////////
