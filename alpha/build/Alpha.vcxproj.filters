@@ -511,9 +511,6 @@
     <ClInclude Include="..\..\ascension\ascension\platforms.hpp">
       <Filter>ascension\Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\rules.hpp">
-      <Filter>ascension\Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\win32\dc.hpp">
       <Filter>ascension\Header Files\win32</Filter>
     </ClInclude>
@@ -1033,13 +1030,13 @@
     <ClInclude Include="..\..\ascension\ascension\rules\transition-rules.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\rules\lexical-partitioning.hpp">
-      <Filter>ascension\Header Files\rules</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-partitioner.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-partition-presentation-reconstructor.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\token-rules.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
   </ItemGroup>
