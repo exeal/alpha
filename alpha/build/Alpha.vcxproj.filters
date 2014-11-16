@@ -1039,6 +1039,9 @@
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-partitioner.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\lexical-partition-presentation-reconstructor.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
