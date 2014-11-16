@@ -19,15 +19,6 @@
 namespace ascension {
 	/// Provides a framework for rule based text scanning and document partitioning.
 	namespace rules {
-		/**
-		 * 
-		 * @see TokenScanner
-		 */
-		class BadScannerStateException : public IllegalStateException {
-		public:
-			BadScannerStateException() : IllegalStateException("The scanner can't accept the requested operation in this state.") {}
-		};
-
 		class TokenScanner;
 
 		/**
@@ -111,79 +102,6 @@ namespace ascension {
 			std::unique_ptr<const regex::Pattern> pattern_;
 		};
 #endif // !ASCENSION_NO_REGEX
-
-		/**
-		 * @c TokenScanner scans a range of document and returns the tokens it finds. To start
-		 * scanning, call @c #parse method with a target document region. And then call
-		 * @c #nextToken method repeatedly to get tokens. When reached the end of the scanning
-		 * region, the scanning is end and @c #hasNext will return @c false.
-		 */
-		class TokenScanner {
-		public:
-			/// Destructor.
-			virtual ~TokenScanner() BOOST_NOEXCEPT {}
-			/// Returns @c false if the scanning is done.
-			virtual bool hasNext() const BOOST_NOEXCEPT = 0;
-			/// Returns the identifier syntax.
-			virtual const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT = 0;
-			/**
-			 * Moves to the next token and returns it.
-			 * @return The token or @c null if the scanning was done.
-			 */
-			virtual std::unique_ptr<Token> nextToken() = 0;
-			/**
-			 * Starts the scan with the specified range. The current position of the scanner will
-			 * be the top of the specified region.
-			 * @param document The document
-			 * @param region The region to be scanned
-			 * @throw kernel#BadRegionException @a region intersects outside of the document
-			 */
-			virtual void parse(const kernel::Document& document, const kernel::Region& region) = 0;
-			/// Returns the current position.
-			virtual kernel::Position position() const = 0;
-		};
-
-		/**
-		 * @c NullTokenScanner returns no tokens. @c NullTokenScanner#hasNext returns always
-		 * @c false.
-		 */
-		class NullTokenScanner : public TokenScanner {
-		public:
-			bool hasNext() const BOOST_NOEXCEPT;
-			const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT;
-			std::unique_ptr<Token> nextToken();
-			void parse(const kernel::Document& document, const kernel::Region& region);
-			kernel::Position position() const;
-		private:
-			boost::optional<kernel::Position> position_;
-		};
-
-		/**
-		 * A generic scanner which is programable with a sequence of rules. The rules must be
-		 * registered before start of scanning. Otherwise @c RunningScannerException will be thrown.
-		 * Note that the tokens this scanner returns are only single-line. Multi-line tokens are
-		 * not supported by this class.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class LexicalTokenScanner : public TokenScanner, private boost::noncopyable {
-		public:
-			// constructors
-			explicit LexicalTokenScanner(kernel::ContentType contentType) BOOST_NOEXCEPT;
-			// attributes
-			void addRule(std::unique_ptr<const Rule> rule);
-			void addWordRule(std::unique_ptr<const WordRule> rule);
-			// TokenScanner
-			bool hasNext() const BOOST_NOEXCEPT;
-			const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT;
-			std::unique_ptr<Token> nextToken();
-			void parse(const kernel::Document& document, const kernel::Region& region);
-			kernel::Position position() const BOOST_NOEXCEPT;
-		private:
-			kernel::ContentType contentType_;
-			std::forward_list<std::unique_ptr<const Rule>> rules_;
-			std::forward_list<std::unique_ptr<const WordRule>> wordRules_;
-			kernel::DocumentCharacterIterator current_;
-		};
 
 		/**
 		 * A rule for detecting patterns which begin new partition in document.
