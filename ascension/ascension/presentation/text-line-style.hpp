@@ -15,7 +15,6 @@
 #	define FUSION_MAX_VECTOR_SIZE 40
 #endif
 
-#include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/corelib/memory.hpp>
 #include <ascension/presentation/styles/auxiliary.hpp>
 #include <ascension/presentation/styles/box.hpp>
@@ -68,7 +67,7 @@ namespace ascension {
 		// TODO: Check uniqueness of the members of TextLineStyle.
 
 		/// "Declared Values" of @c TextLineStyle.
-		class DeclaredTextLineStyle : public TextLineStyle,
+		class DeclaredTextLineStyle : public boost::mpl::transform<TextLineStyle, styles::DeclaredValue<boost::mpl::_1>>::type,
 			public FastArenaObject<DeclaredTextLineStyle>, public std::enable_shared_from_this<DeclaredTextLineStyle> {
 		public:
 			DeclaredTextLineStyle();
@@ -80,33 +79,32 @@ namespace ascension {
 			static const DeclaredTextLineStyle& unsetInstance();
 
 		private:
-			explicit DeclaredTextLineStyle(const styles::UnsetTag&);
 			std::shared_ptr<const DeclaredTextRunStyle> runsStyle_;
 		};
 
 		/// "Specified Values" of @c TextLineStyle.
 #if 1
 		struct SpecifiedTextLineStyle :
-			boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type {};
+			boost::mpl::transform<TextLineStyle, styles::SpecifiedValue<boost::mpl::_1>>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextLineStyle, styles::SpecifiedValueType<boost::mpl::_1>>::type
+			boost::mpl::transform<TextLineStyle, styles::SpecifiedValue<boost::mpl::_1>>::type
 		>::type SpecifiedTextLineStyle;
 #endif
 
 		/// "Computed Values" of @c TextLineStyle.
 #if 1
 		struct ComputedTextLineStyle :
-			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type {};
+			boost::mpl::transform<TextLineStyle, styles::ComputedValue<boost::mpl::_1>>::type {};
 #else
 		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextLineStyle, styles::ComputedValueType<boost::mpl::_1>>::type
+			boost::mpl::transform<TextLineStyle, styles::ComputedValue<boost::mpl::_1>>::type
 		>::type ComputedTextLineStyle;
 #endif
 
 		namespace styles {
-			template<> struct SpecifiedValueType<TextLineStyle> : boost::mpl::identity<SpecifiedTextLineStyle> {};
-			template<> struct ComputedValueType<TextLineStyle> : boost::mpl::identity<ComputedTextLineStyle> {};
+			template<> struct SpecifiedValue<TextLineStyle> : boost::mpl::identity<SpecifiedTextLineStyle> {};
+			template<> struct ComputedValue<TextLineStyle> : boost::mpl::identity<ComputedTextLineStyle> {};
 		}
 
 		boost::flyweight<ComputedTextLineStyle> compute(

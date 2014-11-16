@@ -8,10 +8,14 @@
 #include <ascension/corelib/range.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/presentation-reconstructor.hpp>
-#include <ascension/presentation/text-style.hpp>
+#include <ascension/presentation/styled-text-run-iterator.hpp>
+#include <ascension/presentation/text-line-style.hpp>
+#include <ascension/presentation/text-run-style.hpp>
+#include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/rules.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/foreach.hpp>
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
 #ifdef BOOST_OS_WINDOWS
 #include <shellapi.h>	// ShellExecuteW
 #endif // BOOST_OS_WINDOWS
@@ -31,28 +35,22 @@ namespace ascension {
 
 	namespace presentation {
 		namespace styles {
-			// TODO: these value are changed later.
-			const Length Border::THIN(0.05f, Length::EM_HEIGHT);
-			const Length Border::MEDIUM(0.10f, Length::EM_HEIGHT);
-			const Length Border::THICK(0.20f, Length::EM_HEIGHT);
-		}
-
-		/**
-		 * Returns the default line style of the specified toplevel style.
-		 * @param toplevelStyle The toplevel style
-		 * @return toplevelStyle.defaultLineStyle, of a default-constructed @c TextLineStyle instance if @c null
-		 * @see defaultTextRunStyle
-		 */
-		std::shared_ptr<const TextLineStyle> defaultTextLineStyle(const TextToplevelStyle& toplevelStyle) {
-			static const TextLineStyle defaultInstance;
-			return (toplevelStyle.defaultLineStyle.get() != nullptr) ?
-				toplevelStyle.defaultLineStyle : std::shared_ptr<const TextLineStyle>(&defaultInstance, boost::null_deleter());
-		}
+/*			namespace linewidthkeywords {
+				// TODO: these value are changed later.
+				const Length THIN(0.05f, Length::EM_HEIGHT);
+				const Length MEDIUM(0.10f, Length::EM_HEIGHT);
+				const Length THICK(0.20f, Length::EM_HEIGHT);
+			}
+*/		}
 
 
 		// Presentation ///////////////////////////////////////////////////////////////////////////////////////////////
 
-		std::shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_TEXT_TOPLEVEL_STYLE;
+		struct Presentation::ComputedStyles {
+			boost::flyweight<ComputedTextRunStyle> forRuns;
+			boost::flyweight<ComputedTextLineStyle> forLines;
+			boost::flyweight<ComputedTextToplevelStyle> forToplevel;
+		};
 
 		struct Presentation::Hyperlinks {
 			Index lineNumber;
@@ -65,12 +63,7 @@ namespace ascension {
 		 * @param document The target document
 		 */
 		Presentation::Presentation(kernel::Document& document) BOOST_NOEXCEPT : document_(document) {
-			if(DEFAULT_TEXT_TOPLEVEL_STYLE.get() == nullptr) {
-				std::unique_ptr<TextToplevelStyle> temp(new TextToplevelStyle);
-				temp->defaultLineStyle = defaultTextLineStyle(*temp);
-				DEFAULT_TEXT_TOPLEVEL_STYLE = std::move(temp);
-			}
-			setTextToplevelStyle(std::shared_ptr<const TextToplevelStyle>());
+			setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle>());
 			document_.addListener(*this);
 		}
 		
@@ -78,6 +71,16 @@ namespace ascension {
 		Presentation::~Presentation() BOOST_NOEXCEPT {
 			document_.removeListener(*this);
 			clearHyperlinksCache();
+		}
+		
+		/**
+		 * Registers the text toplevel style listener.
+		 * @param listener The listener to be registered
+		 * @throw std#invalid_argument @a listener is already registered
+		 * @see #removeTextToplevelStyleListener, #textToplevelStyle
+		 */
+		void Presentation::addComputedTextToplevelStyleListener(ComputedTextToplevelStyleListener& listener) {
+			computedTextToplevelStyleListeners_.add(listener);
 		}
 
 		/**
@@ -91,16 +94,6 @@ namespace ascension {
 				throw NullPointerException("specifier");
 			textLineColorSpecifiers_.push_back(specifier);
 		}
-		
-		/**
-		 * Registers the text toplevel style listener.
-		 * @param listener The listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 * @see #removeTextToplevelStyleListener, #textToplevelStyle
-		 */
-		void Presentation::addTextToplevelStyleListener(TextToplevelStyleListener& listener) {
-			textToplevelStyleListeners_.add(listener);
-		}
 
 		void Presentation::clearHyperlinksCache() BOOST_NOEXCEPT {
 			BOOST_FOREACH(Hyperlinks* p, hyperlinks_) {
@@ -112,14 +105,37 @@ namespace ascension {
 		}
 
 		namespace {
-//			template<typename PropertyType>
-//			inline typename sp::IntrinsicType<PropertyType>::Type resolveProperty(PropertyType TextLineStyle::*pointerToMember, const TextLineStyle& declared, const TextLineStyle& toplevel) {
-//				return !(declared.*pointerToMember).inherits() ? (declared.*pointerToMember).get() : (toplevel.*pointerToMember).getOrInitial();
-//			}
-			template<typename PropertyType>
-			inline void resolveProperty(PropertyType TextLineStyle::*pointerToMember, const TextLineStyle& toplevel, TextLineStyle& property) {
-				if((property.*pointerToMember).inherits())
-					property.*pointerToMember = (toplevel.*pointerToMember).getOrInitial();
+			template<typename Styles>
+			struct SpecifiedValuesFromCascadedValues {
+				SpecifiedValuesFromCascadedValues(const Styles& cascadedValues,
+					const typename styles::ComputedValue<Styles>::type& parentComputedValues,
+					typename styles::SpecifiedValue<Styles>::type& specifiedValues) :
+					cascadedValues(cascadedValues), parentComputedValues(parentComputedValues), specifiedValues(specifiedValues) {}
+				template<typename SpecifiedValue>
+				void operator()(SpecifiedValue& specifiedValue) {
+					typedef boost::fusion::result_of::find<
+						typename styles::SpecifiedValue<Styles>::type, SpecifiedValue
+					>::type I;
+					static_assert(
+						!std::is_same<I, boost::fusion::result_of::end<typename styles::SpecifiedValue<Styles>::type>::type>::value,
+						"SpecifiedValue was not found in SpecifiedTextLineStyle.");
+					typedef boost::fusion::result_of::distance<
+						boost::fusion::result_of::begin<typename styles::SpecifiedValue<Styles>::type>::type, I
+					>::type Index;
+					styles::specifiedValueFromCascadedValue(
+						boost::fusion::at<Index>(cascadedValues), boost::fusion::at<Index>(parentComputedValues), specifiedValue);
+				}
+				const Styles& cascadedValues;
+				const typename styles::ComputedValue<Styles>::type& parentComputedValues;
+				typename styles::SpecifiedValue<Styles>::type& specifiedValues;
+			};
+
+			template<typename Styles>
+			void specifiedValuesFromCascadedValues(const Styles& cascadedValues,
+					const typename styles::ComputedValue<Styles>::type& parentComputedValues,
+					typename styles::SpecifiedValue<Styles>::type& specifiedValues) {
+				SpecifiedValuesFromCascadedValues<Styles> compressor(cascadedValues, parentComputedValues, specifiedValues);
+				boost::fusion::for_each(specifiedValues, compressor);
 			}
 		}
 
@@ -127,181 +143,54 @@ namespace ascension {
 		 * Returns the style of the specified text line.
 		 * @param line The line number
 		 * @param lengthContext 
-		 * @param globalSwitch 
 		 * @param[out] result The computed text line style
 		 * @throw BadPositionException @a line is outside of the document
 		 * @throw NullPointerException Internal @c Length#value call may throw this exception
 		 */
 		void Presentation::computeTextLineStyle(Index line,
-				const styles::Length::Context& lengthContext, const GlobalTextStyleSwitch* globalSwitch, ComputedTextLineStyle& result) const {
+				const styles::Length::Context& lengthContext, ComputedTextLineStyle& result) const {
 			if(line >= document_.numberOfLines())
 				throw kernel::BadPositionException(kernel::Position(line, 0));
-		
-			TextToplevelStyle toplevel(textToplevelStyle());
-			if(toplevel.writingMode.inherits() && globalSwitch != nullptr)
-				toplevel.writingMode = globalSwitch->writingMode();
-		
-			std::shared_ptr<const TextLineStyle> declared;
-			if(textLineStyleDeclarator_.get() != nullptr)
-				declared = textLineStyleDeclarator_->declareTextLineStyle(line);
-		
-			TextLineStyle precomputed((declared.get() != nullptr) ? *declared : TextLineStyle());
-			if(globalSwitch != nullptr) {
-				if(!precomputed.direction.inherits())
-					precomputed.direction = globalSwitch->direction();
-				if(!precomputed.textAlignment.inherits())
-					precomputed.textAlignment = globalSwitch->textAlignment();
-				if(!precomputed.textOrientation.inherits())
-					precomputed.textOrientation = globalSwitch->textOrientation();
-				if(!precomputed.whiteSpace.inherits())
-					precomputed.whiteSpace = globalSwitch->whiteSpace();
-			}
-			const std::shared_ptr<const TextLineStyle> defaultStyle(defaultTextLineStyle(toplevel));
-			assert(defaultStyle != nullptr);
-			resolveProperty(&TextLineStyle::direction, *defaultStyle, precomputed);
-//			resolveProperty(&TextLineStyle::unicodeBidi, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::textOrientation, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::lineBoxContain, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::inlineBoxAlignment, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::whiteSpace, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::tabSize, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::lineBreak, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::wordBreak, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::overflowWrap, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::textAlignment, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::textAlignmentLast, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::textJustification, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::textIndent, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::hangingPunctuation, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::dominantBaseline, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::lineHeight, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::measure, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::numberSubstitutionLocaleOverride, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::numberSubstitutionLocaleSource, *defaultStyle, precomputed);
-			resolveProperty(&TextLineStyle::numberSubstitutionMethod, *defaultStyle, precomputed);
-		
-			result.writingMode = WritingMode(precomputed.direction.getOrInitial(), toplevel.writingMode.getOrInitial(), precomputed.textOrientation.getOrInitial());
-			{
-				std::shared_ptr<const TextRunStyle> defaultRunStyle(precomputed.defaultRunStyle);
-				if(defaultRunStyle.get() == nullptr)
-					defaultRunStyle = defaultTextRunStyle(*defaultStyle);
-				assert(defaultRunStyle.get() != nullptr);
-				result.nominalFont.families = defaultRunStyle->fontFamily.getOrInitial();
-				result.nominalFont.properties.weight = defaultRunStyle->fontWeight.getOrInitial();
-				result.nominalFont.properties.stretch = defaultRunStyle->fontStretch.getOrInitial();
-				result.nominalFont.properties.style = defaultRunStyle->fontStyle.getOrInitial();
-				result.nominalFont.pointSize = defaultRunStyle->fontSize.getOrInitial();
-				result.nominalFont.sizeAdjust = defaultRunStyle->fontSizeAdjust.getOrInitial();
-			}
-			result.lineBoxContain = precomputed.lineBoxContain.getOrInitial();
-			result.whiteSpace = precomputed.whiteSpace.getOrInitial();
-			precomputed.tabSize.getOrInitial();
-			result.lineBreak = precomputed.lineBreak.getOrInitial();
-			result.wordBreak = precomputed.wordBreak.getOrInitial();
-			result.overflowWrap = precomputed.overflowWrap.getOrInitial();
-			result.alignment = precomputed.textAlignment.getOrInitial();
-			result.alignmentLast = precomputed.textAlignmentLast.getOrInitial();
-			result.justification = precomputed.textJustification.getOrInitial();
-			result.indent.length = static_cast<graphics::Scalar>(precomputed.textIndent.getOrInitial().length.value(lengthContext));
-			result.indent.hanging = precomputed.textIndent.getOrInitial().hanging;
-			result.indent.eachLine = precomputed.textIndent.getOrInitial().eachLine;
-			result.hangingPunctuation = precomputed.hangingPunctuation.getOrInitial();
-			result.dominantBaseline = precomputed.dominantBaseline.getOrInitial();
-			{
-				// TODO: This code is temporary.
-				auto precomputedLineHeight(precomputed.lineHeight.getOrInitial());
-				if(LineHeightEnums* const keyword = boost::get<LineHeightEnums>(&precomputedLineHeight)) {
-					if(*keyword == LineHeightEnums::NONE)
-						*keyword = LineHeightEnums::NORMAL;
-					if(*keyword == LineHeightEnums::NORMAL || true)
-						precomputedLineHeight = Length(1.15f, Length::EM_HEIGHT);
-				} else if(const graphics::Scalar* const number = boost::get<graphics::Scalar>(&precomputedLineHeight))
-					precomputedLineHeight = Length(*number, Length::EM_HEIGHT);
-				if(const Length* const length = boost::get<Length>(&precomputedLineHeight))
-					result.lineHeight = static_cast<graphics::Scalar>(length->value(lengthContext));
-				else
-					ASCENSION_ASSERT_NOT_REACHED();
-			}
-			{
-				const boost::optional<Length> value(precomputed.measure.getOrInitial());
-				if(value != boost::none)
-					result.measure = static_cast<graphics::Scalar>(value->value(lengthContext));
-				else
-					result.measure = Length(100, Length::PERCENTAGE, isHorizontal(result.writingMode.blockFlowDirection) ? Length::WIDTH : Length::HEIGHT).value(lengthContext);
-			}
-			result.numberSubstitution.localeOverride = precomputed.numberSubstitutionLocaleOverride.getOrInitial();
-			result.numberSubstitution.localeSource = precomputed.numberSubstitutionLocaleSource.getOrInitial();
-			result.numberSubstitution.method = precomputed.numberSubstitutionMethod.getOrInitial();
+
+			const std::shared_ptr<const DeclaredTextLineStyle> declared(
+				(textLineStyleDeclarator_.get() != nullptr) ? textLineStyleDeclarator_->declareTextLineStyle(line)
+					: std::shared_ptr<const DeclaredTextLineStyle>(&DeclaredTextLineStyle::unsetInstance(), boost::null_deleter()));
+
+//			styles::cascade(declared);
+
+			SpecifiedTextLineStyle specified;
+			specifiedValuesFromCascadedValues(static_cast<const TextLineStyle&>(*declared), computedStyles_->forLines.get(), specified);
 		}
 
-		namespace {
-			template<typename PropertyType, typename TextStyle>
-			inline void computeDefaultTextRunStyle(PropertyType TextStyle::*pointerToMember, const TextStyle& defaultStyle, TextStyle& style) {
-				if((style.*pointerToMember).inherits())
-					style.*pointerToMember = (defaultStyle.*pointerToMember).getOrInitial();
-			}
-			inline void computeDefaultTextRunStyle(Background TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
-				computeDefaultTextRunStyle(&Background::color, defaultStyle.background, style.background);
-			}
-			inline void computeDefaultTextRunStyle(Border TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
-				BOOST_FOREACH(Border::Side& side, (static_cast<std::array<Border::Side, 4>&>(style.border.sides))) {
-					const FlowRelativeDirection direction = static_cast<FlowRelativeDirection>(&side - &*std::begin(style.border.sides));
-					computeDefaultTextRunStyle(&Border::Side::color, defaultStyle.border.sides[direction], style.border.sides[direction]);
-					computeDefaultTextRunStyle(&Border::Side::style, defaultStyle.border.sides[direction], style.border.sides[direction]);
-					computeDefaultTextRunStyle(&Border::Side::width, defaultStyle.border.sides[direction], style.border.sides[direction]);
-				}
-			}
-			template<typename PropertyType>
-			inline void computeDefaultTextRunStyle(FlowRelativeFourSides<PropertyType> TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
-				BOOST_FOREACH(FlowRelativeFourSides<PropertyType>::value_type& side, (static_cast<std::array<PropertyType, 4>&>(style.*pointerToMember))) {
-					const FlowRelativeDirection direction = static_cast<FlowRelativeDirection>(&side - &*std::begin(style.*pointerToMember));
-					if((style.*pointerToMember)[direction].inherits())
-						(style.*pointerToMember)[direction] = (defaultStyle.*pointerToMember)[direction].getOrInitial();
-				}
-			}
-			template<typename PropertyType>
-			inline void computeDefaultTextRunStyle(SpacingLimit<PropertyType> TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
-				computeDefaultTextRunStyle(&SpacingLimit<PropertyType>::optimum, defaultStyle.*pointerToMember, style.*pointerToMember);
-				computeDefaultTextRunStyle(&SpacingLimit<PropertyType>::minimum, defaultStyle.*pointerToMember, style.*pointerToMember);
-				computeDefaultTextRunStyle(&SpacingLimit<PropertyType>::maximum, defaultStyle.*pointerToMember, style.*pointerToMember);
-			}
-			inline void computeDefaultTextRunStyle(TextDecoration TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
-				computeDefaultTextRunStyle(&TextDecoration::lines, defaultStyle.*pointerToMember, style.*pointerToMember);
-				computeDefaultTextRunStyle(&TextDecoration::color, defaultStyle.*pointerToMember, style.*pointerToMember);
-				computeDefaultTextRunStyle(&TextDecoration::style, defaultStyle.*pointerToMember, style.*pointerToMember);
-				computeDefaultTextRunStyle(&TextDecoration::skip, defaultStyle.*pointerToMember, style.*pointerToMember);
-				computeDefaultTextRunStyle(&TextDecoration::underlinePosition, defaultStyle.*pointerToMember, style.*pointerToMember);
-			}
-			inline void computeDefaultTextRunStyle(TextEmphasis TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
-				computeDefaultTextRunStyle(&TextEmphasis::style, defaultStyle.*pointerToMember, style.*pointerToMember);
-				computeDefaultTextRunStyle(&TextEmphasis::position, defaultStyle.*pointerToMember, style.*pointerToMember);
-			}
-			inline void computeDefaultTextRunStyle(TextShadow TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
-				// TODO: Write the code.
-			}
-		
-			class ComputedStyledTextRunIteratorImpl : public graphics::font::ComputedStyledTextRunIterator {
+		namespace {		
+			class ComputedStyledTextRunIteratorImpl : public ComputedStyledTextRunIterator {
 			public:
-				ComputedStyledTextRunIteratorImpl(std::unique_ptr<StyledTextRunIterator>&& declaration,
-						TextRunStyle&& defaultStyle) : declaration_(std::move(declaration)), defaultStyle_(defaultStyle) {
+				ComputedStyledTextRunIteratorImpl(std::unique_ptr<DeclaredStyledTextRunIterator> declaration,
+						const styles::Length::Context& context, const ComputedTextRunStyle& parentComputedStyle)
+						: declaration_(std::move(declaration)), context_(context), parentComputedStyle_(parentComputedStyle) {
 				}
-				// font.ComputedStyledTextRunIterator
-				boost::integer_range<Index> currentRange() const {
+				// ComputedStyledTextRunIterator
+				boost::integer_range<Index> currentRange() const override {
 					return declaration_->currentRange();
 				}
-				void currentStyle(graphics::font::ComputedTextRunStyle& style) const {
-					const std::shared_ptr<const TextRunStyle> declared(declaration_->currentStyle());
-					declared->color;
+				boost::flyweight<ComputedTextRunStyle> currentStyle() const override {
+					const std::shared_ptr<const DeclaredTextRunStyle> declared(declaration_->currentStyle());
+//					cascade();
+					SpecifiedTextRunStyle specified;
+					specifiedValuesFromCascadedValues(static_cast<const TextRunStyle&>(*declared), parentComputedStyle_, specified);
+					return compute(specified, context_, parentComputedStyle_);
 				}
-				bool isDone() const BOOST_NOEXCEPT {
+				bool isDone() const override BOOST_NOEXCEPT {
 					return declaration_->isDone();
 				}
-				void next() {
+				void next() override {
 					return declaration_->next();
 				}
+
 			private:
-				std::unique_ptr<StyledTextRunIterator> declaration_;
-				const TextRunStyle defaultStyle_;
+				std::unique_ptr<DeclaredStyledTextRunIterator> declaration_;
+				const styles::Length::Context& context_;
+				const ComputedTextRunStyle& parentComputedStyle_;
 			};
 		}
 
@@ -309,89 +198,55 @@ namespace ascension {
 		 * Returns the styles of the text runs in the specified line.
 		 * @param line The line
 		 * @param lengthContext 
-		 * @return An iterator enumerates the styles of the text runs in the line, or @c null if the line
-		 *         has no styled text runs
+		 * @return An iterator enumerates the styles of the text runs in the line, or @c null if the line has no styled
+		 *         text runs
 		 * @throw BadPositionException @a line is outside of the document
 		 */
-		std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line, const Length::Context& lengthContext) const {
+		std::unique_ptr<ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line, const styles::Length::Context& lengthContext) const {
 			if(line >= document_.numberOfLines())
 				throw kernel::BadPositionException(kernel::Position(line, 0));
-			std::unique_ptr<StyledTextRunIterator> declaration(
-				(textRunStyleDeclarator_.get() != nullptr) ?
-					textRunStyleDeclarator_->declareTextRunStyle(line) : std::unique_ptr<StyledTextRunIterator>());
-			if(declaration.get() == nullptr)
-				return std::unique_ptr<graphics::font::ComputedStyledTextRunIterator>();
-		
-			const std::shared_ptr<const TextLineStyle> declaredLineStyle(
-				(textLineStyleDeclarator_ != nullptr) ? textLineStyleDeclarator_->declareTextLineStyle(line) : nullptr);
-			TextRunStyle defaultStyle((declaredLineStyle.get() != nullptr) ? *declaredLineStyle->defaultRunStyle : TextRunStyle());
-			const std::shared_ptr<const TextRunStyle> defaultStyleFromToplevel(defaultTextRunStyle(*defaultTextLineStyle(*textToplevelStyle_)));
-			// TODO: Should I use Boost.Fusion?
-			computeDefaultTextRunStyle(&TextRunStyle::color, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::background, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::border, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::padding, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::margin, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::fontFamily, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::fontWeight, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::fontStretch, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::fontStyle, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::fontSize, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::fontSizeAdjust, *defaultStyleFromToplevel, defaultStyle);
-//			computeDefaultTextRunStyle(&TextRunStyle::fontFeatureSettings, *defaultStyleFromToplevel, defaultStyle);
-//			computeDefaultTextRunStyle(&TextRunStyle::fontLanguageOverride, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::textHeight, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::lineHeight, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::dominantBaseline, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::alignmentBaseline, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::alignmentAdjust, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::baselineShift, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::textTransform, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::hyphens, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::wordSpacing, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::letterSpacing, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::textDecoration, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::textEmphasis, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::textShadow, *defaultStyleFromToplevel, defaultStyle);
-			computeDefaultTextRunStyle(&TextRunStyle::shapingEnabled, *defaultStyleFromToplevel, defaultStyle);
-		
-			return std::unique_ptr<graphics::font::ComputedStyledTextRunIterator>(
-				new ComputedStyledTextRunIteratorImpl(std::move(declaration), std::move(defaultStyle)));
+			if(textRunStyleDeclarator_.get() != nullptr) {
+				std::unique_ptr<DeclaredStyledTextRunIterator> declaration(textRunStyleDeclarator_->declareTextRunStyle(line));
+				if(declaration.get() != nullptr)
+					return std::unique_ptr<ComputedStyledTextRunIterator>(
+						new ComputedStyledTextRunIteratorImpl(std::move(declaration), lengthContext, computedStyles_->forRuns.get()));
+			}
+			return std::unique_ptr<ComputedStyledTextRunIterator>();
 		}
 
 		/**
-		 * Computes the writing mode. This method does not call @c TextLineStyleDeclarator.
-		 * @param globalSwitch
-		 * @preturn The computed writing mode value
+		 * Computes the writing mode.
+		 * @param line The line to test. If this is @c boost#none, this method returns the entire writing mode
+		 * @return The computed writing mode value
+		 * @throw IndexOutOfBoundsException @a line is invalid
 		 */
-		WritingMode Presentation::computeWritingMode(const GlobalTextStyleSwitch* globalSwitch) const {
-			const TextToplevelStyle& toplevel = textToplevelStyle();
-			boost::optional<BlockFlowDirection> writingMode(toplevel.writingMode.getOrNone());
-			if(writingMode == boost::none) {
-				if(globalSwitch != nullptr)
-					writingMode = globalSwitch->writingMode().getOrInitial();
-				else
-					writingMode = toplevel.writingMode.initialValue();
-		
-			}
-			assert(writingMode != boost::none);
-		
-			boost::optional<ReadingDirection> direction;
-			boost::optional<TextOrientation> textOrientation;
-			if(globalSwitch != nullptr) {
-				if(writingMode == boost::none)
-					writingMode = globalSwitch->writingMode().getOrNone();
-				direction = globalSwitch->direction().getOrNone();
-				textOrientation = globalSwitch->textOrientation().getOrNone();
-			}
-			if(direction == boost::none)
-				direction = defaultTextLineStyle(toplevel)->direction.getOrInitial();
-			if(textOrientation == boost::none)
-				textOrientation = defaultTextLineStyle(toplevel)->textOrientation.getOrInitial();
-			assert(direction != boost::none);
-			assert(textOrientation != boost::none);
-		
-			return WritingMode(*direction, *writingMode, *textOrientation);
+		WritingMode Presentation::computeWritingMode(boost::optional<Index> line /* = boost::none */) const {
+			const BlockFlowDirection writingMode = *boost::fusion::find<BlockFlowDirection>(computedStyles_->forToplevel.get());
+			if(line == boost::none)
+				return WritingMode(*boost::fusion::find<ReadingDirection>(computedStyles_->forLines.get()),
+					writingMode, *boost::fusion::find<TextOrientation>(computedStyles_->forLines.get()));
+			else {
+				// compute 'direction' and 'text-orientation' properties
+				std::shared_ptr<const DeclaredTextLineStyle> declared;
+				if(textLineStyleDeclarator_.get() != nullptr)
+					declared = textLineStyleDeclarator_->declareTextLineStyle(boost::get(line));
+#if 0
+				const TextLineStyle& cascaded = cascade(declared);
+#else
+				const TextLineStyle& cascaded = *declared;
+#endif
+				if(declared.get() == nullptr)
+					declared.reset(&DeclaredTextLineStyle::unsetInstance(), boost::null_deleter());
+				styles::SpecifiedValue<styles::Direction>::type specifiedDirection;
+				styles::SpecifiedValue<styles::TextOrientation>::type specifiedTextOrientation;
+				styles::specifiedValueFromCascadedValue(*boost::fusion::find<styles::Direction>(cascaded),
+					*boost::fusion::find<decltype(specifiedDirection)>(computedStyles_->forLines.get()), specifiedDirection);
+				styles::specifiedValueFromCascadedValue(*boost::fusion::find<styles::TextOrientation>(cascaded),
+					*boost::fusion::find<decltype(specifiedTextOrientation)>(computedStyles_->forLines.get()), specifiedTextOrientation);
+				styles::ComputedValue<styles::Direction>::type computedDirection(specifiedDirection);	// TODO: compute as specified
+				styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(specifiedTextOrientation);	// TODO: compute as specified
+				return WritingMode(computedDirection, writingMode, computedTextOrientation);
+			}		
 		}
 
 		/// Returns the document to which the presentation connects.
@@ -487,12 +342,12 @@ namespace ascension {
 		}
 
 		/**
-		 * Removes the text toplevel style listener.
+		 * Removes the computed text toplevel style listener.
 		 * @param listener The listener to be removed
 		 * @throw std#invalid_argument @a listener is not registered
-		 * @see #addTextToplevelStyleListener, #textToplevelStyle
+		 * @see #addComputedTextToplevelStyleListener, #computedTextToplevelStyle
 		 */
-		void Presentation::removeTextToplevelStyleListener(TextToplevelStyleListener& listener) {
+		void Presentation::removeComputedTextToplevelStyleListener(ComputedTextToplevelStyleListener& listener) {
 			textToplevelStyleListeners_.remove(listener);
 		}
 
@@ -537,14 +392,19 @@ namespace ascension {
 		}
 
 		/**
-		 * Sets the text toplevel line style.
+		 * Sets the declared text toplevel line style.
 		 * @param newStyle The style to set
-		 * @see #textToplevelStyle
+		 * @see #declaredTextToplevelStyle
 		 */
-		void Presentation::setTextToplevelStyle(std::shared_ptr<const TextToplevelStyle> newStyle) {
-			const std::shared_ptr<const TextToplevelStyle> used(textToplevelStyle_);
-			textToplevelStyle_ = (newStyle.get() != nullptr) ? newStyle : DEFAULT_TEXT_TOPLEVEL_STYLE;
-			textToplevelStyleListeners_.notify<std::shared_ptr<const TextToplevelStyle>>(&TextToplevelStyleListener::textToplevelStyleChanged, used);
+		void Presentation::setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle> newStyle) {
+			static const DeclaredTextToplevelStyle DEFAULT_TEXT_TOPLEVEL_STYLE;
+			const std::shared_ptr<const DeclaredTextToplevelStyle> previous(declaredTextToplevelStyle_);
+			textToplevelStyle_ = (newStyle.get() != nullptr) ?
+				newStyle : std::shared_ptr<const DeclaredTextToplevelStyle>(&DEFAULT_TEXT_TOPLEVEL_STYLE, boost::null_deleter());
+			cascade();
+			specifiedValueFromCascadedValue(*boost::fusion::find<styles::WritingMode>(*textToplevelStyle_), nullptr, );
+			if(previous.get() != nullptr)
+				textToplevelStyleListeners_.notify<std::shared_ptr<const TextToplevelStyle>>(&TextToplevelStyleListener::textToplevelStyleChanged, used);
 		}
 		
 		/**
