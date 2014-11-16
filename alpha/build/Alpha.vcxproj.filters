@@ -1015,6 +1015,9 @@
     <ClInclude Include="..\..\ascension\ascension\rules\uri-detector.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\token.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

@@ -28,14 +28,6 @@ namespace ascension {
 			BadScannerStateException() : IllegalStateException("The scanner can't accept the requested operation in this state.") {}
 		};
 
-		/// A token is a text segment with identifier.
-		struct Token : public FastArenaObject<Token> {
-			typedef std::uint16_t Identifier;
-			static const Identifier UNCALCULATED;
-			Identifier id;
-			kernel::Region region;
-		};
-
 		class TokenScanner;
 
 		/**
