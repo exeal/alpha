@@ -24,6 +24,8 @@ namespace ascension {
 	}
 
 	namespace rules {
+		struct Token;
+
 		/**
 		 * 
 		 * @see TokenScanner
