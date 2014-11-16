@@ -221,8 +221,9 @@
     <ClCompile Include="..\..\ascension\src\presentation\text-run-style.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\text-toplevel-style.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\lexical-partitioning.cpp" />
-    <ClCompile Include="..\..\ascension\src\rules\scanner.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\lexical-token-scanner.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\token-scanner.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\transition-rules.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\uri-detector.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\command.cpp" />
@@ -424,6 +425,8 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\text-toplevel-style.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode-mappings.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\lexical-token-scanner.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\token-scanner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\uri-detector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp" />

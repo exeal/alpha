@@ -389,9 +389,6 @@
     <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\rules\scanner.cpp">
-      <Filter>ascension\Source Files\rules</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\rules\lexical-partitioning.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
@@ -465,6 +462,12 @@
       <Filter>ascension\Source Files\presentation\hyperlink</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\rules\uri-detector.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\lexical-token-scanner.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\token-scanner.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1016,6 +1019,12 @@
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\rules\token.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\token-scanner.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\lexical-token-scanner.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
   </ItemGroup>
