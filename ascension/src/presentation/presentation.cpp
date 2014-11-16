@@ -6,6 +6,8 @@
  */
 
 #include <ascension/corelib/range.hpp>
+#include <ascension/presentation/hyperlink/hyperlink.hpp>
+#include <ascension/presentation/hyperlink/hyperlink-detector.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
@@ -16,9 +18,6 @@
 #include <boost/core/null_deleter.hpp>
 #include <boost/foreach.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
-#ifdef BOOST_OS_WINDOWS
-#include <shellapi.h>	// ShellExecuteW
-#endif // BOOST_OS_WINDOWS
 //using graphics::font::TextRenderer;
 
 
@@ -638,113 +637,6 @@ namespace ascension {
 				reconstructors_.erase(old);
 			}
 			reconstructors_.insert(std::make_pair(contentType, reconstructor.release()));
-		}
-
-
-		// hyperlink.URIHyperlinkDetector /////////////////////////////////////////////////////////////////////////////
-
-		namespace {
-			class URIHyperlink : public hyperlink::Hyperlink {
-			public:
-				explicit URIHyperlink(const boost::integer_range<Index>& region, const String& uri) BOOST_NOEXCEPT : hyperlink::Hyperlink(region), uri_(uri) {}
-				String description() const BOOST_NOEXCEPT {
-					static const Char PRECEDING[] = {0x202au, 0};
-					static const Char FOLLOWING[] = {0x202cu, 0x0a,
-						0x43, 0x54, 0x52, 0x4c, 0x20, 0x2b, 0x20, 0x63, 0x6c, 0x69, 0x63, 0x6b, 0x20,
-						0x74, 0x6f, 0x20, 0x66, 0x6f, 0x6c, 0x6c, 0x6f, 0x77, 0x20, 0x74, 0x68, 0x65,
-						0x20, 0x6c, 0x69, 0x6e, 0x6b, 0x2e, 0
-					};	// "\x202c\nCTRL + click to follow the link."
-					return PRECEDING + uri_ + FOLLOWING;
-				}
-				void invoke() const BOOST_NOEXCEPT {
-#ifdef BOOST_OS_WINDOWS
-					::ShellExecuteW(nullptr, nullptr, uri_.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-#else
-#endif
-				}
-			private:
-				const String uri_;
-			};
-		} // namespace @0
-
-		namespace hyperlink {
-			/**
-			 * Constructor.
-			 * @param uriDetector Can't be @c null
-			 * @throw NullPointerException @a uriDetector is @c null
-			 */
-			URIHyperlinkDetector::URIHyperlinkDetector(std::shared_ptr<const rules::URIDetector> uriDetector) : uriDetector_(uriDetector) {
-				if(uriDetector.get() == nullptr)
-					throw NullPointerException("uriDetector");
-			}
-			
-			/// Destructor.
-			URIHyperlinkDetector::~URIHyperlinkDetector() BOOST_NOEXCEPT {
-			}
-			
-			/// @see HyperlinkDetector#nextHyperlink
-			std::unique_ptr<Hyperlink> URIHyperlinkDetector::nextHyperlink(
-					const kernel::Document& document, Index line, const boost::integer_range<Index>& range) const {
-				const String& s = document.line(line);
-				if(*range.end() > s.length())
-					throw std::out_of_range("range");
-				const Char* bol = s.data();
-				const StringPiece result(uriDetector_->search(StringPiece(bol + range.front(), range.size())));
-				if(result.begin() != nullptr)
-					return std::unique_ptr<Hyperlink>(new URIHyperlink(
-						boost::irange<Index>(result.begin() - bol, result.end() - bol), String(result.begin(), result.end())));
-				else
-					return std::unique_ptr<Hyperlink>();
-			}
-
-
-			// hyperlink.CompositeHyperlinkDetector ///////////////////////////////////////////////////////////////////
-
-			/// Destructor.
-			CompositeHyperlinkDetector::~CompositeHyperlinkDetector() BOOST_NOEXCEPT {
-				typedef std::pair<kernel::ContentType, HyperlinkDetector*> Temp;
-				BOOST_FOREACH(const Temp& p, composites_)
-					delete p.second;
-			}
-			
-			/// @see HyperlinkDetector#nextHyperlink
-			std::unique_ptr<Hyperlink> CompositeHyperlinkDetector::nextHyperlink(
-					const kernel::Document& document, Index line, const boost::integer_range<Index>& range) const BOOST_NOEXCEPT {
-				const kernel::DocumentPartitioner& partitioner = document.partitioner();
-				kernel::DocumentPartition partition;
-				for(kernel::Position p(line, *range.begin()), e(line, *range.end()); p < e;) {
-					partitioner.partition(p, partition);
-					assert(partition.region.includes(p));
-					std::map<kernel::ContentType, HyperlinkDetector*>::const_iterator detector(composites_.find(partition.contentType));
-					if(detector != composites_.end()) {
-						std::unique_ptr<Hyperlink> found = detector->second->nextHyperlink(
-							document, line, boost::irange(p.offsetInLine, std::min(partition.region.end(), e).offsetInLine));
-						if(found.get() != nullptr)
-							return found;
-					}
-					p = partition.region.end();
-				}
-				return std::unique_ptr<Hyperlink>();
-			}
-			
-			/**
-			 * Sets the hyperlink detector for the specified content type.
-			 * @param contentType The content type. if a detector for this content type was already be set, the
-			 *                    old will be deleted
-			 * @param detector The hyperlink detector to set. Can't be @c null. The ownership will be
-			 *                 transferred to the callee
-			 * @throw NullPointerException @a detector is @c null
-			 */
-			void CompositeHyperlinkDetector::setDetector(kernel::ContentType contentType, std::unique_ptr<HyperlinkDetector> detector) {
-				if(detector.get() == nullptr)
-					throw NullPointerException("detector");
-				std::map<kernel::ContentType, HyperlinkDetector*>::iterator old(composites_.find(contentType));
-				if(old != composites_.end()) {
-					composites_.erase(old);
-					delete old->second;
-				}
-				composites_.insert(std::make_pair(contentType, detector.release()));
-			}
 		}
 	}
 

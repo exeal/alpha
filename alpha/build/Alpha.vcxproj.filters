@@ -117,6 +117,12 @@
     <Filter Include="ascension\Source Files\presentation">
       <UniqueIdentifier>{7293e282-7b3c-4594-a2ec-f839519329cf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\presentation\hyperlink">
+      <UniqueIdentifier>{96233f0a-650d-47a2-be91-80b9c3534520}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\presentation\hyperlink">
+      <UniqueIdentifier>{54afb19a-328c-479f-8d22-f1bf92cab20f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -448,6 +454,12 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\presentation\text-toplevel-style.cpp">
       <Filter>ascension\Source Files\presentation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\presentation\hyperlink\uri-hyperlink-detector.cpp">
+      <Filter>ascension\Source Files\presentation\hyperlink</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\presentation\hyperlink\composite-hyperlink-detector.cpp">
+      <Filter>ascension\Source Files\presentation\hyperlink</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -987,6 +999,12 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\styled-text-run-iterator.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\hyperlink\hyperlink.hpp">
+      <Filter>ascension\Header Files\presentation\hyperlink</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\hyperlink\hyperlink-detector.hpp">
+      <Filter>ascension\Header Files\presentation\hyperlink</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

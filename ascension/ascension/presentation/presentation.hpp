@@ -93,79 +93,6 @@ namespace ascension {
 			virtual void computedTextToplevelStyleChanged(std::shared_ptr<const ComputedTextToplevelStyle> previous) = 0;
 		};
 
-		/**
-		 * Provides support for detecting and presenting hyperlinks in text editors. "Hyperlink" is
-		 * invokable text segment in the document.
-		 * @see Presentation#getHyperlinks, Presentation#setHyperlinkDetector
-		 */
-		namespace hyperlink {
-			/// Represents a hyperlink.
-			class Hyperlink {
-			public:
-				/// Destructor.
-				virtual ~Hyperlink() BOOST_NOEXCEPT {}
-				/// Returns the descriptive text of the hyperlink.
-				virtual String description() const BOOST_NOEXCEPT = 0;
-				/// Invokes the hyperlink.
-				virtual void invoke() const BOOST_NOEXCEPT = 0;
-				/// Returns the columns of the region of the hyperlink.
-				const boost::integer_range<Index>& region() const BOOST_NOEXCEPT {return region_;}
-			protected:
-				/// Protected constructor takes the region of the hyperlink.
-				explicit Hyperlink(const boost::integer_range<Index>& region) BOOST_NOEXCEPT : region_(region) {}
-			private:
-				const boost::integer_range<Index> region_;
-			};
-
-			/// A @c HyperlinkDetector finds the hyperlinks in the document.
-			class HyperlinkDetector {
-			public:
-				/// Destructor.
-				virtual ~HyperlinkDetector() BOOST_NOEXCEPT {}
-				/**
-				 * Returns the next hyperlink in the specified text line.
-				 * @param document The document
-				 * @param line The line number
-				 * @param range The range of offsets in the line to search. @a range.begin() can be
-				 *              the beginning of the found hyperlink
-				 * @return The found hyperlink, or @c null if not found
-				 */
-				virtual std::unique_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, Index line,
-					const boost::integer_range<Index>& range) const BOOST_NOEXCEPT = 0;
-			};
-
-			/**
-			 * URI hyperlink detector.
-			 * @see rules#URIDetector, rules#URIRule
-			 * @note This class is not intended to be subclassed.
-			 */
-			class URIHyperlinkDetector : public HyperlinkDetector {
-			public:
-				URIHyperlinkDetector(std::shared_ptr<const rules::URIDetector> uriDetector) BOOST_NOEXCEPT;
-				~URIHyperlinkDetector() BOOST_NOEXCEPT;
-				// HyperlinkDetector
-				std::unique_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, Index line, const boost::integer_range<Index>& range) const BOOST_NOEXCEPT;
-			private:
-				std::shared_ptr<const rules::URIDetector> uriDetector_;
-			};
-
-			/**
-			 * @note This class is not intended to be subclassed.
-			 */
-			class CompositeHyperlinkDetector : public hyperlink::HyperlinkDetector {
-			public:
-				~CompositeHyperlinkDetector() BOOST_NOEXCEPT;
-				void setDetector(kernel::ContentType contentType, std::unique_ptr<hyperlink::HyperlinkDetector> detector);
-				// hyperlink.HyperlinkDetector
-				std::unique_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, Index line, const boost::integer_range<Index>& range) const BOOST_NOEXCEPT;
-			private:
-				std::map<kernel::ContentType, hyperlink::HyperlinkDetector*> composites_;
-			};
-		} // namespace hyperlink
-
 		struct ComputedStyledTextRunIterator;
 		struct ComputedTextLineStyle;
 		struct ComputedTextRunStyle;
@@ -173,6 +100,11 @@ namespace ascension {
 		class GlobalTextStyleSwitch;
 		class TextRunStyleDeclarator;
 		struct WritingMode;
+
+		namespace hyperlink {
+			class Hyperlink;
+			class HyperlinkDetector;
+		}
 
 		/**
 		 * A bridge between the document and visual styled text.
