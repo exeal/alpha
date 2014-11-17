@@ -12,6 +12,7 @@
 #include <ascension/corelib/regex.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/rules/token.hpp>
+#include <ascension/rules/uri-detector.hpp>
 #include <memory>
 
 namespace ascension {

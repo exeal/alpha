@@ -17,6 +17,9 @@
 
 namespace ascension {
 	namespace rules {
+		class Rule;
+		class WordRule;
+
 		/**
 		 * A generic scanner which is programable with a sequence of rules.
 		 * The rules must be registered before start of scanning. Otherwise @c RunningScannerException will be thrown.

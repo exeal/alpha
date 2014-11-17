@@ -6,25 +6,17 @@
  * @date 2014-01-13 separated from rules.cpp
  */
 
-#include <ascension/rules.hpp>
 #include <ascension/corelib/ustring.hpp>	// umemchr, umemcmp, ustrchr
+#include <ascension/rules/hash-table.hpp>
+#include <ascension/rules/token-rules.hpp>
+#include <ascension/rules/token-scanner.hpp>
 #include <boost/foreach.hpp>
+#include <boost/numeric/interval.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 
 
 namespace ascension {
 	namespace rules {
-		namespace {
-			// bad idea :(
-			template<typename T> inline bool inRange(T v, T b, T e) {return v >= b && v <= e;}
-			template<typename T> struct InRange : std::unary_function<T, bool> {
-				InRange(T first, T last) : f(first), l(last) {}
-				bool operator()(T v) const {return inRange(v, f, l);}
-				T f, l;
-			};
-		}
-
-
 		// Token //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		const Token::Identifier Token::UNCALCULATED = static_cast<Token::Identifier>(-1);
@@ -111,30 +103,34 @@ namespace ascension {
 				Octal integer literals are not supported. See "B.1.1 Numeric Literals" in the same specification.
 			*/
 			// ISSUE: This implementation accepts some illegal format like as "0.1.2".
+			static const boost::numeric::interval<Char> DIGITS('0', '9'), CAPITAL_LETTERS('A', 'F'), SMALL_LETTERS('a', 'f');
 			if(scanner.position().offsetInLine > 0	// see below
-					&& (inRange<Char>(text[-1], '0', '9') || inRange<Char>(text[-1], 'A', 'F') || inRange<Char>(text[-1], 'a', 'f')))
+					&& (boost::numeric::in(text[-1], DIGITS) || boost::numeric::in(text[-1], CAPITAL_LETTERS) || boost::numeric::in(text[-1], SMALL_LETTERS)))
 				return std::unique_ptr<Token>();
 			StringPiece::const_iterator e;
 			if(text.length() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {	// HexIntegerLiteral?
 				for(e = text.cbegin() + 2; e < text.cend(); ++e) {
-					if(inRange<Char>(*e, '0', '9') || inRange<Char>(*e, 'A', 'F') || inRange<Char>(*e, 'a', 'f'))
+					if(boost::numeric::in(*e, DIGITS) || boost::numeric::in(*e, CAPITAL_LETTERS) || boost::numeric::in(*e, SMALL_LETTERS))
 						continue;
 					break;
 				}
 				if(e == text.cbegin() + 2)
 					return std::unique_ptr<Token>();
 			} else {	// DecimalLiteral?
+				static const auto isNotDigit = [](Char c) {
+					return !boost::numeric::in(c, boost::numeric::interval<Char>('0', '9'));
+				};
 				bool foundDecimalIntegerLiteral = false, foundDot = false;
-				if(inRange<Char>(text[0], '0', '9')) {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
+				if(boost::numeric::in(text[0], DIGITS)) {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
 					e = text.cbegin() + 1;
 					foundDecimalIntegerLiteral = true;
 					if(text[0] != '0')
-						e = std::find_if(e, text.cend(), not1(InRange<Char>('0', '9')));
+						e = std::find_if(e, text.cend(), isNotDigit);
 				} else
 					e = text.cbegin();
 				if(e < text.cend() && *e == '.') {	// . DecimalDigits ::= /\.[0-9]+/
 					foundDot = true;
-					e = std::find_if(++e, text.cend(), std::not1(InRange<Char>('0', '9')));
+					e = std::find_if(++e, text.cend(), isNotDigit);
 					if(e[-1] == '.')
 						return std::unique_ptr<Token>();
 				}
@@ -147,14 +143,14 @@ namespace ascension {
 						if(++e == text.cend())
 							return std::unique_ptr<Token>();
 					}
-					e = find_if(++e, text.cend(), not1(InRange<Char>('0', '9')));
+					e = std::find_if(++e, text.cend(), isNotDigit);
 				}
 			}
 		
 			// e points the end of the found token
 			assert(e > text.cbegin());
 			// "The source character immediately following a NumericLiteral must not be an IdentifierStart or DecimalDigit."
-			if(e < text.cend() && (inRange<Char>(*e, '0', '9') || scanner.identifierSyntax().isIdentifierStartCharacter(text::utf::decodeFirst(e, text.cend()))))
+			if(e < text.cend() && (boost::numeric::in(*e, DIGITS) || scanner.identifierSyntax().isIdentifierStartCharacter(text::utf::decodeFirst(e, text.cend()))))
 				return std::unique_ptr<Token>();
 		
 			std::unique_ptr<Token> temp(new Token);
