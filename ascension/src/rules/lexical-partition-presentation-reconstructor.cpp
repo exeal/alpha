@@ -1,12 +1,13 @@
 /**
- * @file lexical-partitioning.cpp
+ * @file lexical-partition-presentation-reconstructor.cpp
  * @author exeal
  * @date 2004-2006 (was Lexer.cpp)
  * @date 2006-2014 was rules.cpp
  * @date 2014-01-13 separated from rules.cpp
+ * @date 2014-11-16 Renamed from lexical-partitioning.cpp
  */
 
-#include <ascension/rules.hpp>
+#include <ascension/rules/lexical-partition-presentation-reconstructor.hpp>
 #include <ascension/corelib/ustring.hpp>
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <boost/foreach.hpp>

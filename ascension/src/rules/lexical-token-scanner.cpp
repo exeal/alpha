@@ -8,6 +8,8 @@
  */
 
 #include <ascension/rules/lexical-token-scanner.hpp>
+#include <ascension/rules/token.hpp>
+#include <ascension/rules/token-rules.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/find.hpp>
 
