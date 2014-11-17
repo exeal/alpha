@@ -10,14 +10,13 @@
 
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/rules/token.hpp>
+#include <ascension/rules/token-scanner.hpp>
 #include <map>
 #include <memory>
 
 namespace ascension {
 	/// Provides a framework for rule based text scanning and document partitioning.
 	namespace rules {
-		class TokenScanner;
-
 		/**
 		 * Standard implementation of @c presentation#IPartitionPresentationReconstructor.
 		 * This implementation performs rule based lexical tokenization using the given @c TokenScanner.
@@ -27,18 +26,18 @@ namespace ascension {
 		public:
 			explicit LexicalPartitionPresentationReconstructor(
 				const presentation::Presentation& presentation, std::unique_ptr<TokenScanner> tokenScanner,
-				const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle>>& styles,
-				std::shared_ptr<const presentation::TextRunStyle> defaultStyle = std::shared_ptr<const presentation::TextRunStyle>());
+				const std::map<Token::Identifier, std::shared_ptr<const presentation::DeclaredTextRunStyle>>& styles,
+				std::shared_ptr<const presentation::DeclaredTextRunStyle> defaultStyle = std::shared_ptr<const presentation::DeclaredTextRunStyle>());
 
 		private:
 			// presentation.PartitionPresentationReconstructor
-			std::unique_ptr<presentation::DeclaredStyledTextRunIterator> getPresentation(const kernel::Region& region) const BOOST_NOEXCEPT override;
+			std::unique_ptr<presentation::DeclaredStyledTextRunIterator> presentation(const kernel::Region& region) const BOOST_NOEXCEPT override;
 		private:
 			class StyledTextRunIterator;
 			const presentation::Presentation& presentation_;
 			std::unique_ptr<TokenScanner> tokenScanner_;
-			std::shared_ptr<const presentation::TextRunStyle> defaultStyle_;
-			const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle>> styles_;
+			std::shared_ptr<const presentation::DeclaredTextRunStyle> defaultStyle_;
+			const std::map<Token::Identifier, std::shared_ptr<const presentation::DeclaredTextRunStyle>> styles_;
 		};
 	}
 } // namespace ascension.rules

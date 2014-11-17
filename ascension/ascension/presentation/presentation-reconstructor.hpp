@@ -55,8 +55,7 @@ namespace ascension {
 
 		/**
 		 * Interface for objects which declare style of text runs in a text line.
-		 * @see Presentation#setTextRunStyleDeclarator, StyledTextRunIterator,
-		 *      TextLineStyleDeclarator
+		 * @see Presentation#setTextRunStyleDeclarator, StyledTextRunIterator, TextLineStyleDeclarator
 		 */
 		class TextRunStyleDeclarator {
 		public:
