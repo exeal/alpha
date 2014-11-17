@@ -28,8 +28,8 @@ namespace ascension {
 		 */
 		LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstructor(
 				const presentation::Presentation& presentation, std::unique_ptr<TokenScanner> tokenScanner,
-				const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle>>& styles,
-				std::shared_ptr<const presentation::TextRunStyle> defaultStyle /* = shared_ptr<const presentation::TextRunStyle>() */)
+				const std::map<Token::Identifier, std::shared_ptr<const presentation::DeclaredTextRunStyle>>& styles,
+				std::shared_ptr<const presentation::DeclaredTextRunStyle> defaultStyle /* = shared_ptr<const presentation::DeclaredTextRunStyle>() */)
 				: presentation_(presentation), tokenScanner_(std::move(tokenScanner)), styles_(styles) {
 			if(tokenScanner_.get() == nullptr)
 				throw NullPointerException("tokenScanner");
