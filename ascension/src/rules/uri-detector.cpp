@@ -7,102 +7,16 @@
  * @date 2014-11-16 Separated from token-rules.cpp
  */
 
-#include <ascension/corelib/text/case-folder.hpp>
+#include <ascension/corelib/text/utf.hpp>
 #include <ascension/corelib/ustring.hpp>	// umemchr, umemcmp, ustrchr
+#include <ascension/rules/hash-table.hpp>
 #include <ascension/rules/uri-detector.hpp>
 #include <boost/foreach.hpp>
 #include <boost/numeric/interval.hpp>
-#include <boost/range/iterator.hpp>
 #include <locale>
 
 namespace ascension {
 	namespace rules {
-		namespace detail {
-			class HashTable : private boost::noncopyable {
-			public:
-
-				/**
-				 * Constructor.
-				 * @tparam StringSequence A type of @a first and @a last
-				 * @param first The start of the strings
-				 * @param last The end of the strings
-				 * @param caseSensitive Set @c true to enable case sensitive match
-				 */
-				template<typename StringSequence>
-				HashTable(StringSequence first, StringSequence last, bool caseSensitive)
-						: entries_(std::distance(first, last)), maxLength_(0), caseSensitive_(caseSensitive) {
-					while(first != last) {
-						const String folded(caseSensitive_ ? *first : text::CaseFolder::fold(*first));
-						const std::size_t h = hashCode(folded);
-						std::unique_ptr<Entry> newEntry(new Entry(folded));
-						if(folded.length() > maxLength_)
-							maxLength_ = folded.length();
-						if(entries_[h % entries_.size()] != nullptr)
-							newEntry->next = std::move(entries_[h % entries_.size()]);
-						entries_[h % entries_.size()] = std::move(newEntry);
-						++first;
-					}
-				}
-
-				/**
-				 * Returns the hash value of the specified string.
-				 * @tparam SinglePassReadableRange UTF-16 character sequence
-				 * @param characterSequence The character sequence
-				 * @return The hash value
-				 */
-				template<typename SinglePassReadableRange>
-				static std::uint32_t hashCode(const SinglePassReadableRange& characterSequence) {
-					static_assert(
-						text::CodeUnitSizeOf<boost::range_iterator<const SinglePassReadableRange>::type>::value == 2,
-						"characterSequence should be 16-bit character sequence.");
-					std::uint32_t h = 0;
-					BOOST_FOREACH(auto c, characterSequence) {
-						h *= 2;
-						h += c;
-					}
-					return h;
-				}
-
-				/**
-				 * Searches the specified string.
-				 * @param textString The text string
-				 * @return @c true if the specified string is found
-				 */
-				bool matches(const StringPiece& textString) const {
-					if(caseSensitive_) {
-						if(textString.length() > maxLength_)
-							return false;
-						const std::size_t h = hashCode(textString);
-						for(const std::unique_ptr<Entry>* entry = &entries_[h % entries_.size()]; *entry != nullptr; entry = &(*entry)->next) {
-							if((*entry)->data.length() == textString.length() && umemcmp((*entry)->data.data(), textString.cbegin(), (*entry)->data.length()) == 0)
-								return true;
-						}
-					} else {
-						const String folded(text::CaseFolder::fold(textString));
-						const std::size_t h = hashCode(folded);
-						for(const std::unique_ptr<Entry>* entry = &entries_[h % entries_.size()]; *entry != nullptr; entry = &(*entry)->next) {
-							if((*entry)->data.length() == folded.length() && umemcmp((*entry)->data.data(), folded.data(), folded.length()) == 0)
-								return true;
-						}
-					}
-					return false;
-				}
-
-				std::size_t maximumLength() const BOOST_NOEXCEPT {return maxLength_;}
-			private:
-				struct Entry {
-					String data;
-					std::unique_ptr<Entry> next;
-					explicit Entry(const String& str) BOOST_NOEXCEPT : data(str) {}
-				};
-				std::vector<std::unique_ptr<Entry>> entries_;
-				std::size_t maxLength_;	// the length of the longest keyword
-				const bool caseSensitive_;
-			};
-		}
-
-		// URIDetector ////////////////////////////////////////////////////////////////////////////////////////////////
-
 		namespace {
 			// Procedures implement productions of RFC 3986 and RFC 3987.
 			// Each procedures take two parameter represent the parsed character sequence. These must be
