@@ -5,53 +5,22 @@
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 separated from presentation.hpp
  * @date 2012-2014
+ * @see partition-presentation-reconstructor.hpp
  */
 
 #ifndef ASCENSION_PRESENTATION_RECONSTRUCTOR_HPP
 #define ASCENSION_PRESENTATION_RECONSTRUCTOR_HPP
 
-#include <ascension/kernel/document.hpp>	// kernel.ContentType, kernel.Region
+#include <ascension/kernel/partition.hpp>	// kernel.ContentType
 #include <map>
-#include <memory>							// std.shared_ptr, std.unique_ptr
-#include <boost/range/irange.hpp>
+#include <memory>
+#include <boost/config.hpp>	// BOOST_NOEXCEPT
 
 namespace ascension {
 	namespace presentation {
+		class PartitionPresentationReconstructor;
 		class Presentation;
 		struct DeclaredStyledTextRunIterator;
-		class DeclaredTextRunStyle;
-
-		/**
-		 * Creates (reconstructs) styles of the document region. This is used by
-		 * @c PresentationReconstructor class to manage the styles in the specified content type.
-		 * @see PresentationReconstructor#setPartitionReconstructor
-		 */
-		class PartitionPresentationReconstructor {
-		public:
-			/// Destructor.
-			virtual ~PartitionPresentationReconstructor() BOOST_NOEXCEPT {}
-		private:
-			/**
-			 * Returns the styled text segments for the specified document region.
-			 * @param region The region to reconstruct the new presentation
-			 * @return The presentation or @c null (filled by the presentation's default style)
-			 */
-			virtual std::unique_ptr<DeclaredStyledTextRunIterator>
-				presentation(const kernel::Region& region) const BOOST_NOEXCEPT = 0;
-			friend class PresentationReconstructor;
-		};
-
-		/// Reconstructs document presentation with single text style.
-		class SingleStyledPartitionPresentationReconstructor : public PartitionPresentationReconstructor {
-		public:
-			explicit SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const DeclaredTextRunStyle> style) BOOST_NOEXCEPT;
-		private:
-			// PartitionPresentationReconstructor
-			std::unique_ptr<DeclaredStyledTextRunIterator> presentation(const kernel::Region& region) const override;
-		private:
-			class Iterator;
-			const std::shared_ptr<const DeclaredTextRunStyle> style_;
-		};
 
 		/**
 		 * Interface for objects which declare style of text runs in a text line.
@@ -61,6 +30,7 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~TextRunStyleDeclarator() BOOST_NOEXCEPT {}
+
 		private:
 			/**
 			 * Returns the style of the text line.
@@ -83,6 +53,7 @@ namespace ascension {
 			// attribute
 			void setPartitionReconstructor(kernel::ContentType contentType,
 				std::unique_ptr<PartitionPresentationReconstructor> reconstructor);
+
 		private:
 			// TextRunStyleDeclarator
 			std::unique_ptr<DeclaredStyledTextRunIterator> declareTextRunStyle(Index line) const override;

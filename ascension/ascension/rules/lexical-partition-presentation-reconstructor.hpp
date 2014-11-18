@@ -8,7 +8,7 @@
 #ifndef ASCENSION_LEXICAL_PARTITION_PRESENTATION_RECONSTRUCTOR_HPP
 #define ASCENSION_LEXICAL_PARTITION_PRESENTATION_RECONSTRUCTOR_HPP
 
-#include <ascension/presentation/presentation-reconstructor.hpp>
+#include <ascension/presentation/partition-presentation-reconstructor.hpp>
 #include <ascension/rules/token.hpp>
 #include <ascension/rules/token-scanner.hpp>
 #include <map>
