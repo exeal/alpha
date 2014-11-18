@@ -1042,6 +1042,9 @@
     <ClInclude Include="..\..\ascension\ascension\rules\hash-table.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\partition-presentation-reconstructor.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
