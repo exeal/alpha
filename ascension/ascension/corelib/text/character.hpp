@@ -11,6 +11,7 @@
 
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/future/type-traits.hpp>	// std.integral_constant
+#include <boost/optional.hpp>
 #include <boost/range/iterator.hpp>
 #include <array>
 #include <ios>	// std.ios_base.failure
@@ -65,12 +66,22 @@ namespace ascension {
 			LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR
 		};
 
+		namespace detail {
+			template<typename Iterator> class IteratorValue {
+				typedef typename std::iterator_traits<Iterator>::value_type T1;
+				template<typename T> struct T2 : boost::mpl::identity<T> {};
+				template<typename T> struct T2<boost::optional<T>> : boost::mpl::identity<typename boost::optional<T>::value_type> {};
+			public:
+				typedef typename T2<T1>::type type;
+			};
+		}
+
 		/**
 		 * Returns the size of a code unit of the specified code unit sequence in bytes.
 		 * @tparam CodeUnitSequence The type represents a code unit sequence
 		 */
 		template<typename CodeUnitSequence> struct CodeUnitSizeOf
-			: std::integral_constant<std::size_t, sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type)> {};
+			: std::integral_constant<std::size_t, sizeof(detail::IteratorValue<CodeUnitSequence>::type)> {};
 		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T>>
 			: std::integral_constant<std::size_t, sizeof(T::value_type)> {};
 		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T>>
