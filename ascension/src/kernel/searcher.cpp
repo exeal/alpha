@@ -92,76 +92,52 @@ namespace ascension {
 			}
 		}
 
-		/**
-		 * Returns @c true if the pattern matches the specified character sequence.
-		 * @param target The character sequence to match
-		 * @return true if matched
-		 */
-		bool LiteralPattern::matches(const text::CharacterIterator& target) const {
+		bool LiteralPattern::matches(const text::detail::CharacterIterator& target) const {
 			// TODO: compare using collation elements.
-			std::unique_ptr<text::CharacterIterator> i(target.clone());
-			for(std::vector<int>::const_iterator j(collationElements_.cbegin()), e(collationElements_.cend()); j < e && i->hasNext(); ++j, i->next()) {
-				if(*j != static_cast<int>(caseSensitive_ ? i->current() : text::CaseFolder::fold(i->current())))
+			text::detail::CharacterIterator i(target);
+			for(std::vector<int>::const_iterator j(collationElements_.cbegin()), e(collationElements_.cend()); j < e && i.hasNext(); ++j, ++i) {
+				if(*j != static_cast<int>(caseSensitive_ ? *i : text::CaseFolder::fold(*i)))
 					return false;
 			}
-			return !i->hasNext();
+			return !i.hasNext();
 		}
 
-		namespace {
-			template<typename Distance>
-			inline void orzAdvance(text::CharacterIterator& i, Distance offset) {
-				while(offset > 0) {i.next(); --offset;}
-				while(offset < 0) {i.previous(); ++offset;}
-			}
-		}
-
-		/**
-		 * Searches in the specified character sequence.
-		 * @param target The target character sequence
-		 * @param direction The direction to search. If this is @c Direction#FORWARD, the method finds the first
-		 *                  occurence of the pattern in @a target. Otherwise finds the last one
-		 * @param[out] matchedFirst 
-		 * @param[out] matchedLast 
-		 * @return true if the pattern was found
-		 */
-		bool LiteralPattern::search(const text::CharacterIterator& target, Direction direction,
-				std::unique_ptr<text::CharacterIterator>& matchedFirst, std::unique_ptr<text::CharacterIterator>& matchedLast) const {
+		bool LiteralPattern::search(const text::detail::CharacterIterator& target, Direction direction,
+				text::detail::CharacterIterator& matchedFirst, text::detail::CharacterIterator& matchedLast) const {
 			const_cast<LiteralPattern*>(this)->makeShiftTable(direction);
 			// TODO: this implementation is just scrath.
-			std::unique_ptr<text::CharacterIterator> t(target.clone());
+			text::detail::CharacterIterator t(target);
 			const std::vector<int>::const_iterator b(collationElements_.cbegin()), e(collationElements_.cend());
 			if(direction == Direction::FORWARD) {
-				orzAdvance(*t, collationElements_.size() - 1);
-				for(std::vector<int>::const_iterator pattern; t->hasNext(); orzAdvance(*t,
-						std::max<Index>(lastOccurences_[caseSensitive_ ? t->current() : text::CaseFolder::fold(t->current())], e - pattern))) {
+				std::advance(t, collationElements_.size() - 1);
+				for(std::vector<int>::const_iterator pattern; t.hasNext(); std::advance(t,
+						std::max<Index>(lastOccurences_[caseSensitive_ ? *t : text::CaseFolder::fold(*t)], e - pattern))) {
 					for(pattern = e - 1;
-						(caseSensitive_ ? t->current() : text::CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : text::CaseFolder::fold(static_cast<CodePoint>(*pattern)));
-						t->previous(), --pattern) {
+						(caseSensitive_ ? *t : text::CaseFolder::fold(*t)) == (caseSensitive_ ? *pattern : text::CaseFolder::fold(static_cast<CodePoint>(*pattern)));
+						--t, --pattern) {
 						if(pattern == b) {
-							matchedFirst = std::move(t);
-							matchedLast = matchedFirst->clone();
-							orzAdvance(*matchedLast, collationElements_.size());
+							matchedFirst = matchedLast = t;
+							std::advance(matchedLast, collationElements_.size());
 							return true;
 						}
 					}
 				}
 			} else {
 				std::ptrdiff_t skipLength;
-				orzAdvance(*t, collationElements_.size());
-				for(std::vector<int>::const_iterator pattern; ; orzAdvance(*t, -skipLength)) {
+				std::advance(t, collationElements_.size());
+				for(std::vector<int>::const_iterator pattern; ; std::advance(t, -skipLength)) {
 					for(pattern = b;
-							(caseSensitive_ ? t->current() : text::CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : text::CaseFolder::fold(static_cast<CodePoint>(*pattern)));
-							t->next(), ++pattern) {
+							(caseSensitive_ ? *t : text::CaseFolder::fold(*t)) == (caseSensitive_ ? *pattern : text::CaseFolder::fold(static_cast<CodePoint>(*pattern)));
+							++t, ++pattern) {
 						if(pattern == e) {
-							orzAdvance(*t, collationElements_.size() + 1);
-							matchedFirst = std::move(t);
-							matchedLast = matchedFirst->clone();
-							orzAdvance(*matchedLast, collationElements_.size());
+							std::advance(t, collationElements_.size() + 1);
+							matchedFirst = matchedLast = t;
+							std::advance(matchedLast, collationElements_.size());
 							return true;
 						}
 					}
-					skipLength = std::max(lastOccurences_[caseSensitive_ ? t->current() : text::CaseFolder::fold(t->current())], pattern - b + 1);
-					if(skipLength > t->offset() - target.offset())
+					skipLength = std::max(lastOccurences_[caseSensitive_ ? *t : text::CaseFolder::fold(*t)], pattern - b + 1);
+					if(skipLength > t.offset() - target.offset())
 						break;
 				}
 			}
@@ -375,12 +351,12 @@ namespace ascension {
 					return bi.isBoundary(first) && bi.isBoundary(last);
 				}
 				case TextSearcher::MATCH_WORD: {
-					const kernel::Document& document = *first.document();
-					const text::WordBreakIterator<kernel::DocumentCharacterIterator> bi1(first, text::AbstractWordBreakIterator::START_OF_SEGMENT,
+					const kernel::Document& document = first.document();
+					const text::WordBreakIterator<kernel::DocumentCharacterIterator> bi1(first, text::WordBreakIteratorBase::START_OF_SEGMENT,
 						document.contentTypeInformation().getIdentifierSyntax(document.partitioner().contentType(first.tell())));
 					if(!bi1.isBoundary(first))
 						return false;
-					const text::WordBreakIterator<kernel::DocumentCharacterIterator> bi2(last, text::AbstractWordBreakIterator::END_OF_SEGMENT,
+					const text::WordBreakIterator<kernel::DocumentCharacterIterator> bi2(last, text::WordBreakIteratorBase::END_OF_SEGMENT,
 						document.contentTypeInformation().getIdentifierSyntax(document.partitioner().contentType(last.tell())));
 					return bi2.isBoundary(last);
 				}
@@ -435,23 +411,19 @@ namespace ascension {
 				callback->replacementStarted(document, kernel::Region(scope).normalize());
 
 			if(type() == LITERAL) {
-				std::unique_ptr<text::CharacterIterator> matchedFirst, matchedLast;
+				kernel::DocumentCharacterIterator matchedFirst, matchedLast;
 				kernel::Point endOfScope(document, scope.end());
 				for(kernel::DocumentCharacterIterator i(document, scope); i.hasNext(); ) {
 					if(!literalPattern_->search(i, Direction::FORWARD, matchedFirst, matchedLast))
 						break;
-					else if(!checkBoundary(
-							static_cast<kernel::DocumentCharacterIterator&>(*matchedFirst),
-							static_cast<kernel::DocumentCharacterIterator&>(*matchedLast), wholeMatch_)) {
-						i.next();
+					else if(!checkBoundary(matchedFirst, matchedLast, wholeMatch_)) {
+						++i;
 						continue;
 					}
 
 					// matched -> replace
 					++numberOfMatches;
-					kernel::Region matchedRegion(
-						static_cast<kernel::DocumentCharacterIterator&>(*matchedFirst).tell(),
-						static_cast<kernel::DocumentCharacterIterator&>(*matchedLast).tell());
+					kernel::Region matchedRegion(matchedFirst.tell(), matchedLast.tell());
 					while(true) {
 						action = (callback != nullptr) ?
 							callback->queryReplacementAction(matchedRegion, !history.empty()) : InteractiveReplacementCallback::REPLACE;
@@ -614,17 +586,15 @@ namespace ascension {
 				throw kernel::BadPositionException(from);
 			bool matched = false;
 			if(type() == LITERAL) {
-				std::unique_ptr<text::CharacterIterator> matchedFirst, matchedLast;
+				kernel::DocumentCharacterIterator matchedFirst, matchedLast;
 				for(kernel::DocumentCharacterIterator i(document, scope, from);
 						(direction == Direction::FORWARD) ? i.hasNext() : i.hasPrevious();
-						(direction == Direction::FORWARD) ? i.next() : i.previous()) {
+						(direction == Direction::FORWARD) ? ++i : --i) {
 					if(!literalPattern_->search(i, direction, matchedFirst, matchedLast))
 						break;	// not found
-					else if(checkBoundary(
-							static_cast<kernel::DocumentCharacterIterator&>(*matchedFirst),
-							static_cast<kernel::DocumentCharacterIterator&>(*matchedLast), wholeMatch_)) {
-						matchedRegion.first = static_cast<kernel::DocumentCharacterIterator*>(matchedFirst.get())->tell();
-						matchedRegion.second = static_cast<kernel::DocumentCharacterIterator*>(matchedLast.get())->tell();
+					else if(checkBoundary(matchedFirst, matchedLast, wholeMatch_)) {
+						matchedRegion.first = matchedFirst.tell();
+						matchedRegion.second = matchedLast.tell();
 						matched = true;
 						break;
 					}
@@ -663,7 +633,7 @@ namespace ascension {
 					kernel::DocumentCharacterIterator b(document, from);	// position from where the match should start
 					if(!continuous || b.tell() > scope.beginning()) {
 						if(continuous)
-							b.previous();
+							--b;
 						while(true) {
 							regexMatcher_->region(b, e);
 							if(matched = (regexMatcher_->lookingAt()
@@ -671,7 +641,7 @@ namespace ascension {
 								break;
 							else if(b.tell() <= scope.beginning())
 								break;
-							b.previous();	// move to the next search start
+							--b;	// move to the next search start
 						}
 					}
 				}
