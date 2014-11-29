@@ -18,40 +18,71 @@
 namespace ascension {
 	/// Provides a framework for rule based text scanning and document partitioning.
 	namespace rules {
-		class TokenScanner;
+		/// Base class of the two abstract rule classes.
+		class RuleBase {
+		public:
+			/// Destructor.
+			virtual ~RuleBase() BOOST_NOEXCEPT {}
+			/// Returns the identifier of the token.
+			Token::Identifier tokenID() const BOOST_NOEXCEPT {return identifier_;}
+		protected:
+			explicit RuleBase(Token::Identifier tokenID);
+		private:
+			const Token::Identifier identifier_;
+		};
 
 		/**
-		 * Base class for concrete rule classes.
-		 * @see LexicalTokenScanner, RegionRule, NumberRule, WordRule, RegexRule
+		 * Base class of non-word rule classes.
+		 * @see LexicalTokenScanner, RegionRule, NumberRule, RegexRule
 		 */
-		class Rule {
+		class Rule : public RuleBase {
 		public:
 			/// Destructor.
 			virtual ~Rule() BOOST_NOEXCEPT {}
 			/**
-			 * 
-			 * @param scanner The scanner
-			 * @param text The text to parse
-			 * @return The found token or @c null
+			 * Parses and finds a token at the beginning of the given text string.
+			 * @param text The text string to parse. This is a while line in the document
+			 * @param start The start position of the token
+			 * @param identifierSyntax The identifier syntax
+			 * @return The end position of the found token, or @c boost::none if not found
 			 */
-			virtual std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT = 0;
-			/// Returns the identifier of the token.
-			Token::Identifier tokenID() const BOOST_NOEXCEPT {return id_;}
+			virtual boost::optional<StringPiece::const_iterator> parse(
+				const StringPiece& text, StringPiece::const_iterator start,
+				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT = 0;
 		protected:
-			explicit Rule(Token::Identifier tokenID);
-		private:
-			const Token::Identifier id_;
+			explicit Rule(Token::Identifier tokenID) : RuleBase(tokenID) {}
+		};
+
+		/**
+		 * Base class of word rule classes.
+		 * @see LexicalTokenScanner, WordSetRule
+		 */
+		class WordRule : public RuleBase {
+		public:
+			/// Destructor.
+			virtual ~WordRule() BOOST_NOEXCEPT {}
+			/**
+			 * Parses and finds a token at the beginning of the given text string.
+			 * @param text The text string to parse. This is a while line in the document
+			 * @param word The word to check if is a token
+			 * @param identifierSyntax The identifier syntax
+			 * @return @c true if @a word is a token
+			 */
+			virtual bool parse(const StringPiece& text, const StringPiece& word,
+				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT = 0;
+		protected:
+			explicit WordRule(Token::Identifier tokenID) : RuleBase(tokenID) {}
 		};
 
 		/***/
 		class RegionRule : public Rule {
 		public:
-			RegionRule(Token::Identifier id,
+			RegionRule(Token::Identifier identifier,
 				const String& startSequence, const String& endSequence,
 				Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
-			std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT override;
+			boost::optional<StringPiece::const_iterator> parse(
+				const StringPiece& text, StringPiece::const_iterator start,
+				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;
 		private:
 			const String startSequence_, endSequence_;
 			const Char escapeCharacter_;
@@ -61,31 +92,33 @@ namespace ascension {
 		/// A concrete rule detects numeric tokens.
 		class NumberRule : public Rule {
 		public:
-			explicit NumberRule(Token::Identifier id) BOOST_NOEXCEPT;
-			std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT override;
+			explicit NumberRule(Token::Identifier identifier) BOOST_NOEXCEPT;
+			boost::optional<StringPiece::const_iterator> parse(
+				const StringPiece& text, StringPiece::const_iterator start,
+				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;
 		};
 
 		/// A concrete rule detects URI strings.
 		class URIRule : public Rule {
 		public:
-			URIRule(Token::Identifier id,
+			URIRule(Token::Identifier identifier,
 				std::shared_ptr<const URIDetector> uriDetector) BOOST_NOEXCEPT;
-			std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT override;
+			boost::optional<StringPiece::const_iterator> parse(
+				const StringPiece& text, StringPiece::const_iterator start,
+				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;
 		private:
 			std::shared_ptr<const URIDetector> uriDetector_;
 		};
 
 		/// A concrete rule detects the registered words.
-		class WordRule : protected Rule {
+		class WordSetRule : protected WordRule {
 		public:
-			WordRule(Token::Identifier id,
+			WordSetRule(Token::Identifier identifier,
 				const String* first, const String* last, bool caseSensitive = true);
-			WordRule(Token::Identifier id,
+			WordSetRule(Token::Identifier identifier,
 				const StringPiece& words, Char separator, bool caseSensitive = true);
-			std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT override;
+			bool parse(const StringPiece& text, const StringPiece& word,
+				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;
 		private:
 			std::unique_ptr<detail::HashTable> words_;
 		};
@@ -94,9 +127,10 @@ namespace ascension {
 		/// A concrete rule detects tokens using regular expression match.
 		class RegexRule : public Rule {
 		public:
-			RegexRule(Token::Identifier id, std::unique_ptr<const regex::Pattern> pattern);
-			std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT override;
+			RegexRule(Token::Identifier identifier, std::unique_ptr<const regex::Pattern> pattern);
+			boost::optional<StringPiece::const_iterator> parse(
+				const StringPiece& text, StringPiece::const_iterator start,
+				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;
 		private:
 			std::unique_ptr<const regex::Pattern> pattern_;
 		};

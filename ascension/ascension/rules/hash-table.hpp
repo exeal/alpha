@@ -14,7 +14,7 @@
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/ustring.hpp>	// umemcmp
 #include <boost/core/noncopyable.hpp>
-#include <boost/foreach.hpp>
+#include <boost/functional/hash/hash.hpp>
 #include <boost/range/iterator.hpp>
 #include <memory>
 #include <utility>
@@ -59,12 +59,7 @@ namespace ascension {
 					static_assert(
 						text::CodeUnitSizeOf<boost::range_iterator<const SinglePassReadableRange>::type>::value == 2,
 						"characterSequence should be 16-bit character sequence.");
-					std::uint32_t h = 0;
-					BOOST_FOREACH(auto c, characterSequence) {
-						h *= 2;
-						h += c;
-					}
-					return h;
+					return boost::hash_range(boost::begin(characterSequence), boost::end(characterSequence));
 				}
 
 				/**

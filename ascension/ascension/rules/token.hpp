@@ -15,12 +15,21 @@
 namespace ascension {
 	/// Provides a framework for rule based text scanning and document partitioning.
 	namespace rules {
-		/// A token is a text segment with identifier.
+		/// A token is a text segment with an identifier.
 		struct Token : public FastArenaObject<Token> {
 			typedef std::uint16_t Identifier;
 			static const Identifier UNCALCULATED;
-			Identifier id;
-			kernel::Region region;
+			Identifier identifier;		///< The identifier of the token.
+			kernel::Position position;	///< The beginning position of the token.
+
+			/// Default constructor initializes nothing.
+			Token() BOOST_NOEXCEPT {}
+			/// Creates a token with initial values.
+			Token(Identifier identifier, kernel::Position position) BOOST_NOEXCEPT
+				: identifier(identifier), position(position) {}
+			/// Creates a token with initial values.
+			Token(kernel::Position position, Identifier identifier) BOOST_NOEXCEPT
+				: identifier(identifier), position(position) {}
 		};
 	}
 } // namespace ascension.rules

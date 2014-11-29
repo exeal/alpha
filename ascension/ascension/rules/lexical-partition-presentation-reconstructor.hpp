@@ -18,7 +18,7 @@ namespace ascension {
 	/// Provides a framework for rule based text scanning and document partitioning.
 	namespace rules {
 		/**
-		 * Standard implementation of @c presentation#IPartitionPresentationReconstructor.
+		 * Standard implementation of @c presentation#PartitionPresentationReconstructor.
 		 * This implementation performs rule based lexical tokenization using the given @c TokenScanner.
 		 * @note This class is not intended to be subclassed.
 		 */
@@ -33,7 +33,6 @@ namespace ascension {
 			// presentation.PartitionPresentationReconstructor
 			std::unique_ptr<presentation::DeclaredStyledTextRunIterator> presentation(const kernel::Region& region) const BOOST_NOEXCEPT override;
 		private:
-			class StyledTextRunIterator;
 			const presentation::Presentation& presentation_;
 			std::unique_ptr<TokenScanner> tokenScanner_;
 			std::shared_ptr<const presentation::DeclaredTextRunStyle> defaultStyle_;
