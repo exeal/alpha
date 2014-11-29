@@ -11,25 +11,46 @@
 #define ASCENSION_CHARACTER_ITERATOR_HPP
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/utf.hpp>
-#include <iterator>
-#include <stdexcept>
 #include <boost/iterator/iterator_facade.hpp>
-
-#if ASCENSION_UNICODE_VERSION > 0x0510
-#error These class definitions and implementations are based on old version of Unicode.
+#if 1
+#	include <boost/mpl/vector.hpp>
+#	include <boost/iterator/iterator_adaptor.hpp>	// place here because of C2874 at Boost 1.57
+#	include <boost/type_erasure/iterator.hpp>
+#	include <boost/type_erasure/member.hpp>
+#else
+#	include <boost/core/null_deleter.hpp>
+#	include <boost/optional.hpp>
 #endif
-/// Tracking revision number of UAX #14 ("Line Breaking Properties")
-#define ASCENSION_UAX14_REVISION_NUMBER 19	// 2006-05-23
-/// Tracking revision number of UAX #29 ("Text Boundary")
-#define ASCENSION_UAX29_REVISION_NUMBER 11	// 2006-10-12
+#include <iterator>
+#include <memory>
+#include <stdexcept>
+
+#if 1
+// hasNext method takes no argument and returns true if the iterator has the next element
+BOOST_TYPE_ERASURE_MEMBER((ascension)(text)(detail)(hasHasNext), hasNext, 0)
+// hasPrevious method takes no argument and returns true if the iterator has the previous element
+BOOST_TYPE_ERASURE_MEMBER((ascension)(text)(detail)(hasHasPrevious), hasPrevious, 0)
+// hasNext method takes no argument returns the position of the iterator in the target sequence
+BOOST_TYPE_ERASURE_MEMBER((ascension)(text)(detail)(hasOffset), offset, 0)
+#endif
 
 namespace ascension {
 	namespace text {
-
+#if 1
+		namespace detail {
+			typedef boost::mpl::vector<
+				hasHasNext<bool(void), const boost::type_erasure::_self>,
+				hasHasPrevious<bool(void), const boost::type_erasure::_self>,
+				hasOffset<std::ptrdiff_t(void), const boost::type_erasure::_self>,
+				boost::type_erasure::bidirectional_iterator<boost::type_erasure::_self, const CodePoint>,
+				boost::type_erasure::typeid_<>,
+				boost::type_erasure::relaxed
+			> CharacterIteratorConcepts;
+			typedef boost::type_erasure::any<CharacterIteratorConcepts> CharacterIterator;
+		}
+#else
 		// documentation is character-iterator.cpp
 		class CharacterIterator {
-		public:
-			static const CodePoint DONE;
 		public:
 			/// Destructor.
 			virtual ~CharacterIterator() BOOST_NOEXCEPT {}
@@ -126,8 +147,8 @@ namespace ascension {
 			/// @name Virtual Methods the Concrete Class Should Implement
 			/// @{
 		public:
-			/// Returns the current code point value.
-			virtual CodePoint current() const BOOST_NOEXCEPT = 0;
+			/// Returns the current code point value, or @c boost#none if the iterator is done.
+			virtual boost::optional<CodePoint> current() const BOOST_NOEXCEPT = 0;
 			/// Returns @c true if the iterator is not last.
 			virtual bool hasNext() const BOOST_NOEXCEPT = 0;
 			/// Returns @c true if the iterator is not first.
@@ -170,66 +191,40 @@ namespace ascension {
 				if(classID_ != other.classID_)
 					throw std::invalid_argument("type mismatch.");
 			}
+			// boost.iterator_facade
+			friend class boost::iterators::iterator_core_access;
+			CodePoint dereference() const {return boost::get(current());}
+			void decrement() {previous();}
+			bool equal(const CharacterIterator& other) const {return equals(other);}
+			void increment() {next();}
 			std::ptrdiff_t offset_;
 			const ConcreteTypeTag* const classID_;
 		};
 
-		/**
-		 * Implementation of @c CharacterIterator for C string or @c String.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class StringCharacterIterator :
-			public CharacterIterator,
+		class CharacterIteratorFacade :
 			public boost::iterators::iterator_facade<
-				StringCharacterIterator, CodePoint,
+				CharacterIteratorFacade, CodePoint,
 				boost::iterators::bidirectional_traversal_tag, const CodePoint, std::ptrdiff_t
 			> {
 		public:
-			StringCharacterIterator() BOOST_NOEXCEPT;
-			StringCharacterIterator(const StringPiece& text);
-			StringCharacterIterator(const StringPiece& text, StringPiece::const_iterator start);
-			StringCharacterIterator(const String& text);
-			StringCharacterIterator(const String& text, String::const_iterator start);
-			StringCharacterIterator(const StringCharacterIterator& other) BOOST_NOEXCEPT;
-
-			// attributes
-			/// Returns the beginning position.
-			StringPiece::const_iterator beginning() const BOOST_NOEXCEPT {return range_.cend();}
-			/// Returns the end position.
-			StringPiece::const_iterator end() const BOOST_NOEXCEPT {return range_.cend();}
-			/// Returns the current position.
-			StringPiece::const_iterator tell() const BOOST_NOEXCEPT {return current_;}
-
-			// CharacterIterator
-			/// @see CharacterIterator#current
-			CodePoint current() const BOOST_NOEXCEPT {
-				return (tell() != end()) ? utf::checkedDecodeFirst(tell(), end()) : DONE;
-			}
-			/// @see CharacterIterator#hasNext
-			bool hasNext() const BOOST_NOEXCEPT {return tell() != end();}
-			/// @see CharacterIterator#hasPrevious
-			bool hasPrevious() const BOOST_NOEXCEPT {return tell() != end();}
+			explicit CharacterIteratorFacade(CharacterIterator& base) : base_(&base, boost::null_deleter()) BOOST_NOEXCEPT {}
+			explicit CharacterIteratorFacade(std::shared_ptr<CharacterIterator> base) : base_(base) BOOST_NOEXCEPT {}
+			explicit CharacterIteratorFacade(std::unique_ptr<CharacterIterator> base) : base_(std::move(base)) BOOST_NOEXCEPT {}
+			explicit CharacterIteratorFacade(const std::weak_ptr<CharacterIterator>& base) : base_(base) BOOST_NOEXCEPT {}
+			CharacterIterator& base() BOOST_NOEXCEPT {return *base_;}
+			const CharacterIterator& base() const BOOST_NOEXCEPT {return *base_;}
 
 		private:
-			void doAssign(const CharacterIterator& other);
-			std::unique_ptr<CharacterIterator> doClone() const;
-			void doFirst();
-			bool doEquals(const CharacterIterator& other) const;
-			void doLast();
-			bool doLess(const CharacterIterator& other) const;
-			void doNext();
-			void doPrevious();
 			// boost.iterator_facade
 			friend class boost::iterators::iterator_core_access;
-			CodePoint dereference() const {return current();}
-			void decrement() {previous();}
-			bool equal(const StringCharacterIterator& other) const {return equals(other);}
-			void increment() {next();}
+			CodePoint dereference() const {return boost::get(base().current());}
+			void decrement() {base().previous();}
+			bool equal(const CharacterIteratorFacade& other) const {return base().equals(other.base());}
+			void increment() {base().next();}
 		private:
-			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
-			StringPiece::const_iterator current_;
-			StringPiece range_;
+			std::shared_ptr<CharacterIterator> base_;
 		};
+#endif
 
 	}
 } // namespace ascension.text

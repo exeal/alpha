@@ -9,11 +9,12 @@
 #ifndef ASCENSION_BREAK_ITERATOR_HPP
 #define ASCENSION_BREAK_ITERATOR_HPP
 
-#include <ascension/corelib/text/character-iterator.hpp>	// CharacterIterator
-#include <iterator>
-#include <locale>
+#include <ascension/corelib/text/character-iterator.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/iterator_traits.hpp>
+#include <boost/type_erasure/any_cast.hpp>
+#include <iterator>
+#include <locale>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #	error These class definitions and implementations are based on old version of Unicode.
@@ -39,12 +40,10 @@ namespace ascension {
 			virtual ~BreakIterator() BOOST_NOEXCEPT {}
 			/// Returns the locale.
 			const std::locale& locale() const BOOST_NOEXCEPT {return locale_;}
-			/// Returns true if @a at addresses a boundary.
-			virtual bool isBoundary(const CharacterIterator& at) const = 0;
 			/// Moves to the next boundary.
 			virtual void next(std::ptrdiff_t amount) = 0;
 		protected:
-			BreakIterator(const std::locale& lc) BOOST_NOEXCEPT : locale_(lc) {}
+			BreakIterator(const std::locale& locale) BOOST_NOEXCEPT : locale_(locale) {}
 		private:
 			const std::locale& locale_;
 		};
@@ -75,18 +74,66 @@ namespace ascension {
 			};
 		} // namespace detail
 
-		/// Base class of @c GraphemeBreakIterator.
-		class AbstractGraphemeBreakIterator : public BreakIterator {
+#define ASCENSION_DEFINE_BREAK_ITERATOR_BASE_METHODS()														\
+	template<typename BaseIterator>																			\
+	BaseIterator& base() {return boost::type_erasure::any_cast<BaseIterator&>(characterIterator_);}			\
+	template<typename BaseIterator>																			\
+	BaseIterator& base() const {return boost::type_erasure::any_cast<BaseIterator&>(characterIterator_);}	\
+	bool isBoundary(const detail::CharacterIterator& at) const;												\
+	void next(std::size_t n);																				\
+	void previous(std::size_t n)
+
+		template<typename Derived, typename Base, typename BaseIterator>
+		class BreakIteratorImpl : public Base, public detail::BreakIteratorFacade<Derived> {
 		public:
-			bool isBoundary(const CharacterIterator& at) const;
-			void next(std::ptrdiff_t amount);
+			/// Returns the base iterator.
+			BaseIterator& base() BOOST_NOEXCEPT {
+				return Base::base<BaseIterator>();
+			}
+			/// Returns the base iterator.
+			const BaseIterator& base() const BOOST_NOEXCEPT {
+				return Base::base<const BaseIterator>();
+			}
+			/**
+			 * Checks the specified position is grapheme cluster boundary
+			 * @tparam CharacterIterator The type of @a at, which should satisfy @c detail#CharacterIteratorConcepts
+			 * @param at The position to check
+			 * @return true if @a at is grapheme cluster boundary
+			 */
+			template<typename CharacterIterator>
+			bool isBoundary(const CharacterIterator& at) const {
+				return Base::isBoundary(detail::CharacterIterator(at));
+			}
+			/// @see BreakIterator#next
+			void next(std::ptrdiff_t n) override {
+				if(n > 0)
+					Base::next(+n);
+				else if(n < 0)
+					Base::previous(-n);
+			}
+
 		protected:
-			AbstractGraphemeBreakIterator(const std::locale& lc) BOOST_NOEXCEPT;
-			virtual CharacterIterator& characterIterator() BOOST_NOEXCEPT = 0;
-			virtual const CharacterIterator& characterIterator() const BOOST_NOEXCEPT = 0;
+			template<typename Argument1>
+			BreakIteratorImpl(BaseIterator base,
+				const Argument1& locale) : Base(base, locale) {}
+			template<typename Argument1, typename Argument2>
+			BreakIteratorImpl(BaseIterator base,
+				const Argument1& locale, const Argument2& a2) : Base(base, locale, a2) {}
+			template<typename Argument1, typename Argument2, typename Argument3>
+			BreakIteratorImpl(BaseIterator base,
+				const Argument1& locale, const Argument2& a2, const Argument3& a3) : Base(base, locale, a2, a3) {}
+		};
+
+		/// Base class of @c GraphemeBreakIterator.
+		class GraphemeBreakIteratorBase : public BreakIterator {
+		protected:
+			template<typename CharacterIterator>
+			explicit GraphemeBreakIteratorBase(
+				const CharacterIterator& characterIterator, const std::locale& locale) BOOST_NOEXCEPT
+				: BreakIterator(locale), characterIterator_(characterIterator) {}
+			ASCENSION_DEFINE_BREAK_ITERATOR_BASE_METHODS();
 		private:
-			void doNext(std::ptrdiff_t amount);
-			void doPrevious(std::ptrdiff_t amount);
+			detail::CharacterIterator characterIterator_;
 		};
 
 		/**
@@ -94,39 +141,26 @@ namespace ascension {
 		 * @tparam BaseIterator
 		 */
 		template<class BaseIterator>
-		class GraphemeBreakIterator : public AbstractGraphemeBreakIterator,
-			public detail::BreakIteratorFacade<GraphemeBreakIterator<BaseIterator>> {
+		class GraphemeBreakIterator : public BreakIteratorImpl<
+			GraphemeBreakIterator<BaseIterator>, GraphemeBreakIteratorBase, BaseIterator> {
 		public:
 			/**
 			 * Constructor.
 			 * @param base The base iterator
-			 * @param lc The locale
+			 * @param locale The locale
 			 */
 			GraphemeBreakIterator(
-				BaseIterator base, const std::locale& lc = std::locale::classic())
-				: AbstractGraphemeBreakIterator(lc), p_(base) {}
-			/// Returns the base iterator.
-			BaseIterator& base() BOOST_NOEXCEPT {return p_;}
-			/// Returns the base iterator.
-			const BaseIterator& base() const BOOST_NOEXCEPT {return p_;}
-		private:
-			CharacterIterator& characterIterator() BOOST_NOEXCEPT {
-				return static_cast<CharacterIterator&>(p_);
-			}
-			const CharacterIterator& characterIterator() const BOOST_NOEXCEPT {
-				return static_cast<const CharacterIterator&>(p_);
-			}
-			BaseIterator p_;
+				BaseIterator base, const std::locale& locale = std::locale::classic())
+				: BreakIteratorImpl(base, locale) {}
 		};
 
 		class IdentifierSyntax;
 
 		/// Base class of @c WordBreakIterator.
-		class AbstractWordBreakIterator : public BreakIterator {
+		class WordBreakIteratorBase : public BreakIterator {
 		public:
 			/**
-			 * Components of segment to search word boundaries.
-			 * These values specify which boundary the iterator scans.
+			 * Components of segment to search word boundaries. These values specify which boundary the iterator scans.
 			 * @see WordBreakIterator
 			 */
 			enum Component {
@@ -145,19 +179,20 @@ namespace ascension {
 				/// Start or end of word consists of alpha-numerics.
 				BOUNDARY_OF_ALPHANUMERICS	= BOUNDARY_OF_SEGMENT | ALPHA_NUMERIC
 			};
+		public:
 			/// Returns the word component to search.
-			AbstractWordBreakIterator::Component component() const BOOST_NOEXCEPT {return component_;}
-			bool isBoundary(const CharacterIterator& at) const;
-			void next(std::ptrdiff_t amount);
+			Component component() const BOOST_NOEXCEPT {return component_;}
+			void next(std::ptrdiff_t amount) override;
 			void setComponent(Component component);
 		protected:
-			AbstractWordBreakIterator(Component component,
-				const IdentifierSyntax& syntax, const std::locale& lc) BOOST_NOEXCEPT;
-			virtual CharacterIterator& characterIterator() BOOST_NOEXCEPT = 0;
-			virtual const CharacterIterator& characterIterator() const BOOST_NOEXCEPT = 0;
+			template<typename CharacterIterator>
+			WordBreakIteratorBase(
+				const CharacterIterator& characterIterator, const std::locale& locale,
+				Component component, const IdentifierSyntax& syntax) BOOST_NOEXCEPT
+				: BreakIterator(locale), characterIterator_(characterIterator), component_(component), syntax_(syntax) {}
+			ASCENSION_DEFINE_BREAK_ITERATOR_BASE_METHODS();
 		private:
-			void doNext(std::ptrdiff_t amount);
-			void doPrevious(std::ptrdiff_t amount);
+			detail::CharacterIterator characterIterator_;
 			Component component_;
 			const IdentifierSyntax& syntax_;
 		};
@@ -167,39 +202,27 @@ namespace ascension {
 		 * @tparam BaseIterator
 		 */
 		template<class BaseIterator>
-		class WordBreakIterator : public AbstractWordBreakIterator,
-			public detail::BreakIteratorFacade<WordBreakIterator<BaseIterator>> {
+		class WordBreakIterator : public BreakIteratorImpl<
+			WordBreakIterator<BaseIterator>, WordBreakIteratorBase, BaseIterator> {
 		public:
 			/**
 			 * Constructor.
 			 * @param base The base iterator
 			 * @param component The component of word to search
 			 * @param syntax The identifier syntax for detecting identifier characters
-			 * @param lc The locale
+			 * @param locale The locale
 			 */
-			WordBreakIterator(BaseIterator base, Component component,
-				const IdentifierSyntax& syntax, const std::locale& lc = std::locale::classic())
-				: AbstractWordBreakIterator(component, syntax, lc), p_(base) {}
-			/// Returns the base iterator.
-			BaseIterator& base() BOOST_NOEXCEPT {return p_;}
-			/// Returns the base iterator.
-			const BaseIterator& base() const BOOST_NOEXCEPT {return p_;}
-		private:
-			CharacterIterator& characterIterator() BOOST_NOEXCEPT {
-				return static_cast<CharacterIterator&>(p_);
-			}
-			const CharacterIterator& characterIterator() const BOOST_NOEXCEPT {
-				return static_cast<const CharacterIterator&>(p_);
-			}
-			BaseIterator p_;
+			WordBreakIterator(
+				BaseIterator base, WordBreakIteratorBase::Component component,
+				const IdentifierSyntax& syntax, const std::locale& locale = std::locale::classic())
+				: BreakIteratorImpl(base, locale, component, syntax) {}
 		};
 
 		/// Base class of @c SentenceBreakIterator.
-		class AbstractSentenceBreakIterator : public BreakIterator {
+		class SentenceBreakIteratorBase : public BreakIterator {
 		public:
 			/**
-			 * Components of segment to search word boundaries.
-			 * These values specify which boundary the iterator scans.
+			 * Components of segment to search word boundaries. These values specify which boundary the iterator scans.
 			 * @see WordBreakIterator
 			 */
 			enum Component {
@@ -210,19 +233,20 @@ namespace ascension {
 				/// Breaks at each starts and ends of segments.
 				BOUNDARY_OF_SEGMENT	= START_OF_SEGMENT | END_OF_SEGMENT,
 			};
+		public:
 			/// Returns the sentence component to search.
-			AbstractSentenceBreakIterator::Component component() const BOOST_NOEXCEPT {return component_;}
-			bool isBoundary(const CharacterIterator& at) const;
-			void next(std::ptrdiff_t amount);
+			Component component() const BOOST_NOEXCEPT {return component_;}
+			void next(std::ptrdiff_t amount) override;
 			void setComponent(Component component);
 		protected:
-			AbstractSentenceBreakIterator(Component component,
-				const IdentifierSyntax& syntax, const std::locale& lc) BOOST_NOEXCEPT;
-			virtual CharacterIterator& characterIterator() BOOST_NOEXCEPT = 0;
-			virtual const CharacterIterator& characterIterator() const BOOST_NOEXCEPT = 0;
+			template<typename CharacterIterator>
+			SentenceBreakIteratorBase(
+				const CharacterIterator& characterIterator, const std::locale& locale,
+				Component component, const IdentifierSyntax& syntax) BOOST_NOEXCEPT
+				: characterIterator_(characterIterator), component_(component), syntax_(syntax) {}
+			ASCENSION_DEFINE_BREAK_ITERATOR_BASE_METHODS();
 		private:
-			void doNext(std::ptrdiff_t amount);
-			void doPrevious(std::ptrdiff_t amount);
+			detail::CharacterIterator characterIterator_;
 			Component component_;
 			const IdentifierSyntax& syntax_;
 		};
@@ -232,42 +256,34 @@ namespace ascension {
 		 * @tparam BaseIterator
 		 */
 		template<class BaseIterator>
-		class SentenceBreakIterator : public AbstractSentenceBreakIterator,
-			public detail::BreakIteratorFacade<SentenceBreakIterator<BaseIterator>> {
+		class SentenceBreakIterator : public BreakIteratorImpl<
+			SentenceBreakIterator<BaseIterator>, SentenceBreakIteratorBase, BaseIterator> {
 		public:
 			/**
 			 * Constructor.
 			 * @param base The base iterator
 			 * @param component The component of sentence to search
 			 * @param syntax The identifier syntax to detect alphabets
-			 * @param lc The locale
+			 * @param locale The locale
 			 */
-			SentenceBreakIterator(BaseIterator base, Component component,
-				const IdentifierSyntax& syntax, const std::locale& lc = std::locale::classic())
-				: AbstractSentenceBreakIterator(component, syntax, lc), p_(base) {}
-			/// Returns the base iterator.
-			BaseIterator& base() BOOST_NOEXCEPT {return p_;}
-			/// Returns the base iterator.
-			const BaseIterator& base() const BOOST_NOEXCEPT {return p_;}
-		private:
-			CharacterIterator& characterIterator() BOOST_NOEXCEPT {
-				return static_cast<CharacterIterator&>(p_);
-			}
-			const CharacterIterator& characterIterator() const BOOST_NOEXCEPT {
-				return static_cast<const CharacterIterator&>(p_);
-			}
-			BaseIterator p_;
+			SentenceBreakIterator(
+				BaseIterator base, SentenceBreakIteratorBase::Component component,
+				const IdentifierSyntax& syntax, const std::locale& locale = std::locale::classic())
+				: BreakIteratorImpl(base, locale, component, syntax) {}
 		};
 
 		/// Base class of @c LineBreakIterator.
-		class AbstractLineBreakIterator : public BreakIterator {
+		class LineBreakIteratorBase : public BreakIterator {
 		public:
-			bool isBoundary(const CharacterIterator& at) const;
-			void next(std::ptrdiff_t amount);
+			void next(std::ptrdiff_t amount) override;
 		protected:
-			AbstractLineBreakIterator(const std::locale& lc) BOOST_NOEXCEPT;
-			virtual CharacterIterator& characterIterator() BOOST_NOEXCEPT = 0;
-			virtual const CharacterIterator& characterIterator() const BOOST_NOEXCEPT = 0;
+			template<typename CharacterIterator>
+			LineBreakIteratorBase(
+				const CharacterIterator& characterIterator, const std::locale& locale) BOOST_NOEXCEPT
+				: BreakIterator(locale), characterIterator_(characterIterator) {}
+			ASCENSION_DEFINE_BREAK_ITERATOR_BASE_METHODS();
+		private:
+			detail::CharacterIterator characterIterator_;
 		};
 
 		/**
@@ -275,30 +291,21 @@ namespace ascension {
 		 * @tparam BaseIterator
 		 */
 		template<class BaseIterator>
-		class LineBreakIterator : public AbstractLineBreakIterator,
-			public detail::BreakIteratorFacade<LineBreakIterator<BaseIterator>> {
+		class LineBreakIterator : public BreakIteratorImpl<
+			LineBreakIterator<BaseIterator>, LineBreakIteratorBase, BaseIterator> {
 		public:
 			/**
 			 * Constructor.
 			 * @param base The base iterator
-			 * @param lc The locale
+			 * @param locale The locale
 			 */
-			LineBreakIterator(BaseIterator base,
-				const std::locale& lc = std::locale::classic())
-				: AbstractLineBreakIterator(lc), p_(base) {}
-			/// Returns the base iterator.
-			BaseIterator& base() BOOST_NOEXCEPT {return p_;}
-			/// Returns the base iterator.
-			const BaseIterator& base() const BOOST_NOEXCEPT {return p_;}
-		private:
-			CharacterIterator& characterIterator() BOOST_NOEXCEPT {
-				return static_cast<CharacterIterator&>(p_);
-			}
-			const CharacterIterator& characterIterator() const BOOST_NOEXCEPT {
-				return static_cast<const CharacterIterator&>(p_);
-			}
-			BaseIterator p_;
+			LineBreakIterator(
+				BaseIterator base, const std::locale& locale = std::locale::classic())
+				: BreakIteratorImpl(base, locale) {}
 		};
+
+#undef ASCENSION_DEFINE_ABSTRACT_BASE_METHODS
+
 	}
 } // namespace ascension.text
 

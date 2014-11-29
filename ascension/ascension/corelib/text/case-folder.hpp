@@ -10,7 +10,8 @@
 #define ASCENSION_CASE_FOLDER_HPP
 
 #include <ascension/corelib/text/character-iterator.hpp>
-#include <ascension/corelib/text/utf-iterator.hpp>	// CharacterDecodeIterator, surrogates.encode
+#include <ascension/corelib/text/string-character-iterator.hpp>
+#include <ascension/corelib/text/utf-iterator.hpp>	// utf.CharacterDecodeIterator, utf.checkedEncode
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
 #include <algorithm>	// std.lower_bound
@@ -23,15 +24,30 @@
 namespace ascension {
 	namespace text {
 		/**
-		 * @c CaseFolder folds cases of characters and strings. This behavior is based on Default
-		 * Case Algorithm of Unicode, and locale-independent and context-insensitive.
+		 * @c CaseFolder folds cases of characters and strings. This behavior is based on Default Case Algorithm of
+		 * Unicode, and locale-independent and context-insensitive.
 		 * @see Collator, Normalizer, searcher#LiteralPattern
 		 */
 		class CaseFolder {
 		public:
 			static const Index MAXIMUM_EXPANSION_CHARACTERS;
-			static int compare(const CharacterIterator& s1,
-				const CharacterIterator& s2, bool excludeTurkishI = false);
+
+		public:
+			/**
+			 * Compares the two character sequences case-insensitively.
+			 * @tparam CharacterIterator1 The type of @a s1. This should satisfy @c detail#CharacterIteratorConcepts
+			 * @tparam CharacterIterator2 The type of @a s2. This should satisfy @c detail#CharacterIteratorConcepts
+			 * @param s1 The character sequence
+			 * @param s2 The the other
+			 * @param excludeTurkishI Set @c true to perform "Turkish I mapping"
+			 * @retval &lt;0 The first character sequence is less than the second
+			 * @retval 0 The both sequences are same
+			 * @retval &gt;0 The first character sequence is greater than the second
+			 */
+			template<typename CharacterIterator1, typename CharacterIterator2>
+			static int compare(const CharacterIterator1& s1, const CharacterIterator2& s2, bool excludeTurkishI = false) {
+				return compare(detail::CharacterIterator(s1), detail::CharacterIterator(s2), excludeTurkishI);
+			}
 
 			/**
 			 * Compares the two character sequences case-insensitively.
@@ -43,8 +59,7 @@ namespace ascension {
 			 * @retval &gt;0 The first character sequence is greater than the second
 			 */
 			static int compare(const String& s1, const String& s2, bool excludeTurkishI = false) {
-				return compare(StringCharacterIterator(s1),
-					StringCharacterIterator(s2), excludeTurkishI);
+				return compare(StringCharacterIterator(s1), StringCharacterIterator(s2), excludeTurkishI);
 			}
 
 			/**
@@ -63,8 +78,7 @@ namespace ascension {
 				if(c != (result = foldCommon(c)))
 					return result;
 				// simple mapping
-				const CodePoint* const p = std::lower_bound(
-					SIMPLE_CASED_, SIMPLE_CASED_ + NUMBER_OF_SIMPLE_CASED_, c);
+				const CodePoint* const p = std::lower_bound(SIMPLE_CASED_, SIMPLE_CASED_ + NUMBER_OF_SIMPLE_CASED_, c);
 				return (*p == c) ? SIMPLE_FOLDED_[p - SIMPLE_CASED_] : c;
 			}
 
@@ -72,8 +86,7 @@ namespace ascension {
 				InputIterator first, InputIterator last, bool excludeTurkishI = false);
 
 			/**
-			 * Folds case of the specified character sequence. This method performs "full case
-			 * folding."
+			 * Folds case of the specified character sequence. This method performs "full case folding."
 			 * @tparam SinglePassReadableRange
 			 * @param text The character sequence
 			 * @param excludeTurkishI Set @c true to perform "Turkish I mapping"
@@ -85,6 +98,7 @@ namespace ascension {
 			}
 
 		private:
+			static int compare(detail::CharacterIterator i1, detail::CharacterIterator i2, bool excludeTurkishI);
 			static CodePoint foldCommon(CodePoint c) BOOST_NOEXCEPT {
 				const CodePoint* const p = std::lower_bound(
 					COMMON_CASED_, COMMON_CASED_ + NUMBER_OF_COMMON_CASED_, c);
