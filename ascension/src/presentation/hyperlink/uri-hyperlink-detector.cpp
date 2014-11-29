@@ -8,7 +8,7 @@
 
 #include <ascension/kernel/document.hpp>
 #include <ascension/presentation/hyperlink/hyperlink-detector.hpp>
-#include <ascension/rules.hpp>
+#include <ascension/rules/uri-detector.hpp>
 #ifdef BOOST_OS_WINDOWS
 #	include <shellapi.h>	// ShellExecuteW
 #else
