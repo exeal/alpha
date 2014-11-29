@@ -74,12 +74,14 @@ namespace ascension {
 			friend class Presentation;
 		};
 
+		class DeclaredTextToplevelStyle;
 		struct ComputedTextToplevelStyle;
 
 		/**
 		 * Interface for objects which are interested in change of the computed toplevel text style of @c Presentation.
-		 * @see Presentation#addComputedTextToplevelStyleListener,
-		 *      Presentation#removeComputedTextToplevelStyleListener, font#ComputedBlockFlowDirectionListener
+		 * @see Presentation#addComputedTextToplevelStyleListener, Presentation#computedTextToplevelStyle,
+		 *      Presentation#declaredTextToplevelStyle, Presentation#removeComputedTextToplevelStyleListener,
+		 *      Presentation#setDeclaredTextToplevelStyle
 		 */
 		class ComputedTextToplevelStyleListener {
 		public:
@@ -87,10 +89,13 @@ namespace ascension {
 			virtual ~ComputedTextToplevelStyleListener() BOOST_NOEXCEPT {}
 			/**
 			 * The computed toplevel text style of @c Presentation was changed.
-			 * @param previous The old style used previously
+			 * @param previouslyDeclared The declared style used before the change
+			 * @param previouslyComputed The computed style used before the change
 			 * @see Presentation#declaredTextToplevelStyle, Presentation#setDeclaredTextToplevelStyle
 			 */
-			virtual void computedTextToplevelStyleChanged(std::shared_ptr<const ComputedTextToplevelStyle> previous) = 0;
+			virtual void computedTextToplevelStyleChanged(
+				std::shared_ptr<const DeclaredTextToplevelStyle> previouslyDeclared,
+				boost::flyweight<ComputedTextToplevelStyle> previouslyComputed) = 0;
 		};
 
 		struct ComputedStyledTextRunIterator;

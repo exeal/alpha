@@ -14,7 +14,6 @@
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
-#include <ascension/rules.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/foreach.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
@@ -76,7 +75,7 @@ namespace ascension {
 		 * Registers the text toplevel style listener.
 		 * @param listener The listener to be registered
 		 * @throw std#invalid_argument @a listener is already registered
-		 * @see #removeTextToplevelStyleListener, #textToplevelStyle
+		 * @see #removeTextToplevelStyleListener, #computedTextToplevelStyle
 		 */
 		void Presentation::addComputedTextToplevelStyleListener(ComputedTextToplevelStyleListener& listener) {
 			computedTextToplevelStyleListeners_.add(listener);
@@ -169,21 +168,21 @@ namespace ascension {
 						: declaration_(std::move(declaration)), context_(context), parentComputedStyle_(parentComputedStyle) {
 				}
 				// ComputedStyledTextRunIterator
-				boost::integer_range<Index> currentRange() const override {
-					return declaration_->currentRange();
-				}
-				boost::flyweight<ComputedTextRunStyle> currentStyle() const override {
-					const std::shared_ptr<const DeclaredTextRunStyle> declared(declaration_->currentStyle());
-//					cascade();
-					SpecifiedTextRunStyle specified;
-					specifiedValuesFromCascadedValues(static_cast<const TextRunStyle&>(*declared), parentComputedStyle_, specified);
-					return compute(specified, context_, parentComputedStyle_);
-				}
 				bool isDone() const override BOOST_NOEXCEPT {
 					return declaration_->isDone();
 				}
 				void next() override {
 					return declaration_->next();
+				}
+				kernel::Position position() const override {
+					return declaration_->position();
+				}
+				boost::flyweight<ComputedTextRunStyle> style() const override {
+					const std::shared_ptr<const DeclaredTextRunStyle> declared(declaration_->style());
+//					cascade();
+					SpecifiedTextRunStyle specified;
+					specifiedValuesFromCascadedValues(static_cast<const TextRunStyle&>(*declared), parentComputedStyle_, specified);
+					return compute(specified, context_, parentComputedStyle_);
 				}
 
 			private:
@@ -230,18 +229,29 @@ namespace ascension {
 				if(textLineStyleDeclarator_.get() != nullptr)
 					declared = textLineStyleDeclarator_->declareTextLineStyle(boost::get(line));
 #if 0
-				const TextLineStyle& cascaded = cascade(declared);
+				const DeclaredTextLineStyle& cascaded = cascade(declared);
 #else
-				const TextLineStyle& cascaded = *declared;
+				const DeclaredTextLineStyle& cascaded = *declared;
 #endif
 				if(declared.get() == nullptr)
 					declared.reset(&DeclaredTextLineStyle::unsetInstance(), boost::null_deleter());
+
 				styles::SpecifiedValue<styles::Direction>::type specifiedDirection;
+				const auto& cascadedDirection(*boost::fusion::find<styles::DeclaredValue<styles::Direction>::type>(cascaded));
+				const auto& computedParentDirection(*boost::fusion::find<styles::ComputedValue<styles::Direction>::type>(computedStyles_->forLines.get()));
+				static_assert(!std::is_same<std::decay<decltype(cascadedDirection)>::type, boost::mpl::void_>::value, "");
+				static_assert(!std::is_same<std::decay<decltype(computedParentDirection)>::type, boost::mpl::void_>::value, "");
+				styles::specifiedValueFromCascadedValue<styles::Direction>(
+					cascadedDirection, computedParentDirection, specifiedDirection);
+
 				styles::SpecifiedValue<styles::TextOrientation>::type specifiedTextOrientation;
-				styles::specifiedValueFromCascadedValue(*boost::fusion::find<styles::Direction>(cascaded),
-					*boost::fusion::find<decltype(specifiedDirection)>(computedStyles_->forLines.get()), specifiedDirection);
-				styles::specifiedValueFromCascadedValue(*boost::fusion::find<styles::TextOrientation>(cascaded),
-					*boost::fusion::find<decltype(specifiedTextOrientation)>(computedStyles_->forLines.get()), specifiedTextOrientation);
+				const auto& cascadedTextOrientation(*boost::fusion::find<styles::DeclaredValue<styles::TextOrientation>::type>(cascaded));
+				const auto& computedParentTextOrientation(*boost::fusion::find<styles::ComputedValue<styles::TextOrientation>::type>(computedStyles_->forLines.get()));
+				static_assert(!std::is_same<std::decay<decltype(cascadedTextOrientation)>::type, boost::mpl::void_>::value, "");
+				static_assert(!std::is_same<std::decay<decltype(computedParentTextOrientation)>::type, boost::mpl::void_>::value, "");
+				styles::specifiedValueFromCascadedValue<styles::TextOrientation>(
+					cascadedTextOrientation, computedParentTextOrientation, specifiedTextOrientation);
+
 				styles::ComputedValue<styles::Direction>::type computedDirection(specifiedDirection);	// TODO: compute as specified
 				styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(specifiedTextOrientation);	// TODO: compute as specified
 				return WritingMode(computedDirection, writingMode, computedTextOrientation);
@@ -347,7 +357,7 @@ namespace ascension {
 		 * @see #addComputedTextToplevelStyleListener, #computedTextToplevelStyle
 		 */
 		void Presentation::removeComputedTextToplevelStyleListener(ComputedTextToplevelStyleListener& listener) {
-			textToplevelStyleListeners_.remove(listener);
+			computedTextToplevelStyleListeners_.remove(listener);
 		}
 
 		/**
@@ -393,17 +403,29 @@ namespace ascension {
 		/**
 		 * Sets the declared text toplevel line style.
 		 * @param newStyle The style to set
-		 * @see #declaredTextToplevelStyle
+		 * @see #declaredTextToplevelStyle, ComputedTextToplevelStyleListener
 		 */
 		void Presentation::setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle> newStyle) {
-			static const DeclaredTextToplevelStyle DEFAULT_TEXT_TOPLEVEL_STYLE;
-			const std::shared_ptr<const DeclaredTextToplevelStyle> previous(declaredTextToplevelStyle_);
-			textToplevelStyle_ = (newStyle.get() != nullptr) ?
-				newStyle : std::shared_ptr<const DeclaredTextToplevelStyle>(&DEFAULT_TEXT_TOPLEVEL_STYLE, boost::null_deleter());
-			cascade();
-			specifiedValueFromCascadedValue(*boost::fusion::find<styles::WritingMode>(*textToplevelStyle_), nullptr, );
-			if(previous.get() != nullptr)
-				textToplevelStyleListeners_.notify<std::shared_ptr<const TextToplevelStyle>>(&TextToplevelStyleListener::textToplevelStyleChanged, used);
+			std::shared_ptr<const DeclaredTextToplevelStyle> newlyDeclared = (newStyle.get() != nullptr) ? newStyle
+				: std::shared_ptr<const DeclaredTextToplevelStyle>(&DeclaredTextToplevelStyle::unsetInstance(), boost::null_deleter());
+//			cascade();
+			SpecifiedTextToplevelStyle newlySpecified;
+			styles::specifiedValueFromCascadedValue<styles::WritingMode>(
+				*boost::fusion::find<styles::DeclaredValue<styles::WritingMode>::type>(*newStyle),
+				nullptr, *boost::fusion::find<styles::SpecifiedValue<styles::WritingMode>::type>(newlySpecified));
+			const boost::flyweight<ComputedTextToplevelStyle> newlyComputed(compute(newlySpecified));
+
+			// commit
+			std::shared_ptr<const DeclaredTextToplevelStyle> previouslyDeclared;
+			boost::flyweight<ComputedTextToplevelStyle> previouslyComputed;
+			using boost::swap;
+			using std::swap;
+			swap(newlyDeclared, previouslyDeclared);
+			swap(newlyComputed, previouslyComputed);
+			if(previouslyDeclared.get() != nullptr)
+				computedTextToplevelStyleListeners_.notify
+					<std::shared_ptr<const DeclaredTextToplevelStyle>, boost::flyweight<ComputedTextToplevelStyle>>(
+						&ComputedTextToplevelStyleListener::computedTextToplevelStyleChanged, previouslyDeclared, previouslyComputed);
 		}
 		
 		/**
@@ -427,216 +449,6 @@ namespace ascension {
 					background = g;
 				}
 			}
-		}
-
-
-		// SingleStyledPartitionPresentationReconstructor.Iterator ////////////////////////////////////////////////////
-
-		class SingleStyledPartitionPresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
-		public:
-			Iterator(const boost::integer_range<Index>& range, std::shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT : range_(range), style_(style), done_(false) {
-			}
-		private:
-			// StyledTextRunIterator
-			boost::integer_range<Index> currentRange() const {
-				if(done_)
-					throw NoSuchElementException();
-				return range_;
-			}
-			std::shared_ptr<const TextRunStyle> currentStyle() const {
-				if(done_)
-					throw NoSuchElementException();
-				return style_;
-			}
-			bool isDone() const BOOST_NOEXCEPT {
-				return done_;
-			}
-			void next() {
-				if(done_)
-					throw NoSuchElementException();
-				done_ = true;
-			}
-		private:
-			const boost::integer_range<Index> range_;
-			const std::shared_ptr<const TextRunStyle> style_;
-			bool done_;
-		};
-
-
-		// SingleStyledPartitionPresentationReconstructor /////////////////////////////////////////////////////////////
-
-		/**
-		 * Constructor.
-		 * @param style The style
-		 */
-		SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT : style_(style) {
-		}
-		
-		/// @see PartitionPresentationReconstructor#presentation
-		std::unique_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::presentation(Index, const boost::integer_range<Index>& rangeInLine) const {
-			return std::unique_ptr<presentation::StyledTextRunIterator>(new Iterator(rangeInLine, style_));
-		}
-
-
-		// PresentationReconstructor.Iterator /////////////////////////////////////////////////////////////////////////
-
-		class PresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
-		public:
-			Iterator(const Presentation& presentation,
-				const std::map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors, Index line);
-		private:
-			void updateSubiterator();
-			// StyledTextRunIterator
-			boost::integer_range<Index> currentRange() const;
-			std::shared_ptr<const TextRunStyle> currentStyle() const;
-			bool isDone() const BOOST_NOEXCEPT;
-			void next();
-		private:
-			const Presentation& presentation_;
-			const std::map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors_;
-			const Index line_;
-			kernel::DocumentPartition currentPartition_;
-			std::unique_ptr<presentation::StyledTextRunIterator> subiterator_;
-			boost::integer_range<Index> currentRange_;
-			std::shared_ptr<const TextRunStyle> currentStyle_;
-		};
-
-		/**
-		 * Constructor.
-		 * @param presentation
-		 * @param reconstructors
-		 * @param line
-		 */
-		PresentationReconstructor::Iterator::Iterator(
-				const Presentation& presentation, const std::map<kernel::ContentType,
-				PartitionPresentationReconstructor*> reconstructors, Index line)
-				: presentation_(presentation), reconstructors_(reconstructors), line_(line), currentRange_(0, 0) {
-			const kernel::DocumentPartitioner& partitioner = presentation_.document().partitioner();
-			Index offsetInLine = 0;
-			for(const Index lineLength = presentation_.document().lineLength(line);;) {
-				partitioner.partition(kernel::Position(line, offsetInLine), currentPartition_);	// this may throw BadPositionException
-				if(!currentPartition_.region.isEmpty())
-					break;
-				if(++offsetInLine >= lineLength) {	// rare case...
-					currentPartition_.contentType = kernel::DEFAULT_CONTENT_TYPE;
-					currentPartition_.region = kernel::Region(line, boost::irange(static_cast<Index>(0), lineLength));
-					break;
-				}
-			}
-			updateSubiterator();
-		}
-		
-		/// @see StyledTextRunIterator#currentRange
-		boost::integer_range<Index> PresentationReconstructor::Iterator::currentRange() const {
-			if(subiterator_.get() != nullptr)
-				return subiterator_->currentRange();
-			else if(!isDone())
-				return currentRange_;
-			throw NoSuchElementException();
-		}
-		
-		/// @see StyledTextRunIterator#currentStyle
-		std::shared_ptr<const TextRunStyle> PresentationReconstructor::Iterator::currentStyle() const {
-			if(subiterator_.get() != nullptr)
-				return subiterator_->currentStyle();
-			else if(!isDone())
-				return currentStyle_;
-			throw NoSuchElementException();
-		}
-
-		/// @see StyledTextRunIterator#isDone
-		bool PresentationReconstructor::Iterator::isDone() const BOOST_NOEXCEPT {
-			return currentPartition_.region.isEmpty();
-		}
-		
-		/// @see StyledTextRunIterator#next
-		void PresentationReconstructor::Iterator::next() {
-			if(subiterator_.get() != nullptr) {
-				subiterator_->next();
-				if(subiterator_->isDone())
-					subiterator_.reset();
-			}
-			if(subiterator_.get() == nullptr) {
-				const kernel::Document& document = presentation_.document();
-				const Index lineLength = document.lineLength(line_);
-				if(currentPartition_.region.end() >= kernel::Position(line_, lineLength)) {
-					// done
-					currentPartition_.region = kernel::Region(currentPartition_.region.end());
-					return;
-				}
-				// find the next partition
-				const kernel::DocumentPartitioner& partitioner = document.partitioner();
-				for(Index offsetInLine = currentPartition_.region.end().offsetInLine; ; ) {
-					partitioner.partition(kernel::Position(line_, offsetInLine), currentPartition_);
-					if(!currentPartition_.region.isEmpty())
-						break;
-					if(++offsetInLine >= lineLength) {	// rare case...
-						currentPartition_.contentType = kernel::DEFAULT_CONTENT_TYPE;
-						currentPartition_.region = kernel::Region(line_,  boost::irange(offsetInLine, lineLength));
-					}
-				}
-				updateSubiterator();
-			}
-		}
-
-		inline void PresentationReconstructor::Iterator::updateSubiterator() {
-			std::map<kernel::ContentType, PartitionPresentationReconstructor*>::const_iterator r(reconstructors_.find(currentPartition_.contentType));
-			if(r != std::end(reconstructors_))
-				subiterator_ = r->second->presentation(currentPartition_.region);
-			else
-				subiterator_.reset();
-			if(subiterator_.get() == nullptr) {
-				const std::shared_ptr<const TextLineStyle> lineStyle(defaultTextLineStyle(presentation_.textToplevelStyle()));
-				assert(lineStyle.get() != nullptr);
-				std::shared_ptr<const TextRunStyle> runStyle(defaultTextRunStyle(*lineStyle));
-				assert(runStyle.get() != nullptr);
-				currentRange_ = boost::irange(currentPartition_.region.beginning().offsetInLine, currentPartition_.region.end().offsetInLine);
-				currentStyle_ = runStyle;
-			}
-		}
-
-
-		// PresentationReconstructor //////////////////////////////////////////////////////////////////////////////////
-
-		/**
-		 * Constructor.
-		 * @param presentation The presentation
-		 */
-		PresentationReconstructor::PresentationReconstructor(Presentation& presentation) : presentation_(presentation) {
-			presentation_.setTextRunStyleDeclarator(std::shared_ptr<TextRunStyleDeclarator>(this));	// TODO: danger call (may delete this).
-		}
-		
-		/// Destructor.
-		PresentationReconstructor::~PresentationReconstructor() BOOST_NOEXCEPT {
-		//	presentation_.setLineStyleDirector(ASCENSION_SHARED_POINTER<LineStyleDirector>());
-			typedef std::pair<kernel::ContentType, PartitionPresentationReconstructor*> Temp;
-			BOOST_FOREACH(const Temp& p, reconstructors_)
-				delete p.second;
-		}
-
-		/// @see LineStyleDeclarator#declareTextRunStyle
-		std::unique_ptr<StyledTextRunIterator> PresentationReconstructor::declareTextRunStyle(Index line) const {
-			return std::unique_ptr<StyledTextRunIterator>(new Iterator(presentation_, reconstructors_, line));
-		}
-		
-		/**
-		 * Sets the partition presentation reconstructor for the specified content type.
-		 * @param contentType The content type. If a reconstructor for this content type was already be
-		 *                    set, the old will be deleted
-		 * @param reconstructor The partition presentation reconstructor to set. Can't be @c null. The
-		 *                      ownership will be transferred to the callee
-		 * @throw NullPointerException @a reconstructor is @c null
-		 */
-		void PresentationReconstructor::setPartitionReconstructor(
-				kernel::ContentType contentType, std::unique_ptr<PartitionPresentationReconstructor> reconstructor) {
-			if(reconstructor.get() == nullptr)
-				throw NullPointerException("reconstructor");
-			const std::map<kernel::ContentType, PartitionPresentationReconstructor*>::iterator old(reconstructors_.find(contentType));
-			if(old != reconstructors_.end()) {
-				delete old->second;
-				reconstructors_.erase(old);
-			}
-			reconstructors_.insert(std::make_pair(contentType, reconstructor.release()));
 		}
 	}
 }
