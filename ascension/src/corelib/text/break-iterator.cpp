@@ -17,96 +17,85 @@
 
 namespace ascension {
 	namespace text {
-		// AbstractGraphemeBreakIterator //////////////////////////////////////////////////////////////////////////////
+		// GraphemeBreakIteratorBase //////////////////////////////////////////////////////////////////////////////////
 
-		/**
-		 * Protected constructor.
-		 * @param lc The locale
-		 */
-		AbstractGraphemeBreakIterator::AbstractGraphemeBreakIterator(const std::locale& lc) BOOST_NOEXCEPT : BreakIterator(lc) {
-		}
-
-		void AbstractGraphemeBreakIterator::doNext(std::ptrdiff_t amount) {
+		void GraphemeBreakIteratorBase::next(std::size_t n) {
 			using ucd::GraphemeClusterBreak;
-			assert(amount > 0);
-			CharacterIterator& i = characterIterator();
-			if(!i.hasNext())	// (GB2)
+			if(!characterIterator_.hasNext())	// (GB2)
 				return;
-			CodePoint prevCP, cp = i.current();
+			CodePoint prevCP, cp = *characterIterator_;
 			int prev, current = GraphemeClusterBreak::of(cp);
-			while(amount > 0 && i.next().hasNext()) {	// (GB2)
+			while(n > 0 && (++characterIterator_).hasNext()) {	// (GB2)
 				prevCP = cp;
 				prev = current;
-				current = GraphemeClusterBreak::of(cp = i.current());
+				current = GraphemeClusterBreak::of(cp = *characterIterator_);
 				if(prev == GraphemeClusterBreak::CR) {	// (GB3, GB4)
 					if(current != GraphemeClusterBreak::LF)
-						--amount;
+						--n;
 				} else if(prev == GraphemeClusterBreak::CONTROL || prev == GraphemeClusterBreak::LF	// (GB4)
 						|| current == GraphemeClusterBreak::CONTROL || current == GraphemeClusterBreak::CR || current == GraphemeClusterBreak::LF)	// (GB5)
-					--amount;
+					--n;
 				else if(prev == GraphemeClusterBreak::L) {
 					if(current != GraphemeClusterBreak::L && current != GraphemeClusterBreak::V && current != GraphemeClusterBreak::LV
 							&& current != GraphemeClusterBreak::LVT && current != GraphemeClusterBreak::EXTEND)	// (GB6, GB9)
-						--amount;
+						--n;
 				} else if(prev == GraphemeClusterBreak::LV || prev == GraphemeClusterBreak::V) {
 					if(current != GraphemeClusterBreak::V && current != GraphemeClusterBreak::T && current != GraphemeClusterBreak::EXTEND)	// (GB7, GB9)
-						--amount;
+						--n;
 				} else if(prev == GraphemeClusterBreak::LVT || prev == GraphemeClusterBreak::T) {
 					if(current != GraphemeClusterBreak::T && current != GraphemeClusterBreak::EXTEND)	// (GB8, GB9)
-						--amount;
+						--n;
 				} else if(current != GraphemeClusterBreak::EXTEND)	// (GB9)
-					--amount;
+					--n;
 			}
 		}
 
-		void AbstractGraphemeBreakIterator::doPrevious(std::ptrdiff_t amount) {
+		void GraphemeBreakIteratorBase::previous(std::size_t n) {
 			using ucd::GraphemeClusterBreak;
-			assert(amount > 0);
-			CharacterIterator& i = characterIterator();
-			if(!i.hasPrevious() || !i.previous().hasPrevious())	// (GB1)
+			if(!characterIterator_.hasPrevious() || !(--characterIterator_).hasPrevious())	// (GB1)
 				return;
-			CodePoint prevCP, cp = i.current();
+			CodePoint prevCP, cp = *characterIterator_;
 			int prev, current = GraphemeClusterBreak::of(cp);
 			do {
 				prevCP = cp;
 				prev = current;
-				current = GraphemeClusterBreak::of(cp = i.previous().current());
+				current = GraphemeClusterBreak::of(cp = *--characterIterator_);
 				if(prev == GraphemeClusterBreak::LF) {	// (GB3, GB5)
 					if(current != GraphemeClusterBreak::CR)
-						--amount;
+						--n;
 				} else if(current == GraphemeClusterBreak::CONTROL || current == GraphemeClusterBreak::CR || current == GraphemeClusterBreak::LF	// (GB4)
 						|| prev == GraphemeClusterBreak::CONTROL || prev == GraphemeClusterBreak::CR)	// (GB5)
-					--amount;
+					--n;
 				else if(current == GraphemeClusterBreak::L) {
 					if(prev != GraphemeClusterBreak::L && prev != GraphemeClusterBreak::V && prev != GraphemeClusterBreak::LV
 							&& prev != GraphemeClusterBreak::LVT && prev != GraphemeClusterBreak::EXTEND)	// (GB6, GB9)
-						--amount;
+						--n;
 				} else if(current == GraphemeClusterBreak::LV || current == GraphemeClusterBreak::V) {
 					if(prev != GraphemeClusterBreak::V && prev != GraphemeClusterBreak::T && prev != GraphemeClusterBreak::EXTEND)	// (GB7, GB9)
-						--amount;
+						--n;
 				} else if(current == GraphemeClusterBreak::LVT || current == GraphemeClusterBreak::T) {
 					if(prev != GraphemeClusterBreak::T && prev != GraphemeClusterBreak::EXTEND)	// (GB8, GB9)
-						--amount;
+						--n;
 				} else if(prev != GraphemeClusterBreak::EXTEND)	// (GB9)
-					--amount;
-				if(amount == 0) {
-					i.next();
+					--n;
+				if(n == 0) {
+					++characterIterator_;
 					return;
 				}
-			} while(i.hasPrevious());	// (GB1)
+			} while(characterIterator_.hasPrevious());	// (GB1)
 		}
 
-		/// @see BreakIterator#isBoundary
-		bool AbstractGraphemeBreakIterator::isBoundary(const CharacterIterator& at) const {
+		/// @internal Implements @c GraphemeBreakIterator#isBoundary
+		bool GraphemeBreakIteratorBase::isBoundary(const detail::CharacterIterator& at) const {
 			using ucd::GraphemeClusterBreak;
 			if(!at.hasNext() || !at.hasPrevious())	// (GB1, GB2)
 				return true;
-			const int p = GraphemeClusterBreak::of(at.current());
+			const int p = GraphemeClusterBreak::of(*at);
 			if(p == GraphemeClusterBreak::CR || p == GraphemeClusterBreak::CONTROL)	// (GB5)
 				return true;
-			std::unique_ptr<CharacterIterator> i(at.clone());
-			i->previous();
-			const int prev = GraphemeClusterBreak::of(i->current());
+			detail::CharacterIterator i(at);
+			--i;
+			const int prev = GraphemeClusterBreak::of(*i);
 			if(prev == GraphemeClusterBreak::CR)
 				return p != GraphemeClusterBreak::LF;	// (GB3, GB4)
 			else if(prev == GraphemeClusterBreak::LF || prev == GraphemeClusterBreak::CONTROL || p == GraphemeClusterBreak::LF)	// (GB4, GB5)
@@ -120,47 +109,39 @@ namespace ascension {
 			return p != GraphemeClusterBreak::EXTEND;	// (GB9, 10)
 		}
 
-		/// @see BreakIterator#next
-		void AbstractGraphemeBreakIterator::next(std::ptrdiff_t amount) {
-			if(amount > 0)
-				doNext(+amount);
-			else if(amount < 0)
-				doPrevious(-amount);
-		}
 
-
-		// AbstractWordBreakIterator //////////////////////////////////////////////////////////////////////////////////
+		// WordBreakIteratorBase //////////////////////////////////////////////////////////////////////////////////////
 
 		namespace {
-			/// Advances @a i to the next character neither Extend nor Format.
-			int nextBase(CharacterIterator& i) {
+			/// @internal Advances @a i to the next character neither Extend nor Format.
+			int nextBase(detail::CharacterIterator& i) {
 				if(!i.hasNext())
 					return ucd::GeneralCategory::LAST_VALUE;
-				CodePoint cp = i.current();
+				CodePoint cp = *i;
 				if(cp == LINE_FEED || cp == CARRIAGE_RETURN || cp == NEXT_LINE || cp == LINE_SEPARATOR || cp == PARAGRAPH_SEPARATOR) {	// !Sep
-					i.next();
+					++i;
 					return ucd::GeneralCategory::LAST_VALUE;
 				}
 				int gc = ucd::GeneralCategory::LAST_VALUE;
-				while(i.next().hasNext()) {
-					gc = ucd::GeneralCategory::of(cp = i.current());
+				while((++i).hasNext()) {
+					gc = ucd::GeneralCategory::of(cp = *i);
 					if(gc != ucd::GeneralCategory::FORMAT && !ucd::BinaryProperty::is<ucd::BinaryProperty::GRAPHEME_EXTEND>(cp))
 						break;
 				}
 				return gc;
 			}
 
-			/// Advances @a i to the previous character neither Extend nor Format.
-			int previousBase(CharacterIterator& i) {
+			/// @internal Advances @a i to the previous character neither Extend nor Format.
+			int previousBase(detail::CharacterIterator& i) {
 				if(!i.hasPrevious())
-					return ucd::GeneralCategory::of(i.current());
+					return ucd::GeneralCategory::of(*i);
 				int gc = ucd::GeneralCategory::LAST_VALUE;
 				CodePoint cp;
 				do {
-					cp = i.previous().current();
+					cp = *--i;
 					if(gc != ucd::GeneralCategory::LAST_VALUE
 							&& (cp == LINE_FEED || cp == CARRIAGE_RETURN || cp == NEXT_LINE || cp == LINE_SEPARATOR || cp == PARAGRAPH_SEPARATOR)) {	// !Sep
-						i.next();
+						++i;
 						break;
 					}
 							gc = ucd::GeneralCategory::of(cp);
@@ -194,21 +175,14 @@ namespace ascension {
 			}
 		}
 
-		/**
-		 * Protected constructor.
-		 * @param component The word component to search
-		 * @param syntax The identifier syntax
-		 * @param lc The locale
-		 * @see #setComponent
-		 */
-		AbstractWordBreakIterator::AbstractWordBreakIterator(Component component,
-				const IdentifierSyntax& syntax, const std::locale& lc) BOOST_NOEXCEPT : BreakIterator(lc), component_(component), syntax_(syntax) {
-		}
+		void WordBreakIteratorBase::next(std::size_t n) {
+			assert(n > 0);
+#define ASCENSION_TRY_RETURN() {if(--n == 0) return;}
 
-		void AbstractWordBreakIterator::doNext(std::ptrdiff_t amount) {
-			using namespace ucd;
-			assert(amount > 0);
-#define ASCENSION_TRY_RETURN() {if(--amount == 0) return;}
+			using ucd::BinaryProperty;
+			using ucd::GraphemeClusterBreak;
+			using ucd::WordBreak;
+
 			// A B | C D -> iteration-direction
 			// ^ ^ ^ ^ ^
 			// | | | | next-next
@@ -216,22 +190,26 @@ namespace ascension {
 			// | | current-boundary-candidate
 			// | prev
 			// prev-prev
-			CharacterIterator& i = characterIterator();
-			if(!i.hasNext())	// (WB2)
+			if(!characterIterator_.hasNext())	// (WB2)
 				return;
-			nextBase(i);
-			if(!i.hasNext())	// (WB2)
+			nextBase(characterIterator_);
+			if(!characterIterator_.hasNext())	// (WB2)
 				return;
-			std::unique_ptr<CharacterIterator> prevPrev, prev, nextNext;
-			CodePoint nextCP = i.current(), prevCP = INVALID_CODE_POINT;
+			boost::optional<detail::CharacterIterator> prevPrev, prev, nextNext;
+			CodePoint nextCP = *characterIterator_, prevCP = INVALID_CODE_POINT;
 			int nextClass = WordBreak::of(nextCP, syntax_, locale()),
-				prevClass = NOT_PROPERTY, nextNextClass = NOT_PROPERTY, prevPrevClass = NOT_PROPERTY;
+				prevClass = ucd::NOT_PROPERTY, nextNextClass = ucd::NOT_PROPERTY, prevPrevClass = ucd::NOT_PROPERTY;
 			while(true) {
 				// 1 つ前 (B) を調べる
-				assert(i.hasPrevious());
-				if(prev.get() == nullptr) {prev.reset(i.clone().release()); previousBase(*prev);}
-				if(prevCP == INVALID_CODE_POINT) prevCP = prev->current();
-				if(prevClass == NOT_PROPERTY) prevClass = WordBreak::of(prevCP, syntax_, locale());
+				assert(characterIterator_.hasPrevious());
+				if(prev == boost::none) {
+					prev = characterIterator_;
+					previousBase(boost::get(prev));
+				}
+				if(prevCP == INVALID_CODE_POINT)
+					prevCP = *boost::get(prev);
+				if(prevClass == ucd::NOT_PROPERTY)
+					prevClass = WordBreak::of(prevCP, syntax_, locale());
 				if(prevClass == GraphemeClusterBreak::CR && nextClass == GraphemeClusterBreak::LF)	// (WB3)
 					/* do nothing */;
 				else if(nextClass == WordBreak::A_LETTER && prevClass == WordBreak::A_LETTER) {	// (WB5+, !WB13)
@@ -243,9 +221,9 @@ namespace ascension {
 				else if((prevClass == WordBreak::A_LETTER && nextClass == WordBreak::MID_LETTER)
 						|| (prevClass == WordBreak::NUMERIC && nextClass == WordBreak::MID_NUM)) {	// (WB6, WB12)?
 					// 2 つ次 (D) を調べる
-					nextNext.reset(i.clone().release());
-					nextBase(*nextNext);
-					nextNextClass = WordBreak::of(nextNext->current(), syntax_, locale());
+					nextNext = characterIterator_;
+					nextBase(boost::get(nextNext));
+					nextNextClass = WordBreak::of(*boost::get(nextNext), syntax_, locale());
 					if(!nextNext->hasNext())	// (WB14)
 						ASCENSION_TRY_RETURN()
 					if(nextNextClass != prevClass	// (WB6, WB12)
@@ -259,12 +237,12 @@ namespace ascension {
 						ASCENSION_TRY_RETURN()
 						break;
 					}
-					if(prevPrevClass == NOT_PROPERTY) {
-						if(prevPrev.get() == nullptr) {
-							prevPrev.reset(prev->clone().release());
-							previousBase(*prevPrev);
+					if(prevPrevClass == ucd::NOT_PROPERTY) {
+						if(prevPrev == boost::none) {
+							prevPrev = boost::get(prev);
+							previousBase(boost::get(prevPrev));
 						}
-						prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, locale());
+						prevPrevClass = WordBreak::of(*boost::get(prevPrev), syntax_, locale());
 					}
 					if(prevPrevClass != nextClass
 							&& ((component_ & ALPHA_NUMERIC) == 0
@@ -282,28 +260,32 @@ namespace ascension {
 
 				// 次に進む
 				prevPrev = move(prev);
-				prev = i.clone();
-				nextBase(i);
-				nextNext.reset();
-				if(!i.hasNext())	// (WB2)
+				prev = characterIterator_;
+				nextBase(characterIterator_);
+				nextNext = boost::none;
+				if(!characterIterator_.hasNext())	// (WB2)
 					return;
 				prevCP = nextCP;
-				nextCP = i.current();
+				nextCP = *characterIterator_;
 				prevPrevClass = prevClass;
 				prevClass = nextClass;
-				if(nextNextClass != NOT_PROPERTY) {
+				if(nextNextClass != ucd::NOT_PROPERTY) {
 					nextClass = nextNextClass;
-					nextNextClass = NOT_PROPERTY;
+					nextNextClass = ucd::NOT_PROPERTY;
 				} else
 					nextClass = WordBreak::of(nextCP, syntax_, locale());
 			}
 #undef ASCENSION_TRY_RETURN
 		}
 
-		void AbstractWordBreakIterator::doPrevious(std::ptrdiff_t amount) {
-			using namespace ucd;
-			assert(amount > 0);
-#define ASCENSION_TRY_RETURN() {if(--amount == 0) return;}
+		void WordBreakIteratorBase::previous(std::size_t n) {
+			assert(n > 0);
+#define ASCENSION_TRY_RETURN() {if(--n == 0) return;}
+
+			using ucd::BinaryProperty;
+			using ucd::GraphemeClusterBreak;
+			using ucd::WordBreak;
+
 			// iteration-direction <- A B | C D
 			//                        ^ ^ ^ ^ ^
 			//                next-next | | | |
@@ -311,25 +293,26 @@ namespace ascension {
 			//   current-boundary-candidate | |
 			//                       prev (i) |
 			//                        prev-prev
-			CharacterIterator& i = characterIterator();
-			if(!i.hasPrevious())	// (WB1)
+			if(!characterIterator_.hasPrevious())	// (WB1)
 				return;
-			previousBase(i);
-			if(!i.hasPrevious())	// (WB1)
+			previousBase(characterIterator_);
+			if(!characterIterator_.hasPrevious())	// (WB1)
 				return;
-			std::unique_ptr<CharacterIterator> next, nextNext, prevPrev;
-			CodePoint prevCP = i.current(), nextCP = INVALID_CODE_POINT, nextNextCP = INVALID_CODE_POINT;
+			boost::optional<detail::CharacterIterator> next, nextNext, prevPrev;
+			CodePoint prevCP = *characterIterator_, nextCP = INVALID_CODE_POINT, nextNextCP = INVALID_CODE_POINT;
 			int prevClass = WordBreak::of(prevCP, syntax_, locale()),
-				nextClass = NOT_PROPERTY, nextNextClass = NOT_PROPERTY, prevPrevClass = NOT_PROPERTY;
+				nextClass = ucd::NOT_PROPERTY, nextNextClass = ucd::NOT_PROPERTY, prevPrevClass = ucd::NOT_PROPERTY;
 			while(true) {
 				// 1 つ次 (B) を調べる
-				assert(i.hasPrevious());
-				if(next.get() == nullptr) {
-					next.reset(i.clone().release());
-					previousBase(*next);
+				assert(characterIterator_.hasPrevious());
+				if(next == boost::none) {
+					next = characterIterator_;
+					previousBase(boost::get(next));
 				}
-				if(nextCP == INVALID_CODE_POINT) nextCP = next->current();
-				if(nextClass == NOT_PROPERTY) nextClass = WordBreak::of(nextCP, syntax_, locale());
+				if(nextCP == INVALID_CODE_POINT)
+					nextCP = *boost::get(next);
+				if(nextClass == ucd::NOT_PROPERTY)
+					nextClass = WordBreak::of(nextCP, syntax_, locale());
 				if(prevClass == GraphemeClusterBreak::LF && nextClass == GraphemeClusterBreak::CR)	// (WB3)
 					/* do nothing */;
 				else if(prevClass == WordBreak::A_LETTER && nextClass == WordBreak::A_LETTER) {	// (WB5+, !WB13)
@@ -341,16 +324,16 @@ namespace ascension {
 				else if((nextClass == WordBreak::A_LETTER && prevClass == WordBreak::MID_LETTER)
 						|| (nextClass == WordBreak::NUMERIC && prevClass == WordBreak::MID_NUM)) {	// (WB6, WB12)?
 					// 2 つ前 (D) を調べる
-					if(prevPrevClass == NOT_PROPERTY) {
-						if(prevPrev.get() == nullptr) {
-							prevPrev.reset(i.clone().release());
-							nextBase(*prevPrev);
+					if(prevPrevClass == ucd::NOT_PROPERTY) {
+						if(prevPrev == boost::none) {
+							prevPrev = characterIterator_;
+							nextBase(boost::get(prevPrev));
 						}
 						if(!prevPrev->hasNext()) {	// (WB14)
 							ASCENSION_TRY_RETURN()
 							break;
 						}
-						prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, locale());
+						prevPrevClass = WordBreak::of(*boost::get(prevPrev), syntax_, locale());
 					}
 					if(prevPrevClass != nextClass
 							&& ((component_ & ALPHA_NUMERIC) == 0
@@ -363,9 +346,9 @@ namespace ascension {
 						ASCENSION_TRY_RETURN()
 						break;
 					}
-					nextNext.reset(next->clone().release());
-					previousBase(*nextNext);
-					nextNextClass = WordBreak::of(nextNextCP = nextNext->current(), syntax_, locale());
+					nextNext = next;
+					previousBase(boost::get(nextNext));
+					nextNextClass = WordBreak::of(nextNextCP = *boost::get(nextNext), syntax_, locale());
 					if(nextNextClass != prevClass
 							&& ((component_ & ALPHA_NUMERIC) == 0
 							|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))	// (WB7, WB11)
@@ -381,35 +364,37 @@ namespace ascension {
 					ASCENSION_TRY_RETURN()
 
 				// 次に進む
-				prevPrev.reset(i.clone().release());
-				previousBase(i);
-				if(!i.hasPrevious())	// (WB1)
+				prevPrev = characterIterator_;
+				previousBase(characterIterator_);
+				if(!characterIterator_.hasPrevious())	// (WB1)
 					ASCENSION_TRY_RETURN()
-				next = move(nextNext);
-				nextNext.reset();	// ...is need?
-				prevCP = i.current();
+				next = std::move(nextNext);
+				nextNext = boost::none;	// ...is need?
+				prevCP = *characterIterator_;
 				nextCP = nextNextCP;
 				nextNextCP = INVALID_CODE_POINT;
 				prevPrevClass = prevClass;
 				prevClass = nextClass;
 				nextClass = nextNextClass;
-				nextNextClass = NOT_PROPERTY;
+				nextNextClass = ucd::NOT_PROPERTY;
 			}
 		}
 
-		/// @see BreakIterator#isBoundary
-		bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
-			using namespace ucd;
+		/// @internal Implements @c WordBreakIterator#isBoundary
+		bool WordBreakIteratorBase::isBoundary(const detail::CharacterIterator& at) const {
+			using ucd::GraphemeClusterBreak;
+			using ucd::WordBreak;
+
 			if(!at.hasNext() || !at.hasPrevious())	// (WB1, WB2)
 				return true;
 
-			const CodePoint nextCP = at.current();
+			const CodePoint nextCP = *at;
 			const int nextClass = WordBreak::of(nextCP, syntax_, locale());
 			if(nextClass == WordBreak::OTHER)	// (WB14)
 				return true;
-			std::unique_ptr<CharacterIterator> i(at.clone());
-			previousBase(*i);
-			CodePoint prevCP = i->current();
+			detail::CharacterIterator i(at);
+			previousBase(i);
+			CodePoint prevCP = *i;
 			int prevClass = WordBreak::of(prevCP, syntax_, locale());
 
 			if(prevClass == GraphemeClusterBreak::CR && nextClass == GraphemeClusterBreak::LF)	// (WB3)
@@ -423,26 +408,26 @@ namespace ascension {
 					|| (prevClass == WordBreak::NUMERIC && nextClass == WordBreak::MID_NUM)) {	// (WB6, WB12)?
 				// 2 つ次を調べる
 				int nextNextClass;
-				i.reset(at.clone().release());
-				nextBase(*i);
+				i = at;
+				nextBase(i);
 				while(true) {
-					if(!i->hasNext())	// (WB14)
+					if(!i.hasNext())	// (WB14)
 						return true;
-					else if(WordBreak::FORMAT != (nextNextClass = WordBreak::of(i->current(), syntax_, locale())))	// (WB4)
+					else if(WordBreak::FORMAT != (nextNextClass = WordBreak::of(*i, syntax_, locale())))	// (WB4)
 						break;
-					nextBase(*i);
+					nextBase(i);
 				}
 				return nextNextClass != prevClass;	// (WB6, WB12)
-			} else if(i->hasPrevious()
+			} else if(i.hasPrevious()
 					&& ((prevClass == WordBreak::MID_LETTER && nextClass == WordBreak::A_LETTER)
 					|| (prevClass == WordBreak::MID_NUM && nextClass == WordBreak::NUMERIC))) {	// (WB7, WB11)?
 				// 2 つ前を調べる
 				int prevPrevClass;
 				while(true) {
-					previousBase(*i);
-					if(!i->hasPrevious())	// (WB14)
+					previousBase(i);
+					if(!i.hasPrevious())	// (WB14)
 						return true;
-					else if(WordBreak::FORMAT != (prevPrevClass = WordBreak::of(i->current(), syntax_, locale())))	// (WB4)
+					else if(WordBreak::FORMAT != (prevPrevClass = WordBreak::of(*i, syntax_, locale())))	// (WB4)
 						break;
 				}
 				return prevPrevClass != nextClass;	// (WB7, WB11)
@@ -450,40 +435,32 @@ namespace ascension {
 			return true;	// (WB14)
 		}
 
-		/// @see BreakIterator#next
-		void AbstractWordBreakIterator::next(std::ptrdiff_t amount) {
-			if(amount > 0)
-				doNext(+amount);
-			else if(amount < 0)
-				doPrevious(-amount);
-		}
-
 		/**
 		 * Sets the word component to search.
 		 * @param component The new component to set
 		 * @throw UnknownValueException @a component is invalid
 		 */
-		void AbstractWordBreakIterator::setComponent(Component component) {
+		void WordBreakIteratorBase::setComponent(Component component) {
 			if((component & ~BOUNDARY_OF_ALPHANUMERICS) != 0)
 				throw UnknownValueException("component");
 			component_ = component;
 		}
 
 
-		// AbstractSentenceBreakIterator //////////////////////////////////////////////////////////////////////////////
+		// SentenceBreakIteratorBase //////////////////////////////////////////////////////////////////////////////////
 
 		namespace {
 			/// Tries SB8 rule.
-			bool trySB8(CharacterIterator& i) {
-				std::unique_ptr<CharacterIterator> j(i.clone());
-				for(; j->hasNext(); nextBase(*j)) {
-					switch(ucd::SentenceBreak::of(j->current())) {
+			bool trySB8(detail::CharacterIterator& i) {
+				detail::CharacterIterator j(i);
+				for(; j.hasNext(); nextBase(j)) {
+					switch(ucd::SentenceBreak::of(*j)) {
 						case ucd::SentenceBreak::O_LETTER:
 						case ucd::SentenceBreak::UPPER:
 						case ucd::SentenceBreak::SEP:
 							break;
 						case ucd::SentenceBreak::LOWER:
-							while(i.offset() < j->offset())
+							while(i.offset() < j.offset())
 								nextBase(i);
 							return false;	// (SB8)
 						default:
@@ -496,13 +473,13 @@ namespace ascension {
 			}
 
 			/// Handles after (STerm|ATerm).
-			bool tryToExtendTerm(CharacterIterator& i, bool aTerm) {
+			bool tryToExtendTerm(detail::CharacterIterator& i, bool aTerm) {
 				using ucd::SentenceBreak;
 				assert(i.hasPrevious());
 				bool closeOccured = false;	// true if (STerm|ATerm) Close+
 				bool spOccured = false;		// true if (STerm|ATerm) Sp+ or (STerm|ATerm) Close+ Sp+
 				while(i.hasNext()) {
-					switch(SentenceBreak::of(i.current())) {
+					switch(SentenceBreak::of(*i)) {
 					case SentenceBreak::SEP:
 						nextBase(i);
 						return true;	// (SB4)
@@ -517,12 +494,12 @@ namespace ascension {
 						if(!aTerm || (!closeOccured && !spOccured))
 							return false;	// (SB12)
 						else {
-							std::unique_ptr<CharacterIterator> temp(i.clone());
-							previousBase(*temp);
-							if(!temp->hasPrevious())
+							detail::CharacterIterator temp(i);
+							previousBase(temp);
+							if(!temp.hasPrevious())
 								return true;	// (SB12)
-							previousBase(*temp);
-							return SentenceBreak::of(temp->current()) != SentenceBreak::UPPER;
+							previousBase(temp);
+							return SentenceBreak::of(*temp) != SentenceBreak::UPPER;
 						}
 					case SentenceBreak::O_LETTER:
 						return true;	// (SB12)
@@ -551,42 +528,31 @@ namespace ascension {
 			}
 		}	// namespace @0
 
-		/**
-		 * Protected constructor.
-		 * @param component The sentence component to search
-		 * @param syntax The character detector
-		 * @param lc The locale
-		 */
-		AbstractSentenceBreakIterator::AbstractSentenceBreakIterator(Component component,
-				const IdentifierSyntax& syntax, const std::locale& lc) BOOST_NOEXCEPT : BreakIterator(lc), component_(component), syntax_(syntax) {
-		}
-
-		void AbstractSentenceBreakIterator::doNext(std::ptrdiff_t amount) {
+		void SentenceBreakIteratorBase::next(std::size_t n) {
 			// TODO: not implemented.
-			CharacterIterator& i = characterIterator();
-			while(i.hasNext()) {
-				if(i.current() == CARRIAGE_RETURN) {
-					i.next();
-					if(!i.hasNext())
+			while(characterIterator_.hasNext()) {
+				if(*characterIterator_ == CARRIAGE_RETURN) {
+					++characterIterator_;
+					if(!characterIterator_.hasNext())
 						return;	// (SB2)
-					if(i.current() == LINE_FEED)
-						i.next();	// (SB3)
+					if(*characterIterator_ == LINE_FEED)
+						++characterIterator_;	// (SB3)
 					return;	// (SB4)
 				}
 
 				using ucd::SentenceBreak;
-				switch(SentenceBreak::of(i.current())) {
+				switch(SentenceBreak::of(*characterIterator_)) {
 					case SentenceBreak::SEP:
-						i.next();
+						++characterIterator_;
 						return;	// (SB4)
 					case SentenceBreak::A_TERM:
-						nextBase(i);
-						if(tryToExtendTerm(i, true))
+						nextBase(characterIterator_);
+						if(tryToExtendTerm(characterIterator_, true))
 							return;	// (SB11)
 						break;
 					case SentenceBreak::S_TERM:
-						nextBase(i);
-						if(tryToExtendTerm(i, false))
+						nextBase(characterIterator_);
+						if(tryToExtendTerm(characterIterator_, false))
 							return;	// (SB11)
 						break;
 					default:
@@ -596,49 +562,41 @@ namespace ascension {
 			// (SB2)
 		}
 
-		void AbstractSentenceBreakIterator::doPrevious(std::ptrdiff_t amount) {
+		void SentenceBreakIteratorBase::previous(std::size_t n) {
 			// TODO: not implemented.
 		}
 
-		/// @see BreakIterator#isBoundary
-		bool AbstractSentenceBreakIterator::isBoundary(const CharacterIterator& at) const {
+		/// @internal Implements @c SentenceBreakIterator#isBoundary
+		bool SentenceBreakIteratorBase::isBoundary(const detail::CharacterIterator& at) const {
 			if(!at.hasNext() || !at.hasPrevious())
 				return true;	// (SB1, SB2)
-			std::unique_ptr<CharacterIterator> i(at.clone());
-			if(at.current() == LINE_FEED) {
-				if(i->previous().current() == CARRIAGE_RETURN)
+			detail::CharacterIterator i(at);
+			if(*at == LINE_FEED) {
+				if(*--i == CARRIAGE_RETURN)
 					return false;	// (SB3)
-				else if(!i->hasPrevious())
+				else if(!i.hasPrevious())
 					return true;	// (SB12)
-				const int p = ucd::SentenceBreak::of(i->current());
+				const int p = ucd::SentenceBreak::of(*i);
 				if(p == ucd::GraphemeClusterBreak::EXTEND || p == ucd::SentenceBreak::FORMAT)
-					previousBase(*i);	// (SB5)
+					previousBase(i);	// (SB5)
 			} else
-				previousBase(*i);	// (SB5)
+				previousBase(i);	// (SB5)
 			do {
-				switch(ucd::SentenceBreak::of(i->current())) {
+				switch(ucd::SentenceBreak::of(*i)) {
 					case ucd::SentenceBreak::SEP:
-						return at.offset() - i->offset() == 1;	// (SB4)
+						return at.offset() - i.offset() == 1;	// (SB4)
 					case ucd::SentenceBreak::A_TERM:
-						nextBase(*i);
-						return tryToExtendTerm(*i, true) && i->offset() == at.offset();
+						nextBase(i);
+						return tryToExtendTerm(i, true) && i.offset() == at.offset();
 					case ucd::SentenceBreak::S_TERM:
-						nextBase(*i);
-						return tryToExtendTerm(*i, false) && i->offset() == at.offset();
+						nextBase(i);
+						return tryToExtendTerm(i, false) && i.offset() == at.offset();
 					default:
 						break;
 				}
-				previousBase(*i);
-			} while(i->hasPrevious());
+				previousBase(i);
+			} while(i.hasPrevious());
 			return false;	// (SB1)
-		}
-
-		/// @see BreakIterator#next
-		void AbstractSentenceBreakIterator::next(std::ptrdiff_t amount) {
-			if(amount > 0)
-				doNext(+amount);
-			else if(amount < 0)
-				doPrevious(-amount);
 		}
 
 		/**
@@ -646,29 +604,17 @@ namespace ascension {
 		 * @param component The new component to set
 		 * @throw UnknownValueException @a component is invalid
 		 */
-		void AbstractSentenceBreakIterator::setComponent(Component component) {
+		void SentenceBreakIteratorBase::setComponent(Component component) {
 			if((component & ~BOUNDARY_OF_SEGMENT) != 0)
 				throw UnknownValueException("component");
 			component_ = component;
 		}
 
 
-		// AbstractLineBreakIterator //////////////////////////////////////////////////////////////////////////////////
+		// LineBreakIteratorBase //////////////////////////////////////////////////////////////////////////////////////
 
-		/**
-		 * Protected constructor.
-		 * @param lc The locale
-		 */
-		AbstractLineBreakIterator::AbstractLineBreakIterator(const std::locale& lc) BOOST_NOEXCEPT : BreakIterator(lc) {
-		}
-		
-		/// @see BreakIterator#next
-		void AbstractLineBreakIterator::next(std::ptrdiff_t amount) {
-			// TODO: not implemented.
-		}
-		
 		/// @see BreakIterator#isBoundary
-		bool AbstractLineBreakIterator::isBoundary(const CharacterIterator& at) const {
+		bool LineBreakIteratorBase::isBoundary(const detail::CharacterIterator& at) const {
 			// TODO: not implemented.
 			return true;
 		}
