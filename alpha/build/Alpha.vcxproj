@@ -191,7 +191,10 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\character-iterator.cpp" />
-    <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp">
+      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </ShowIncludes>
+    </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\text\collator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\identifier-syntax.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\normalizer.cpp" />
@@ -213,9 +216,12 @@
     <ClCompile Include="..\..\ascension\src\graphics\paint-cairo.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\paint-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\document-character-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\hyperlink\composite-hyperlink-detector.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\hyperlink\uri-hyperlink-detector.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\length.cpp" />
+    <ClCompile Include="..\..\ascension\src\presentation\partition-presentation-reconstructor.cpp" />
+    <ClCompile Include="..\..\ascension\src\presentation\presentation-reconstructor.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\presentation.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\text-line-style.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\text-run-style.cpp" />
@@ -223,7 +229,10 @@
     <ClCompile Include="..\..\ascension\src\rules\lexical-partition-presentation-reconstructor.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\lexical-partitioner.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\lexical-token-scanner.cpp" />
-    <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp">
+      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </ShowIncludes>
+    </ClCompile>
     <ClCompile Include="..\..\ascension\src\rules\token-scanner.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\transition-rules.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\uri-detector.cpp" />
@@ -362,6 +371,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\text\identifier-syntax.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\newline.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\normalizer.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\string-character-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\utf.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\timer.hpp" />
