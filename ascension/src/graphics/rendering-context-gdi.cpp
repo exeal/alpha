@@ -7,11 +7,12 @@
 
 #include <ascension/graphics/rendering-context.hpp>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-#include <ascension/graphics/paint.hpp>
-#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
+#include <ascension/graphics/geometry/algorithm.hpp>
+#include <ascension/graphics/native-conversion.hpp>
+#include <ascension/graphics/paint.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/math/constants/constants.hpp>		// boost.math.constants.pi
 #include <boost/math/special_functions/round.hpp>	// boost.iround
@@ -763,18 +764,18 @@ namespace ascension {
 			return *this;
 		}
 
-		RenderingContext2D& RenderingContext2D::setTextBaseline(presentation::AlignmentBaseline textBaseline) {
+		RenderingContext2D& RenderingContext2D::setTextBaseline(font::AlignmentBaseline textBaseline) {
 			UINT v = ::GetTextAlign(nativeObject_.get());
 			if(v == GDI_ERROR)
 				throw makePlatformError();
 			v &= ~(TA_BASELINE | TA_BOTTOM | TA_TOP);
 			switch(boost::native_value(textBaseline)) {
-				case presentation::AlignmentBaseline::BEFORE_EDGE:
-				case presentation::AlignmentBaseline::TEXT_BEFORE_EDGE:
+				case font::AlignmentBaseline::OVER_EDGE:
+				case font::AlignmentBaseline::TEXT_OVER_EDGE:
 					v |= TA_TOP;
 					break;
-				case presentation::AlignmentBaseline::AFTER_EDGE:
-				case presentation::AlignmentBaseline::TEXT_AFTER_EDGE:
+				case font::AlignmentBaseline::UNDER_EDGE:
+				case font::AlignmentBaseline::TEXT_UNDER_EDGE:
 					v |= TA_BOTTOM;
 					break;
 				default:
@@ -850,18 +851,18 @@ namespace ascension {
 			}
 		}
 
-		presentation::AlignmentBaseline RenderingContext2D::textBaseline() const {
+		font::AlignmentBaseline RenderingContext2D::textBaseline() const {
 			const UINT v = ::GetTextAlign(nativeObject_.get());
 			if(v == GDI_ERROR)
 				throw makePlatformError();
 			switch(v & (TA_BASELINE | TA_BOTTOM | TA_TOP)) {
 				case TA_BOTTOM:
-					return presentation::AlignmentBaseline::TEXT_AFTER_EDGE;
+					return font::AlignmentBaseline::TEXT_UNDER_EDGE;
 				case TA_TOP:
-					return presentation::AlignmentBaseline::TEXT_BEFORE_EDGE;
+					return font::AlignmentBaseline::TEXT_OVER_EDGE;
 				case TA_BASELINE:
 				default:
-					return presentation::AlignmentBaseline::ALPHABETIC;
+					return font::AlignmentBaseline::ALPHABETIC;
 			}
 		}
 

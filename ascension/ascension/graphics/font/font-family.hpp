@@ -121,6 +121,7 @@ namespace ascension {
 				String name(const std::locale& lc = std::locale::classic()) const BOOST_NOEXCEPT;
 
 			private:
+				friend std::size_t hash_value(const FontFamily& fontFamily);
 #if ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 				win32::com::SmartPointer<IDWriteFontFamily> nativeObject_;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
