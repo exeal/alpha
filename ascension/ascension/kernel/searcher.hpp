@@ -36,22 +36,31 @@ namespace ascension {
 		 */
 		class LiteralPattern : private boost::noncopyable {
 		public:
-			// constructors
 			LiteralPattern(const String& pattern, bool caseSensitive = true
 #ifndef ASCENSION_NO_UNICODE_COLLATION
 				, std::unique_ptr<const text::Collator> collator = std::unique_ptr<const text::Collator>()
 #endif // !ASCENSION_NO_UNICODE_COLLATION
 );
-			// attributes
+			/// @name Attributes
+			/// @{
 			bool isCaseSensitive() const BOOST_NOEXCEPT;
 			const String& pattern() const BOOST_NOEXCEPT;
-			// operations
-			bool matches(const text::CharacterIterator& target) const;
-			bool search(const text::CharacterIterator& target, Direction direction,
-				std::unique_ptr<text::CharacterIterator>& matchedFirst,
-				std::unique_ptr<text::CharacterIterator>& matchedLast) const;
+			/// @}
+
+			/// @name Operations
+			/// @{
+			template<typename CharacterIterator>
+			bool matches(const CharacterIterator& target) const;
+			template<typename CharacterIterator>
+			bool search(const CharacterIterator& target, Direction direction,
+				CharacterIterator& matchedFirst, CharacterIterator& matchedLast) const;
+			/// @}
+
 		private:
 			void makeShiftTable(Direction direction) BOOST_NOEXCEPT;
+			bool matches(const text::detail::CharacterIterator& target) const;
+			bool search(const text::detail::CharacterIterator& target, Direction direction,
+				text::detail::CharacterIterator& matchedFirst, text::detail::CharacterIterator& matchedLast) const;
 		private:
 			const String pattern_;
 			const bool caseSensitive_;
@@ -337,13 +346,44 @@ namespace ascension {
 		};
 
 
-		// inline implementation //////////////////////////////////////////////////////////////////
+		// inline implementation //////////////////////////////////////////////////////////////////////////////////////
 
 		/// Returns @c true if the pattern performs case-sensitive match.
 		inline bool LiteralPattern::isCaseSensitive() const BOOST_NOEXCEPT {return caseSensitive_;}
 
+		/**
+		 * Returns @c true if the pattern matches the specified character sequence.
+		 * @tparam CharacterIterator The type of @a target, which satisfies @c text#detail#CharacterIteratorConcepts
+		 * @param target The character sequence to match
+		 * @return true if matched
+		 */
+		template<typename CharacterIterator>
+		inline bool LiteralPattern::matches(const CharacterIterator& target) const {
+			return matches(text::detail::CharacterIterator(target));
+		}
+
 		/// Returns the pattern string.
 		inline const String& LiteralPattern::pattern() const BOOST_NOEXCEPT {return pattern_;}
+
+		/**
+		 * Searches in the specified character sequence.
+		 * @tparam CharacterIterator The type of @a target, which satisfies @c text#detail#CharacterIteratorConcepts
+		 * @param target The target character sequence
+		 * @param direction The direction to search. If this is @c Direction#FORWARD, the method finds the first
+		 *                  occurence of the pattern in @a target. Otherwise finds the last one
+		 * @param[out] matchedFirst 
+		 * @param[out] matchedLast 
+		 * @return true if the pattern was found
+		 */
+		template<typename CharacterIterator>
+		inline bool LiteralPattern::search(const CharacterIterator& target, Direction direction,
+				CharacterIterator& matchedFirst, CharacterIterator& matchedLast) const {
+			text::detail::CharacterIterator b, e;
+			const bool found = search(text::detail::CharacterIterator(target), direction, b, e);
+			matchedFirst = boost::type_erasure::any_cast<CharacterIterator>(b);
+			matchedLast = boost::type_erasure::any_cast<CharacterIterator>(e);
+			return found;
+		}
 
 		/// Returns @c true if any pattern is set on the searcher.
 		inline bool TextSearcher::hasPattern() const BOOST_NOEXCEPT {
