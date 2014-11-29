@@ -64,46 +64,46 @@ namespace ascension {
 		
 		/// @see TokenScanner#identifierSyntax
 		const text::IdentifierSyntax& LexicalTokenScanner::identifierSyntax() const BOOST_NOEXCEPT {
-			return current_.document()->contentTypeInformation().getIdentifierSyntax(contentType_);
+			return current_.document().contentTypeInformation().getIdentifierSyntax(contentType_);
 		}
 		
 		/// @see TokenScanner#nextToken
 		std::unique_ptr<Token> LexicalTokenScanner::nextToken() {
-			const text::IdentifierSyntax& idSyntax = identifierSyntax();
-			std::unique_ptr<Token> result;
-			const String* line = &current_.line();
+			// TODO: This code is not exception-safe.
+			const text::IdentifierSyntax& ids = identifierSyntax();
+			StringPiece line(current_.line());
 			while(current_.hasNext()) {
-				if(current_.current() == text::LINE_SEPARATOR) {
-					current_.next();
-					line = &current_.line();
+				if(*current_ == text::LINE_SEPARATOR) {
+					++current_;
+					line = current_.line();
 					if(!current_.hasNext())
 						break;
 				}
-				const Char* const p = line->data() + current_.tell().offsetInLine;
-				const Char* const last = line->data() + line->length();
+				const StringPiece::const_iterator p(line.cbegin() + current_.tell().offsetInLine);
 				BOOST_FOREACH(const std::unique_ptr<const Rule>& rule, rules_) {
-					result = rule->parse(*this, makeStringPiece(p, last));
-					if(result.get() != nullptr) {
-						current_.seek(result->region.end());
-						return result;
+					const boost::optional<StringPiece::const_iterator> endOfToken(rule->parse(line, p, ids));
+					if(endOfToken != boost::none) {
+						const kernel::Position beginningOfToken(current_.tell());
+						current_.seek(kernel::Position(beginningOfToken.line, boost::get(endOfToken) - line.cbegin()));
+						return std::unique_ptr<Token>(new Token(rule->tokenID(), beginningOfToken));
 					}
 				}
-				const Char* const wordEnd = idSyntax.eatIdentifier(p, last);
-				if(wordEnd > p) {
+				const StringPiece::const_iterator endOfWord(ids.eatIdentifier(p, line.cend()));
+				if(endOfWord > p) {
 					if(!wordRules_.empty()) {
 						BOOST_FOREACH(const std::unique_ptr<const WordRule>& wordRule, wordRules_) {
-							result = wordRule->parse(*this, makeStringPiece(p, wordEnd));
-							if(result.get() != nullptr) {
-								current_.seek(result->region.end());
-								return result;
+							if(wordRule->parse(line, makeStringPiece(p, endOfWord), ids)) {
+								const kernel::Position beginningOfToken(current_.tell());
+								current_.seek(kernel::Position(beginningOfToken.line, endOfWord - line.cbegin()));
+								return std::unique_ptr<Token>(new Token(wordRule->tokenID(), beginningOfToken));
 							}
 						}
 					}
-					current_.seek(kernel::Position(current_.tell().line, wordEnd - line->data()));
+					current_.seek(kernel::Position(current_.tell().line, endOfWord - line.cbegin()));
 				} else
-					current_.next();
+					++current_;
 			}
-			return result;
+			return std::unique_ptr<Token>();
 		}
 		
 		/// @see TokenScanner#parse

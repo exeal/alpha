@@ -125,7 +125,7 @@ namespace ascension {
 				}
 				// go to the next character if no transition occurred
 				if(tokenLength == 0) {
-					i.next();
+					++i;
 					if(i.tell().offsetInLine == 0)	// entered the next line
 						line = &doc.line(i.tell().line);
 				}
