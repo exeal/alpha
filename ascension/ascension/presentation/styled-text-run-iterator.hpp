@@ -13,8 +13,8 @@
 #ifndef ASCENSION_STYLED_TEXT_RUN_ITERATOR_HPP
 #define ASCENSION_STYLED_TEXT_RUN_ITERATOR_HPP
 
+#include <ascension/kernel/position.hpp>
 #include <boost/flyweight/flyweight_fwd.hpp>
-#include <boost/range/irange.hpp>
 #include <memory>
 
 namespace ascension {
@@ -45,30 +45,21 @@ namespace ascension {
 		/**
 		 * Abstract input iterator to obtain text run style objects.
 		 * @tparam Style The return type of @c #currentStyle method
+		 *
+		 * <h3>Basic Usage</h3>
+		 * @code
+		 * for(StyledTextRunIterator&lt;...&gt;&amp; i = ...; !i.isDone(); i.next()) {
+		 *   usePosition(i.position());
+		 *   useStyle(i.style());
+		 *   ...
+		 * }
+		 * @endcode
 		 */
 		template<typename Style>
 		struct StyledTextRunIterator {
 		public:
 			/// Destructor.
 			virtual ~StyledTextRunIterator() BOOST_NOEXCEPT {}
-			/**
-			 * Returns the range of the current text run addressed by this iterator.
-			 * @return The range of the current text run this iterator addresses in character offsets in the line.
-			 *         @c front() should be greater than or equal to @c back of the previous text run. If @c back is
-			 *         greater than the length of the line, the range is truncated. Otherwise if @c front() is greater
-			 *         than @c back() of the previous text run, treated as if there is a text run with the range
-			 *         [previous's @c back(), front()) and unset style
-			 * @throw NoSuchElementException This iterator is done
-			 * @see #currentStyle
-			 */
-			virtual boost::integer_range<Index> currentRange() const = 0;
-			/**
-			 * Returns the style of the current text run addressed by this iterator.
-			 * @return The style of the current text run this iterator addresses. If @c null, the default style is used
-			 * @throw NoSuchElementException This iterator is done
-		 	 * @see #currentRange
-			 */
-			virtual Style currentStyle() const = 0;
 			/// Returns @c true if the iterator addresses the end of the range.
 			virtual bool isDone() const BOOST_NOEXCEPT = 0;
 			/**
@@ -76,6 +67,19 @@ namespace ascension {
 			 * @throw NoSuchElementException This iterator is done.
 			 */
 			virtual void next() = 0;
+			/**
+			 * Returns the beginning position of the current styled text run addressed by this iterator in the
+			 * document, or the end of the target region if the iterator is done.
+			 * @see #style
+			 */
+			virtual kernel::Position position() const BOOST_NOEXCEPT = 0;
+			/**
+			 * Returns the style of the current text run addressed by this iterator.
+			 * @return The style of the current text run this iterator addresses. If @c null, the default style is used
+			 * @throw NoSuchElementException This iterator is done
+		 	 * @see #position
+			 */
+			virtual Style style() const = 0;
 		};
 		
 		class DeclaredTextRunStyle;
