@@ -13,79 +13,80 @@
 #include <ascension/kernel/document.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>	// text.CharacterIterator
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/utility/value_init.hpp>
 
 namespace ascension {
 	namespace kernel {
-		class DocumentCharacterIterator :
-			public text::CharacterIterator,
-			public boost::iterators::iterator_facade<
-				DocumentCharacterIterator, CodePoint,
-				boost::iterators::bidirectional_traversal_tag, const CodePoint, std::ptrdiff_t
-			> {
+		class DocumentCharacterIterator : public boost::iterators::iterator_facade<
+			DocumentCharacterIterator, CodePoint,
+			boost::iterators::bidirectional_traversal_tag, const CodePoint, std::ptrdiff_t
+		> {
 		public:
-			// constructors
 			DocumentCharacterIterator() BOOST_NOEXCEPT;
 			DocumentCharacterIterator(const Document& document, const Position& position);
 			DocumentCharacterIterator(const Document& document, const Region& region);
 			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
 			DocumentCharacterIterator(const DocumentCharacterIterator& other) BOOST_NOEXCEPT;
-			// attributes
-			const Document* document() const BOOST_NOEXCEPT;
+
+			/// @name Position
+			/// @{
+			DocumentCharacterIterator& seek(const Position& to);
+			const Position& tell() const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Other Document-Related Attributes
+			/// @{
+			const Document& document() const BOOST_NOEXCEPT;
 			const String& line() const BOOST_NOEXCEPT;
 			const Region& region() const BOOST_NOEXCEPT;
 			void setRegion(const Region& newRegion);
-			const Position& tell() const BOOST_NOEXCEPT;
-			// operation
-			DocumentCharacterIterator& seek(const Position& to);
-			// CharacterIterator
-			CodePoint current() const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name CharacterIterator Concepts
+			/// @{
 			bool hasNext() const BOOST_NOEXCEPT;
 			bool hasPrevious() const BOOST_NOEXCEPT;
+			std::ptrdiff_t offset() const BOOST_NOEXCEPT;
+			/// @}
 
 		private:
-			void doAssign(const CharacterIterator& other);
-			std::unique_ptr<CharacterIterator> doClone() const;
-			void doFirst();
-			void doLast();
-			bool doEquals(const CharacterIterator& other) const;
-			bool doLess(const CharacterIterator& other) const;
-			void doNext();
-			void doPrevious();
-			// boost.iterators.iterator_facade
+			// boost.iterator_facade
 			friend class boost::iterators::iterator_core_access;
-			CodePoint dereference() const {return current();}
-			void decrement() {previous();}
-			bool equal(const DocumentCharacterIterator& other) const {return equals(other);}
-			void increment() {next();}
+			CodePoint dereference() const;
+			void decrement();
+			bool equal(const DocumentCharacterIterator& other) const;
+			void increment();
 		private:
-			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
 			const Document* document_;
-			Region region_;
-			const String* line_;
-			Position p_;
+			Region region_;	// should be normalized
+			Position position_;
+			boost::value_initialized<std::ptrdiff_t> offset_;
 		};
 
-
-		// inline implementation //////////////////////////////////////////////////////////////////
 		
 		/// Returns the document.
-		inline const Document* DocumentCharacterIterator::document() const BOOST_NOEXCEPT {
-			return document_;
+		inline const Document& DocumentCharacterIterator::document() const BOOST_NOEXCEPT {
+			return *document_;
 		}
 		
-		/// @see text#CharacterIterator#hasNext
+		/// Returns @c true if the iterator has the next character.
 		inline bool DocumentCharacterIterator::hasNext() const BOOST_NOEXCEPT {
-			return tell() != region().second;
+			return tell() < region().second;
 		}
 		
-		/// @see text#CharacterIterator#hasPrevious
+		/// Returns @c true if the iterator has the previous character.
 		inline bool DocumentCharacterIterator::hasPrevious() const BOOST_NOEXCEPT {
-			return tell() != region().first;
+			return tell() > region().first;
 		}
 		
-		/// Returns the line.
+		/// Returns the line text string.
 		inline const String& DocumentCharacterIterator::line() const BOOST_NOEXCEPT {
-			return *line_;
+			return document().line(tell().line);
+		}
+
+		/// Returns the relative position from where the iterator started.
+		inline std::ptrdiff_t DocumentCharacterIterator::offset() const BOOST_NOEXCEPT {
+			return boost::get(offset_);
 		}
 		
 		/// Returns the iteration region.
@@ -95,18 +96,17 @@ namespace ascension {
 		
 		/**
 		 * Moves to the specified position.
-		 * @param to The position. if this is outside of the iteration region, the start/end of the
-		 *           region will be used
+		 * @param to The position. If this is outside of the iteration region, the start/end of the region will be used
 		 * @return This iterator
 		 */
 		inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
-			line_ = &document_->line((p_ = std::max(std::min(to, region().second), region().first)).line);
+			position_ = std::max(std::min(to, region().second), region().first);
 			return *this;
 		}
 		
 		/// Returns the document position the iterator addresses.
 		inline const Position& DocumentCharacterIterator::tell() const BOOST_NOEXCEPT {
-			return p_;
+			return position_;
 		}
 	}
 } // namespace ascension.kernel
