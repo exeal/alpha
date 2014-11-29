@@ -38,6 +38,7 @@ namespace ascension {
 
 		public:
 			Normalizer();
+			template<typename CharacterIterator>
 			Normalizer(const CharacterIterator& text, Form form);
 			Normalizer(const Normalizer& other);
 			Normalizer(Normalizer&& other) BOOST_NOEXCEPT;
@@ -47,11 +48,11 @@ namespace ascension {
 			/// @name Methods not in Standard Iterator Interface
 			/// @{
 			/** Returns @c false if the iterator addresses the end of the normalized text. */
-			bool hasNext() const BOOST_NOEXCEPT {return current_->hasNext();}
+			bool hasNext() const BOOST_NOEXCEPT {return characterIterator_.hasNext();}
 			/// Returns @c false if the iterator addresses the start of the normalized text.
-			bool hasPrevious() const BOOST_NOEXCEPT {return current_->hasPrevious() || indexInBuffer_ != 0;}
+			bool hasPrevious() const BOOST_NOEXCEPT {return characterIterator_.hasPrevious() || indexInBuffer_ != 0;}
 			/// Returns the current position in the input text that is being normalized.
-			std::ptrdiff_t offset() const BOOST_NOEXCEPT {return current_->offset();}
+			std::ptrdiff_t offset() const BOOST_NOEXCEPT {return characterIterator_.offset();}
 			/// @}
 
 		private:
@@ -61,7 +62,7 @@ namespace ascension {
 			/// Moves to the previous normalized character.
 			void decrement() {
 				if(!hasPrevious())
-					throw std::out_of_range("the iterator is the first");
+					throw NoSuchElementException("The iterator is the first");
 				else if(indexInBuffer_ == 0)
 					nextClosure(Direction::BACKWARD, false);
 				else
@@ -73,20 +74,20 @@ namespace ascension {
 			}
 			/// Returns true if both iterators address the same character in the normalized text.
 			bool equal(const Normalizer& other) const BOOST_NOEXCEPT {
-				return /*current_->isCloneOf(*other.current_)
-					&&*/ current_->offset() == other.current_->offset()
+				return /*characterIterator_.isCloneOf(*other.characterIterator_)
+					&&*/ characterIterator_.offset() == other.characterIterator_.offset()
 					&& indexInBuffer_ == other.indexInBuffer_;
 			}
 			/// Moves to the next normalized character.
 			void increment() {
 				if(!hasNext())
-					throw std::out_of_range("The iterator is the last.");
+					throw NoSuchElementException("The iterator is the last.");
 				else if(++indexInBuffer_ == normalizedBuffer_.length())
 					nextClosure(Direction::FORWARD, false);
 			}
 		private:
 			Form form_;
-			std::unique_ptr<CharacterIterator> current_;
+			detail::CharacterIterator characterIterator_;
 			std::basic_string<CodePoint> normalizedBuffer_;
 			std::size_t indexInBuffer_;
 			std::ptrdiff_t nextOffset_;
@@ -97,8 +98,46 @@ namespace ascension {
 		int compareForCanonicalEquivalence(const String& s1, const String& s2, CaseSensitivity caseSensitivity);
 		Normalizer::Form formForName(const Char* name);
 		String normalize(CodePoint c, Normalizer::Form form);
-		String normalize(const CharacterIterator& text, Normalizer::Form form);
+		template<typename CharacterIterator> String normalize(const CharacterIterator& text, Normalizer::Form form);
 		/// @}
+
+		/**
+		 * Constructor.
+		 * @tparam CharacterIterator The type of @a text. Should satisfy @c detail#CharacterIteratorConcepts concept
+		 * @param text The text to be normalized
+		 * @param form The normalization form
+		 */
+		template<typename CharacterIterator>
+		inline Normalizer::Normalizer(const CharacterIterator& text, Form form) : form_(form), characterIterator_(text) {
+			nextClosure(Direction::FORWARD, true);
+		}
+
+		/**
+		 * Normalizes the specified text according to the normalization form.
+		 * @tparam CharacterIterator The type of @a text. Should satisfy @c detail#CharacterIteratorConcepts concept
+		 * @param text The text to normalize
+		 * @param form The normalization form
+		 */
+		template<typename CharacterIterator>
+		inline String text::normalize(const CharacterIterator& text, Normalizer::Form form) {
+			// TODO: There is more efficient implementation.
+			Normalizer n(text, form);
+			std::basic_stringbuf<Char> buffer(std::ios_base::out);
+			CodePoint c;
+			Char surrogates[2];
+			for(Normalizer n(text, form); n.hasNext(); ++n) {
+				c = *n;
+				if(c < 0x010000ul)
+					buffer.sputc(static_cast<Char>(c & 0xffffu));
+				else {
+					assert(isScalarValue(c));
+					Char* temp = surrogates;
+					utf::encode(c, temp);
+					buffer.sputn(surrogates, 2);
+				}
+			}
+			return buffer.str();
+		}
 	}
 } // namespace ascension.text
 

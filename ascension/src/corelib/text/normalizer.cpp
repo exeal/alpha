@@ -6,8 +6,9 @@
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_*
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-#include <ascension/corelib/text/normalizer.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/corelib/text/normalizer.hpp>
+#include <ascension/corelib/text/string-character-iterator.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/algorithm/lower_bound.hpp>
@@ -243,13 +244,13 @@ namespace ascension {
 			 * @param form The normalization form
 			 * @return The normalized sequence
 			 */
-			std::basic_string<CodePoint> internalNormalize(const CharacterIterator& first, const CharacterIterator& last, Normalizer::Form form) {
+			std::basic_string<CodePoint> internalNormalize(const detail::CharacterIterator& first, const detail::CharacterIterator& last, Normalizer::Form form) {
 				Char room[128];
 				Index len;	// length of room
 				// decompose
 				std::basic_stringbuf<CodePoint> buffer(std::ios_base::out);
-				for(std::unique_ptr<CharacterIterator> i(first.clone()); i->offset() < last.offset(); i->next()) {
-					len = internalDecompose(i->current(), form == Normalizer::FORM_KD || form == Normalizer::FORM_KC, room);
+				for(detail::CharacterIterator i(first); i.offset() < last.offset(); ++i) {
+					len = internalDecompose(*i, form == Normalizer::FORM_KD || form == Normalizer::FORM_KC, room);
 					for(utf::CharacterDecodeIterator<const Char*> j(room, room + len); j.tell() < room + len; ++j)
 						buffer.sputc(*j);
 				}
@@ -333,31 +334,22 @@ namespace ascension {
 		/// Default constructor.
 		Normalizer::Normalizer() {
 		}
-
-		/**
-		 * Constructor.
-		 * @param text The text to be normalized
-		 * @param form The normalization form
-		 */
-		Normalizer::Normalizer(const CharacterIterator& text, Form form) : form_(form), current_(text.clone().release()) {
-			nextClosure(Direction::FORWARD, true);
-		}
 		
 		/// Copy-constructor.
 		Normalizer::Normalizer(const Normalizer& other) : form_(other.form_),
-				current_(other.current_->clone().release()), normalizedBuffer_(other.normalizedBuffer_),
+				characterIterator_(other.characterIterator_), normalizedBuffer_(other.normalizedBuffer_),
 				indexInBuffer_(other.indexInBuffer_), nextOffset_(other.nextOffset_) {
 		}
 		
 		/// Move-constructor.
-		Normalizer::Normalizer(Normalizer&& other) BOOST_NOEXCEPT : form_(other.form_), current_(std::move(other.current_)),
+		Normalizer::Normalizer(Normalizer&& other) BOOST_NOEXCEPT : form_(other.form_), characterIterator_(std::move(other.characterIterator_)),
 				normalizedBuffer_(std::move(other.normalizedBuffer_)), indexInBuffer_(other.indexInBuffer_), nextOffset_(other.nextOffset_) {
 		}
 
 		/// Copy-assignment operator.
 		Normalizer& Normalizer::operator=(const Normalizer& other) {
 			normalizedBuffer_ = other.normalizedBuffer_;
-			current_.reset(other.current_->clone().release());
+			characterIterator_ = other.characterIterator_;
 			form_ = other.form_;
 			indexInBuffer_ = other.indexInBuffer_;
 			nextOffset_ = other.nextOffset_;
@@ -367,7 +359,7 @@ namespace ascension {
 		/// Move-assignment operator.
 		Normalizer& Normalizer::operator=(Normalizer&& other) BOOST_NOEXCEPT {
 			form_ = other.form_;
-			current_ = std::move(other.current_);
+			characterIterator_ = std::move(other.characterIterator_);
 			normalizedBuffer_ = std::move(other.normalizedBuffer_);
 			indexInBuffer_ = other.indexInBuffer_;
 			nextOffset_ = other.nextOffset_;
@@ -376,36 +368,36 @@ namespace ascension {
 
 		/// Normalizes the next or previous closure for the following iteration.
 		void Normalizer::nextClosure(Direction direction, bool initialize) {
-			std::unique_ptr<CharacterIterator> next;
+			detail::CharacterIterator next;
 			if(direction == Direction::FORWARD) {
 				if(!initialize) {
 					do {
-						current_->next();
-					} while(current_->offset() < nextOffset_);
+						++characterIterator_;
+					} while(characterIterator_.offset() < nextOffset_);
 				}
-				if(!current_->hasNext()) {
+				if(!characterIterator_.hasNext()) {
 					// reached the end of the source character sequence
 					indexInBuffer_ = 0;
 					return;
 				}
 				// locate the next starter
-				next.reset(current_->clone().release());
-				for(next->next(); next->hasNext(); next->next()) {
-					if(ucd::CanonicalCombiningClass::of(next->current()) == ucd::CanonicalCombiningClass::NOT_REORDERED)
+				next = characterIterator_;
+				for(++next; next.hasNext(); ++next) {
+					if(ucd::CanonicalCombiningClass::of(*next) == ucd::CanonicalCombiningClass::NOT_REORDERED)
 						break;
 				}
-				nextOffset_ = next->offset();
+				nextOffset_ = next.offset();
 			} else {
-				next.reset(current_->clone().release());
-				nextOffset_ = current_->offset();
-				current_->previous();
+				next = characterIterator_;
+				nextOffset_ = characterIterator_.offset();
+				--characterIterator_;
 				// locate the previous starter
-				while(current_->hasPrevious()) {
-					if(ucd::CanonicalCombiningClass::of(current_->current()) == ucd::CanonicalCombiningClass::NOT_REORDERED)
+				while(characterIterator_.hasPrevious()) {
+					if(ucd::CanonicalCombiningClass::of(*characterIterator_) == ucd::CanonicalCombiningClass::NOT_REORDERED)
 						break;
 				}
 			}
-			normalizedBuffer_ = internalNormalize(*current_, *next, form_);
+			normalizedBuffer_ = internalNormalize(characterIterator_, next, form_);
 			indexInBuffer_ = (direction == Direction::FORWARD) ? 0 : normalizedBuffer_.length() - 1;
 		}
 
@@ -428,31 +420,6 @@ namespace ascension {
 			if(caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s2))
 				nfd2 = normalize(StringCharacterIterator(s2), Normalizer::FORM_D);
 			return internalCompare(boost::get_optional_value_or(nfd1, s1), boost::get_optional_value_or(nfd2, s2), caseSensitivity);
-		}
-
-		/**
-		 * Normalizes the specified text according to the normalization form.
-		 * @param text The text to normalize
-		 * @param form The normalization form
-		 */
-		String text::normalize(const CharacterIterator& text, Normalizer::Form form) {
-			// TODO: There is more efficient implementation.
-			Normalizer n(text, form);
-			std::basic_stringbuf<Char> buffer(std::ios_base::out);
-			CodePoint c;
-			Char surrogates[2];
-			for(Normalizer n(text, form); n.hasNext(); ++n) {
-				c = *n;
-				if(c < 0x010000ul)
-					buffer.sputc(static_cast<Char>(c & 0xffffu));
-				else {
-					assert(isScalarValue(c));
-					Char* temp = surrogates;
-					utf::encode(c, temp);
-					buffer.sputn(surrogates, 2);
-				}
-			}
-			return buffer.str();
 		}
 	}
 }

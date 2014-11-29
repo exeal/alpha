@@ -9,7 +9,6 @@
 
 #include <ascension/directions.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
-#include <ascension/corelib/text/utf-iterator.hpp>	// utf.makeCharacterDecodeIterator
 
 
 namespace ascension {
@@ -104,94 +103,5 @@ namespace ascension {
 		 * }
 		 * @endcode
 		 */
-
-		/// Indicates the iterator is the last.
-		const CodePoint CharacterIterator::DONE = 0xfffffffful;
-
-
-		// StringCharacterIterator ////////////////////////////////////////////////////////////////////////
-
-		const CharacterIterator::ConcreteTypeTag
-			StringCharacterIterator::CONCRETE_TYPE_TAG_ = CharacterIterator::ConcreteTypeTag();
-
-		/// Default constructor.
-		StringCharacterIterator::StringCharacterIterator() BOOST_NOEXCEPT
-				: CharacterIterator(CONCRETE_TYPE_TAG_) {
-		}
-
-		StringCharacterIterator::StringCharacterIterator(const StringPiece& text) :
-				CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.cbegin()), range_(text) {
-		}
-
-		StringCharacterIterator::StringCharacterIterator(const StringPiece& text, const StringPiece::const_iterator start) :
-				CharacterIterator(CONCRETE_TYPE_TAG_), current_(start), range_(text) {
-			if(tell() < beginning() || tell() > end())
-				throw std::invalid_argument("invalid input.");
-		}
-
-		StringCharacterIterator::StringCharacterIterator(const String& text) :
-				CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.data()), range_(text) {
-			if(tell() < beginning() || tell() > end())
-				throw std::invalid_argument("invalid input.");
-		}
-
-		StringCharacterIterator::StringCharacterIterator(const String& text, String::const_iterator start) :
-				CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.data() + (start - std::begin(text))), range_(text) {
-			if(tell() < beginning() || tell() > end())
-				throw std::invalid_argument("invalid input.");
-		}
-
-		/// Copy-constructor.
-		StringCharacterIterator::StringCharacterIterator(const StringCharacterIterator& other) BOOST_NOEXCEPT
-				: CharacterIterator(other), current_(other.current_), range_(other.range_) {
-		}
-
-		/// @see CharacterIterator#doAssign
-		void StringCharacterIterator::doAssign(const CharacterIterator& other) {
-			CharacterIterator::operator=(other);
-			current_ = static_cast<const StringCharacterIterator&>(other).current_;
-			range_ = static_cast<const StringCharacterIterator&>(other).range_;
-		}
-
-		/// @see CharacterIterator#doClone
-		std::unique_ptr<CharacterIterator> StringCharacterIterator::doClone() const {
-			return std::unique_ptr<CharacterIterator>(new StringCharacterIterator(*this));
-		}
-
-		/// @see CharacterIterator#doEquals
-		bool StringCharacterIterator::doEquals(const CharacterIterator& other) const {
-			return tell() == static_cast<const StringCharacterIterator&>(other).tell();
-		}
-
-		/// @see CharacterIterator#doFirst
-		void StringCharacterIterator::doFirst() {
-			current_ = beginning();
-		}
-
-		/// @see CharacterIterator#doLast
-		void StringCharacterIterator::doLast() {
-			current_ = end();
-		}
-
-		/// @see CharacterIterator#doLess
-		bool StringCharacterIterator::doLess(const CharacterIterator& other) const {
-			return tell() < static_cast<const StringCharacterIterator&>(other).tell();
-		}
-
-		/// @see CharacterIterator#doNext
-		void StringCharacterIterator::doNext() {
-			if(tell() == end())
-//				throw std::out_of_range("the iterator is the last.");
-				return;
-			current_ = (++utf::makeCharacterDecodeIterator(beginning(), end(), tell())).tell();
-		}
-
-		/// @see CharacterIterator#doPrevious
-		void StringCharacterIterator::doPrevious() {
-			if(tell() == beginning())
-//				throw std::out_of_range("the iterator is the first.");
-				return;
-			current_ = (--utf::makeCharacterDecodeIterator(beginning(), end(), tell())).tell();
-		}
 	}
 }
