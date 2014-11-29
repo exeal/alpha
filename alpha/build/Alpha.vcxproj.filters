@@ -473,6 +473,15 @@
     <ClCompile Include="..\..\ascension\src\rules\lexical-partition-presentation-reconstructor.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\presentation\presentation-reconstructor.cpp">
+      <Filter>ascension\Source Files\presentation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\presentation\partition-presentation-reconstructor.cpp">
+      <Filter>ascension\Source Files\presentation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\document-character-iterator.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1044,6 +1053,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\partition-presentation-reconstructor.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\string-character-iterator.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

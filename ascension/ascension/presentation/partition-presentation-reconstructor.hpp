@@ -33,8 +33,6 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~PartitionPresentationReconstructor() BOOST_NOEXCEPT {}
-
-		private:
 			/**
 			 * Returns the styled text segments for the specified document region.
 			 * @param region The region to reconstruct the new presentation
@@ -42,7 +40,6 @@ namespace ascension {
 			 */
 			virtual std::unique_ptr<DeclaredStyledTextRunIterator>
 				presentation(const kernel::Region& region) const BOOST_NOEXCEPT = 0;
-			friend class PresentationReconstructor;
 		};
 
 		/// Reconstructs document presentation with single text style.
@@ -54,7 +51,6 @@ namespace ascension {
 			// PartitionPresentationReconstructor
 			std::unique_ptr<DeclaredStyledTextRunIterator> presentation(const kernel::Region& region) const override;
 		private:
-			class Iterator;
 			const std::shared_ptr<const DeclaredTextRunStyle> style_;
 		};
 	}
