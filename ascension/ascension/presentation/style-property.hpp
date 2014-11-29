@@ -81,11 +81,15 @@ namespace ascension {
 			 * @tparam Property @c StyleProperty class template
 			 */
 			template<typename Property>
-			struct SpecifiedValue : boost::mpl::identity<typename Property::value_type> {};
+			struct SpecifiedValue : boost::mpl::identity<typename Property::value_type> {
+				static_assert(!std::is_same<typename std::remove_cv<type>::type, boost::mpl::void_>::value, "");
+			};
 
 			template<typename Property>
 			struct SpecifiedValue<FlowRelativeFourSides<Property>>
-				: boost::mpl::identity<FlowRelativeFourSides<typename SpecifiedValue<Property>::type>> {};
+					: boost::mpl::identity<FlowRelativeFourSides<typename SpecifiedValue<Property>::type>> {
+				static_assert(!std::is_same<typename std::remove_cv<type>::type, boost::mpl::void_>::value, "");
+			};
 
 			/**
 			 * Returns "Computed Value" type of the given property.
@@ -148,6 +152,7 @@ namespace ascension {
 				private boost::equality_comparable<DeclaredValue<Property>, InheritTag>,
 				private boost::equality_comparable<DeclaredValue<Property>, UnsetTag> {
 			public:
+				static_assert(!std::is_same<typename std::remove_cv<type>::type, boost::mpl::void_>::value, "");
 				typedef typename Property::value_type value_type;	///< The type of the contributed value.
 			public:
 #if 0
@@ -319,7 +324,7 @@ namespace ascension {
 			 */
 			template<typename Property>
 			inline void specifiedValueFromCascadedValue(
-					const Property& cascadedValue,
+					const typename DeclaredValue<Property>::type& cascadedValue,
 					const typename ComputedValue<Property>::type& parentComputedValue,
 					typename SpecifiedValue<Property>::type& specifiedValue) {
 				if(cascadedValue == UNSET) {
@@ -348,7 +353,7 @@ namespace ascension {
 			 */
 			template<typename Property, typename Function>
 			inline void specifiedValueFromCascadedValue(
-					const Property& cascadedValue,
+					const typename DeclaredValue<Property>::type& cascadedValue,
 					Function parentComputedValueGenerator,
 					typename SpecifiedValue<Property>::type& specifiedValue) {
 				if(cascadedValue == UNSET) {
