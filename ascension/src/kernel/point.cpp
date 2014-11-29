@@ -471,9 +471,9 @@ namespace ascension {
 					// TODO: there is more efficient implementation.
 					DocumentCharacterIterator i(document, position);
 					if(direction == Direction::FORWARD)
-						while(offset-- > 0) i.next();
+						while(offset-- > 0) ++i;	// TODO: Use std.advance instead.
 					else
-						while(offset-- > 0) i.previous();
+						while(offset-- > 0) --i;	// TODO: Use std.advance instead.
 					return i.tell();
 				} else if(characterUnit == locations::GRAPHEME_CLUSTER) {
 					text::GraphemeBreakIterator<DocumentCharacterIterator> i(
@@ -523,7 +523,7 @@ namespace ascension {
 			Position nextWord(const Point& p, Direction direction, Index words /* = 1 */) {
 				text::WordBreakIterator<DocumentCharacterIterator> i(
 					DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
-					text::AbstractWordBreakIterator::START_OF_SEGMENT, detail::identifierSyntax(p));
+					text::WordBreakIteratorBase::START_OF_SEGMENT, detail::identifierSyntax(p));
 				if(direction == Direction::FORWARD)
 					i += words;
 				else
@@ -541,7 +541,7 @@ namespace ascension {
 			Position nextWordEnd(const Point& p, Direction direction, Index words /* = 1 */) {
 				text::WordBreakIterator<DocumentCharacterIterator> i(
 					DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
-					text::AbstractWordBreakIterator::END_OF_SEGMENT, detail::identifierSyntax(p));
+					text::WordBreakIteratorBase::END_OF_SEGMENT, detail::identifierSyntax(p));
 				if(direction == Direction::FORWARD)
 					i += words;
 				else
