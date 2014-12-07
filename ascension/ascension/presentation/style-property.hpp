@@ -77,17 +77,29 @@ namespace ascension {
 			/// @defgroup style_properties_metafunctions Style Properties Metafunctions
 			/// @{
 			/**
+			 * Base type of other metafunctions.
+			 * @tparam The property type
+			 * @tparam ValueType The value type
+			 */
+			template<typename Property, typename ValueType>
+			struct ValueBase : boost::mpl::identity<ValueType> {
+				static_assert(!std::is_pointer<Property>::value, "'Property' can't be a pointer type.");
+				static_assert(!std::is_reference<Property>::value, "'Property' can't be a reference type.");
+				typedef Property PropertyType;	///< The property type. Usually @c StyleProperty class template.
+			};
+
+			/**
 			 * Returns "Specified Value" type of the given property.
 			 * @tparam Property @c StyleProperty class template
 			 */
 			template<typename Property>
-			struct SpecifiedValue : boost::mpl::identity<typename Property::value_type> {
+			struct SpecifiedValue : ValueBase<Property, typename Property::value_type> {
 				static_assert(!std::is_same<typename std::remove_cv<type>::type, boost::mpl::void_>::value, "");
 			};
 
 			template<typename Property>
 			struct SpecifiedValue<FlowRelativeFourSides<Property>>
-					: boost::mpl::identity<FlowRelativeFourSides<typename SpecifiedValue<Property>::type>> {
+					: ValueBase<Property, FlowRelativeFourSides<typename SpecifiedValue<Property>::type>> {
 				static_assert(!std::is_same<typename std::remove_cv<type>::type, boost::mpl::void_>::value, "");
 			};
 
@@ -96,11 +108,11 @@ namespace ascension {
 			 * @tparam Property @c StyleProperty class template
 			 */
 			template<typename Property>
-			struct ComputedValue : boost::mpl::identity<typename Property::_ComputedValueType> {};
+			struct ComputedValue : ValueBase<Property, typename Property::_ComputedValueType> {};
 
 			template<typename Property>
 			struct ComputedValue<FlowRelativeFourSides<Property>>
-				: boost::mpl::identity<FlowRelativeFourSides<typename ComputedValue<Property>::type>> {};
+				: ValueBase<Property, FlowRelativeFourSides<typename ComputedValue<Property>::type>> {};
 
 			/**
 			 * Computes the given "Specified Value" as specified.
@@ -146,7 +158,7 @@ namespace ascension {
 			 */
 			template<typename Property>
 			class DeclaredValue :
-				public boost::mpl::identity<DeclaredValue<Property>>,
+				public ValueBase<Property, DeclaredValue<Property>>,
 				private boost::equality_comparable<DeclaredValue<Property>>,
 				private boost::equality_comparable<DeclaredValue<Property>, InitialTag>,
 				private boost::equality_comparable<DeclaredValue<Property>, InheritTag>,
@@ -274,8 +286,10 @@ namespace ascension {
 
 			template<typename Property>
 			class DeclaredValue<FlowRelativeFourSides<Property>>
-				: boost::mpl::identity<FlowRelativeFourSides<typename DeclaredValue<Property>::type>> {};
+				: ValueBase<Property, FlowRelativeFourSides<typename DeclaredValue<Property>::type>> {};
 
+			/// @defgroup cascading_and_defaulting Cascading and Defaulting of Style Values
+			/// @{
 			/**
 			 * Implements "Cascading" describe by CSS Cascading and Inheritance Level 3.
 			 * @tparam Property @c StyleProperty class template
