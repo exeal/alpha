@@ -303,16 +303,13 @@ namespace ascension {
 			}
 
 			/**
-			 * Implements "Inheritance" process.
+			 * Implements "Inheritance" process, as root element.
 			 * @tparam Property @c StyleProperty class template
-			 * @param parentComputedValue The "Computed Value" of the parent element, or @c null if the root element
 			 * @param[out] specifiedValue The calculated "Specified Value"
 			 */
 			template<typename Property>
-			inline void inherit(
-					const typename ComputedValue<Property>::type* parentComputedValue,
-					typename SpecifiedValue<Property>::type& specifiedValue) {
-				specifiedValue = (parentComputedValue != nullptr) ? *parentComputedValue : Property::initialValue();
+			inline void inherit(std::nullptr_t, typename SpecifiedValue<Property>::type& specifiedValue) {
+				specifiedValue = Property::initialValue();
 			}
 
 			/**
@@ -324,66 +321,40 @@ namespace ascension {
 			 * @param[out] specifiedValue The calculated "Specified Value"
 			 */
 			template<typename Property, typename Function>
-			inline void inherit(Function parentComputedValueGenerator,
-					typename SpecifiedValue<Property>::type& specifiedValue) {
+			inline void inherit(Function parentComputedValueGenerator, typename SpecifiedValue<Property>::type& specifiedValue) {
 				specifiedValue = parentComputedValueGenerator();
 			}
 
 			/**
 			 * Calculates a "Specified Value" from the given "Cascaded Value" with the defaulting process.
 			 * @tparam Property @c StyleProperty class template
+			 * @tparam ParentComputedValue The type of @a parentComputedValue
 			 * @param cascadedValue The "Cascaded Value" to process or any defaulting ketyword
-			 * @param parentComputedValue The "Computed Value" of the parent element, or @c null if the root element
+			 * @param parentComputedValue Either of the followings give the "Computed Value" of the parent element: (a)
+			 *                            A literal value of type @c ComputedValue&lt;Property&gt;::type. (b) A
+			 *                            function takes no parameter and returns the. (c) An object of type
+			 *                            @c HandleAsRoot if the element is the root
 			 * @param[out] specifiedValue The calculated "Specified Value"
 			 */
-			template<typename Property>
+			template<typename Property, typename ParentComputedValue>
 			inline void specifiedValueFromCascadedValue(
 					const typename DeclaredValue<Property>::type& cascadedValue,
-					const typename ComputedValue<Property>::type& parentComputedValue,
-					typename SpecifiedValue<Property>::type& specifiedValue) {
+					const ParentComputedValue& parentComputedValue, typename SpecifiedValue<Property>::type& specifiedValue) {
 				if(cascadedValue == UNSET) {
 					if(Property::INHERITED)
-						inherit(parentComputedValue, specifiedValue);
+						inherit<Property>(parentComputedValue, specifiedValue);
 					else
 						specifiedValue = Property::initialValue();
 				} else if(!cascadedValue.isDefaultingKeyword())
-					specifiedValue = cascadedValue;
+					specifiedValue = cascadedValue.get();
 				else if(cascadedValue == INITIAL)
 					specifiedValue = Property::initialValue();
 				else if(cascadedValue == INHERIT)
-					inherit(specifiedValue, parentComputedValue);
+					inherit<Property>(parentComputedValue, specifiedValue);
 				else
 					ASCENSION_ASSERT_NOT_REACHED();
 			}
-
-			/**
-			 * Calculates a "Specified Value" from the given "Cascaded Value" with the defaulting process.
-			 * @tparam Property @c StyleProperty class template
-			 * @tparam Function The type of @a parentComputedValueGenerator
-			 * @param cascadedValue The "Cascaded Value" to process or any defaulting ketyword
-			 * @param parentComputedValueGenerator The function takes no parameter and returns the "Computed Value" of
-			 *                                     the parent element
-			 * @param[out] specifiedValue The calculated "Specified Value"
-			 */
-			template<typename Property, typename Function>
-			inline void specifiedValueFromCascadedValue(
-					const typename DeclaredValue<Property>::type& cascadedValue,
-					Function parentComputedValueGenerator,
-					typename SpecifiedValue<Property>::type& specifiedValue) {
-				if(cascadedValue == UNSET) {
-					if(Property::INHERITED)
-						inherit(parentComputedValueGenerator, specifiedValue);
-					else
-						specifiedValue = Property::initialValue();
-				} else if(!cascadedValue.isDefaultingKeyword())
-					specifiedValue = cascadedValue;
-				else if(cascadedValue == INITIAL)
-					specifiedValue = Property::initialValue();
-				else if(cascadedValue == INHERIT)
-					inherit(specifiedValue, parentComputedValueGenerator);
-				else
-					ASCENSION_ASSERT_NOT_REACHED();
-			}
+			/// @}
 		}
 	}
 } // namespace ascension.presentation
