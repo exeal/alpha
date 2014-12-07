@@ -128,6 +128,15 @@ namespace ascension {
 					= *boost::fusion::find<typename styles::SpecifiedValue<Property>::type>(specifiedValues);
 			}
 			/// @}
+
+			namespace detail {
+				// for boost.fusion.transform
+				template<template<typename> class Metafunction>
+				struct ValueConverter {
+					template<typename Property>
+					typename Metafunction<Property>::type operator()(const Property&) const BOOST_NOEXCEPT;	// only definition
+				};
+			}
 		}
 
 		/**

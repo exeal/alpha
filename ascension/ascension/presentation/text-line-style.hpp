@@ -24,8 +24,6 @@
 #include <boost/flyweight/flyweight_fwd.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
-#include <boost/mpl/placeholders.hpp>
-#include <boost/mpl/transform.hpp>
 #include <memory>
 
 namespace ascension {
@@ -67,8 +65,13 @@ namespace ascension {
 		// TODO: Check uniqueness of the members of TextLineStyle.
 
 		/// "Declared Values" of @c TextLineStyle.
-		class DeclaredTextLineStyle : public boost::mpl::transform<TextLineStyle, styles::DeclaredValue<boost::mpl::_1>>::type,
-			public FastArenaObject<DeclaredTextLineStyle>, public std::enable_shared_from_this<DeclaredTextLineStyle> {
+		class DeclaredTextLineStyle :
+			public boost::fusion::result_of::as_vector<
+				boost::fusion::result_of::transform<
+					TextLineStyle, styles::detail::ValueConverter<styles::DeclaredValue>
+				>::type
+			>::type,
+			public std::enable_shared_from_this<DeclaredTextLineStyle> {
 		public:
 			DeclaredTextLineStyle();
 			/// Returns the default @c DeclaredTextRunStyle of this line element.
@@ -83,24 +86,20 @@ namespace ascension {
 		};
 
 		/// "Specified Values" of @c TextLineStyle.
-#if 1
 		struct SpecifiedTextLineStyle :
-			boost::mpl::transform<TextLineStyle, styles::SpecifiedValue<boost::mpl::_1>>::type {};
-#else
-		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextLineStyle, styles::SpecifiedValue<boost::mpl::_1>>::type
-		>::type SpecifiedTextLineStyle;
-#endif
+			boost::fusion::result_of::as_vector<
+				boost::fusion::result_of::transform<
+					TextLineStyle, styles::detail::ValueConverter<styles::SpecifiedValue>
+				>::type
+			>::type {};
 
 		/// "Computed Values" of @c TextLineStyle.
-#if 1
 		struct ComputedTextLineStyle :
-			boost::mpl::transform<TextLineStyle, styles::ComputedValue<boost::mpl::_1>>::type {};
-#else
-		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextLineStyle, styles::ComputedValue<boost::mpl::_1>>::type
-		>::type ComputedTextLineStyle;
-#endif
+			boost::fusion::result_of::as_vector<
+				boost::fusion::result_of::transform<
+					TextLineStyle, styles::detail::ValueConverter<styles::ComputedValue>
+				>::type
+			>::type {};
 
 		namespace styles {
 			template<> class DeclaredValue<TextLineStyle> : public boost::mpl::identity<DeclaredTextLineStyle> {};
