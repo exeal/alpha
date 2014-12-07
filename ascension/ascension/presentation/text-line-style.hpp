@@ -103,6 +103,7 @@ namespace ascension {
 #endif
 
 		namespace styles {
+			template<> class DeclaredValue<TextLineStyle> : public boost::mpl::identity<DeclaredTextLineStyle> {};
 			template<> struct SpecifiedValue<TextLineStyle> : boost::mpl::identity<SpecifiedTextLineStyle> {};
 			template<> struct ComputedValue<TextLineStyle> : boost::mpl::identity<ComputedTextLineStyle> {};
 		}
