@@ -17,7 +17,6 @@
 #include <boost/core/null_deleter.hpp>
 #include <boost/foreach.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
-//using graphics::font::TextRenderer;
 
 
 namespace ascension {
@@ -105,35 +104,43 @@ namespace ascension {
 		namespace {
 			template<typename Styles>
 			struct SpecifiedValuesFromCascadedValues {
-				SpecifiedValuesFromCascadedValues(const Styles& cascadedValues,
+				SpecifiedValuesFromCascadedValues(
+					const typename styles::DeclaredValue<Styles>::type& cascadedValues,
 					const typename styles::ComputedValue<Styles>::type& parentComputedValues,
 					typename styles::SpecifiedValue<Styles>::type& specifiedValues) :
 					cascadedValues(cascadedValues), parentComputedValues(parentComputedValues), specifiedValues(specifiedValues) {}
 				template<typename SpecifiedValue>
-				void operator()(SpecifiedValue& specifiedValue) {
+				void operator()(SpecifiedValue& specifiedValue) const {
 					typedef boost::fusion::result_of::find<
 						typename styles::SpecifiedValue<Styles>::type, SpecifiedValue
 					>::type I;
 					static_assert(
-						!std::is_same<I, boost::fusion::result_of::end<typename styles::SpecifiedValue<Styles>::type>::type>::value,
+						!std::is_same<
+							I, boost::fusion::result_of::end<
+								typename styles::SpecifiedValue<Styles>::type
+							>::type
+						>::value,
 						"SpecifiedValue was not found in SpecifiedTextLineStyle.");
 					typedef boost::fusion::result_of::distance<
-						boost::fusion::result_of::begin<typename styles::SpecifiedValue<Styles>::type>::type, I
+						boost::fusion::result_of::begin<
+							typename styles::SpecifiedValue<Styles>::type
+						>::type, I
 					>::type Index;
-					styles::specifiedValueFromCascadedValue(
+					styles::specifiedValueFromCascadedValue<boost::fusion::result_of::value_at<Styles, Index>::type>(
 						boost::fusion::at<Index>(cascadedValues), boost::fusion::at<Index>(parentComputedValues), specifiedValue);
 				}
-				const Styles& cascadedValues;
+				const typename styles::DeclaredValue<Styles>::type& cascadedValues;
 				const typename styles::ComputedValue<Styles>::type& parentComputedValues;
-				typename styles::SpecifiedValue<Styles>::type& specifiedValues;
+				mutable typename styles::SpecifiedValue<Styles>::type& specifiedValues;	// mutable because of boost.fusion.for_each
 			};
 
 			template<typename Styles>
-			void specifiedValuesFromCascadedValues(const Styles& cascadedValues,
+			void specifiedValuesFromCascadedValues(
+					const typename styles::DeclaredValue<Styles>::type& cascadedValues,
 					const typename styles::ComputedValue<Styles>::type& parentComputedValues,
 					typename styles::SpecifiedValue<Styles>::type& specifiedValues) {
-				SpecifiedValuesFromCascadedValues<Styles> compressor(cascadedValues, parentComputedValues, specifiedValues);
-				boost::fusion::for_each(specifiedValues, compressor);
+				const SpecifiedValuesFromCascadedValues<Styles> compressor(cascadedValues, parentComputedValues, specifiedValues);
+//				boost::fusion::for_each(specifiedValues, compressor);
 			}
 		}
 
@@ -157,7 +164,7 @@ namespace ascension {
 //			styles::cascade(declared);
 
 			SpecifiedTextLineStyle specified;
-			specifiedValuesFromCascadedValues(static_cast<const TextLineStyle&>(*declared), computedStyles_->forLines.get(), specified);
+			specifiedValuesFromCascadedValues<TextLineStyle>(*declared, computedStyles_->forLines.get(), specified);
 		}
 
 		namespace {		
@@ -179,9 +186,13 @@ namespace ascension {
 				}
 				boost::flyweight<ComputedTextRunStyle> style() const override {
 					const std::shared_ptr<const DeclaredTextRunStyle> declared(declaration_->style());
-//					cascade();
+#if 0
+					const DeclaredTextRunStyle& cascaded = styles::cascade(declared);
+#else
+					const DeclaredTextRunStyle& cascaded = *declared;
+#endif
 					SpecifiedTextRunStyle specified;
-					specifiedValuesFromCascadedValues(static_cast<const TextRunStyle&>(*declared), parentComputedStyle_, specified);
+					specifiedValuesFromCascadedValues<TextRunStyle>(cascaded, parentComputedStyle_, specified);
 					return compute(specified, context_, parentComputedStyle_);
 				}
 
@@ -229,7 +240,7 @@ namespace ascension {
 				if(textLineStyleDeclarator_.get() != nullptr)
 					declared = textLineStyleDeclarator_->declareTextLineStyle(boost::get(line));
 #if 0
-				const DeclaredTextLineStyle& cascaded = cascade(declared);
+				const DeclaredTextLineStyle& cascaded = styles::cascade(declared);
 #else
 				const DeclaredTextLineStyle& cascaded = *declared;
 #endif
@@ -242,7 +253,11 @@ namespace ascension {
 				static_assert(!std::is_same<std::decay<decltype(cascadedDirection)>::type, boost::mpl::void_>::value, "");
 				static_assert(!std::is_same<std::decay<decltype(computedParentDirection)>::type, boost::mpl::void_>::value, "");
 				styles::specifiedValueFromCascadedValue<styles::Direction>(
-					cascadedDirection, computedParentDirection, specifiedDirection);
+					cascadedDirection,
+					[&computedParentDirection]() {
+						return computedParentDirection;
+					},
+					specifiedDirection);
 
 				styles::SpecifiedValue<styles::TextOrientation>::type specifiedTextOrientation;
 				const auto& cascadedTextOrientation(*boost::fusion::find<styles::DeclaredValue<styles::TextOrientation>::type>(cascaded));
@@ -250,7 +265,11 @@ namespace ascension {
 				static_assert(!std::is_same<std::decay<decltype(cascadedTextOrientation)>::type, boost::mpl::void_>::value, "");
 				static_assert(!std::is_same<std::decay<decltype(computedParentTextOrientation)>::type, boost::mpl::void_>::value, "");
 				styles::specifiedValueFromCascadedValue<styles::TextOrientation>(
-					cascadedTextOrientation, computedParentTextOrientation, specifiedTextOrientation);
+					cascadedTextOrientation,
+					[&computedParentTextOrientation]() {
+						return computedParentTextOrientation;
+					},
+					specifiedTextOrientation);
 
 				styles::ComputedValue<styles::Direction>::type computedDirection(specifiedDirection);	// TODO: compute as specified
 				styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(specifiedTextOrientation);	// TODO: compute as specified
@@ -408,20 +427,27 @@ namespace ascension {
 		void Presentation::setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle> newStyle) {
 			std::shared_ptr<const DeclaredTextToplevelStyle> newlyDeclared = (newStyle.get() != nullptr) ? newStyle
 				: std::shared_ptr<const DeclaredTextToplevelStyle>(&DeclaredTextToplevelStyle::unsetInstance(), boost::null_deleter());
-//			cascade();
+#if 0
+			const DeclaredTextToplevelStyle& newlyCascaded = styles::cascade(newlyDeclared);
+#else
+			const DeclaredTextToplevelStyle& newlyCascaded = *newlyDeclared;
+#endif
+
+			const auto& cascadedWritingMode(*boost::fusion::find<styles::DeclaredValue<styles::WritingMode>::type>(newlyCascaded));
+			static_assert(!std::is_same<std::decay<decltype(cascadedWritingMode)>::type, boost::mpl::void_>::value, "");
 			SpecifiedTextToplevelStyle newlySpecified;
-			styles::specifiedValueFromCascadedValue<styles::WritingMode>(
-				*boost::fusion::find<styles::DeclaredValue<styles::WritingMode>::type>(*newStyle),
-				nullptr, *boost::fusion::find<styles::SpecifiedValue<styles::WritingMode>::type>(newlySpecified));
-			const boost::flyweight<ComputedTextToplevelStyle> newlyComputed(compute(newlySpecified));
+			auto& specifiedWritingMode(*boost::fusion::find<styles::SpecifiedValue<styles::WritingMode>::type>(newlySpecified));
+			static_assert(!std::is_same<std::decay<decltype(specifiedWritingMode)>::type, boost::mpl::void_>::value, "");
+			styles::specifiedValueFromCascadedValue<styles::WritingMode>(cascadedWritingMode, nullptr, specifiedWritingMode);
+			boost::flyweight<ComputedTextToplevelStyle> newlyComputed(compute(newlySpecified));
 
 			// commit
-			std::shared_ptr<const DeclaredTextToplevelStyle> previouslyDeclared;
-			boost::flyweight<ComputedTextToplevelStyle> previouslyComputed;
+			std::shared_ptr<const DeclaredTextToplevelStyle> previouslyDeclared(declaredTextToplevelStyle_);
+			boost::flyweight<ComputedTextToplevelStyle> previouslyComputed(computedStyles_->forToplevel);
 			using boost::swap;
 			using std::swap;
-			swap(newlyDeclared, previouslyDeclared);
-			swap(newlyComputed, previouslyComputed);
+			swap(newlyDeclared, declaredTextToplevelStyle_);
+			swap(newlyComputed, computedStyles_->forToplevel);
 			if(previouslyDeclared.get() != nullptr)
 				computedTextToplevelStyleListeners_.notify
 					<std::shared_ptr<const DeclaredTextToplevelStyle>, boost::flyweight<ComputedTextToplevelStyle>>(
