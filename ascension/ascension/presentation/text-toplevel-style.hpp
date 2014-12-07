@@ -11,6 +11,9 @@
 
 #ifndef ASCENSION_TEXT_TOP_LEVEL_STYLE_HPP
 #define ASCENSION_TEXT_TOP_LEVEL_STYLE_HPP
+#ifndef FUSION_MAX_VECTOR_SIZE
+#	define FUSION_MAX_VECTOR_SIZE 40
+#endif
 
 #include <ascension/corelib/memory.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
@@ -18,8 +21,6 @@
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
 #include <boost/fusion/sequence/comparison/equal_to.hpp>
-#include <boost/mpl/placeholders.hpp>
-#include <boost/mpl/transform.hpp>
 #include <memory>
 
 namespace ascension {
@@ -40,8 +41,13 @@ namespace ascension {
 		// TODO: Check uniqueness of the members of TextToplevelStyle.
 
 		/// "Declared Values" of @c TextToplevelStyle.
-		class DeclaredTextToplevelStyle : public TextToplevelStyle,
-			public FastArenaObject<DeclaredTextToplevelStyle>, public std::enable_shared_from_this<DeclaredTextToplevelStyle> {
+		class DeclaredTextToplevelStyle : 
+			public boost::fusion::result_of::as_vector<
+				boost::fusion::result_of::transform<
+					TextToplevelStyle, styles::detail::ValueConverter<styles::DeclaredValue>
+				>::type
+			>::type,
+			public std::enable_shared_from_this<DeclaredTextToplevelStyle> {
 		public:
 			DeclaredTextToplevelStyle();
 			/// Returns the default @c DeclaredTextLineStyle of this toplevel element.
@@ -56,24 +62,20 @@ namespace ascension {
 		};
 
 		/// "Specified Values" of @c TextToplevelStyle.
-#if 1
 		struct SpecifiedTextToplevelStyle :
-			boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValue<boost::mpl::_1>>::type {};
-#else
-		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextToplevelStyle, styles::SpecifiedValue<boost::mpl::_1>>::type
-		>::type SpecifiedTextToplevelStyle;
-#endif
+			boost::fusion::result_of::as_vector<
+				boost::fusion::result_of::transform<
+					TextToplevelStyle, styles::detail::ValueConverter<styles::SpecifiedValue>
+				>::type
+			>::type {};
 
 		/// "Computed Values" of @c TextToplevelStyle.
-#if 1
 		struct ComputedTextToplevelStyle :
-			boost::mpl::transform<TextToplevelStyle, styles::ComputedValue<boost::mpl::_1>>::type {};
-#else
-		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextToplevelStyle, styles::ComputedValue<boost::mpl::_1>>::type
-		>::type ComputedTextToplevelStyle;
-#endif
+			boost::fusion::result_of::as_vector<
+				boost::fusion::result_of::transform<
+					TextToplevelStyle, styles::detail::ValueConverter<styles::ComputedValue>
+				>::type
+			>::type {};
 
 		namespace styles {
 			template<> class DeclaredValue<TextToplevelStyle> : public boost::mpl::identity<DeclaredTextToplevelStyle> {};

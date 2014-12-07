@@ -27,8 +27,6 @@
 #include <boost/flyweight/flyweight_fwd.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
-#include <boost/mpl/placeholders.hpp>
-#include <boost/mpl/transform.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -91,8 +89,13 @@ namespace ascension {
 
 		// TODO: Check uniqueness of the members of TextRunStyle.
 
-		class DeclaredTextRunStyle : public TextRunStyle,
-				public FastArenaObject<DeclaredTextRunStyle>, public std::enable_shared_from_this<DeclaredTextRunStyle> {
+		class DeclaredTextRunStyle :
+			public boost::fusion::result_of::as_vector<
+				boost::fusion::result_of::transform<
+					TextRunStyle, styles::detail::ValueConverter<styles::DeclaredValue>
+				>::type
+			>::type,
+			public std::enable_shared_from_this<DeclaredTextRunStyle> {
 		public:
 #ifndef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
 			DeclaredTextRunStyle() = default;
@@ -103,24 +106,20 @@ namespace ascension {
 		};
 
 		/// "Specified Values" of @c TextRunStyle.
-#if 1
 		struct SpecifiedTextRunStyle :
-			boost::mpl::transform<TextRunStyle, styles::SpecifiedValue<boost::mpl::_1>>::type {};
-#else
-		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextRunStyle, styles::SpecifiedValue<boost::mpl::_1>>::type
-		>::type SpecifiedTextRunStyle;
-#endif
+			boost::fusion::result_of::as_vector<
+				boost::fusion::result_of::transform<
+					TextRunStyle, styles::detail::ValueConverter<styles::SpecifiedValue>
+				>::type
+			>::type {};
 
 		/// "Computed Values" of @c TextRunStyle.
-#if 1
 		struct ComputedTextRunStyle :
-			boost::mpl::transform<TextRunStyle, styles::ComputedValue<boost::mpl::_1>>::type {};
-#else
-		typedef boost::fusion::result_of::as_vector<
-			boost::mpl::transform<TextRunStyle, styles::ComputedValue<boost::mpl::_1>>::type
-		>::type ComputedTextRunStyle;
-#endif
+			boost::fusion::result_of::as_vector<
+				boost::fusion::result_of::transform<
+					TextRunStyle, styles::detail::ValueConverter<styles::ComputedValue>
+				>::type
+			>::type {};
 
 		namespace styles {
 			template<> class DeclaredValue<TextRunStyle> : public boost::mpl::identity<DeclaredTextRunStyle> {};
