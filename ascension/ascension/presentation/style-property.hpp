@@ -232,15 +232,15 @@ namespace ascension {
 					return get() == other.get();
 				}
 				/// Equality operator returns @c true if this specifies 'initial' keyword.
-				bool operator==(const InitialTag&) {
+				bool operator==(const InitialTag&) const BOOST_NOEXCEPT {
 					return defaultingKeyword_ == &INITIAL;
 				}
 				/// Equality operator returns @c true if this specifies 'inherit' keyword.
-				bool operator==(const InheritTag&) {
+				bool operator==(const InheritTag&) const BOOST_NOEXCEPT {
 					return defaultingKeyword_ == &INHERIT;
 				}
 				/// Equality operator returns @c true if this specifies 'unset' keyword.
-				bool operator==(const UnsetTag&) {
+				bool operator==(const UnsetTag&) const BOOST_NOEXCEPT {
 					return defaultingKeyword_ == &UNSET;
 				}
 
