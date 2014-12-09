@@ -27,7 +27,7 @@
 namespace ascension {
 	namespace presentation {
 		namespace styles {
-			/// @defgroup css3_text CSS Text Module Level 3
+			/// @defgroup css_text_3 CSS Text Module Level 3
 			/// @see CSS Text Module Level 3 - W3C Last Call Working Draft 10 October 2013
 			///      (http://www.w3.org/TR/css3-text/)
 			/// @{
@@ -273,35 +273,9 @@ namespace ascension {
 			class Presentation;
 			TextAnchor defaultTextAnchor(const Presentation& presentation);
 			
-			/// Enumerated values for @c TextJustification. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextJustificationEnums)
-				/// The UA determines the justification algorithm to follow, based on a balance between performance and
-				/// adequate presentation quality.
-				AUTO,
-				/// Justification is disabled: there are no expansion opportunities within the text.
-				NONE,
-				/// Justification adjusts spacing at word separators only (effectively varying the used ‘word-spacing’
-				/// on the line). This behavior is typical for languages that separate words using spaces, like English
-				/// or Korean.
-				INTER_WORD,
-				/// Justification adjusts spacing between each pair of adjacent characters (effectively varying the
-				/// used ‘letter-spacing’ on the line). This value is sometimes used in e.g. Japanese.
-				DISTRIBUTE/*,
-				INTER_IDEOGRAPH,
-				INTER_CLUSTER,
-				KASHIDA*/
-			ASCENSION_SCOPED_ENUMS_END;
-
-			/**
-			 * [Copied from CSS3] This property selects the justification method used when a line's alignment is set to
-			 * ‘justify’ (see ‘text-align’). The property applies to block containers, but the UA may (but is not
-			 * required to) also support it on inline elements.
-			 * @see CSS Text Module Level 3, 7.3. Justification Method: the ‘text-justify’ property
-			 *      (http://www.w3.org/TR/css3-text/#text-justify-property)
-			 * @note The name of this type is @c TextJustification, not @c TextJustify.
-			 */
+			/// @see graphics#font#TextJustification
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextJustificationEnums), TextJustificationEnums::AUTO>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextJustification), graphics::font::TextJustification::AUTO>,
 				Inherited<true>
 			> TextJustification;
 

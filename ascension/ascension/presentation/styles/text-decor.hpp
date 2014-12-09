@@ -23,7 +23,7 @@ namespace ascension {
 	namespace presentation {
 		namespace styles {
 			/**
-			 * @defgroup css3_text_decor CSS Text Decoration Module Level 3
+			 * @defgroup css_text_decor_3 CSS Text Decoration Module Level 3
 			 * @see CSS Text Decoration Module Level 3 - W3C Candidate Recommendation 1 August 2013
 			 *      (http://www.w3.org/TR/css-text-decor-3/)
 			 * @{

@@ -18,7 +18,7 @@
 namespace ascension {
 	namespace presentation {
 		namespace styles {
-			/// @defgroup css3_writing_modes CSS Writing Modes Level 3
+			/// @defgroup css_writing_modes_3 CSS Writing Modes Level 3
 			/// @see CSS Writing Modes Level 3 - W3C Candidate Recommendation, 20 March 2014
 			///      (http://www.w3.org/TR/css-writing-modes-3/)
 			/// @{

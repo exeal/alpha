@@ -24,9 +24,9 @@ namespace ascension {
 	namespace presentation {
 		namespace styles {
 			/**
-			 * @defgroup css3_background CSS Backgrounds and Borders Module Level 3
+			 * @defgroup css_background_3 CSS Backgrounds and Borders Module Level 3
 			 * @see CSS Backgrounds and Borders Module Level 3 - W3C Candidate Recommendation, 9 September 2014
-			 *      (http://www.w3.org/TR/css3-background/)
+			 *      (http://www.w3.org/TR/css-background-3/)
 			 * @{
 			 */
 			/// A tag type for @c BackgroundColor.
@@ -40,14 +40,14 @@ namespace ascension {
 			 * [Copied from CSS3] This property sets the background color of an element. The color is drawn behind any
 			 * background images.
 			 * @see CSS Backgrounds and Borders Module Level 3, 3.2. Base Color: the ‘background-color’ property
-			 *      (http://www.w3.org/TR/css3-background/#the-background-color)
+			 *      (http://www.w3.org/TR/css-background-3/#the-background-color)
 			 * @see XSL 1.1, 7.8.2 "background-color" (http://www.w3.org/TR/xsl/#background-color)
 			 */
 			typedef TypedColor<BackgroundColorSpec> BackgroundColor;
 
 			/**
 			 * @see CSS Backgrounds and Borders Module Level 3, 3.1. Layering Multiple Background Images
-			 *      (http://www.w3.org/TR/css3-background/#layering)
+			 *      (http://www.w3.org/TR/css-background-3/#layering)
 			 */
 			struct Layer {
 				struct Image {} image;
@@ -91,7 +91,7 @@ namespace ascension {
 			 * [Copied from CSS3] This property sets the foreground color of the border specified by the border-style
 			 * properties. @c boost#none means 'currentColor'.
 			 * @see CSS Backgrounds and Borders Module Level 3, 4.1. Line Colors: the ‘border-color’ property
-			 *      (http://www.w3.org/TR/css3-background/#the-border-color)
+			 *      (http://www.w3.org/TR/css-background-3/#the-border-color)
 			 */
 			typedef TypedColor<BorderColorSpec> BorderColor;
 
@@ -105,7 +105,7 @@ namespace ascension {
 			/**
 			 * [Copied from CSS3] This property sets the style of the border, unless there is a border image.
 			 * @see CSS Backgrounds and Borders Module Level 3, 4.2. Line Patterns: the ‘border-style’ properties
-			 *      (http://www.w3.org/TR/css3-background/#the-border-style)
+			 *      (http://www.w3.org/TR/css-background-3/#the-border-style)
 			 */
 			typedef StyleProperty<
 				Enumerated<BOOST_SCOPED_ENUM_NATIVE(BorderStyleEnums), BorderStyleEnums::NONE>,
@@ -126,7 +126,7 @@ namespace ascension {
 			/**
 			 * [Copied from CSS3] This property sets the thickness of the border.
 			 * @see CSS Backgrounds and Borders Module Level 3, 4.3. Line Thickness: the ‘border-width’ properties
-			 *      (http://www.w3.org/TR/css3-background/#the-border-width)
+			 *      (http://www.w3.org/TR/css-background-3/#the-border-width)
 			 */
 			typedef StyleProperty<
 				Complex<Length, &detail::makeMediumBorderWidth>,

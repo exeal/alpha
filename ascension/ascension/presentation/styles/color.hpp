@@ -19,8 +19,8 @@
 namespace ascension {
 	namespace presentation {
 		namespace styles {
-			/// @defgroup css3_color CSS Color Module Level 3
-			/// @see CSS Color Module Level 3 - W3C Recommendation, 07 June 2011 (http://www.w3.org/TR/css3-color/)
+			/// @defgroup css_color_3 CSS Color Module Level 3
+			/// @see CSS Color Module Level 3 - W3C Recommendation, 07 June 2011 (http://www.w3.org/TR/css-color-3/)
 			/// @{
 			/**
 			 * Base type of @c Color and other color-related properties. @c boost#none means 'currentColor' in CSS 3.
@@ -69,7 +69,7 @@ namespace ascension {
 			/**
 			 * [Copied from CSS3] This property describes the foreground color of an element's text content.
 			 * @see CSS Color Module Level 3, 3.1. Foreground color: the ÅecolorÅf property
-			 *      (http://www.w3.org/TR/css3-color/#foreground)
+			 *      (http://www.w3.org/TR/css-color-3/#foreground)
 			 * @see SVG 1.1 (Second Edition), 12.2 The ÅecolorÅf property
 			 *      (http://www.w3.org/TR/SVG11/color.html#ColorProperty)
 			 * @see XSL 1.1, 7.18.1 "color" (http://www.w3.org/TR/xsl/#color)

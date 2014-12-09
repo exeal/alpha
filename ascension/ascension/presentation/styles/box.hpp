@@ -22,7 +22,7 @@
 namespace ascension {
 	namespace presentation {
 		namespace styles {
-			/// @defgroup css3_basic_box_model CSS basic box model
+			/// @defgroup css_box_3 CSS basic box model
 			/// @see CSS basic box model, Editor's Draft 12 October 2013 (http://dev.w3.org/csswg/css-box/)
 			/// @{
 
@@ -35,7 +35,7 @@ namespace ascension {
 			 * [Copied from CSS3] Sets the thickness of the padding area. The value may not be negative.
 			 * @c std#tuple&lt;&gt; means 'auto' keyword.
 			 * @see CSS basic box model, 7. The padding properties
-			 *      (http://dev.w3.org/csswg/css3-box/#the-padding-properties)
+			 *      (http://dev.w3.org/csswg/css-box-3/#the-padding-properties)
 			 */
 			typedef StyleProperty<
 				Multiple<
@@ -59,7 +59,7 @@ namespace ascension {
 			/**
 			 * [Copied from CSS3] These properties set the thickness of the margin area. The value may be negative.
 			 * @c std#tuple&lt;&gt; means 'auto' keyword.
-			 * @see CSS basic box model, 8. Margins (http://dev.w3.org/csswg/css3-box/#margins)
+			 * @see CSS basic box model, 8. Margins (http://dev.w3.org/csswg/css-box-3/#margins)
 			 */
 			typedef StyleProperty<
 				Multiple<
@@ -73,7 +73,7 @@ namespace ascension {
 			/**
 			 * [Copied from CSS3] These properties specify the width and height of the content area or border area
 			 * (depending on ‘box-sizing’) of certain boxes.
-			 * @see CSS basic box model, 9. The width and height properties (http://dev.w3.org/csswg/css-box/#width)
+			 * @see CSS basic box model, 9. The width and height properties (http://dev.w3.org/csswg/css-box-3/#width)
 			 */
 			typedef StyleProperty<
 				MultipleWithInitialIndex<

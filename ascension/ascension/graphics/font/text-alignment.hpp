@@ -16,9 +16,8 @@
 namespace ascension {
 	namespace graphics {
 		namespace font {
-
-			// from CSS Line Layout Module Level 3 ////////////////////////////////////////////////
-
+			/// @addtogroup css_inline_3
+			/// @{
 			/**
 			 * [Copied from CSS3] This property enumerates which aspects of the elements in a line box contribute to
 			 * the height height of that line box.
@@ -142,15 +141,16 @@ namespace ascension {
 				/// parent.
 				MATHEMATICAL
 			ASCENSION_SCOPED_ENUMS_END;
+			/// @}
 
-			// from CSS Text Level 3 //////////////////////////////////////////////////////////////////////////////////
-
+			/// @addtogroup css_text_3
+			/// @{
 			/**
 			 * [Copied from CSS3] This property describes how the inline-level content of a block is aligned along the
 			 * inline axis if the content does not completely fill the line box.
 			 * @see resolveTextAlignment, TextLineStyle#alignment, TextLineStyle#lastSublineAlignment, defaultTextAnchor
 			 * @see CSS Text Module Level 3, 7.1. Text Alignment: the ‘text-align’ property
-			 *      (http://www.w3.org/TR/css3-text/#text-align-property)
+			 *      (http://www.w3.org/TR/css-text-3/#text-align-property)
 			 * @see XSL 1.1, 7.16.9 "text-align"
 			 *      (http://www.w3.org/TR/2006/REC-xsl11-20061205/#text-align)
 			 */
@@ -178,6 +178,33 @@ namespace ascension {
 				/// and ‘end’ alignment of any remaining lines.
 				START_END
 			ASCENSION_SCOPED_ENUMS_END;
+
+			/**
+			 * [Copied from CSS3] This property selects the justification method used when a line's alignment is set to
+			 * ‘justify’ (see ‘text-align’). The property applies to block containers, but the UA may (but is not
+			 * required to) also support it on inline elements.
+			 * @see CSS Text Module Level 3, 7.3. Justification Method: the ‘text-justify’ property
+			 *      (http://www.w3.org/TR/css-text-3/#text-justify-property)
+			 * @note The name of this type is @c TextJustification, not @c TextJustify.
+			 */
+			ASCENSION_SCOPED_ENUMS_BEGIN(TextJustification)
+				/// The UA determines the justification algorithm to follow, based on a balance between performance and
+				/// adequate presentation quality.
+				AUTO,
+				/// Justification is disabled: there are no expansion opportunities within the text.
+				NONE,
+				/// Justification adjusts spacing at word separators only (effectively varying the used ‘word-spacing’
+				/// on the line). This behavior is typical for languages that separate words using spaces, like English
+				/// or Korean.
+				INTER_WORD,
+				/// Justification adjusts spacing between each pair of adjacent characters (effectively varying the
+				/// used ‘letter-spacing’ on the line). This value is sometimes used in e.g. Japanese.
+				DISTRIBUTE/*,
+				INTER_IDEOGRAPH,
+				INTER_CLUSTER,
+				KASHIDA*/
+			ASCENSION_SCOPED_ENUMS_END;
+			/// @}
 	
 			/**
 			 * [Copied from SVG11] The ‘text-anchor’ property is used to align (start-, middle- or end-alignment) a
