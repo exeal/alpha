@@ -3,7 +3,7 @@
  * @date 2003-2006 (was LineLayout.h)
  * @date 2006-2010
  * @date 2010-11-20 renamed from ascension/layout.hpp
- * @date 2011-2013
+ * @date 2011-2014
  */
 
 #ifndef ASCENSION_TEXT_LAYOUT_HPP
@@ -11,7 +11,9 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
+#include <ascension/directions.hpp>
 #include <ascension/graphics/color.hpp>
+#include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
 #include <memory>	// std.unique_ptr
 #include <vector>
@@ -24,6 +26,7 @@
 namespace ascension {
 
 	namespace presentation {
+		struct ComputedTextLineStyle;
 		class Presentation;
 	}
 
@@ -81,7 +84,6 @@ namespace ascension {
 			};
 
 //			class ComputedStyledTextRunIterator;
-//			struct ComputedTextLineStyle;
 			class TextPaintOverride;
 			class TabExpander;
 			class TextRun;
@@ -159,7 +161,7 @@ namespace ascension {
 #endif
 			public:
 				TextLayout(const String& textString,
-					const ComputedTextLineStyle& lineStyle,
+					const presentation::ComputedTextLineStyle& lineStyle,
 					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
 					const FontCollection& fontCollection,
 					const FontRenderContext& fontRenderContext);
@@ -167,7 +169,7 @@ namespace ascension {
 
 				/// @name General Attributes
 				/// @{
-				presentation::TextAnchor anchor(Index line) const;
+				TextAnchor anchor(Index line) const;
 				std::uint8_t characterLevel() const BOOST_NOEXCEPT;
 				std::uint8_t characterLevel(Index offset) const;
 				bool isBidirectional() const BOOST_NOEXCEPT;
@@ -272,7 +274,7 @@ namespace ascension {
 				boost::iterator_range<RunVector::const_iterator> runsForLine(Index line) const;
 				RunVector::const_iterator firstRunInLine(Index line) const BOOST_NOEXCEPT;
 				bool isEmpty() const BOOST_NOEXCEPT {return runs_.empty();}
-				void justify(Scalar lineMeasure, presentation::TextJustification method) BOOST_NOEXCEPT;
+				void justify(Scalar lineMeasure, TextJustification method) BOOST_NOEXCEPT;
 				Point lineLeft(Index line) const;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				const LineMetrics& lineMetrics(Index line) const;
@@ -282,13 +284,12 @@ namespace ascension {
 				int nextTabStopBasedLeftEdge(Scalar x, bool right) const BOOST_NOEXCEPT;
 				void reorder();
 //				void rewrap();
-				void stackLines(
-					const RenderingContext2D& context, boost::optional<Scalar> lineHeight,
-					presentation::LineBoxContain lineBoxContain, const Font& nominalFont);
+				void stackLines(const RenderingContext2D& context,
+					boost::optional<Scalar> lineHeight, LineBoxContain lineBoxContain, const Font& nominalFont);
 				void wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEXCEPT;
 			private:
 				const String& textString_;
-				boost::flyweight<ComputedTextLineStyle> lineStyle_;
+				boost::flyweight<presentation::ComputedTextLineStyle> lineStyle_;
 				RunVector runs_;
 				Index numberOfLines_;	// TODO: The following 3 std.unique_ptr<T[]> members can be packed for compaction.
 				std::unique_ptr<RunVector::const_iterator[]> firstRunsInLines_;	// size is numberOfLines_, or null if not wrapped
