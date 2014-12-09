@@ -43,7 +43,7 @@ namespace ascension {
 				explicit FixedWidthTabExpander(const presentation::Pixels& width) BOOST_NOEXCEPT : width_(width) {}
 				/// @see TabExpander#nextTabStop
 				presentation::Pixels nextTabStop(const presentation::Pixels& ipd, Index tabOffset) const {
-					return Pixels(ipd.value() - static_cast<long>(ipd.value()) % static_cast<long>(width_.value()) + width_.value());
+					return presentation::Pixels(ipd.value() - static_cast<long>(ipd.value()) % static_cast<long>(width_.value()) + width_.value());
 				}
 
 			private:
