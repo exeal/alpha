@@ -27,13 +27,13 @@
 namespace ascension {
 	namespace presentation {
 		namespace styles {
-			/// @defgroup css3_fonts CSS Fonts Module Level 3
+			/// @defgroup css_fonts_3 CSS Fonts Module Level 3
 			/// @see CSS Fonts Module Level 3 - W3C Candidate Recommendation 3 October 2013
-			///      (http://www.w3.org/TR/css3-fonts/)
+			///      (http://www.w3.org/TR/css-fonts-3/)
 			/// @{
 			/**
 			 * @see CSS Fonts Module Level 3, 3.1 Font family: the font-family property
-			 *      (http://www.w3.org/TR/css3-fonts/#font-family-prop)
+			 *      (http://www.w3.org/TR/css-fonts-3/#font-family-prop)
 			 * @see SVG 1.1 (Second Edition), 10.10 Font selection properties
 			 *      (http://www.w3.org/TR/SVG11/text.html#FontFamilyProperty)
 			 * @see XSL 1.1, 7.9.2 "font-family" (http://www.w3.org/TR/xsl/#font-family)
@@ -65,7 +65,7 @@ namespace ascension {
 			/**
 			 * [Copied from CSS3] An &lt;absolute-size&gt; keyword refers to an entry in a table of font sizes computed
 			 * and kept by the user agent.
-			 * @see http://www.w3.org/TR/css3-fonts/#absolute-size-value
+			 * @see http://www.w3.org/TR/css-fonts-3/#absolute-size-value
 			 */
 			ASCENSION_SCOPED_ENUMS_BEGIN(AbsoluteFontSize)
 				XX_SMALL, X_SMALL, SMALL, MEDIUM, LARGE, X_LARGE, XX_LARGE
@@ -74,7 +74,7 @@ namespace ascension {
 			/**
 			 * [Copied from CSS3] A &lt;relative-size&gt; keyword is interpreted relative to the table of font sizes
 			 * and the computed ‘font-size’ of the parent element.
-			 * @see http://www.w3.org/TR/css3-fonts/#relative-size-value
+			 * @see http://www.w3.org/TR/css-fonts-3/#relative-size-value
 			 */
 			ASCENSION_SCOPED_ENUMS_BEGIN(RelativeFontSize)
 				LARGER, SMALLER
@@ -84,7 +84,7 @@ namespace ascension {
 			 * [Copied from CSS3] This property indicates the desired height of glyphs from the font. For scalable
 			 * fonts, the font-size is a scale factor applied to the EM unit of the font.
 			 * @see CSS Fonts Module Level 3, 3.5 Font size: the font-size property
-			 *      (http://www.w3.org/TR/css3-fonts/#font-size-prop)
+			 *      (http://www.w3.org/TR/css-fonts-3/#font-size-prop)
 			 * @see SVG 1.1 (Second Edition), 10.10 Font selection properties
 			 *      (http://www.w3.org/TR/SVG11/text.html#FontSizeProperty)
 			 * @see XSL 1.1, 7.9.4 "font-size" (http://www.w3.org/TR/xsl/#font-size)
@@ -115,7 +115,7 @@ namespace ascension {
 			 * preserve the readability of text when font fallback occurs. It does this by adjusting the font-size so
 			 * that the x-height is the same regardless of the font used.
 			 * @see CSS Fonts Module Level 3, 3.6 Relative sizing: the font-size-adjust property
-			 *      (http://www.w3.org/TR/css3-fonts/#font-size-adjust-prop)
+			 *      (http://www.w3.org/TR/css-fonts-3/#font-size-adjust-prop)
 			 * @see SVG 1.1 (Second Edition), 10.10 Font selection properties
 			 *      (http://www.w3.org/TR/SVG11/text.html#FontSizeAdjustProperty)
 			 * @see XSL 1.1, 7.9.6 "font-size-adjust" (http://www.w3.org/TR/xsl/#font-size-adjust)

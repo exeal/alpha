@@ -21,7 +21,7 @@
 namespace ascension {
 	namespace presentation {
 		namespace styles {
-			/// @defgroup css3_inline CSS Inline Layout Module Level 3
+			/// @defgroup css_inline_3 CSS Inline Layout Module Level 3
 			/// @see CSS Inline Layout Module Level 3 - Editor's Draft, 5 September 2014
 			/// @{
 
