@@ -11,43 +11,64 @@
 #ifndef ASCENSION_TAB_EXPANDER_HPP
 #define ASCENSION_TAB_EXPANDER_HPP
 
-#include <ascension/presentation/absolute-length.hpp>
+#include <cmath>
+#include <type_traits>
 
 namespace ascension {
 	namespace graphics {
 		namespace font {
 			/**
+			 * Interface of object which implements tab expansion.
+			 * @tparam Length
 			 * @see TextLayout#TextLayout
 			 * @note This interface is designed based on @c TabExpander interface of Java.
 			 */
+			template<typename Length>
 			class TabExpander {
 			public:
 				/// Destructor.
 				virtual ~TabExpander() BOOST_NOEXCEPT {}
 				/**
-				 * Returns the next tab stop position given a reference position.
-				 * @param ipd The position in pixels
+				 * Returns the next tab stop position given a reference position. Values are expressed in @c Length.
+				 * @param ipd The position in @c Length
 				 * @param tabOffset The position within the underlying text that the tab occured
 				 * @return The next tab stop. Should be greater than @a ipd
 				 */
-				virtual presentation::Pixels nextTabStop(const presentation::Pixels& ipd, Index tabOffset) const = 0;
+				virtual Length nextTabStop(Length ipd, Index tabOffset) const = 0;
 			};
 
-			/// Standard implementation of @c TabExpander with fixed width tabulations.
-			class FixedWidthTabExpander : public TabExpander {
+			/**
+			 * Standard implementation of @c TabExpander with fixed width tabulations.
+			 * @tparam Length See the description of @c TabExpander
+			 */
+			template<typename Length>
+			class FixedWidthTabExpander : public TabExpander<Length> {
 			public:
 				/**
 				 * Constructor.
-				 * @param width The fixed width in pixels
+				 * @param width The fixed width in @c Length
+				 * @throw std#invalid_argument @a width is zero
 				 */
-				explicit FixedWidthTabExpander(const presentation::Pixels& width) BOOST_NOEXCEPT : width_(width) {}
+				explicit FixedWidthTabExpander(Length width) : width_(width) {
+					if(width == 0)
+						throw std::invalid_argument("width");
+				}
 				/// @see TabExpander#nextTabStop
-				presentation::Pixels nextTabStop(const presentation::Pixels& ipd, Index tabOffset) const {
-					return presentation::Pixels(ipd.value() - static_cast<long>(ipd.value()) % static_cast<long>(width_.value()) + width_.value());
+				Length nextTabStop(Length ipd, Index tabOffset) const override {
+					return impl(ipd, tabOffset);
 				}
 
 			private:
-				const presentation::Pixels width_;
+				template<typename T>
+				Length impl(T ipd, Index tabOffset, typename std::enable_if<std::is_integral<T>::value>::type* = nullptr) const BOOST_NOEXCEPT {
+					return ipd - ipd % width_ + width_;
+				}
+				template<typename T>
+				Length impl(T ipd, Index tabOffset, typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr) const BOOST_NOEXCEPT {
+					return ipd - std::fmod(ipd, width_) + width_;
+				}
+			private:
+				const Length width_;
 			};
 		}
 	}
