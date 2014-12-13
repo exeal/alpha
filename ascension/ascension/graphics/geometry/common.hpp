@@ -16,10 +16,13 @@ namespace ascension {
 	namespace graphics {
 		namespace geometry {
 
-			/// @defgroup geometric_primitives Geometric Primitives
-			/// Basic primitives of @c ascension#graphics#geometry.
-			/// @{
-			typedef float Scalar;	/// A scalar value.
+			/**
+			 * @defgroup geometric_primitives Geometric Primitives
+			 * Basic primitives of @c ascension#graphics#geometry.
+			 * @{
+			 */
+			/// A scalar value is a length in user space which is "logical coordinates" in Win32 GDI.
+			typedef float Scalar;
 			/// @}
 
 			namespace detail {
