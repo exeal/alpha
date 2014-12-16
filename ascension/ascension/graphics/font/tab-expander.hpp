@@ -11,6 +11,7 @@
 #ifndef ASCENSION_TAB_EXPANDER_HPP
 #define ASCENSION_TAB_EXPANDER_HPP
 
+#include <ascension/graphics/geometry/common.hpp>
 #include <cmath>
 #include <type_traits>
 
@@ -23,7 +24,7 @@ namespace ascension {
 			 * @see TextLayout#TextLayout
 			 * @note This interface is designed based on @c TabExpander interface of Java.
 			 */
-			template<typename Length>
+			template<typename Length = Scalar>
 			class TabExpander {
 			public:
 				/// Destructor.
