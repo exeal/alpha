@@ -28,7 +28,7 @@ namespace ascension {
 				Enumerated<bool, true>,
 				Inherited<false>
 			> ShapingEnabled;
-
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/// Set @c true to make the deprecated format characters (NADS, NODS, ASS and ISS) not effective.
 			typedef StyleProperty<
 				Enumerated<bool, false>,
@@ -40,7 +40,7 @@ namespace ascension {
 				Enumerated<bool, false>,
 				Inherited<false>
 			> SymmetricSwappingInhibited;
-
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 			/// @see graphics#font#NumberSubstitution
 			typedef StyleProperty<
 				Complex<
