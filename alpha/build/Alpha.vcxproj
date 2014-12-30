@@ -377,7 +377,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\timer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp" />
     <ClInclude Include="..\..\ascension\ascension\directions.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\graphics\font\computed-text-styles.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\actual-text-styles.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-collection.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-description.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-family.hpp" />
@@ -413,6 +413,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\absolute-length.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\detail\style-sequence.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\hyperlink\hyperlink-detector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\hyperlink\hyperlink.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\partition-presentation-reconstructor.hpp" />
