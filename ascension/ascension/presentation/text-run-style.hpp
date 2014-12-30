@@ -11,11 +11,9 @@
 
 #ifndef ASCENSION_TEXT_RUN_STYLE_HPP
 #define ASCENSION_TEXT_RUN_STYLE_HPP
-#ifndef FUSION_MAX_VECTOR_SIZE
-#	define FUSION_MAX_VECTOR_SIZE 40
-#endif
 
 #include <ascension/directions.hpp>
+#include <ascension/presentation/detail/style-sequence.hpp>
 #include <ascension/presentation/styles/auxiliary.hpp>
 #include <ascension/presentation/styles/background.hpp>
 #include <ascension/presentation/styles/box.hpp>
@@ -24,15 +22,15 @@
 #include <ascension/presentation/styles/inline.hpp>
 #include <ascension/presentation/styles/text.hpp>
 #include <ascension/presentation/styles/text-decor.hpp>
+#include <ascension/presentation/styles/writing-modes.hpp>
 #include <boost/flyweight/flyweight_fwd.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
 
 namespace ascension {
 	namespace presentation {
 		/**
-		 * A text run style collection.
-		 * @see DeclaredTextRunStyle, SpecifiedTextRunStyle, ComputedTextRunStyle
+		 * A text run style collection, part 1.
+		 * @see TextRunStyle2
 		 * @see TextLineStyle, TextToplevelStyle, StyledTextRunIterator
 		 */
 		typedef boost::fusion::vector<
@@ -61,16 +59,24 @@ namespace ascension {
 //			styles::FontLanguageOverride,				// 'font-language-override' property
 			// Inline Layout
 			styles::TextHeight,							// 'text-height' property
-			styles::LineHeight,							// 'line-height' property
 			styles::DominantBaseline,					// 'dominant-baseline' property
 			styles::AlignmentBaseline,					// 'alignment-baseline' property
-			styles::AlignmentAdjust,					// 'alignment-adjust' property
-			styles::BaselineShift,						// 'baseline-shift' property
+			styles::AlignmentAdjust						// 'alignment-adjust' property
+		> TextRunStyle1;
+
+		/**
+		 * A text run style collection, part 2.
+		 * @see TextRunStyle1
+		 * @see TextLineStyle, TextToplevelStyle, StyledTextRunIterator
+		 */
+		typedef boost::fusion::vector<
 			// Text
 			styles::TextTransform,						// 'text-transform' property
+			styles::WhiteSpace,							// 'white-space' property
 			styles::Hyphens,							// 'hyphens' property
 			styles::WordSpacing,						// 'word-spacing' property
 			styles::LetterSpacing,						// 'letter-spacing' property
+			styles::HangingPunctuation,					// 'hanging-punctuation' property
 			// Text Decoration
 			styles::TextDecorationLine,					// 'text-decoration-line' properties
 			styles::TextDecorationColor,				// 'text-decoration-color' properties
@@ -81,55 +87,86 @@ namespace ascension {
 			styles::TextEmphasisColor,					// 'text-emphasis-color' properties
 			styles::TextEmphasisPosition,				// 'text-emphasis-position' properties
 //			styles::TextShadow,							// 'text-shadow' property
+			// Writing Modes
+			styles::Direction,							// 'direction' property
 			// Auxiliary
-			styles::ShapingEnabled/*,					// 'shaping-enabled' property
-			styles::DeprecatedFormatCharactersDisabled,	// 'deprecated-format-characters-disabled' property
-			styles::SymmetricSwappingInhibited			// 'symmetric-swapping-inhibited' property
-*/		> TextRunStyle;
+//			styles::Effects,							// 'effects' property
+			styles::ShapingEnabled,						// 'shaping-enabled' property
+			styles::NumberSubstitution					// 'number-substitution' property
+		> TextRunStyle2;
 
-		// TODO: Check uniqueness of the members of TextRunStyle.
-
-		class DeclaredTextRunStyle :
-			public boost::fusion::result_of::as_vector<
-				boost::fusion::result_of::transform<
-					TextRunStyle, styles::detail::ValueConverter<styles::DeclaredValue>
-				>::type
-			>::type,
-			public std::enable_shared_from_this<DeclaredTextRunStyle> {
+		/// "Declared Values" of @c TextRunStyle1.
+		class DeclaredTextRunStyle1 :
+			public detail::TransformedAsMap<
+				TextRunStyle1, detail::ValueConverter<styles::DeclaredValue>
+			>,
+			public std::enable_shared_from_this<DeclaredTextRunStyle1> {
 		public:
 #ifndef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
-			DeclaredTextRunStyle() = default;
+			DeclaredTextRunStyle1() = default;
 #else
-			DeclaredTextRunStyle();
+			DeclaredTextRunStyle1();
 #endif
-			static const DeclaredTextRunStyle& unsetInstance();
+			static const DeclaredTextRunStyle1& unsetInstance();
 		};
 
-		/// "Specified Values" of @c TextRunStyle.
-		struct SpecifiedTextRunStyle :
-			boost::fusion::result_of::as_vector<
-				boost::fusion::result_of::transform<
-					TextRunStyle, styles::detail::ValueConverter<styles::SpecifiedValue>
-				>::type
-			>::type {};
+		/// "Declared Values" of @c TextRunStyle2.
+		class DeclaredTextRunStyle2 :
+			public detail::TransformedAsMap<
+				TextRunStyle2, detail::ValueConverter<styles::DeclaredValue>
+			>,
+			public std::enable_shared_from_this<DeclaredTextRunStyle2> {
+		public:
+#ifndef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
+			DeclaredTextRunStyle2() = default;
+#else
+			DeclaredTextRunStyle2();
+#endif
+			static const DeclaredTextRunStyle2& unsetInstance();
+		};
 
-		/// "Computed Values" of @c TextRunStyle.
-		struct ComputedTextRunStyle :
-			boost::fusion::result_of::as_vector<
-				boost::fusion::result_of::transform<
-					TextRunStyle, styles::detail::ValueConverter<styles::ComputedValue>
-				>::type
-			>::type {};
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextRunStyle1);
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextRunStyle2);
+//		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(SpecifiedTextRunStyle);
+//		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(ComputedTextRunStyle);
 
 		namespace styles {
-			template<> class DeclaredValue<TextRunStyle> : public boost::mpl::identity<DeclaredTextRunStyle> {};
-			template<> struct SpecifiedValue<TextRunStyle> : boost::mpl::identity<SpecifiedTextRunStyle> {};
-			template<> struct ComputedValue<TextRunStyle> : boost::mpl::identity<ComputedTextRunStyle> {};
+			template<> class DeclaredValue<TextRunStyle1> : public ValueBase<TextRunStyle1, DeclaredTextRunStyle1> {};
+			template<> class DeclaredValue<TextRunStyle2> : public ValueBase<TextRunStyle2, DeclaredTextRunStyle2> {};
+			template<> struct SpecifiedValue<TextRunStyle1> : boost::mpl::identity<
+				presentation::detail::TransformedAsMap<
+					TextRunStyle1, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+				>
+			> {};
+			template<> struct SpecifiedValue<TextRunStyle2> : boost::mpl::identity<
+				presentation::detail::TransformedAsMap<
+					TextRunStyle2, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+				>
+			> {};
+			template<> struct ComputedValue<TextRunStyle1> : boost::mpl::identity<
+				presentation::detail::TransformedAsMap<
+					TextRunStyle1, presentation::detail::KeyValueConverter<styles::ComputedValue>
+				>
+			> {};
+			template<> struct ComputedValue<TextRunStyle2> : boost::mpl::identity<
+				presentation::detail::TransformedAsMap<
+					TextRunStyle2, presentation::detail::KeyValueConverter<styles::ComputedValue>
+				>
+			> {};
 		}
 
-		boost::flyweight<ComputedTextRunStyle> compute(const SpecifiedTextRunStyle& specifiedValues,
-			const styles::Length::Context& context, const ComputedTextRunStyle& parentComputedValues);
-		std::size_t hash_value(const ComputedTextRunStyle& style);
+		boost::flyweight<styles::ComputedValue<TextRunStyle1>::type> compute(
+			const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,
+			const styles::Length::Context& context,
+			const styles::ComputedValue<TextRunStyle1>::type& parentComputedValues1,
+			const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues2);
+		boost::flyweight<styles::ComputedValue<TextRunStyle2>::type> compute(
+			const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
+			const styles::Length::Context& context,
+			const styles::ComputedValue<styles::Color>::type& computedColor,
+			const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues2);
+		std::size_t hash_value(const styles::ComputedValue<TextRunStyle1>::type& style);
+		std::size_t hash_value(const styles::ComputedValue<TextRunStyle2>::type& style);
 	}
 } // namespace ascension.presentation
 

@@ -16,20 +16,20 @@ namespace ascension {
 				computedValue = boost::get_optional_value_or(specifiedValue, computedParentColor);
 			}
 
-			void computeBackground(const SpecifiedTextRunStyle& specifiedValues,
-					const graphics::Color& foregroundColor, const styles::Length::Context& lengthContext, ComputedTextRunStyle& computedValues) {
-				*boost::fusion::find<styles::ComputedValue<styles::BackgroundColor>::type>(computedValues) =
-					boost::get_optional_value_or(*boost::fusion::find<styles::SpecifiedValue<styles::BackgroundColor>::type>(specifiedValues), foregroundColor);
+			void computeBackground(const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,
+					const graphics::Color& foregroundColor, const styles::Length::Context& lengthContext, styles::ComputedValue<TextRunStyle1>::type& computedValues) {
+				boost::fusion::at_key<styles::BackgroundColor>(computedValues) =
+					boost::get_optional_value_or(boost::fusion::at_key<styles::BackgroundColor>(specifiedValues), foregroundColor);
 			}
 
-			void computeBorder(const SpecifiedTextRunStyle& specifiedValues,
-					const graphics::Color& foregroundColor, const styles::Length::Context& lengthContext, ComputedTextRunStyle& computedValues) {
-				const auto& specifiedColors = *boost::fusion::find<styles::SpecifiedValue<FlowRelativeFourSides<styles::BorderColor>>::type>(specifiedValues);
-				const auto& specifiedStyles = *boost::fusion::find<styles::SpecifiedValue<FlowRelativeFourSides<styles::BorderStyle>>::type>(specifiedValues);
-				const auto& specifiedWidths = *boost::fusion::find<styles::SpecifiedValue<FlowRelativeFourSides<styles::BorderWidth>>::type>(specifiedValues);
-				auto& computedColors = *boost::fusion::find<styles::ComputedValue<FlowRelativeFourSides<styles::BorderColor>>::type>(computedValues);
-				auto& computedStyles = *boost::fusion::find<styles::ComputedValue<FlowRelativeFourSides<styles::BorderStyle>>::type>(computedValues);
-				auto& computedWidths = *boost::fusion::find<styles::ComputedValue<FlowRelativeFourSides<styles::BorderWidth>>::type>(computedValues);
+			void computeBorder(const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,
+					const graphics::Color& foregroundColor, const styles::Length::Context& lengthContext, styles::ComputedValue<TextRunStyle1>::type& computedValues) {
+				const auto& specifiedColors = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderColor>>(specifiedValues);
+				const auto& specifiedStyles = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderStyle>>(specifiedValues);
+				const auto& specifiedWidths = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderWidth>>(specifiedValues);
+				auto& computedColors = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderColor>>(computedValues);
+				auto& computedStyles = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderStyle>>(computedValues);
+				auto& computedWidths = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderWidth>>(computedValues);
 				for(std::size_t i = 0; specifiedColors.size(); ++i) {
 					computedColors[i] = boost::get_optional_value_or(specifiedColors[i], foregroundColor);
 					computedStyles[i] = specifiedStyles[i];
@@ -97,12 +97,6 @@ namespace ascension {
 				computedValue = Pixels::zero();
 			}
 
-			inline void computeBaselineShift(const styles::SpecifiedValue<styles::BaselineShift>::type& specifiedValue,
-					const styles::Length::Context& lengthContext, styles::ComputedValue<styles::BaselineShift>::type& computedValue) {
-				// TODO: [CSS3INLINE] does not describe the computation for other than <percentage>.
-				computedValue = Pixels::zero();
-			}
-
 			inline void computeWordSpacing(const styles::SpecifiedValue<styles::WordSpacing>::type& specifiedValue,
 					const styles::Length::Context& lengthContext, styles::ComputedValue<styles::WordSpacing>::type& computedValue) {
 				if(const styles::Length* const length = boost::get<styles::Length>(&specifiedValue)) {
@@ -123,34 +117,33 @@ namespace ascension {
 					computedValue = Pixels::zero();
 			}
 
-			void computeTextDecoration(const SpecifiedTextRunStyle& specifiedValues,
-					const graphics::Color& foregroundColor, ComputedTextRunStyle& computedValues) {
-				*boost::fusion::find<styles::ComputedValue<styles::TextDecorationLine>::type>(computedValues)
-					= *boost::fusion::find<styles::SpecifiedValue<styles::TextDecorationLine>::type>(specifiedValues);
-				*boost::fusion::find<styles::ComputedValue<styles::TextDecorationColor>::type>(computedValues)
-					= boost::get_optional_value_or(*boost::fusion::find<styles::SpecifiedValue<styles::TextDecorationColor>::type>(specifiedValues), foregroundColor);
-				*boost::fusion::find<styles::ComputedValue<styles::TextDecorationStyle>::type>(computedValues)
-					= *boost::fusion::find<styles::SpecifiedValue<styles::TextDecorationStyle>::type>(specifiedValues);
-				*boost::fusion::find<styles::ComputedValue<styles::TextDecorationSkip>::type>(computedValues)
-					= *boost::fusion::find<styles::SpecifiedValue<styles::TextDecorationSkip>::type>(specifiedValues);
-				*boost::fusion::find<styles::ComputedValue<styles::TextUnderlinePosition>::type>(computedValues)
-					= *boost::fusion::find<styles::SpecifiedValue<styles::TextUnderlinePosition>::type>(specifiedValues);
+			void computeTextDecoration(const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
+					const graphics::Color& foregroundColor, styles::ComputedValue<TextRunStyle2>::type& computedValues) {
+				boost::fusion::at_key<styles::TextDecorationLine>(computedValues)
+					= boost::fusion::at_key<styles::TextDecorationLine>(specifiedValues);
+				boost::fusion::at_key<styles::TextDecorationColor>(computedValues)
+					= boost::get_optional_value_or(boost::fusion::at_key<styles::TextDecorationColor>(specifiedValues), foregroundColor);
+				boost::fusion::at_key<styles::TextDecorationStyle>(computedValues)
+					= boost::fusion::at_key<styles::TextDecorationStyle>(specifiedValues);
+				boost::fusion::at_key<styles::TextDecorationSkip>(computedValues)
+					= boost::fusion::at_key<styles::TextDecorationSkip>(specifiedValues);
+				boost::fusion::at_key<styles::TextUnderlinePosition>(computedValues)
+					= boost::fusion::at_key<styles::TextUnderlinePosition>(specifiedValues);
 			}
 
-			void computeTextEmphasis(const SpecifiedTextRunStyle& specifiedValues,
-					const graphics::Color& foregroundColor, ComputedTextRunStyle& computedValues) {
-				if(const styles::TextEmphasisStyleEnums* keyword = boost::get<styles::TextEmphasisStyleEnums>(
-						&*boost::fusion::find<styles::SpecifiedValue<styles::TextEmphasisStyle>::type>(specifiedValues)))
-					*boost::fusion::find<styles::ComputedValue<styles::TextEmphasisStyle>::type>(computedValues) = static_cast<CodePoint>(boost::native_value(*keyword));
-				else if(const CodePoint* codePoint = boost::get<CodePoint>(
-						&*boost::fusion::find<styles::SpecifiedValue<styles::TextEmphasisStyle>::type>(specifiedValues)))
-					*boost::fusion::find<styles::ComputedValue<styles::TextEmphasisStyle>::type>(computedValues) = *codePoint;
+			void computeTextEmphasis(const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
+					const graphics::Color& foregroundColor, styles::ComputedValue<TextRunStyle2>::type& computedValues) {
+				if(const styles::TextEmphasisStyleEnums* keyword =
+						boost::get<styles::TextEmphasisStyleEnums>(&boost::fusion::at_key<styles::TextEmphasisStyle>(specifiedValues)))
+					boost::fusion::at_key<styles::TextEmphasisStyle>(computedValues) = static_cast<CodePoint>(boost::native_value(*keyword));
+				else if(const CodePoint* codePoint = boost::get<CodePoint>(&boost::fusion::at_key<styles::TextEmphasisStyle>(specifiedValues)))
+					boost::fusion::at_key<styles::TextEmphasisStyle>(computedValues) = *codePoint;
 				else
-					*boost::fusion::find<styles::ComputedValue<styles::TextEmphasisStyle>::type>(computedValues) = boost::none;
-				*boost::fusion::find<styles::ComputedValue<styles::TextEmphasisColor>::type>(computedValues)
-					= boost::get_optional_value_or(*boost::fusion::find<styles::SpecifiedValue<styles::TextEmphasisColor>::type>(specifiedValues), foregroundColor);
-				*boost::fusion::find<styles::ComputedValue<styles::TextEmphasisPosition>::type>(computedValues)
-					= *boost::fusion::find<styles::SpecifiedValue<styles::TextEmphasisPosition>::type>(specifiedValues);
+					boost::fusion::at_key<styles::TextEmphasisStyle>(computedValues) = boost::none;
+				boost::fusion::at_key<styles::TextEmphasisColor>(computedValues)
+					= boost::get_optional_value_or(boost::fusion::at_key<styles::TextEmphasisColor>(specifiedValues), foregroundColor);
+				boost::fusion::at_key<styles::TextEmphasisPosition>(computedValues)
+					= boost::fusion::at_key<styles::TextEmphasisPosition>(specifiedValues);
 			}
 
 			inline void computeTextShadow() {
@@ -159,42 +152,46 @@ namespace ascension {
 		}
 
 		/**
-		 * Computes @c TextRunStyle.
+		 * Computes @c TextRunStyle1.
 		 * @param specifiedValues The "Specified Value"s to compute
 		 * @param context The length context
-		 * @param parentComputedValues The "Computed Value"s of the parent element
+		 * @param parentComputedValues1 The "Computed Value"s of the parent element
+		 * @param parentComputedValues2 The "Computed Value"s of the parent element
 		 * @param[out] computedValues The "Computed Value"s
 		 */
-		boost::flyweight<ComputedTextRunStyle> compute(const SpecifiedTextRunStyle& specifiedValues,
-				const styles::Length::Context& context, const ComputedTextRunStyle& parentComputedValues) {
-			ComputedTextRunStyle computedValues;
+		boost::flyweight<styles::ComputedValue<TextRunStyle1>::type> compute(
+				const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,
+				const styles::Length::Context& context,
+				const styles::ComputedValue<TextRunStyle1>::type& parentComputedValues1,
+				const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues2) {
+			styles::ComputedValue<TextRunStyle1>::type computedValues;
 
 			computeColor(
-				*boost::fusion::find<styles::SpecifiedValue<styles::Color>::type>(specifiedValues),
-				*boost::fusion::find<styles::ComputedValue<styles::Color>::type>(parentComputedValues),
-				*boost::fusion::find<styles::ComputedValue<styles::Color>::type>(computedValues));
-			const auto& computedColor = *boost::fusion::find<styles::ComputedValue<styles::Color>::type>(computedValues);
+				boost::fusion::at_key<styles::Color>(specifiedValues),
+				boost::fusion::at_key<styles::Color>(parentComputedValues1),
+				boost::fusion::at_key<styles::Color>(computedValues));
+			const auto& computedColor = boost::fusion::at_key<styles::Color>(computedValues);
 
 			computeBackground(specifiedValues, computedColor, context, computedValues);
 			computeBorder(specifiedValues, computedColor, context, computedValues);
 
 			computePaddingOrMargin<styles::PaddingSide>(
-				*boost::fusion::find<styles::SpecifiedValue<FlowRelativeFourSides<styles::PaddingSide>>::type>(specifiedValues),
+				boost::fusion::at_key<FlowRelativeFourSides<styles::PaddingSide>>(specifiedValues),
 				context,
-				*boost::fusion::find<styles::ComputedValue<FlowRelativeFourSides<styles::PaddingSide>>::type>(computedValues));
+				boost::fusion::at_key<FlowRelativeFourSides<styles::PaddingSide>>(computedValues));
 			computePaddingOrMargin<styles::MarginSide>(
-				*boost::fusion::find<styles::SpecifiedValue<FlowRelativeFourSides<styles::MarginSide>>::type>(specifiedValues),
+				boost::fusion::at_key<FlowRelativeFourSides<styles::MarginSide>>(specifiedValues),
 				context,
-				*boost::fusion::find<styles::ComputedValue<FlowRelativeFourSides<styles::MarginSide>>::type>(computedValues));
+				boost::fusion::at_key<FlowRelativeFourSides<styles::MarginSide>>(computedValues));
 
 			styles::computeAsSpecified<styles::FontFamily>(specifiedValues, computedValues);
 			computeFontSize(
-				*boost::fusion::find<styles::SpecifiedValue<styles::FontSize>::type>(specifiedValues),
+				boost::fusion::at_key<styles::FontSize>(specifiedValues),
 				context,
-				*boost::fusion::find<styles::ComputedValue<styles::FontSize>::type>(parentComputedValues),
+				boost::fusion::at_key<styles::FontSize>(parentComputedValues1),
 				Pixels(12),	// TODO: This is temporary.
-				*boost::fusion::find<styles::ComputedValue<styles::FontSize>::type>(computedValues));
-			const auto& computedFontSize = *boost::fusion::find<styles::ComputedValue<styles::FontSize>::type>(computedValues);
+				boost::fusion::at_key<styles::FontSize>(computedValues));
+			const auto& computedFontSize = boost::fusion::at_key<styles::FontSize>(computedValues);
 			styles::computeAsSpecified<styles::FontWeight>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::FontStretch>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::FontStyle>(specifiedValues, computedValues);
@@ -203,114 +200,149 @@ namespace ascension {
 //			styles::computeAsSpecified<styles::FontLanguageOverride>(specifiedValues, computedValues);
 
 			styles::computeAsSpecified<styles::TextHeight>(specifiedValues, computedValues);
-			styles::detail::computeLineHeight(
-				*boost::fusion::find<styles::SpecifiedValue<styles::LineHeight>::type>(specifiedValues),
-				computedFontSize,
-				*boost::fusion::find<styles::ComputedValue<styles::LineHeight>::type>(computedValues));
 			styles::computeAsSpecified<styles::DominantBaseline>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::AlignmentBaseline>(specifiedValues, computedValues);
 			computeAlignmentAdjust(
-				*boost::fusion::find<styles::SpecifiedValue<styles::AlignmentAdjust>::type>(specifiedValues),
+				boost::fusion::at_key<styles::AlignmentAdjust>(specifiedValues),
 				context,
-				*boost::fusion::find<styles::ComputedValue<styles::AlignmentAdjust>::type>(computedValues));
-			computeBaselineShift(
-				*boost::fusion::find<styles::SpecifiedValue<styles::BaselineShift>::type>(specifiedValues),
-				context,
-				*boost::fusion::find<styles::ComputedValue<styles::BaselineShift>::type>(computedValues));
+				boost::fusion::at_key<styles::AlignmentAdjust>(computedValues));
+
+			return boost::flyweight<styles::ComputedValue<TextRunStyle1>::type>(computedValues);
+		}
+
+		/**
+		 * Computes @c TextRunStyle.
+		 * @param specifiedValues The "Specified Value"s to compute
+		 * @param context The length context
+		 * @param computedColor The "Computed Value"s of the "color" property
+		 * @param parentComputedValues2 The "Computed Value"s of the parent element
+		 * @param[out] computedValues The "Computed Value"s
+		 */
+		boost::flyweight<styles::ComputedValue<TextRunStyle2>::type> compute(
+				const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
+				const styles::Length::Context& context,
+				const styles::ComputedValue<styles::Color>::type& computedColor,
+				const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues2) {
+			styles::ComputedValue<TextRunStyle2>::type computedValues;
 
 			styles::computeAsSpecified<styles::TextTransform>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::WhiteSpace>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::Hyphens>(specifiedValues, computedValues);
 			computeWordSpacing(
-				*boost::fusion::find<styles::SpecifiedValue<styles::WordSpacing>::type>(specifiedValues),
+				boost::fusion::at_key<styles::WordSpacing>(specifiedValues),
 				context,
-				*boost::fusion::find<styles::ComputedValue<styles::WordSpacing>::type>(computedValues));
+				boost::fusion::at_key<styles::WordSpacing>(computedValues));
 			computeLetterSpacing(
-				*boost::fusion::find<styles::SpecifiedValue<styles::LetterSpacing>::type>(specifiedValues),
+				boost::fusion::at_key<styles::LetterSpacing>(specifiedValues),
 				context,
-				*boost::fusion::find<styles::ComputedValue<styles::LetterSpacing>::type>(computedValues));
+				boost::fusion::at_key<styles::LetterSpacing>(computedValues));
+			styles::computeAsSpecified<styles::HangingPunctuation>(specifiedValues, computedValues);
 
 			computeTextDecoration(specifiedValues, computedColor, computedValues);
 			computeTextEmphasis(specifiedValues, computedColor, computedValues);
 			computeTextShadow();
 
-			styles::computeAsSpecified<styles::ShapingEnabled>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::Direction>(specifiedValues, computedValues);
 
-			return boost::flyweight<ComputedTextRunStyle>(computedValues);
+			styles::computeAsSpecified<styles::ShapingEnabled>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
+
+			return boost::flyweight<styles::ComputedValue<TextRunStyle2>::type>(computedValues);
 		}
 
-		/// Extend @c boost#hash_value for @c ComputedTextRunStyle.
-		std::size_t hash_value(const ComputedTextRunStyle& style) {
+		/// Extend @c boost#hash_value for @c styles#ComputedValue&lt;TextRunStyle1&gt;#type.
+		std::size_t hash_value(const styles::ComputedValue<TextRunStyle1>::type& style) {
 			std::size_t seed = 0;
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::Color>::type>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::Color>(style));
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::BackgroundColor>::type>(style));
-			const auto& borderColors = *boost::fusion::find<styles::ComputedValue<FlowRelativeFourSides<styles::BorderColor>>::type>(style);
+			boost::hash_combine(seed, boost::fusion::at_key<styles::BackgroundColor>(style));
+			const auto& borderColors = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderColor>>(style);
 			boost::hash_range(seed, std::begin(borderColors), std::end(borderColors));
-			const auto& borderStyles = *boost::fusion::find<styles::ComputedValue<FlowRelativeFourSides<styles::BorderStyle>>::type>(style);
+			const auto& borderStyles = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderStyle>>(style);
 			boost::hash_range(seed, std::begin(borderStyles), std::end(borderStyles));
-			const auto& borderWidths = *boost::fusion::find<styles::ComputedValue<FlowRelativeFourSides<styles::BorderWidth>>::type>(style);
+			const auto& borderWidths = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderWidth>>(style);
 			boost::hash_range(seed, std::begin(borderWidths), std::end(borderWidths));
 
-			const auto& padding = *boost::fusion::find<styles::ComputedValue<FlowRelativeFourSides<styles::PaddingSide>>::type>(style);
+			const auto& padding = boost::fusion::at_key<FlowRelativeFourSides<styles::PaddingSide>>(style);
 			boost::hash_range(seed, std::begin(padding), std::end(padding));
-			const auto& margin = *boost::fusion::find<styles::ComputedValue<FlowRelativeFourSides<styles::MarginSide>>::type>(style);
+			const auto& margin = boost::fusion::at_key<FlowRelativeFourSides<styles::MarginSide>>(style);
 			boost::hash_range(seed, std::begin(margin), std::end(margin));
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::FontFamily>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::FontWeight>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::FontStretch>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::FontStyle>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::FontSize>::type>(style));
-			const auto& fontSizeAdjust = *boost::fusion::find<styles::ComputedValue<styles::FontSizeAdjust>::type>(style);
+			boost::hash_combine(seed, boost::fusion::at_key<styles::FontFamily>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::FontWeight>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::FontStretch>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::FontStyle>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::FontSize>(style));
+			const auto& fontSizeAdjust = boost::fusion::at_key<styles::FontSizeAdjust>(style);
 			if(fontSizeAdjust != boost::none)
 				boost::hash_combine(seed, boost::get(fontSizeAdjust));
 			else
 				boost::hash_combine(seed, std::make_tuple());
-//			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::FontFeatureSettings>::type>(style));
-//			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::FontLanguageOverride>::type>(style));
+//			boost::hash_combine(seed, boost::fusion::at_key<styles::FontFeatureSettings>(style));
+//			boost::hash_combine(seed, boost::fusion::at_key<styles::FontLanguageOverride>(style));
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextHeight>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::LineHeight>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::DominantBaseline>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::AlignmentBaseline>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::AlignmentAdjust>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::BaselineShift>::type>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextHeight>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::DominantBaseline>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::AlignmentBaseline>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::AlignmentAdjust>(style));
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextTransform>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::Hyphens>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::WordSpacing>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::LetterSpacing>::type>(style));
+			return seed;
+		}
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextDecorationLine>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextDecorationColor>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextDecorationStyle>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextDecorationSkip>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextUnderlinePosition>::type>(style));
-			if(const auto& textEmphasisStyle = *boost::fusion::find<styles::ComputedValue<styles::TextEmphasisStyle>::type>(style))
+		/// Extend @c boost#hash_value for @c styles#ComputedValue&lt;TextRunStyle2&gt;#type.
+		std::size_t hash_value(const styles::ComputedValue<TextRunStyle2>::type& style) {
+			std::size_t seed = 0;
+
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextTransform>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::WhiteSpace>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::Hyphens>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::WordSpacing>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::LetterSpacing>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::HangingPunctuation>(style));
+
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextDecorationLine>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextDecorationColor>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextDecorationStyle>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextDecorationSkip>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextUnderlinePosition>(style));
+			if(const auto& textEmphasisStyle = boost::fusion::at_key<styles::TextEmphasisStyle>(style))
 				boost::hash_combine(seed, boost::get(textEmphasisStyle));
 			else
 				boost::hash_combine(seed, std::make_tuple());
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextEmphasisColor>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextEmphasisPosition>::type>(style));
-//			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextShadow>::type>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextEmphasisColor>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextEmphasisPosition>(style));
+//			boost::hash_combine(seed, boost::fusion::at_key<styles::TextShadow>(style));
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::ShapingEnabled>::type>(style));
-//			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::DeprecatedFormatCharactersDisabled>::type>(style));
-//			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::SymmetricSwappingInhibited>::type>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::Direction>(style));
+
+			boost::hash_combine(seed, boost::fusion::at_key<styles::ShapingEnabled>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::NumberSubstitution>(style));
 
 			return seed;
 		}
 
 #ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
 		/// Default constructor.
-		DeclaredTextRunStyle::DeclaredTextRunStyle() {
+		DeclaredTextRunStyle1::DeclaredTextRunStyle1() {
 		}
 #endif
 
-		/// Returns a @c DeclaredTextRunStyle instance filled with @c styles#UNSET values.
-		const DeclaredTextRunStyle& DeclaredTextRunStyle::unsetInstance() {
-			static const DeclaredTextRunStyle SINGLETON;
+		/// Returns a @c DeclaredTextRunStyle1 instance filled with @c styles#UNSET values.
+		const DeclaredTextRunStyle1& DeclaredTextRunStyle1::unsetInstance() {
+			static const DeclaredTextRunStyle1 SINGLETON;
+			return SINGLETON;
+		}
+
+#ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
+		/// Default constructor.
+		DeclaredTextRunStyle2::DeclaredTextRunStyle2() {
+		}
+#endif
+
+		/// Returns a @c DeclaredTextRunStyle2 instance filled with @c styles#UNSET values.
+		const DeclaredTextRunStyle2& DeclaredTextRunStyle2::unsetInstance() {
+			static const DeclaredTextRunStyle2 SINGLETON;
 			return SINGLETON;
 		}
 	}
