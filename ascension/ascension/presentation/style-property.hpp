@@ -15,6 +15,12 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
 #include <ascension/corelib/future/type-traits.hpp>	// detail.Type2Type
 #include <ascension/presentation/styles/length.hpp>
+#include <boost/fusion/algorithm/query/find.hpp>
+#include <boost/fusion/iterator/advance.hpp>
+#include <boost/fusion/iterator/deref.hpp>
+#include <boost/fusion/iterator/distance.hpp>
+#include <boost/fusion/sequence/intrinsic/at_key.hpp>
+#include <boost/fusion/sequence/intrinsic/begin.hpp>
 #include <boost/mpl/identity.hpp>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
@@ -85,7 +91,9 @@ namespace ascension {
 			struct ValueBase : boost::mpl::identity<ValueType> {
 				static_assert(!std::is_pointer<Property>::value, "'Property' can't be a pointer type.");
 				static_assert(!std::is_reference<Property>::value, "'Property' can't be a reference type.");
-				typedef Property PropertyType;	///< The property type. Usually @c StyleProperty class template.
+#if 0
+				typedef Property Definition;	///< The defined property type. Usually @c StyleProperty class template.
+#endif
 			};
 
 			/**
@@ -99,7 +107,7 @@ namespace ascension {
 
 			template<typename Property>
 			struct SpecifiedValue<FlowRelativeFourSides<Property>>
-					: ValueBase<Property, FlowRelativeFourSides<typename SpecifiedValue<Property>::type>> {
+					: ValueBase<FlowRelativeFourSides<Property>, FlowRelativeFourSides<typename SpecifiedValue<Property>::type>> {
 				static_assert(!std::is_same<typename std::remove_cv<type>::type, boost::mpl::void_>::value, "");
 			};
 
@@ -112,8 +120,33 @@ namespace ascension {
 
 			template<typename Property>
 			struct ComputedValue<FlowRelativeFourSides<Property>>
-				: ValueBase<Property, FlowRelativeFourSides<typename ComputedValue<Property>::type>> {};
+				: ValueBase<FlowRelativeFourSides<Property>, FlowRelativeFourSides<typename ComputedValue<Property>::type>> {};
+#if 0
+			/**
+			 * @tparam TransformedSequence
+			 * @tparam DefinedType
+			 */
+			template<typename TransformedSequence, typename DefinedType>
+			class FindByDefinedType {
+				typedef typename boost::fusion::result_of::find<typename TransformedSequence::Definition, DefinedType>::type FoundInDefinition;
+				typedef typename boost::fusion::result_of::distance<
+					typename boost::fusion::result_of::begin<typename TransformedSequence::Definition>::type, FoundInDefinition
+				>::type Position;
+				typedef typename boost::fusion::result_of::begin<TransformedSequence>::type Begin;
+			public:
+				typedef typename boost::fusion::result_of::advance<Begin, Position>::type type;
+			};
 
+			template<typename DefinedType, typename TransformedSequence>
+			inline typename FindByDefinedType<TransformedSequence, DefinedType>::type findByDefinedType(TransformedSequence& sequence) {
+				return FindByDefinedType<TransformedSequence, DefinedType>::type(sequence);
+			}
+
+			template<typename DefinedType, typename TransformedSequence>
+			inline const typename FindByDefinedType<const TransformedSequence, DefinedType>::type findByDefinedType(const TransformedSequence& sequence) {
+				return FindByDefinedType<const TransformedSequence, DefinedType>::type(sequence);
+			}
+#endif
 			/**
 			 * Computes the given "Specified Value" as specified.
 			 * @tparam Property The style property
@@ -124,19 +157,9 @@ namespace ascension {
 			 */
 			template<typename Property, typename SpecifiedStyles, typename ComputedStyles>
 			inline void computeAsSpecified(const SpecifiedStyles& specifiedValues, ComputedStyles& computedValues) {
-				*boost::fusion::find<typename styles::ComputedValue<Property>::type>(computedValues)
-					= *boost::fusion::find<typename styles::SpecifiedValue<Property>::type>(specifiedValues);
+				boost::fusion::at_key<Property>(computedValues) = boost::fusion::at_key<Property>(specifiedValues);
 			}
 			/// @}
-
-			namespace detail {
-				// for boost.fusion.transform
-				template<template<typename> class Metafunction>
-				struct ValueConverter {
-					template<typename Property>
-					typename Metafunction<Property>::type operator()(const Property&) const BOOST_NOEXCEPT;	// only definition
-				};
-			}
 		}
 
 		/**

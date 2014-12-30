@@ -14,7 +14,9 @@
 #define ASCENSION_STYLED_TEXT_RUN_ITERATOR_HPP
 
 #include <ascension/kernel/position.hpp>
+#include <ascension/presentation/text-run-style.hpp>
 #include <boost/flyweight/flyweight_fwd.hpp>
+#include <boost/fusion/algorithm/transformation/join.hpp>
 #include <memory>
 
 namespace ascension {
@@ -81,9 +83,11 @@ namespace ascension {
 			 */
 			virtual Style style() const = 0;
 		};
-		
-		class DeclaredTextRunStyle;
-		struct ComputedTextRunStyle;
+
+		typedef boost::fusion::result_of::join<DeclaredTextRunStyle1, DeclaredTextRunStyle2>::type DeclaredTextRunStyle;
+		typedef boost::fusion::result_of::join<
+			styles::ComputedValue<TextRunStyle1>::type, styles::ComputedValue<TextRunStyle2>::type
+		>::type ComputedTextRunStyle;
 
 		/**
 		 * Specialization of @c StyledTextRunIterator class template which returns @c DeclaredTextRunStyle.
