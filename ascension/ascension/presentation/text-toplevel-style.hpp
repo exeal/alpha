@@ -16,6 +16,7 @@
 #endif
 
 #include <ascension/corelib/memory.hpp>
+#include <ascension/presentation/detail/style-sequence.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
 #include <boost/flyweight/flyweight_fwd.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
@@ -31,26 +32,29 @@ namespace ascension {
 		 * A text toplevel style collection.
 		 * The writing modes specified by this style may be overridden by @c graphics#font#TextRenderer#writingMode.
 		 * @see DeclaredTextToplevelStyle, SpecifiedTextToplevelStyle, ComputedTextToplevelStyle
-		 * @see TextRunStyle, TextLineStyle, Presentation#textToplevelStyle, Presentation#setTextToplevelStyle
+		 * @see TextRunStyle1, TextRunStyle2, TextLineStyle, Presentation#textToplevelStyle,
+		 *      Presentation#setTextToplevelStyle
 		 */
 		typedef boost::fusion::vector<
 			// Writing Modes
 			styles::WritingMode	// 'writing-mode' property
 		> TextToplevelStyle;
 
-		// TODO: Check uniqueness of the members of TextToplevelStyle.
-
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextToplevelStyle);
+#if 0
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(DeclaredTextToplevelStyle);
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(SpecifiedTextToplevelStyle);
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(ComputedTextToplevelStyle);
+#endif
 		/// "Declared Values" of @c TextToplevelStyle.
 		class DeclaredTextToplevelStyle : 
-			public boost::fusion::result_of::as_vector<
-				boost::fusion::result_of::transform<
-					TextToplevelStyle, styles::detail::ValueConverter<styles::DeclaredValue>
-				>::type
-			>::type,
-			public std::enable_shared_from_this<DeclaredTextToplevelStyle> {
+			public detail::TransformedAsMap<
+				TextToplevelStyle, detail::ValueConverter<styles::DeclaredValue>
+			>,
+			public std::enable_shared_from_this<DeclaredTextLineStyle> {
 		public:
 			DeclaredTextToplevelStyle();
-			/// Returns the default @c DeclaredTextLineStyle of this toplevel element.
+			/// Returns the @c DeclaredTextLineStyle of this toplevel element.
 			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextLineStyle> linesStyle() const BOOST_NOEXCEPT {
 				return linesStyle_;
 			}
@@ -61,30 +65,22 @@ namespace ascension {
 			std::shared_ptr<const DeclaredTextLineStyle> linesStyle_;
 		};
 
-		/// "Specified Values" of @c TextToplevelStyle.
-		struct SpecifiedTextToplevelStyle :
-			boost::fusion::result_of::as_vector<
-				boost::fusion::result_of::transform<
-					TextToplevelStyle, styles::detail::ValueConverter<styles::SpecifiedValue>
-				>::type
-			>::type {};
-
-		/// "Computed Values" of @c TextToplevelStyle.
-		struct ComputedTextToplevelStyle :
-			boost::fusion::result_of::as_vector<
-				boost::fusion::result_of::transform<
-					TextToplevelStyle, styles::detail::ValueConverter<styles::ComputedValue>
-				>::type
-			>::type {};
-
 		namespace styles {
 			template<> class DeclaredValue<TextToplevelStyle> : public boost::mpl::identity<DeclaredTextToplevelStyle> {};
-			template<> struct SpecifiedValue<TextToplevelStyle> : boost::mpl::identity<SpecifiedTextToplevelStyle> {};
-			template<> struct ComputedValue<TextToplevelStyle> : boost::mpl::identity<ComputedTextToplevelStyle> {};
+			template<> struct SpecifiedValue<TextToplevelStyle> : boost::mpl::identity<
+				presentation::detail::TransformedAsMap<
+					TextToplevelStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+				>
+			> {};
+			template<> struct ComputedValue<TextToplevelStyle> : boost::mpl::identity<
+				presentation::detail::TransformedAsMap<
+					TextToplevelStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
+				>
+			> {};
 		}
 
-		boost::flyweight<ComputedTextToplevelStyle> compute(const SpecifiedTextToplevelStyle& specifiedValues);
-		std::size_t hash_value(const ComputedTextToplevelStyle& style);
+		boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type> compute(const styles::SpecifiedValue<TextToplevelStyle>::type& specifiedValues);
+		std::size_t hash_value(const styles::ComputedValue<TextToplevelStyle>::type& style);
 	}
 } // namespace ascension.presentation
 

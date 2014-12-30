@@ -11,11 +11,9 @@
 
 #ifndef ASCENSION_TEXT_LINE_STYLE_HPP
 #define ASCENSION_TEXT_LINE_STYLE_HPP
-#ifndef FUSION_MAX_VECTOR_SIZE
-#	define FUSION_MAX_VECTOR_SIZE 40
-#endif
 
 #include <ascension/corelib/memory.hpp>
+#include <ascension/presentation/detail/style-sequence.hpp>
 #include <ascension/presentation/styles/auxiliary.hpp>
 #include <ascension/presentation/styles/box.hpp>
 #include <ascension/presentation/styles/inline.hpp>
@@ -28,12 +26,14 @@
 
 namespace ascension {
 	namespace presentation {
-		class DeclaredTextRunStyle;
+		class DeclaredTextRunStyle1;
+		class DeclaredTextRunStyle2;
 
 		/**
 		 * A text line style collection.
+		 * @note @c TextLineStyle does not have style properties for text runs, but see @c DeclaredTextLineStyle.
 		 * @see DeclaredTextLineStyle, SpecifiedTextLineStyle, ComputedTextLineStyle
-		 * @see TextRunStyle, TextToplevelStyle, TextLineStyleDirector
+		 * @see TextRunStyle1, TextRunStyle2, TextToplevelStyle, TextLineStyleDirector
 		 */
 		typedef boost::fusion::vector<
 			// Writing Modes
@@ -44,6 +44,7 @@ namespace ascension {
 			styles::LineHeight,			// 'line-height' property
 			styles::LineBoxContain,		// 'line-box-contain' property
 			styles::DominantBaseline,	// 'dominant-baseline' property
+			styles::BaselineShift,		// 'baseline-shift' property
 			styles::InlineBoxAlignment,	// einline-box-alignf property
 			// Text
 			styles::WhiteSpace,			// 'white-space' property
@@ -62,54 +63,55 @@ namespace ascension {
 			styles::NumberSubstitution	// 'number-substitution' property
 		> TextLineStyle;
 
-		// TODO: Check uniqueness of the members of TextLineStyle.
-
 		/// "Declared Values" of @c TextLineStyle.
 		class DeclaredTextLineStyle :
-			public boost::fusion::result_of::as_vector<
-				boost::fusion::result_of::transform<
-					TextLineStyle, styles::detail::ValueConverter<styles::DeclaredValue>
-				>::type
-			>::type,
+			public detail::TransformedAsMap<
+				TextLineStyle, detail::ValueConverter<styles::DeclaredValue>
+			>,
 			public std::enable_shared_from_this<DeclaredTextLineStyle> {
 		public:
 			DeclaredTextLineStyle();
-			/// Returns the default @c DeclaredTextRunStyle of this line element.
-			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextRunStyle> linesStyle() const BOOST_NOEXCEPT {
-				return runsStyle_;
+			/// Returns the @c DeclaredTextRunStyle1 of this line element.
+			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextRunStyle1> runsStyle1() const BOOST_NOEXCEPT {
+				return runsStyle1_;
 			}
-			void setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle> newStyle) BOOST_NOEXCEPT;
+			/// Returns the @c DeclaredTextRunStyle2 of this line element.
+			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextRunStyle2> runsStyle2() const BOOST_NOEXCEPT {
+				return runsStyle2_;
+			}
+			void setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle1> newStyle) BOOST_NOEXCEPT;
+			void setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle2> newStyle) BOOST_NOEXCEPT;
 			static const DeclaredTextLineStyle& unsetInstance();
 
 		private:
-			std::shared_ptr<const DeclaredTextRunStyle> runsStyle_;
+			std::shared_ptr<const DeclaredTextRunStyle1> runsStyle1_;
+			std::shared_ptr<const DeclaredTextRunStyle2> runsStyle2_;
 		};
 
-		/// "Specified Values" of @c TextLineStyle.
-		struct SpecifiedTextLineStyle :
-			boost::fusion::result_of::as_vector<
-				boost::fusion::result_of::transform<
-					TextLineStyle, styles::detail::ValueConverter<styles::SpecifiedValue>
-				>::type
-			>::type {};
-
-		/// "Computed Values" of @c TextLineStyle.
-		struct ComputedTextLineStyle :
-			boost::fusion::result_of::as_vector<
-				boost::fusion::result_of::transform<
-					TextLineStyle, styles::detail::ValueConverter<styles::ComputedValue>
-				>::type
-			>::type {};
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextLineStyle);
+#if 0
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(DeclaredTextLineStyle);
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(SpecifiedTextLineStyle);
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(ComputedTextLineStyle);
+#endif
 
 		namespace styles {
 			template<> class DeclaredValue<TextLineStyle> : public boost::mpl::identity<DeclaredTextLineStyle> {};
-			template<> struct SpecifiedValue<TextLineStyle> : boost::mpl::identity<SpecifiedTextLineStyle> {};
-			template<> struct ComputedValue<TextLineStyle> : boost::mpl::identity<ComputedTextLineStyle> {};
+			template<> struct SpecifiedValue<TextLineStyle> : boost::mpl::identity<
+				presentation::detail::TransformedAsMap<
+					TextLineStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+				>
+			> {};
+			template<> struct ComputedValue<TextLineStyle> : boost::mpl::identity<
+				presentation::detail::TransformedAsMap<
+					TextLineStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
+				>
+			> {};
 		}
 
-		boost::flyweight<ComputedTextLineStyle> compute(
-			const SpecifiedTextLineStyle& specifiedValues, const styles::Length::Context& context);
-		std::size_t hash_value(const ComputedTextLineStyle& style);
+		boost::flyweight<styles::ComputedValue<TextLineStyle>::type> compute(
+			const styles::SpecifiedValue<TextLineStyle>::type& specifiedValues, const styles::Length::Context& context);
+		std::size_t hash_value(const styles::ComputedValue<TextLineStyle>::type& style);
 	}
 } // namespace ascension.presentation
 

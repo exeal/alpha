@@ -13,6 +13,12 @@
 namespace ascension {
 	namespace presentation {
 		namespace {
+			inline void computeBaselineShift(const styles::SpecifiedValue<styles::BaselineShift>::type& specifiedValue,
+					const styles::Length::Context& lengthContext, styles::ComputedValue<styles::BaselineShift>::type& computedValue) {
+				// TODO: [CSS3INLINE] does not describe the computation for other than <percentage>.
+				computedValue = Pixels::zero();
+			}
+
 			void computeTabSize(const styles::SpecifiedValue<styles::TabSize>::type& specifiedValue,
 					const styles::Length::Context& context, styles::ComputedValue<styles::TabSize>::type& computedValue) {
 				if(const styles::Integer* const integer = boost::get<styles::Integer>(&specifiedValue)) {
@@ -56,26 +62,30 @@ namespace ascension {
 		 * @param context The length context
 		 * @return The "Computed Value"s
 		 */
-		boost::flyweight<ComputedTextLineStyle> compute(
-				const SpecifiedTextLineStyle& specifiedValues, const styles::Length::Context& context) {
-			ComputedTextLineStyle computedValues;
+		boost::flyweight<styles::ComputedValue<TextLineStyle>::type> compute(
+				const styles::SpecifiedValue<TextLineStyle>::type& specifiedValues, const styles::Length::Context& context) {
+			styles::ComputedValue<TextLineStyle>::type computedValues;
 			styles::computeAsSpecified<styles::Direction>(specifiedValues, computedValues);
 //			styles::computeAsSpecified<styles::UnicodeBidi>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::TextOrientation>(specifiedValues, computedValues);
 
 			styles::detail::computeLineHeight(
-				*boost::fusion::find<styles::SpecifiedValue<styles::LineHeight>::type>(specifiedValues),
+				boost::fusion::at_key<styles::LineHeight>(specifiedValues),
 				Pixels(styles::Length(1, styles::Length::EM_HEIGHT).value(context)),
-				*boost::fusion::find<styles::ComputedValue<styles::LineHeight>::type>(computedValues));
+				boost::fusion::at_key<styles::LineHeight>(computedValues));
 			styles::computeAsSpecified<styles::LineBoxContain>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::DominantBaseline>(specifiedValues, computedValues);
+			computeBaselineShift(
+				boost::fusion::at_key<styles::BaselineShift>(specifiedValues),
+				context,
+				boost::fusion::at_key<styles::BaselineShift>(computedValues));
 			styles::computeAsSpecified<styles::InlineBoxAlignment>(specifiedValues, computedValues);
 
 			styles::computeAsSpecified<styles::WhiteSpace>(specifiedValues, computedValues);
 			computeTabSize(
-				*boost::fusion::find<styles::SpecifiedValue<styles::TabSize>::type>(specifiedValues),
+				boost::fusion::at_key<styles::TabSize>(specifiedValues),
 				context,
-				*boost::fusion::find<styles::ComputedValue<styles::TabSize>::type>(computedValues));
+				boost::fusion::at_key<styles::TabSize>(computedValues));
 			styles::computeAsSpecified<styles::LineBreak>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::WordBreak>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::OverflowWrap>(specifiedValues, computedValues);
@@ -83,64 +93,78 @@ namespace ascension {
 			styles::computeAsSpecified<styles::TextAlignmentLast>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::TextJustification>(specifiedValues, computedValues);
 			computeTextIndent(
-				*boost::fusion::find<styles::SpecifiedValue<styles::TextIndent>::type>(specifiedValues),
+				boost::fusion::at_key<styles::TextIndent>(specifiedValues),
 				context,
-				*boost::fusion::find<styles::ComputedValue<styles::TextIndent>::type>(computedValues));
+				boost::fusion::at_key<styles::TextIndent>(computedValues));
 			styles::computeAsSpecified<styles::HangingPunctuation>(specifiedValues, computedValues);
 
 //			styles::computeAsSpecified<styles::Measure>(specifiedValues, computedValues);
 
 			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
 
-			return boost::flyweight<ComputedTextLineStyle>(computedValues);
+			return boost::flyweight<styles::ComputedValue<TextLineStyle>::type>(computedValues);
 		}
 
 		/// @c boost#hash_value for @c ComputedTextLineStyle.
-		std::size_t hash_value(const ComputedTextLineStyle& style) {
+		std::size_t hash_value(const styles::ComputedValue<TextLineStyle>::type& style) {
 			std::size_t seed = 0;
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::Direction>::type>(style));
-//			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::UnicodeBidi>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextOrientation>::type>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::Direction>(style));
+//			boost::hash_combine(seed, boost::fusion::at_key<styles::UnicodeBidi>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextOrientation>(style));
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::LineHeight>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::LineBoxContain>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::DominantBaseline>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::InlineBoxAlignment>::type>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::LineHeight>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::LineBoxContain>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::DominantBaseline>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::BaselineShift>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::InlineBoxAlignment>(style));
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::WhiteSpace>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TabSize>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::LineBreak>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::WordBreak>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::OverflowWrap>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextAlignment>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextAlignmentLast>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextJustification>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::TextIndent>::type>(style));
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::HangingPunctuation>::type>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::WhiteSpace>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TabSize>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::LineBreak>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::WordBreak>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::OverflowWrap>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextAlignment>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextAlignmentLast>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextJustification>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::TextIndent>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::HangingPunctuation>(style));
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::Measure>::type>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::Measure>(style));
 
-			boost::hash_combine(seed, *boost::fusion::find<styles::ComputedValue<styles::NumberSubstitution>::type>(style));
+			boost::hash_combine(seed, boost::fusion::at_key<styles::NumberSubstitution>(style));
 
 			return seed;
 		}
 
 		/// Default constructor.
 		DeclaredTextLineStyle::DeclaredTextLineStyle() {
-			setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle>());
+			setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle1>());
+			setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle2>());
 		}
 
 		/**
-		 * Sets the default @c DeclaredTextRunStyle of this line element.
-		 * @param newStyle The style collection to set. If @c null, this @c DeclaredTextLineStyle holds a
-		 *                 default-constructed @c DeclaredTextRunStyle
+		 * Sets the default @c DeclaredTextRunStyle1 of this line element.
+		 * @param newStyle The style collection to set. If @c null, this @c DeclaredTextLineStyle1 holds a
+		 *                 default-constructed @c DeclaredTextRunStyle1
 		 */
-		void DeclaredTextLineStyle::setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle> newStyle) BOOST_NOEXCEPT {
+		void DeclaredTextLineStyle::setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle1> newStyle) BOOST_NOEXCEPT {
 			if(newStyle.get() != nullptr)
-				runsStyle_ = newStyle;
+				runsStyle1_ = newStyle;
 			else
-				runsStyle_ = std::shared_ptr<const DeclaredTextRunStyle>(&DeclaredTextRunStyle::unsetInstance(), boost::null_deleter());
+				runsStyle1_ = std::shared_ptr<const DeclaredTextRunStyle1>(&DeclaredTextRunStyle1::unsetInstance(), boost::null_deleter());
+		}
+
+		/**
+		 * Sets the default @c DeclaredTextRunStyle2 of this line element.
+		 * @param newStyle The style collection to set. If @c null, this @c DeclaredTextLineStyle2 holds a
+		 *                 default-constructed @c DeclaredTextRunStyle2
+		 */
+		void DeclaredTextLineStyle::setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle2> newStyle) BOOST_NOEXCEPT {
+			if(newStyle.get() != nullptr)
+				runsStyle2_ = newStyle;
+			else
+				runsStyle2_ = std::shared_ptr<const DeclaredTextRunStyle2>(&DeclaredTextRunStyle2::unsetInstance(), boost::null_deleter());
 		}
 
 		/// Returns a @c DeclaredTextLineStyle instance filled with @c styles#UNSET values.

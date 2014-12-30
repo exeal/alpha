@@ -34,16 +34,15 @@ namespace ascension {
 			return SINGLETON;
 		}
 
-		inline boost::flyweight<ComputedTextToplevelStyle> compute(const SpecifiedTextToplevelStyle& specifiedValues) {
-			ComputedTextToplevelStyle computedValues;
-			*boost::fusion::find<styles::ComputedValue<styles::WritingMode>::type>(computedValues)
-				= *boost::fusion::find<styles::SpecifiedValue<styles::WritingMode>::type>(specifiedValues);
-			return boost::flyweight<ComputedTextToplevelStyle>(computedValues);
+		inline boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type> compute(const styles::SpecifiedValue<TextToplevelStyle>::type& specifiedValues) {
+			styles::ComputedValue<TextToplevelStyle>::type computedValues;
+			boost::fusion::at_key<styles::WritingMode>(computedValues) = boost::fusion::at_key<styles::WritingMode>(specifiedValues);
+			return boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type>(computedValues);
 		}
 
-		/// @c boost#hash_value for @c ComputedTextToplevelStyle.
-		std::size_t hash_value(const ComputedTextToplevelStyle& style) {
-			return boost::hash_value(*boost::fusion::find<styles::ComputedValue<styles::WritingMode>::type>(style));
+		/// @c boost#hash_value for @c styles#ComputedValue&lt;TextToplevelStyle&gt;type.
+		std::size_t hash_value(const styles::ComputedValue<TextToplevelStyle>::type& style) {
+			return boost::hash_value(boost::fusion::at_key<styles::WritingMode>(style));
 		}
 	}
 }
