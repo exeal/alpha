@@ -126,6 +126,9 @@
     <Filter Include="ascension\Header Files\rules">
       <UniqueIdentifier>{106697c4-ec9c-4a16-b899-ca9c69fc2948}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\presentation\detail">
+      <UniqueIdentifier>{73653de9-0a60-42f7-85a1-c44859078b61}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -856,9 +859,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\default-caret-shaper.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font\computed-text-styles.hpp">
-      <Filter>ascension\Header Files\graphics\font</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\virtual-box.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
@@ -1056,6 +1056,12 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\text\string-character-iterator.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\actual-text-styles.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\detail\style-sequence.hpp">
+      <Filter>ascension\Header Files\presentation\detail</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
