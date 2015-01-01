@@ -10,6 +10,7 @@
 #ifndef ASCENSION_TEXT_RUN_HPP
 #define ASCENSION_TEXT_RUN_HPP
 
+#include <ascension/graphics/font/actual-text-styles.hpp>
 #include <ascension/graphics/font/glyph-vector.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
 #include <boost/geometry/algorithms/distance.hpp>
@@ -37,8 +38,8 @@ namespace ascension {
 
 		namespace font {
 			/**
-			 * Abstract class represents a minimum text run whose characters can shaped by single
-			 * font and has single text reading direction.
+			 * Abstract class represents a minimum text run whose characters can shaped by single font and has single
+			 * text reading direction.
 			 * @see GlyphVector, TextLayout
 			 */
 			class TextRun : public GlyphVector {
@@ -53,46 +54,41 @@ namespace ascension {
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				/**
 				 * Returns the character encompasses the specified location.
-				 * @param ipd The distance to the location from the leading edge of this text run
-				 *            in inline-progression-dimension, in user units
-				 * @return The character index in this run, or @c boost#none if @a ipd is outside
-				 *         of this text run
+				 * @param ipd The distance to the location from the leading edge of this text run in
+				 *        inline-progression-dimension, in user units
+				 * @return The character index in this run, or @c boost#none if @a ipd is outside of this text run
 				 * @see #characterHasClosestLeadingEdge
 				 */
 				virtual boost::optional<Index> characterEncompassesPosition(Scalar ipd) const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns the character whose leading edge is closest the specified location.
-				 * @param ipd The distance to the location from the leading edge of this text run
-				 *            in inline-progression-dimension, in user units
+				 * @param ipd The distance to the location from the leading edge of this text run in
+				 *        inline-progression-dimension, in user units
 				 * @return The character in this run
 				 * @see #characterHasClosestLeadingEdge
 				 */
 				virtual Index characterHasClosestLeadingEdge(Scalar ipd) const = 0;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				/**
-				 * Returns a @c TextHit corresponding to the specified position. Position outside
-				 * the bounds of the glyph content of the @c TextRun map to hits on the leading
-				 * edge of the first logical character, or the trailing edge of the last logical
-				 * character, as appropriate, regardless of the position of that character in the
-				 * run.
-				 * @param position The logical position, the distance from the line-left edge of
-				 *                 the glyph content (not the allocation box) of this text run, in
-				 *                 user units
-				 * @param bounds The bounds of the @c TextRun. If @c boost#none, the
-				 *               inline-progression-dimension of this text run is used
-				 * @param[out] outOfBounds @c true if @a position is out of @a bounds. Can be
-				 *                         @c null if not needed
-				 * @return A hit describing the character and edge (leading or trailing) under the
-				 *         specified position
+				 * Returns a @c TextHit corresponding to the specified position. Position outside the bounds of the
+				 * glyph content of the @c TextRun map to hits on the leading edge of the first logical character, or
+				 * the trailing edge of the last logical character, as appropriate, regardless of the position of that
+				 * character in the run.
+				 * @param position The logical position, the distance from the line-left edge of the glyph content (not
+				 *                 the allocation box) of this text run, in user units
+				 * @param bounds The bounds of the @c TextRun. If @c boost#none, the inline-progression-dimension of
+				 *               this text run is used
+				 * @param[out] outOfBounds @c true if @a position is out of @a bounds. Can be @c null if not needed
+				 * @return A hit describing the character and edge (leading or trailing) under the specified position
 				 * @see TextLayout#hitTestCharacter
 				 */
 				virtual TextHit<>&& hitTestCharacter(Scalar position,
 					const boost::optional<boost::integer_range<Scalar>>& bounds,
 					bool* outOfBounds = nullptr) const BOOST_NOEXCEPT = 0;
 				/**
-				 * Returns the logical position of the specified character in this text run. This
-				 * is the distance from the line-left edge of the glyph content (not the allocation
-				 * box) of this text run to the specified character.
+				 * Returns the logical position of the specified character in this text run. This is the distance from
+				 * the line-left edge of the glyph content (not the allocation box) of this text run to the specified
+				 * character.
 				 * @param hit The hit to check. This must be a valid hit on the @c TextRun
 				 * @return The logical character position in user units
 				 * @throw IndexOutOfBounds @a hit is not valid for the @c TextRun
@@ -108,7 +104,7 @@ namespace ascension {
 				 * @return The border, or @c null if absent
 				 * @see #margin, #padding
 				 */
-				virtual const presentation::FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT = 0;
+				virtual const presentation::FlowRelativeFourSides<ActualBorderSide>* border() const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns the margin.
 				 * @return The margin widths in user units, or @c null if absent
@@ -177,11 +173,11 @@ namespace ascension {
 			 */
 			inline presentation::FlowRelativeFourSides<Scalar> borderBox(const TextRun& textRun) BOOST_NOEXCEPT {
 				presentation::FlowRelativeFourSides<Scalar> bounds(paddingBox(textRun));
-				if(const presentation::FlowRelativeFourSides<ComputedBorderSide>* const borders = textRun.border()) {
-					bounds.before() -= borders->before().computedWidth();
-					bounds.after() += borders->after().computedWidth();
-					bounds.start() -= borders->start().computedWidth();
-					bounds.end() += borders->end().computedWidth();
+				if(const presentation::FlowRelativeFourSides<ActualBorderSide>* const borders = textRun.border()) {
+					bounds.before() -= borders->before().actualWidth();
+					bounds.after() += borders->after().actualWidth();
+					bounds.start() -= borders->start().actualWidth();
+					bounds.end() += borders->end().actualWidth();
 				}
 				return bounds;
 			}
@@ -222,20 +218,18 @@ namespace ascension {
 			 * @see #measure
 			 */
 			inline Scalar allocationMeasure(const TextRun& textRun) {
-				const presentation::FlowRelativeFourSides<ComputedBorderSide>* const border = textRun.border();
+				const presentation::FlowRelativeFourSides<ActualBorderSide>* const border = textRun.border();
 				const presentation::FlowRelativeFourSides<Scalar>* const margin = textRun.margin();
 				const presentation::FlowRelativeFourSides<Scalar>* const padding = textRun.padding();
 				return measure(textRun)
-					+ ((border != nullptr) ? border->start().computedWidth() + border->end().computedWidth() : 0)
+					+ ((border != nullptr) ? border->start().actualWidth() + border->end().actualWidth() : 0)
 					+ ((margin != nullptr) ? margin->start() + margin->end() : 0)
 					+ ((padding != nullptr) ? padding->start() + padding->end() : 0);
 			}
 			/// @}
 
-			struct ComputedTextDecoration;
-
 			void paintTextDecoration(PaintContext& context,
-				const TextRun& run, const Point& origin, const ComputedTextDecoration& style);
+				const TextRun& run, const Point& origin, const ActualTextDecoration& style);
 		}
 	}
 }
