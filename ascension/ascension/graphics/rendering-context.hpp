@@ -79,18 +79,39 @@ namespace ascension {
 
 		enum FillRule {NONZERO, EVENODD};
 
+		/// Valid values for 'lineCap' attribute.
+		/// Each point has a flat edge perpendicular to the direction of the line coming out of it.
 		ASCENSION_SCOPED_ENUMS_BEGIN(LineCap)
+			/// No additional line cap is added.
 			BUTT,
+			/// A semi-circle with the diameter equal to the styles 'lineWidth' width must additionally be placed on to
+			/// the line coming out of each point.
 			ROUND,
+			/// A rectangle with the length of the style 'lineWidth' width and the width of half the styles 'lineWidth'
+			/// width, placed flat against the edge perpendicular to the direction of the line coming out of the point,
+			/// must be added at each point.
 			SQUARE
 		ASCENSION_SCOPED_ENUMS_END
 
+		/// Valid values for 'lineJoin' attribute.
+		/// In addition to the point where a join occurs, two additional points are relevant to each join, one for each
+		/// line: the two corners found half the line width away from the join point, one perpendicular to each line,
+		/// each on the side furthest from the other line.
 		ASCENSION_SCOPED_ENUMS_BEGIN(LineJoin)
+			/// This is all that is rendered at joins.
 			BEVEL,
+			/// A filled arc connecting the two aforementioned corners of the join, abutting (and not overlapping) the
+			/// aforementioned triangle, with the diameter equal to the line width and the origin at the point of the
+			/// join, must be added at joins.
 			ROUND,
+			/// A second filled triangle must (if it can given the miter length) be added at the join, with one line
+			/// being the line between the two aforementioned corners, abutting the first triangle, and the other two
+			/// being continuations of the outside edges of the two joining lines, as long as required to intersect
+			/// without going over the miter length.
 			MITER
 		ASCENSION_SCOPED_ENUMS_END
 
+		/// Valid values for 'textAlignment' attribute.
 		ASCENSION_SCOPED_ENUMS_BEGIN(TextAlignment)
 			START = font::TextAlignment::START,
 			END = font::TextAlignment::END,
@@ -103,8 +124,8 @@ namespace ascension {
 		public:
 			/**
 			 * Constructor.
-			 * @param data The one-dimensional array containing the data in RGBA order, as integers
-			 *             in the range 0 to 255
+			 * @param data The one-dimensional array containing the data in RGBA order, as integers in the range 0 to
+			 *             255
 			 * @param width The height of the data in device pixels
 			 * @param height The height of the data in device pixels
 			 */
@@ -143,14 +164,17 @@ namespace ascension {
 
 		/**
 		 * @c CanvasRenderingContext2D interface defined in "HTML Canvas 2D Context"
-		 * (http://dev.w3.org/html5/2dcontext/).
-		 * The documentation of this class and its members are copied (and arranged) from W3C
-		 * documents.
+		 * (http://www.w3.org/TR/2dcontext/).
+		 * The documentation of this class and its members are copied (and arranged) from W3C documents.
 		 * Many methods of this class may throw @c PlatformError exception.
+		 * @note When drawing with @c RenderingContext2D, we specify points using logical coordinates. The default unit
+		 *       is one pixel on pixel-based devices and one point on printing devices.
+		 * @see RenderingDevice
 		 */
 		class RenderingContext2D : public Wrapper<RenderingContext2D> {
 		public:
-			// platform-native interfaces
+			/// @name Platform-native Interfaces
+			/// @{
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 			explicit RenderingContext2D(Cairo::RefPtr<Cairo::Context> nativeObject);
 			Cairo::RefPtr<Cairo::Context> native();
@@ -171,10 +195,11 @@ namespace ascension {
 			win32::Handle<HDC>::Type native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 			explicit RenderingContext2D(Gdiplus::Graphics& nativeObject);	// weak ref.
-^			explicit RenderingContext2D(std::shared_ptr<Gdiplus::Graphics> nativeObject);
+			explicit RenderingContext2D(std::shared_ptr<Gdiplus::Graphics> nativeObject);
 			Gdiplus::Graphics& native();
 			const Gdiplus::Graphics& native() const;
 #endif
+			/// @}
 		public:
 			/// Move-constructor.
 			RenderingContext2D(RenderingContext2D&& other) BOOST_NOEXCEPT;
@@ -182,8 +207,8 @@ namespace ascension {
 			font::FontCollection availableFonts() const;
 			/**
 			 * Returns the font metrics for the specified font.
-			 * @param font The font to get metrics. If this is @c null, this method returns the
-			 *             font metrics for the current font
+			 * @param font The font to get metrics. If this is @c null, this method returns the font metrics for the
+			 *             current font
 			 * @return The font metrics with values in the user units
 			 * @see #font
 			 */
@@ -197,15 +222,16 @@ namespace ascension {
 			const RenderingDevice& device() const;
 			/// @}
 
-			/// @name State
+			/// @name 2 The State
+			/// @{
 			/**
-			 * Pushes the current drawing context onto the drawing state stack.
+			 * Pushes a copy of the current drawing state onto the drawing state stack.
 			 * @return This object
 			 * @see #restore
 			 */
 			RenderingContext2D& save();
 			/**
-			 * Pops the top state on the drawing state stack, restoring the context to that state.
+			 * Pops the top entry in the drawing state stack, and resets the drawing state it describes.
 			 * If there is no saved state, this method does nothing.
 			 * @return This object
 			 * @see #save
@@ -213,400 +239,25 @@ namespace ascension {
 			RenderingContext2D& restore();
 			/// @}
 
-			/// @name Compositing
+			/// @name 3 Line Styles (Part of @c CanvasDrawingStyles Interface)
 			/// @{
 			/**
-			 * Returns the current alpha value applied to rendering operations. Initial value is
-			 * @c 1.0.
-			 * @return The current alpha value in the range from 0.0 (fully transparent) to 1.0 (no
-			 *         additional transparency)
-			 * @see #globalCompositeOperation, #setGlobalAlpha
-			 */
-			double globalAlpha() const;
-			/**
-			 * Sets the current alpha value applied to rendering operations.
-			 * @param globalAlpha The alpha value in the range from 0.0 (fully transparent) to 1.0
-			 *                   (no additional transparency)
-			 * @throw std#invalid_argument @a globalAlpha is out of range from 0.0 to 1.0
-			 * @see #globalAlpha, #setGlobalCompositeOperation
-			 */
-			RenderingContext2D& setGlobalAlpha(double globalAlpha);
-			/**
-			 * Returns the current composition operation. Initial value is @c SOURCE_OVER.
-			 * @return The current composition operation
-			 * @see #globalAlpha, #setGlobalCompositeOperation
-			 */
-			CompositeOperation globalCompositeOperation() const;
-			/**
-			 * Sets the current composition operation.
-			 * @param compositeOperation The new composition operation
-			 * @throw UnknownValueException @a compositeOperation is unknown
-			 * @see #globalCompositeOperation, #setGlobalAlpha
-			 */
-			RenderingContext2D& setGlobalCompositeOperation(CompositeOperation compositeOperation);
-			/// @}
-
-			/// @name Colors and Styles
-			/// @{
-			/**
-			 * Returns the current style used for stroking shapes. Initial value is opaque black.
-			 * @return The current stokre style
-			 * @see #setStrokeStyle, #fillStyle
-			 */
-			std::shared_ptr<const Paint> strokeStyle() const;
-			/**
-			 * Sets the style used for stroking shapes.
-			 * @param strokeStyle The new fill style to set
-			 * @return This object
-			 * @see #strokeStyle, #setFillStyle
-			 */
-			RenderingContext2D& setStrokeStyle(std::shared_ptr<const Paint> strokeStyle);
-			/**
-			 * Returns the current style used for filling shapes. Initial value is opaque black.
-			 * @return The current fill style
-			 * @see #setFillStyle, #strokeStyle
-			 */
-			std::shared_ptr<const Paint> fillStyle() const;
-			/**
-			 * Sets the style used for filling shapes.
-			 * @param fillStyle The new fill style to set
-			 * @return This object
-			 * @see #fillStyle, #setStrokeStyle
-			 */
-			RenderingContext2D& setFillStyle(std::shared_ptr<const Paint> fillStyle);
-//			std::unique_ptr<Gradient> createLinearGradient();
-//			std::unique_ptr<Gradient> createRadialGradient();
-//			std::unique_ptr<Pattern> createPattern();
-			/// @}
-
-			/// @name Shadows
-			/// @{
-			/**
-			 * Returns the current shadow offset. Initial value is <code>(0, 0)</code>.
-			 * @return The current shadow offset
-			 * @see #setShadowOffset
-			 */
-			Dimension shadowOffset() const;
-			/**
-			 * Sets the shadow offset.
-			 * @return The new shadow offset to set
-			 * @see #shadowOffset
-			 */
-			RenderingContext2D& setShadowOffset(const Dimension& shadowOffset);
-			/**
-			 * Returns the current level of blur applied to shadows. Initial value is @c 0.
-			 * @return The current level of blur applied to shadows
-			 * @see #setShadowBlur
-			 */
-			Scalar shadowBlur() const;
-			/**
-			 * Sets the shadow color.
-			 * @param shadowColor The new shadow color to set
-			 * @return This object
-			 * @see #shadowBlur
-			 */
-			RenderingContext2D& setShadowBlur(Scalar shadowBlur);
-			/**
-			 * Returns the current shadow color. Initial value is fully-transparent black.
-			 * @return The current shadow color
-			 * @see #setShadowColor
-			 */
-			Color shadowColor() const;
-			/**
-			 * Sets the shadow color.
-			 * @param shadowColor The new shadow color to set
-			 * @return This object
-			 * @see #shadowColor
-			 */
-			RenderingContext2D& setShadowColor(const Color& shadowColor);
-			/// @}
-
-			/// @name Rects
-			/// @{
-			/**
-			 * Clears all pixels on the canvas in the specified rectangle to transparent black.
-			 * @param rectangle The rectangle
-			 * @return This object
-			 * @see #fillRectangle, #strokeRectangle
-			 */
-			RenderingContext2D& clearRectangle(const Rectangle& rectangle);
-			/**
-			 * Paints the specified rectangle onto the canvas, using the current fill style.
-			 * @param rectangle The rectangle
-			 * @return This object
-			 * @see #clarRectangle, #strokeRectangle
-			 */
-			RenderingContext2D& fillRectangle(const Rectangle& rectangle);
-			/**
-			 * Paints the box that outlines the specified rectangle onto the canvas, using the
-			 * current stroke style.
-			 * @param rectangle The rectangle
-			 * @return This object
-			 * @see #clearRectangle, #fillRectangle
-			 */
-			RenderingContext2D& strokeRectangle(const Rectangle& rectangle);
-			/// @}
-
-			/// @name Current Default Path API
-			/// @{
-			/**
-			 * Resets the current default path.
-			 * @return This object
-			 * @see #closePath
-			 */
-			RenderingContext2D& beginPath();
-			/**
-			 * Fills the subpaths of the current default path with the current fill style.
-			 * @return This object
-			 * @see #fillRectangle, #fillText, #stroke
-			 */
-			RenderingContext2D& fill();
-			/**
-			 * Strokes the subpaths of the current default path with the current stroke style.
-			 * @return This object
-			 * @see #fill, #strokeRectangle, #strokeText
-			 */
-			RenderingContext2D& stroke();
-			/**
-			 * Draws a focus ring around the current default path, following the platform
-			 * conventions for focus rings.
-			 * @see #drawCustomFocusRing
-			 */
-			void drawSystemFocusRing(/*const NativeRectangle& bounds*/);
-			/**
-			 * The end user has configured whose system to draw focus rings in a particular manner
-			 * (for example, high contrast focus rings), draws a focus ring around the current
-			 * default path and returns @c false. Otherwise returns @c true.
-			 * @retval true This method did not draw a focus ring
-			 * @retval false This method drew a focus ring
-			 */
-			bool drawCustomFocusRing(/*const NativeRectangle& bounds*/);
-			/**
-			 * Scrolls the current default path into view. This is especially useful on devices
-			 * with small screens, where the whole canvas might not be visible at once.
-			 * @return This object
-			 */
-			RenderingContext2D& scrollPathIntoView();
-			/**
-			 * Further constrains the clipping region to the current default path.
-			 * @return This object
-			 */
-			RenderingContext2D& clip();
-			/**
-			 * Returns @c true if the specified point is in the current default path.
-			 * @param point The point to test
-			 * @return @a point is in the current default path
-			 */
-			bool isPointInPath(const Point& point) const;
-			/// @}
-
-			/// @name Text
-			/// @{
-			/**
-			 * Fills the given text at the given position. If a maximum measure is provided, the
-			 * text will be scaled to fit that measure if necessary.
-			 * @param text The text string
-			 * @param origin The origin of the text. The alignment of the drawing is calculated by
-			 *               the current @c #textAlign and @c #textBaseline values
-			 * @param maximumMeasure If present, this value specifies the maximum measure (width
-			 *                       in horizontal writing mode)
-			 * @return This object
-			 * @throw std#invalid_argument @a maximumMeasure is present but less than or equal to zero
-			 * @see #strokeText, #measureText
-			 */
-			RenderingContext2D& fillText(const StringPiece& text,
-				const Point& origin, boost::optional<Scalar> maximumMeasure = boost::none);
-			/**
-			 * Strokes the given text at the given position. If a maximum measure is provided, the
-			 * text will be scaled to fit that measure if necessary.
-			 * @param text The text string
-			 * @param origin The origin of the text. The alignment of the drawing is calculated by
-			 *               the current @c #textAlign and @c #textBaseline values
-			 * @param maximumMeasure If present, this value specifies the maximum measure (width
-			 *                       in horizontal writing mode)
-			 * @return This object
-			 * @throw std#invalid_argument @a maximumMeasure is present but less than or equal to zero
-			 * @see #fillText, #measureText
-			 */
-			RenderingContext2D& strokeText(const StringPiece& text,
-				const Point& origin, boost::optional<Scalar> maximumMeasure = boost::none);
-			/**
-			 * Returns a size (measure and extent) of the specified text in the current font.
-			 * @param text The text string
-			 * @see #strokeText, #fillText
-			 */
-			Dimension measureText(const StringPiece& text) const;
-			/// @}
-
-			/// @name Drawing Images
-			/// @{
-			/**
-			 * Draws the specified image onto the canvas.
-			 * @param image The image to draw
-			 * @param position The destination position
-			 * @return This object
-			 */
-			RenderingContext2D& drawImage(const Image& image, const Point& position);
-			/**
-			 * Draws the specified image onto the canvas.
-			 * @param image The image to draw
-			 * @param destinationBounds The destination bounds
-			 * @return This object
-			 */
-			RenderingContext2D& drawImage(const Image& image, const Rectangle& destinationBounds);
-			/**
-			 * Draws the specified image onto the canvas.
-			 * @param image The image to draw
-			 * @param sourceBounds The bounds in @a image data to draw
-			 * @param destinationBounds The destination bounds
-			 * @return This object
-			 */
-			RenderingContext2D& drawImage(const Image& image, const Rectangle& sourceBounds, const Rectangle& destinationBounds);
-			/// @}
-
-			/// @a name Pixel Manipulation
-			/// @{
-			/**
-			 * Returns an @c ImageData object with the specified dimensions. All the pixels in the
-			 * returned object are transparent black.
-			 * @param dimensions The dimensions in pixels
-			 * @return An image data
-			 */
-			std::unique_ptr<ImageData> createImageData(const Dimension& dimensions) const;
-			/**
-			 * Returns an @c ImageData object with the same dimensions as the argument. All pixels
-			 * in the returned object are transparent black.
-			 * @param image The image data gives the dimensions
-			 * @return An image data
-			 */
-			std::unique_ptr<ImageData> createImageData(const ImageData& image) const {
-		     	return createImageData(Dimension(
-					geometry::_dx = static_cast<Scalar>(image.width()),
-					geometry::_dy = static_cast<Scalar>(image.height())));
-			}
-			/**
-			 * Returns an @c ImageData object containing the image data for the specified rectangle
-			 * of the canvas.
-			 * @param rectangle The bounds of the image in canvas coordinate space units
-			 * @return An image data. Pixels outside the canvas are returned as transparent black
-			 * @see #putImageData
-			 */
-			std::unique_ptr<ImageData> getImageData(const Rectangle& rectangle) const;
-			/**
-			 * Paints the data from the specified @c ImageData object onto the canvas. The
-			 * @c #globalAlpha and @c #globalCompositeOperation attributes, as well as the shadow
-			 * attributes, are ignored for the purposes of this method call; pixels in the canvas
-			 * are replaced wholesale, with no composition, alpha blending, no shadows, etc.
-			 * @param image The image data
-			 * @param destination The destination position onto where the image is painted in the
-			 *                    canvas coordinate space units
-			 * @see #getImageData
-			 */
-			RenderingContext2D& putImageData(const ImageData& image, const Point& destination) {
-				return putImageData(image, destination, Rectangle(
-					boost::geometry::make_zero<Point>(),
-					Dimension(
-						geometry::_dx = static_cast<Scalar>(image.width()),
-						geometry::_dy = static_cast<Scalar>(image.height()))));
-			}
-			/**
-			 * Paints the data from the specified @c ImageData object onto the canvas. Only the
-			 * pixels from @a dirtyRectangle are painted. The @c #globalAlpha and
-			 * @c #globalCompositeOperation attributes, as well as the shadow attributes, are
-			 * ignored for the purposes of this method call; pixels in the canvas are replaced
-			 * wholesale, with no composition, alpha blending, no shadows, etc.
-			 * @param image The image data
-			 * @param destination The destination position onto where the image is painted in the
-			 *                    canvas coordinate space units
-			 * @param dirtyRectangle The bounds to paint in image in device pixels
-			 * @see #getImageData
-			 */
-			RenderingContext2D& putImageData(const ImageData& image,
-				const Point& destination, const Rectangle& dirtyRectangle);
-			/// @}
-
-			/// @name Transformations (CanvasTransformation Interface)
-			/// @{
-			/**
-			 * Adds the scaling transformation described by @a s to the transformation matrix.
-			 * @param sx The scale factor in the horizontal direction. The factor is multiplies
-			 * @param sy The scale factor in the vertical direction. The factor is multiplies
-			 * @return This object
-			 * @see #rotate, #translate, #transform, #setTransform
-			 */
-			RenderingContext2D& scale(double sx, double sy) {
-				return transform(geometry::makeScalingTransform(geometry::_sx = sx, geometry::_sy = sy));
-			}
-			/**
-			 * Adds the rotation transformation described by @a angle to the transformation matrix.
-			 * @tparam DegreeOrRadian @c boost#geometry#degree or @c boost#geometry#radian
-			 * @param angle A clockwise rotation angle measured in units specified by @a DegreeOrRadian
-			 * @return This object
-			 * @see #scale, #translate, #transform, #setTransform
-			 */
-			template<typename DegreeOrRadian>
-			RenderingContext2D& rotate(double angle) {
-				return transform(geometry::makeRotationTransform<DegreeOrRadian>(angle));
-			}
-			/**
-			 * Adds the translation transformation described by @a delta to the transformation
-			 * matrix.
-			 * @param delta The translation transformation. @c geometry#dx(delta) represents the
-			 *              translation distance in the horizontal direction and
-			 *              @c geometry#dy(delta) represents the translation distance in the
-			 *              vertical direction. These are in xxx units
-			 * @return This object
-			 * @see #scale, #rotate, #transform, #setTransform
-			 */
-			RenderingContext2D& translate(const Dimension& delta) {
-				return translate(geometry::dx(delta), geometry::dy(delta));
-			}
-			/**
-			 * Adds the translation transformation described by @a dx and @a dy to the
-			 * transformation matrix.
-			 * @param dx The translation distance in the horizontal direction in xxx units
-			 * @param dy The translation distance in the vertical direction in xxx units
-			 * @return This object
-			 * @see #scale, #rotate, #transform, #setTransform
-			 */
-			RenderingContext2D& translate(double dx, double dy) {
-				return transform(geometry::makeTranslationTransform(geometry::_tx = dx, geometry::_ty = dy));
-			}
-			/**
-			 * Replaces the current transformation matrix with the result of multiplying the
-			 * current transformation matrix with the matrix described by @a matrix.
-			 * @param matrix The matrix to multiply with
-			 * @return This object
-			 * @see #scale, #rotate, #translate, #setTransform
-			 */
-			RenderingContext2D& transform(const AffineTransform& matrix);
-			/**
-			 * Resets the current transformation to the identity matrix and calls @c #transform(matrix).
-			 * @param matrix The new transformation matrix
-			 * @return This object
-			 * @see #scale, #rotate, #translate, #transform
-			 */
-			RenderingContext2D& setTransform(const AffineTransform& matrix);
-			/// @}
-
-			/// @name Line Caps/Joins (CanvasLineStyles Interface)
-			/// @{
-			/**
-			 * Returns the current width of lines, in xxx units. Initial value is @c 1.0.
-			 * @return The current width of lines
+			 * Returns the current width of lines, in logical coordinate space units. Initial value is @c 1.0.
+			 * @return The current line width
 			 * @see #setLineWidth
 			 */
 			Scalar lineWidth() const;
 			/**
 			 * Sets the width of lines.
-			 * @param lineWidth The width of lines, in xxx units. Values that are not finite values
-			 *                  greater than zero are ignored
+			 * @param lineWidth The width of lines, in logical coordinate space units. Values that are not finite
+			 *                  values greater than zero are ignored
 			 * @return This object
 			 * @see #lineWidth
 			 */
 			RenderingContext2D& setLineWidth(Scalar lineWidth);
 			/**
-			 * Returns the current line cap style. Initial value is @c LineCap#BUTT.
+			 * Returns the type of endings that the renderer will place on the end of lines. Initial value is
+			 * @c LineCap#BUTT.
 			 * @return The current line cap style
 			 * @see #setLineCap
 			 */
@@ -620,7 +271,8 @@ namespace ascension {
 			 */
 			RenderingContext2D& setLineCap(LineCap lineCap);
 			/**
-			 * Returns the current line join style. Initial value is @c LineJoin#MITER.
+			 * Returns the type of corners that the renderer will place where two lines meet. Initial value is
+			 * @c LineJoin#MITER.
 			 * @return The current line join style
 			 * @see #setLineJoin
 			 */
@@ -634,30 +286,52 @@ namespace ascension {
 			 */
 			RenderingContext2D& setLineJoin(LineJoin lineJoin);
 			/**
-			 * Returns the current miter limit ratio. Initial value is @c 10.0.
+			 * Returns the miter limit ratio to decide how to render joins. Initial value is @c 10.0.
 			 * @return The current miter limit ratio
 			 * @see #setMiterLimit
 			 */
 			double miterLimit() const;
 			/**
 			 * Sets the miter limit ratio.
-			 * @param miterLimit The miter limit ratio. Values that are not finite values greater
-			 *                   than zero are ignored
+			 * @param miterLimit The miter limit ratio. Values that are not finite values greater than zero are ignored
 			 * @return This object
 			 * @see #miterLimit
 			 */
 			RenderingContext2D& setMiterLimit(double miterLimit);
+			/**
+			 * @return The current dash list
+			 * @see #setLineDash
+			 */
+			const std::vector<Scalar>& lineDash() const;
+			/**
+			 * @param lineDash
+			 * @return This object
+			 * @see #lineDash
+			 */
+			RenderingContext2D& setLineDash(const std::vector<Scalar>& lineDash);
+			/**
+			 * @see #setLineDashOffset
+			 */
+			Scalar lineDashOffset() const;
+			/**
+			 * @param lineDashOffset
+			 * @return This object
+			 * @see #lineDashOffset
+			 */
+			RenderingContext2D& setLineDashOffset(Scalar lineDashOffset);
 			/// @}
 
-			/// @name Text (CanvasText Interface)
+			/// @name 4 Text (Part of @c CanvasDrawingStyles Interface)
 			/// @{
 			/**
-			 * Returns the current font settings as a @c Font object.
+			 * Returns a @c Font object of the current font of the context. The initial value is platform-dependent.
+			 * @return The current font settings
 			 * @see #setFont
 			 */
 			std::shared_ptr<const font::Font> font() const;
 			/**
 			 * Sets the font settings by the @c Font object.
+			 * @return This object
 			 * @see #font
 			 */
 			RenderingContext2D& setFont(std::shared_ptr<const font::Font> font);
@@ -692,15 +366,8 @@ namespace ascension {
 			RenderingContext2D& setTextBaseline(font::AlignmentBaseline baseline);
 			/// @}
 
-			/// @name Shared Path API Methods (CanvasPathMethods Interface)
+			/// @name 5 Building Paths (@c CanvasPathMethods Interface)
 			/// @{
-			/**
-			 * Marks the current subpath as closed, and starts a new subpath with a point the same
-			 * as the start and end of the newly closed subpath.
-			 * @return This object
-			 * @see #beginPath
-			 */
-			RenderingContext2D& closePath();
 			/**
 			 * Creates a new subpath with the specified point.
 			 * @param to The point as first (and only) of the new subpath
@@ -709,17 +376,23 @@ namespace ascension {
 			 */
 			RenderingContext2D& moveTo(const Point& to);
 			/**
-			 * Adds the specified point to the current subpath, connected to the previous one by a
-			 * straight line. If the path has no subpaths, ensures there is a subpath for that
-			 * point.
+			 * Marks the current subpath as closed, and starts a new subpath with a point the same as the start and end
+			 * of the newly closed subpath.
+			 * @return This object
+			 * @see #beginPath
+			 */
+			RenderingContext2D& closePath();
+			/**
+			 * Adds the specified point to the current subpath, connected to the previous one by a straight line. If
+			 * the path has no subpaths, ensures there is a subpath for that point.
 			 * @param to The point to add to the current subpath
 			 * @return This object
 			 * @see #moveTo
 			 */
 			RenderingContext2D& lineTo(const Point& to);
 			/**
-			 * Adds the specified point to the current subpath, connected to the previous one by a
-			 * quadratic Bézier curve with the specified control point.
+			 * Adds the specified point to the current subpath, connected to the previous one by a quadratic Bézier
+			 * curve with the specified control point.
 			 * @param cp The control point
 			 * @param to The point to add to the current subpath
 			 * @return This object
@@ -727,8 +400,8 @@ namespace ascension {
 			 */
 			RenderingContext2D& quadraticCurveTo(const Point& cp, const Point& to);
 			/**
-			 * Adds the specified point to the current subpath, connected to the previous one by a
-			 * cubic Bézier curve with the specified control point.
+			 * Adds the specified point to the current subpath, connected to the previous one by a cubic Bézier curve
+			 * with the specified control point.
 			 * @param cp1 The first control point
 			 * @param cp2 The second control point
 			 * @param to The point to add to the current subpath
@@ -737,8 +410,8 @@ namespace ascension {
 			 */
 			RenderingContext2D& bezierCurveTo(const Point& cp1, const Point& cp2, const Point& to);
 			/**
-			 * Adds an arc with the specified control points and radius to the current subpath,
-			 * connected to the previous point by a straight line.
+			 * Adds an arc with the specified control points and radius to the current subpath, connected to the
+			 * previous point by a straight line.
 			 * @param p1 The start point
 			 * @param p2 The destination point
 			 * @param radius Radius of the circle gives the arc
@@ -748,28 +421,412 @@ namespace ascension {
 			 */
 			RenderingContext2D& arcTo(const Point& p1, const Point& p2, Scalar radius);
 			/**
+			 * Adds points to the subpath such that the arc described by the circumference of the circle described by
+			 * the arguments, starting at the specified start angle and ending at the given end angle, going in the
+			 * given direction, is added to the path, connected to the previous point by a straight line.
+			 * @param p The origin of the circle gives the arc
+			 * @param radius Radius of the circle gives the arc
+			 * @param startAngle Defines the start point 
+			 * @param endAngle Defines the end point
+			 * @param counterClosewise If @c false, the arc is the path along the circumstance of the circle from the
+			 *                         start point to the end point, closewise
+			 * @return This object
+			 * @throw std#invalid_argument @a radius is negative
+			 * @see #arcTo
+			 */
+			RenderingContext2D& arc(const Point& p, Scalar radius,
+				double startAngle, double endAngle, bool counterClockwise = false);
+			/**
 			 * Adds a new closed subpath to the path, representing the specified rectangle.
 			 * @param rect The rectangle
 			 * @return This object
 			 */
 			RenderingContext2D& rectangle(const Rectangle& rect);
+			/// @}
+
+			/// @name 6 Transformations
+			/// @{
 			/**
-			 * Adds points to the subpath such that the arc described by the circumference of the
-			 * circle described by the arguments, starting at the specified start angle and ending
-			 * at the given end angle, going in the given direction, is added to the path,
-			 * connected to the previous point by a straight line.
-			 * @param p The origin of the circle gives the arc
-			 * @param radius Radius of the circle gives the arc
-			 * @param startAngle Defines the start point 
-			 * @param endAngle Defines the end point
-			 * @param counterClosewise If @c false, the arc is the path along the circumstance of
-			 *                         the circle from the start point to the end point, closewise
+			 * Adds the scaling transformation described by @a s to the transformation matrix.
+			 * @param sx The scale factor in the horizontal direction. The factor is multiplies
+			 * @param sy The scale factor in the vertical direction. The factor is multiplies
 			 * @return This object
-			 * @throw std#invalid_argument @a radius is negative
-			 * @see #arc
+			 * @see #rotate, #translate, #transform, #setTransform
 			 */
-			RenderingContext2D& arc(const Point& p, Scalar radius,
-				double startAngle, double endAngle, bool counterClockwise = false);
+			RenderingContext2D& scale(double sx, double sy) {
+				return transform(geometry::makeScalingTransform(geometry::_sx = sx, geometry::_sy = sy));
+			}
+			/**
+			 * Adds the rotation transformation described by @a angle to the transformation matrix.
+			 * @tparam DegreeOrRadian @c boost#geometry#degree or @c boost#geometry#radian
+			 * @param angle A clockwise rotation angle measured in units specified by @a DegreeOrRadian
+			 * @return This object
+			 * @see #scale, #translate, #transform, #setTransform
+			 */
+			template<typename DegreeOrRadian>
+			RenderingContext2D& rotate(double angle) {
+				return transform(geometry::makeRotationTransform<DegreeOrRadian>(angle));
+			}
+			/**
+			 * Adds the translation transformation described by @a delta to the transformation matrix.
+			 * @param delta The translation transformation. @c geometry#dx(delta) represents the translation distance
+			 *              in the horizontal direction and @c geometry#dy(delta) represents the translation distance
+			 *              in the vertical direction. These are in logical coordinate space units
+			 * @return This object
+			 * @see #scale, #rotate, #transform, #setTransform
+			 */
+			RenderingContext2D& translate(const Dimension& delta) {
+				return translate(geometry::dx(delta), geometry::dy(delta));
+			}
+			/**
+			 * Adds the translation transformation described by @a dx and @a dy to the transformation matrix.
+			 * @param dx The translation distance in the horizontal direction in logical coordinate space units
+			 * @param dy The translation distance in the vertical direction in logical coordinate space units
+			 * @return This object
+			 * @see #scale, #rotate, #transform, #setTransform
+			 */
+			RenderingContext2D& translate(double dx, double dy) {
+				return transform(geometry::makeTranslationTransform(geometry::_tx = dx, geometry::_ty = dy));
+			}
+			/**
+			 * Replaces the current transformation matrix with the result of multiplying the current transformation
+			 * matrix with the matrix described by @a matrix.
+			 * @param matrix The matrix to multiply with
+			 * @return This object
+			 * @see #scale, #rotate, #translate, #setTransform
+			 */
+			RenderingContext2D& transform(const AffineTransform& matrix);
+			/**
+			 * Resets the current transformation to the identity matrix and calls @c #transform(matrix).
+			 * @param matrix The new transformation matrix
+			 * @return This object
+			 * @see #scale, #rotate, #translate, #transform
+			 */
+			RenderingContext2D& setTransform(const AffineTransform& matrix);
+			/// @}
+
+			/// @name 7 Fill and Stroke Styles
+			/// @{
+			/**
+			 * Returns the color or style to use inside shapes. Initial value is opaque black.
+			 * @return The current fill style
+			 * @see #setFillStyle, #strokeStyle
+			 */
+			std::shared_ptr<const Paint> fillStyle() const;
+			/**
+			 * Sets the style used for filling shapes.
+			 * @param fillStyle The new fill style to set
+			 * @return This object
+			 * @see #fillStyle, #setStrokeStyle
+			 */
+			RenderingContext2D& setFillStyle(std::shared_ptr<const Paint> fillStyle);
+			/**
+			 * Returns the color or style to use for the lines around the shapes. Initial value is opaque black.
+			 * @return The current stokre style
+			 * @see #setStrokeStyle, #fillStyle
+			 */
+			std::shared_ptr<const Paint> strokeStyle() const;
+			/**
+			 * Sets the style used for stroking shapes.
+			 * @param strokeStyle The new fill style to set
+			 * @return This object
+			 * @see #strokeStyle, #setFillStyle
+			 */
+			RenderingContext2D& setStrokeStyle(std::shared_ptr<const Paint> strokeStyle);
+//			std::unique_ptr<Gradient> createLinearGradient();
+//			std::unique_ptr<Gradient> createRadialGradient();
+//			std::unique_ptr<Pattern> createPattern();
+			/// @}
+
+			/// @name 8 Drawing Rectangles to the Canvas
+			/// @{
+			/**
+			 * Clears all pixels on the canvas in the specified rectangle to transparent black.
+			 * @param rectangle The rectangle
+			 * @return This object
+			 * @see #fillRectangle, #strokeRectangle
+			 */
+			RenderingContext2D& clearRectangle(const Rectangle& rectangle);
+			/**
+			 * Paints the specified rectangle onto the canvas, using the current fill style.
+			 * @param rectangle The rectangle
+			 * @return This object
+			 * @see #clarRectangle, #strokeRectangle
+			 */
+			RenderingContext2D& fillRectangle(const Rectangle& rectangle);
+			/**
+			 * Paints the box that outlines the specified rectangle onto the canvas, using the current stroke style.
+			 * @param rectangle The rectangle
+			 * @return This object
+			 * @see #clearRectangle, #fillRectangle
+			 */
+			RenderingContext2D& strokeRectangle(const Rectangle& rectangle);
+			/// @}
+
+			/// @name 9 Drawing Text to the Canvas
+			/// @{
+			/**
+			 * Fills the given text at the given position. If a maximum measure is provided, the text will be scaled to
+			 * fit that measure if necessary.
+			 * @param text The text string
+			 * @param origin The origin of the text. The alignment of the drawing is calculated by the current
+			 *               @c #textAlignment and @c #textBaseline values
+			 * @param maximumMeasure If present, this value specifies the maximum measure (width in horizontal writing
+			 *                       mode)
+			 * @return This object
+			 * @throw std#invalid_argument @a maximumMeasure is present but less than or equal to zero
+			 * @see #strokeText, #measureText
+			 */
+			RenderingContext2D& fillText(const StringPiece& text,
+				const Point& origin, boost::optional<Scalar> maximumMeasure = boost::none);
+			/**
+			 * Strokes the given text at the given position. If a maximum measure is provided, the text will be scaled
+			 * to fit that measure if necessary.
+			 * @param text The text string
+			 * @param origin The origin of the text. The alignment of the drawing is calculated by the current
+			 *               @c #textAlignment and @c #textBaseline values
+			 * @param maximumMeasure If present, this value specifies the maximum measure (width in horizontal writing
+			 *                       mode)
+			 * @return This object
+			 * @throw std#invalid_argument @a maximumMeasure is present but less than or equal to zero
+			 * @see #fillText, #measureText
+			 */
+			RenderingContext2D& strokeText(const StringPiece& text,
+				const Point& origin, boost::optional<Scalar> maximumMeasure = boost::none);
+			/**
+			 * Returns a size (measure and extent) of the specified text in the current font.
+			 * @param text The text string
+			 * @see #strokeText, #fillText
+			 */
+			Dimension measureText(const StringPiece& text) const;
+			/// @}
+
+			/// @name 10 Drawing Paths to the Canvas
+			/// @{
+			/**
+			 * Resets the current default path.
+			 * @return This object
+			 * @see #closePath
+			 */
+			RenderingContext2D& beginPath();
+			/**
+			 * Fills the subpaths of the current default path with the current fill style.
+			 * @return This object
+			 * @see #fillRectangle, #fillText, #stroke
+			 */
+			RenderingContext2D& fill();
+			/**
+			 * Strokes the subpaths of the current default path with the current stroke style.
+			 * @return This object
+			 * @see #fill, #strokeRectangle, #strokeText
+			 */
+			RenderingContext2D& stroke();
+#if 1
+			/**
+			 */
+			RenderingContext2D& drawFocusIfNeeded(const void* element);
+#else
+			/**
+			 * Draws a focus ring around the current default path, following the platform conventions for focus rings.
+			 * @see #drawCustomFocusRing
+			 */
+			void drawSystemFocusRing(/*const NativeRectangle& bounds*/);
+			/**
+			 * The end user has configured whose system to draw focus rings in a particular manner (for example, high
+			 * contrast focus rings), draws a focus ring around the current default path and returns @c false.
+			 * Otherwise returns @c true.
+			 * @retval true This method did not draw a focus ring
+			 * @retval false This method drew a focus ring
+			 */
+			bool drawCustomFocusRing(/*const NativeRectangle& bounds*/);
+			/**
+			 * Scrolls the current default path into view. This is especially useful on devices with small screens,
+			 * where the whole canvas might not be visible at once.
+			 * @return This object
+			 */
+			RenderingContext2D& scrollPathIntoView();
+#endif
+			/**
+			 * Further constrains the clipping region to the current default path.
+			 * @return This object
+			 */
+			RenderingContext2D& clip();
+			/**
+			 * Returns @c true if the specified point is in the current default path.
+			 * @param point The point to test
+			 * @return @a point is in the current default path
+			 */
+			bool isPointInPath(const Point& point) const;
+			/// @}
+
+			/// @name 11 Drawing Images to the Canvas
+			/// @{
+			/**
+			 * Draws the specified image onto the canvas.
+			 * @param image The image to draw
+			 * @param position The destination position
+			 * @return This object
+			 */
+			RenderingContext2D& drawImage(const Image& image, const Point& position);
+			/**
+			 * Draws the specified image onto the canvas.
+			 * @param image The image to draw
+			 * @param destinationBounds The destination bounds
+			 * @return This object
+			 */
+			RenderingContext2D& drawImage(const Image& image, const Rectangle& destinationBounds);
+			/**
+			 * Draws the specified image onto the canvas.
+			 * @param image The image to draw
+			 * @param sourceBounds The bounds in @a image data to draw
+			 * @param destinationBounds The destination bounds
+			 * @return This object
+			 */
+			RenderingContext2D& drawImage(const Image& image, const Rectangle& sourceBounds, const Rectangle& destinationBounds);
+			/// @}
+#if 0
+			/// @name 12 Hit Regions
+			/// @{
+			struct HitRegionOptions {
+				String id;
+				const void* control;
+			};
+			void addHitRegion(const HitRegionOptions& options);
+			void removeHitRegion(/*id*/);
+			void clearHitRegions();
+			/// @}
+#endif
+			/// @name 13 Pixel Manipulation
+			/// @{
+			/**
+			 * Returns an @c ImageData object with the specified dimensions. All the pixels in the returned object are
+			 * transparent black.
+			 * @param dimensions The dimensions in pixels
+			 * @return An image data
+			 */
+			std::unique_ptr<ImageData> createImageData(const Dimension& dimensions) const;
+			/**
+			 * Returns an @c ImageData object with the same dimensions as the argument. All pixels in the returned
+			 * object are transparent black.
+			 * @param image The image data gives the dimensions
+			 * @return An image data
+			 */
+			std::unique_ptr<ImageData> createImageData(const ImageData& image) const {
+		     	return createImageData(Dimension(
+					geometry::_dx = static_cast<Scalar>(image.width()),
+					geometry::_dy = static_cast<Scalar>(image.height())));
+			}
+			/**
+			 * Returns an @c ImageData object containing the image data for the specified rectangle of the canvas.
+			 * @param rectangle The bounds of the image in canvas coordinate space units
+			 * @return An image data. Pixels outside the canvas are returned as transparent black
+			 * @see #putImageData
+			 */
+			std::unique_ptr<ImageData> getImageData(const Rectangle& rectangle) const;
+			/**
+			 * Paints the data from the specified @c ImageData object onto the canvas. The @c #globalAlpha and
+			 * @c #globalCompositeOperation attributes, as well as the shadow attributes, are ignored for the purposes
+			 * of this method call; pixels in the canvas are replaced wholesale, with no composition, alpha blending,
+			 * no shadows, etc.
+			 * @param image The image data
+			 * @param destination The destination position onto where the image is painted in logical coordinate space
+			 *                    units
+			 * @see #getImageData
+			 */
+			RenderingContext2D& putImageData(const ImageData& image, const Point& destination) {
+				return putImageData(image, destination, Rectangle(
+					boost::geometry::make_zero<Point>(),
+					Dimension(
+						geometry::_dx = static_cast<Scalar>(image.width()),
+						geometry::_dy = static_cast<Scalar>(image.height()))));
+			}
+			/**
+			 * Paints the data from the specified @c ImageData object onto the canvas. Only the pixels from
+			 * @a dirtyRectangle are painted. The @c #globalAlpha and @c #globalCompositeOperation attributes, as well
+			 * as the shadow attributes, are ignored for the purposes of this method call; pixels in the canvas are
+			 * replaced wholesale, with no composition, alpha blending, no shadows, etc.
+			 * @param image The image data
+			 * @param destination The destination position onto where the image is painted in the logical coordinate
+			 *                    space units
+			 * @param dirtyRectangle The bounds to paint in image in device pixels
+			 * @see #getImageData
+			 */
+			RenderingContext2D& putImageData(const ImageData& image,
+				const Point& destination, const Rectangle& dirtyRectangle);
+			/// @}
+
+			/// @name 14 Compositing
+			/// @{
+			/**
+			 * Returns the current alpha value applied to rendering operations. Initial value is @c 1.0.
+			 * @return The current alpha value in the range from 0.0 (fully transparent) to 1.0 (no additional
+			 *         transparency)
+			 * @see #globalCompositeOperation, #setGlobalAlpha
+			 */
+			double globalAlpha() const;
+			/**
+			 * Sets the current alpha value applied to rendering operations.
+			 * @param globalAlpha The alpha value in the range from 0.0 (fully transparent) to 1.0
+			 *                   (no additional transparency)
+			 * @throw std#invalid_argument @a globalAlpha is out of range from 0.0 to 1.0
+			 * @see #globalAlpha, #setGlobalCompositeOperation
+			 */
+			RenderingContext2D& setGlobalAlpha(double globalAlpha);
+			/**
+			 * Returns the current composition operation. Initial value is @c SOURCE_OVER.
+			 * @return The current composition operation
+			 * @see #globalAlpha, #setGlobalCompositeOperation
+			 */
+			CompositeOperation globalCompositeOperation() const;
+			/**
+			 * Sets the current composition operation.
+			 * @param compositeOperation The new composition operation
+			 * @throw UnknownValueException @a compositeOperation is unknown
+			 * @see #globalCompositeOperation, #setGlobalAlpha
+			 */
+			RenderingContext2D& setGlobalCompositeOperation(CompositeOperation compositeOperation);
+			/// @}
+
+			/// @name 15 Shadows
+			/// @{
+			/**
+			 * Returns the current shadow color. Initial value is fully-transparent black.
+			 * @return The current shadow color
+			 * @see #setShadowColor
+			 */
+			Color shadowColor() const;
+			/**
+			 * Sets the shadow color.
+			 * @param shadowColor The new shadow color to set
+			 * @return This object
+			 * @see #shadowColor
+			 */
+			RenderingContext2D& setShadowColor(const Color& shadowColor);
+			/**
+			 * Returns the current shadow offset. Initial value is <code>(0, 0)</code>.
+			 * @return The current shadow offset
+			 * @see #setShadowOffset
+			 */
+			Dimension shadowOffset() const;
+			/**
+			 * Sets the shadow offset.
+			 * @return The new shadow offset to set
+			 * @see #shadowOffset
+			 */
+			RenderingContext2D& setShadowOffset(const Dimension& shadowOffset);
+			/**
+			 * Returns the current level of blur applied to shadows. Initial value is @c 0.
+			 * @return The current level of blur applied to shadows
+			 * @see #setShadowBlur
+			 */
+			Scalar shadowBlur() const;
+			/**
+			 * Sets the shadow color.
+			 * @param shadowColor The new shadow color to set
+			 * @return This object
+			 * @see #shadowBlur
+			 */
+			RenderingContext2D& setShadowBlur(Scalar shadowBlur);
 			/// @}
 
 		private:
