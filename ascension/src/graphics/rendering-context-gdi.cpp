@@ -204,7 +204,12 @@ namespace ascension {
 			}
 			throw makePlatformError();
 		}
-
+#if 1
+		RenderingContext2D& RenderingContext2D::drawFocusIfNeeded(const void* element) {
+			// TODO: not implemented.
+			return *this;
+		}
+#else
 		void RenderingContext2D::drawSystemFocusRing(/*const NativeRectangle& bounds*/) {
 			// TODO: not implemented.
 		}
@@ -213,7 +218,7 @@ namespace ascension {
 			// TODO: not implemented.
 			return true;
 		}
-
+#endif
 		inline bool RenderingContext2D::endPath() {
 			if(!hasCurrentSubpath_)
 				return false;
@@ -664,12 +669,12 @@ namespace ascension {
 			savedStates_.top().cookie = cookie;
 			return *this;
 		}
-
+#if 0
 		RenderingContext2D& RenderingContext2D::scrollPathIntoView() {
 			// TODO: not implemented.
 			return *this;
 		}
-
+#endif
 		RenderingContext2D& RenderingContext2D::setFillStyle(std::shared_ptr<const Paint> fillStyle) {
 			if(fillStyle.get() == nullptr)
 				throw NullPointerException("fillStyle");
