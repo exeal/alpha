@@ -1,14 +1,15 @@
 /**
- * @file directions.hpp
+ * @file direction.hpp
  * Defines abstract and physical directional terms.
  * @date 2012-03-31 created
- * @date 2012-2014
+ * @date 2012-2014 was directions.hpp
+ * @date 2015-01-09 Renamed from directions.hpp
  * @see flow-relative-directions-dimensions.hpp, line-relative-directions-dimensions.hpp,
  *      physical-directions-dimensions.hpp, writing-mode.hpp
  */
 
-#ifndef ASCENSION_DIRECTIONS_HPP
-#define ASCENSION_DIRECTIONS_HPP
+#ifndef ASCENSION_DIRECTION_HPP
+#define ASCENSION_DIRECTION_HPP
 #include <boost/operators.hpp>
 
 namespace ascension {
@@ -40,4 +41,4 @@ namespace ascension {
 	};
 }
 
-#endif // !ASCENSION_DIRECTIONS_HPP
+#endif // !ASCENSION_DIRECTION_HPP
