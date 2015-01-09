@@ -1069,6 +1069,15 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\decay-or-refer.hpp">
       <Filter>ascension\Header Files\corelib\detail</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\flow-relative-directions-dimensions.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\physical-directions-dimensions.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-directions-dimensions.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
