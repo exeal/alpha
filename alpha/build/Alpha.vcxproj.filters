@@ -129,6 +129,9 @@
     <Filter Include="ascension\Header Files\presentation\detail">
       <UniqueIdentifier>{73653de9-0a60-42f7-85a1-c44859078b61}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\corelib\detail">
+      <UniqueIdentifier>{a0841fc2-14fb-40cf-8d66-4cfa64aafa40}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -1062,6 +1065,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\detail\style-sequence.hpp">
       <Filter>ascension\Header Files\presentation\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\decay-or-refer.hpp">
+      <Filter>ascension\Header Files\corelib\detail</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
