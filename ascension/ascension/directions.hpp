@@ -11,6 +11,7 @@
 #ifndef ASCENSION_DIRECTIONS_HPP
 #define ASCENSION_DIRECTIONS_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
+#include <ascension/corelib/detail/decay-or-refer.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/geometry/algorithm.hpp>
 #include <array>
@@ -50,15 +51,6 @@ namespace ascension {
 		explicit Direction(bool value) BOOST_NOEXCEPT : value_(value) {}
 		bool value_;
 	};
-
-	namespace detail {
-		template<typename T> struct DecayOrRefer {
-			typedef typename std::decay<T>::type Type;
-		};
-		template<typename T> struct DecayOrRefer<std::reference_wrapper<T>> {
-			typedef T& Type;
-		};
-	}
 
 	namespace graphics {
 		/// @defgroup physical_directions Physical Directions
