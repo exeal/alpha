@@ -15,18 +15,21 @@
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
-#include <memory>	// std.unique_ptr
-#include <vector>
-#include <boost/flyweight.hpp>
+#include <ascension/graphics/geometry/geometry.hpp>
+#include <ascension/presentation/text-line-style.hpp>	// presentation.ComputedTextLineStyle
+#include <ascension/presentation/text-toplevel-style.hpp>	// presentation.ComputedTextToplevelStyle
+#include <boost/flyweight/flyweight.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/multi/geometries/multi_polygon.hpp>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
+#include <memory>	// std.unique_ptr
+#include <vector>
 
 namespace ascension {
 
 	namespace presentation {
-		struct ComputedTextLineStyle;
+		struct ComputedStyledTextRunIterator;
 		class Presentation;
 	}
 
@@ -36,6 +39,9 @@ namespace ascension {
 		class PaintContext;
 
 		namespace font {
+			class TextLayout;
+
+			presentation::WritingMode writingMode(const TextLayout& textLayout) BOOST_NOEXCEPT;
 
 			struct VisualLine : private boost::totally_ordered<VisualLine> {
 				/// Default constructor.
@@ -83,9 +89,8 @@ namespace ascension {
 //				}
 			};
 
-//			class ComputedStyledTextRunIterator;
 			class TextPaintOverride;
-			class TabExpander;
+			template<typename Length = Scalar> class TabExpander;
 			class TextRun;
 
 			class TextLayout : private boost::noncopyable {
@@ -120,11 +125,11 @@ namespace ascension {
 						return layout_ == nullptr || line() >= layout_->numberOfLines();
 					}
 					bool isNegativeVertical() const {
-						const presentation::WritingMode& writingMode = layout_->writingMode();
-						if(writingMode.blockFlowDirection == presentation::VERTICAL_RL)
-							return presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT;
-						else if(writingMode.blockFlowDirection == presentation::VERTICAL_LR)
-							return presentation::resolveTextOrientation(writingMode) != presentation::SIDEWAYS_LEFT;
+						const auto wm(writingMode(*layout_));
+						if(wm.blockFlowDirection == presentation::VERTICAL_RL)
+							return presentation::resolveTextOrientation(wm) == presentation::SIDEWAYS_LEFT;
+						else if(wm.blockFlowDirection == presentation::VERTICAL_LR)
+							return presentation::resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT;
 						return false;
 					}
 					void resetBaselineOffset();
@@ -140,29 +145,12 @@ namespace ascension {
 					Scalar baselineOffset_;
 					friend class boost::iterators::iterator_core_access;
 				};
-#if 0
-				/// Bidirectional iterator enumerates style runs in a line.
-				class StyledSegmentIterator {
-				public:
-					// constructors
-					StyledSegmentIterator(const StyledSegmentIterator& rhs) /*throw()*/;
-					// operators
-					StyledSegmentIterator& operator=(const StyledSegmentIterator& rhs) /*throw()*/;
-					// methods
-					presentation::StyledRun current() const /*throw()*/;
-					bool equals(const StyledSegmentIterator& rhs) const /*throw()*/;
-					StyledSegmentIterator& next() /*throw()*/;
-					StyledSegmentIterator& previous() /*throw()*/;
-				private:
-					explicit StyledSegmentIterator(const internal::Run*& start) /*throw()*/;
-					const internal::Run** p_;
-					friend class LineLayout;
-				};
-#endif
+
 			public:
 				TextLayout(const String& textString,
-					const presentation::ComputedTextLineStyle& lineStyle,
-					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
+					boost::flyweight<presentation::styles::ComputedValue<presentation::TextToplevelStyle>::type> toplevelStyle,
+					boost::flyweight<presentation::styles::ComputedValue<presentation::TextLineStyle>::type> lineStyle,
+					std::unique_ptr<presentation::ComputedStyledTextRunIterator> textRunStyles,
 					const FontCollection& fontCollection,
 					const FontRenderContext& fontRenderContext);
 				~TextLayout() BOOST_NOEXCEPT;
@@ -174,8 +162,8 @@ namespace ascension {
 				std::uint8_t characterLevel(Index offset) const;
 				bool isBidirectional() const BOOST_NOEXCEPT;
 				Index numberOfCharacters() const BOOST_NOEXCEPT;
-				const presentation::TextLineStyle& style() const BOOST_NOEXCEPT;
-				const presentation::WritingMode& writingMode() const BOOST_NOEXCEPT;
+				const presentation::styles::ComputedValue<presentation::TextToplevelStyle>::type& parentStyle() const BOOST_NOEXCEPT;
+				const presentation::styles::ComputedValue<presentation::TextLineStyle>::type& style() const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Visual Line Accesses
@@ -240,11 +228,6 @@ namespace ascension {
 					const boost::optional<boost::integer_range<Scalar>>& bounds) const BOOST_NOEXCEPT;
 				/// @}
 
-				// styled segments
-//				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
-//				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
-//				presentation::StyledTextRun styledTextRun(Index offset) const;
-
 				/// @name Painting
 				/// @{
 				void draw(PaintContext& context, const Point& origin,
@@ -268,7 +251,7 @@ namespace ascension {
 				TextHit<> internalHitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const;
 //				void buildLineMetrics(Index line);
-				void expandTabsWithoutWrapping(const TabExpander& tabExpander) BOOST_NOEXCEPT;
+				void expandTabsWithoutWrapping(const TabExpander<>& tabExpander) BOOST_NOEXCEPT;
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
 				RunVector::const_iterator runForPosition(Index offset) const BOOST_NOEXCEPT;
 				boost::iterator_range<RunVector::const_iterator> runsForLine(Index line) const;
@@ -286,10 +269,11 @@ namespace ascension {
 //				void rewrap();
 				void stackLines(const RenderingContext2D& context,
 					boost::optional<Scalar> lineHeight, LineBoxContain lineBoxContain, const Font& nominalFont);
-				void wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEXCEPT;
+				void wrap(Scalar measure, const TabExpander<>& tabExpander) BOOST_NOEXCEPT;
 			private:
 				const String& textString_;
-				boost::flyweight<presentation::ComputedTextLineStyle> lineStyle_;
+				boost::flyweight<presentation::styles::ComputedValue<presentation::TextToplevelStyle>::type> toplevelStyle_;
+				boost::flyweight<presentation::styles::ComputedValue<presentation::TextLineStyle>::type> lineStyle_;
 				RunVector runs_;
 				Index numberOfLines_;	// TODO: The following 3 std.unique_ptr<T[]> members can be packed for compaction.
 				std::unique_ptr<RunVector::const_iterator[]> firstRunsInLines_;	// size is numberOfLines_, or null if not wrapped
@@ -301,10 +285,10 @@ namespace ascension {
 			};
 
 
-
 			/// Returns the base bidirectional embedding level of this @c TextLayout.
 			inline std::uint8_t TextLayout::characterLevel() const BOOST_NOEXCEPT {
-				return (writingMode().inlineFlowDirection == presentation::RIGHT_TO_LEFT) ? 1 : 0;
+				const auto direction(boost::fusion::at_key<presentation::styles::Direction>(style()));
+				return (direction == presentation::RIGHT_TO_LEFT) ? 1 : 0;
 			}
 
 			/**
@@ -374,6 +358,11 @@ namespace ascension {
 			/// Returns the number of the wrapped lines.
 			inline Index TextLayout::numberOfLines() const BOOST_NOEXCEPT {return numberOfLines_;}
 
+			/// Returns the "Computed Value" of @c presentation#TextToplevelStyle of this layout.
+			inline const presentation::styles::ComputedValue<presentation::TextToplevelStyle>::type& TextLayout::parentStyle() const BOOST_NOEXCEPT {
+				return toplevelStyle_.get();
+			}
+
 			/**
 			 * @internal Returns iterator range addresses the all text runs belong to the specified visual line.
 			 * @param line The visual line
@@ -389,9 +378,9 @@ namespace ascension {
 					(line + 1 < numberOfLines()) ? firstRunsInLines_[line + 1] : std::end(runs_));
 			}
 
-			/// Returns the writing mode for this @c TextLayout.
-			inline const presentation::WritingMode& TextLayout::writingMode() const BOOST_NOEXCEPT {
-				return lineStyle_.get().writingMode;
+			/// Returns the "Computed Value" of @c presentation#TextLineStyle of this layout.
+			inline const presentation::styles::ComputedValue<presentation::TextLineStyle>::type& TextLayout::style() const BOOST_NOEXCEPT {
+				return lineStyle_.get();
 			}
 
 			/**
@@ -408,7 +397,7 @@ namespace ascension {
 
 			/// Returns the baseline of the current line.
 			inline DominantBaseline TextLayout::LineMetricsIterator::baseline() const {
-				return layout_->lineStyle_.get().dominantBaseline;
+				return boost::fusion::at_key<presentation::styles::DominantBaseline>(layout_->style());
 			}
 
 			/**
@@ -428,7 +417,7 @@ namespace ascension {
 			inline Point TextLayout::LineMetricsIterator::baselineOffsetInPhysicalCoordinates() const {
 				if(layout_ == nullptr)
 					throw NoSuchElementException();
-				switch(layout_->writingMode().blockFlowDirection) {
+				switch(boost::fusion::at_key<presentation::styles::WritingMode>(layout_->parentStyle())) {
 					case presentation::HORIZONTAL_TB:
 						return Point(geometry::_x = 0.0f, geometry::_y = baselineOffset());
 					case presentation::VERTICAL_RL:
@@ -519,6 +508,14 @@ namespace ascension {
 				return line_;
 			}
 
+			/// Returns the writing modes of the given @c TextLayout object.
+			inline presentation::WritingMode writingMode(const TextLayout& textLayout) BOOST_NOEXCEPT {
+				namespace styles = presentation::styles;
+				return presentation::WritingMode(
+					boost::fusion::at_key<styles::Direction>(textLayout.style()),
+					boost::fusion::at_key<styles::WritingMode>(textLayout.parentStyle()),
+					boost::fusion::at_key<styles::TextOrientation>(textLayout.style()));
+			}
 		}
 	}
 } // namespace ascension.graphics.font

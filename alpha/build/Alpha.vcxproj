@@ -388,6 +388,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-metrics.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\line-layout-vector.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-directions-dimensions.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\number-substitution.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\tab-expander.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-alignment.hpp" />
@@ -410,11 +411,13 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\native-conversion.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\object.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\paint.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\physical-directions-dimensions.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\absolute-length.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\detail\style-sequence.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\flow-relative-directions-dimensions.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\hyperlink\hyperlink-detector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\hyperlink\hyperlink.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\partition-presentation-reconstructor.hpp" />
