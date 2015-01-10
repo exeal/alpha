@@ -82,7 +82,7 @@ namespace ascension {
 		class FlowRelativeTwoAxesBase : public std::array<T, 2> {
 		public:
 			/// Default constructor initializes nothing.
-			AbstractTwoAxesBase() {}
+			FlowRelativeTwoAxesBase() {}
 #ifdef BOOST_COMP_MSVC
 			FlowRelativeTwoAxesBase(const FlowRelativeTwoAxesBase& other) : std::array<T, 2>(other) {}
 #endif	// BOOST_COMP_MSVC
@@ -234,7 +234,7 @@ namespace ascension {
 		 */
 		template<typename T>
 		class FlowRelativeFourSides : public FlowRelativeFourSidesBase<T>,
-			private boost::additive<FlowRelativeFourSides<T>, AbstractTwoAxes<T>> {
+			private boost::additive<FlowRelativeFourSides<T>, FlowRelativeTwoAxes<T>> {
 		public:
 			/// Default constructor initializes nothing.
 			FlowRelativeFourSides() {}

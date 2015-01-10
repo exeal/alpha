@@ -4,10 +4,10 @@
  * @date 2005-2011 was unicode-property.cpp
  * @date 2011-05-07 renamed from unicode-property.cpp
  * @date 2011-09-21 split from character-property.cpp
- * @date 2014
+ * @date 2014-2015
  */
 
-#include <ascension/directions.hpp>
+#include <ascension/direction.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
 
 

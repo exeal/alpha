@@ -157,7 +157,7 @@ namespace ascension {
 		 * @see mapPhysicalToAbstract
 		 */
 		template<typename T>
-		inline graphics::PhysicalTwoAxes<T> mapAbstractToPhysical(const WritingMode& writingMode, const AbstractTwoAxes<T>& from) {
+		inline graphics::PhysicalTwoAxes<T> mapAbstractToPhysical(const WritingMode& writingMode, const FlowRelativeTwoAxes<T>& from) {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
 					return graphics::PhysicalTwoAxes<T>(
@@ -187,10 +187,10 @@ namespace ascension {
 		 * @see mapAbstractToPhysical
 		 */
 		template<typename T>
-		inline AbstractTwoAxes<T> mapPhysicalToAbstract(const WritingMode& writingMode, const graphics::PhysicalTwoAxes<T>& from) {
+		inline FlowRelativeTwoAxes<T> mapPhysicalToAbstract(const WritingMode& writingMode, const graphics::PhysicalTwoAxes<T>& from) {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
-					return AbstractTwoAxes<T>(
+					return FlowRelativeTwoAxes<T>(
 						_ipd = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.x() : -from.x(),
 						_bpd = from.y()
 					);
@@ -198,7 +198,7 @@ namespace ascension {
 				case VERTICAL_LR: {
 					bool ttb = writingMode.inlineFlowDirection == LEFT_TO_RIGHT;
 					ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
-					return AbstractTwoAxes<T>(
+					return FlowRelativeTwoAxes<T>(
 						_ipd = ttb ? +from.y() : -from.y(),
 						_bpd = (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.x() : +from.x()
 					);
@@ -222,9 +222,9 @@ namespace ascension {
 		 */
 		template<typename T>
 		inline graphics::PhysicalFourSides<T> mapFlowRelativeToPhysical(const WritingMode& writingMode, const FlowRelativeFourSides<T>& from) {
-			const AbstractTwoAxes<T> sources[2] = {
-				AbstractTwoAxes<T>(_ipd = from.start(), _bpd = from.before()),
-				AbstractTwoAxes<T>(_ipd = from.end(), _bpd = from.after())
+			const FlowRelativeTwoAxes<T> sources[2] = {
+				FlowRelativeTwoAxes<T>(_ipd = from.start(), _bpd = from.before()),
+				FlowRelativeTwoAxes<T>(_ipd = from.end(), _bpd = from.after())
 			};
 			const graphics::PhysicalTwoAxes<T> destinations[2] = {
 				mapAbstractToPhysical(writingMode, sources[0]), mapAbstractToPhysical(writingMode, sources[1])
@@ -270,7 +270,7 @@ namespace ascension {
 				graphics::PhysicalTwoAxes<T>(graphics::_x = from.left(), graphics::_y = from.top()),
 				graphics::PhysicalTwoAxes<T>(graphics::_x = from.right(), graphics::_y = from.bottom())
 			};
-			const AbstractTwoAxes<T> destinations[2] = {
+			const FlowRelativeTwoAxes<T> destinations[2] = {
 				mapPhysicalToAbstract(writingMode, sources[0]), mapPhysicalToAbstract(writingMode, sources[1])
 			};
 			return FlowRelativeFourSides<T>(

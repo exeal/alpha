@@ -11,7 +11,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
-#include <ascension/directions.hpp>
+//#include <ascension/directions.hpp>
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
@@ -89,6 +89,7 @@ namespace ascension {
 //				}
 			};
 
+			class FontRenderContext;
 			class TextPaintOverride;
 			template<typename Length = Scalar> class TabExpander;
 			class TextRun;
@@ -205,9 +206,9 @@ namespace ascension {
 
 				/// @name Hit Test
 				/// @{
-				TextHit<> hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, bool* outOfBounds = nullptr) const;
-				TextHit<> hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, const presentation::FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds = nullptr) const;
-				presentation::AbstractTwoAxes<Scalar> hitToPoint(const TextHit<>& hit) const;
+				TextHit<> hitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point, bool* outOfBounds = nullptr) const;
+				TextHit<> hitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point, const presentation::FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds = nullptr) const;
+				presentation::FlowRelativeTwoAxes<Scalar> hitToPoint(const TextHit<>& hit) const;
 				/// @}
 
 				/// @name Other Hit Test
@@ -248,7 +249,7 @@ namespace ascension {
 				//       and 'per-inline-height-rectangle' for each 'line-area'?
 
 			private:
-				TextHit<> internalHitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
+				TextHit<> internalHitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const;
 //				void buildLineMetrics(Index line);
 				void expandTabsWithoutWrapping(const TabExpander<>& tabExpander) BOOST_NOEXCEPT;

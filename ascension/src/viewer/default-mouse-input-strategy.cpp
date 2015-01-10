@@ -905,7 +905,7 @@ namespace ascension {
 				} else if(input.scrollType() == widgetapi::event::MouseWheelInput::WHEEL_BLOCK_SCROLL) {
 					const graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset> physicalPages(
 						graphics::_x = graphics::geometry::dx(input.wheelRotation()), graphics::_y = graphics::geometry::dy(input.wheelRotation()));
-					presentation::AbstractTwoAxes<graphics::font::TextViewportSignedScrollOffset> abstractPages(
+					presentation::FlowRelativeTwoAxes<graphics::font::TextViewportSignedScrollOffset> abstractPages(
 						mapPhysicalToAbstract(viewer_->textRenderer().presentation().computeWritingMode(&viewer_->textRenderer()), physicalPages));
 					if(abstractPages.bpd() != 0) {
 						viewport->scrollBlockFlowPage(abstractPages.bpd());

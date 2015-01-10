@@ -12,8 +12,8 @@
 #define ASCENSION_TEXT_VIEWPORT_LISTENER_HPP
 
 //#include <ascension/config.hpp>						// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
-#include <ascension/directions.hpp>						// presentation.AbstractTwoAxes
 #include <ascension/graphics/geometry/rectangle.hpp>	// graphics.Rectangle
+#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 
 namespace ascension {
 	namespace graphics {
@@ -48,7 +48,7 @@ namespace ascension {
 				 *      TextViewport#scroll, TextViewport#scrollTo
 				 */
 				virtual void viewportScrollPositionChanged(
-					const presentation::AbstractTwoAxes<TextViewportScrollOffset>& positionsBeforeScroll,
+					const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>& positionsBeforeScroll,
 					const VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT = 0;
 				/**
 				 * The scroll properties (position, page size and range) were changed.
@@ -56,7 +56,7 @@ namespace ascension {
 				 * @note In this case, the position was changed because only the layout was changed
 				 */
 				virtual void viewportScrollPropertiesChanged(
-					const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT = 0;
+					const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT = 0;
 				friend class TextViewport;
 			};
 		}

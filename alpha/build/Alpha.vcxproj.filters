@@ -778,9 +778,6 @@
     <ClInclude Include="..\..\ascension\ascension\content-assist\default-content-assistant.hpp">
       <Filter>ascension\Header Files\content-assist</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\directions.hpp">
-      <Filter>ascension\Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\win32\handle.hpp">
       <Filter>ascension\Header Files\win32</Filter>
     </ClInclude>
@@ -1077,6 +1074,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-directions-dimensions.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\direction.hpp">
+      <Filter>ascension\Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

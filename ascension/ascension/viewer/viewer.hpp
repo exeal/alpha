@@ -286,8 +286,8 @@ namespace ascension {
 			void paintCaret(graphics::PaintContext& context);
 			void repaintRuler();
 			void updateScrollBars(
-				const presentation::AbstractTwoAxes<bool>& positions,
-				const presentation::AbstractTwoAxes<bool>& properties);
+				const presentation::FlowRelativeTwoAxes<bool>& positions,
+				const presentation::FlowRelativeTwoAxes<bool>& properties);
 
 		protected:
 			/// @name Overridable Caret Signals
@@ -320,10 +320,10 @@ namespace ascension {
 			// graphics.font.TextViewportListener
 			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
 			void viewportScrollPositionChanged(
-				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
+				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
 				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
 			void viewportScrollPropertiesChanged(
-				const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
+				const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
 			// graphics.font.ComputedBlockFlowDirectionListener
 			void computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used) override;
 			// detail.PointCollection<VisualPoint>

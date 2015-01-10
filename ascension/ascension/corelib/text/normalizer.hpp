@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-26 separated from unicode.hpp
- * @date 2012-2014
+ * @date 2012-2015
  */
 
 #ifndef ASCENSION_NORMALIZER_HPP
@@ -11,7 +11,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_NORMALIZATION
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-#include <ascension/directions.hpp>
+#include <ascension/direction.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>	// CharacterIterator
 #include <ascension/corelib/text/character.hpp>
 #include <memory>		// std.unique_ptr

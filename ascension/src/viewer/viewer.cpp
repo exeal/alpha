@@ -207,7 +207,7 @@ namespace ascension {
 
 		/// @see ComputedWritingModeListener#computedBlockFlowDirectionChanged
 		void TextViewer::computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used) {
-			updateScrollBars(presentation::AbstractTwoAxes<bool>(true, true), presentation::AbstractTwoAxes<bool>(true, true));
+			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
 		}
 
 		/// @see DefaultFontListener#defaultFontChanged
@@ -505,7 +505,7 @@ namespace ascension {
 				const graphics::font::TextRenderer& textRenderer = textViewer.textRenderer();
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer.viewport());
 				const presentation::WritingMode writingMode(textViewer.presentation().computeWritingMode(&textRenderer));
-				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset> scrollPositions(viewport->scrollPositions());
+				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset> scrollPositions(viewport->scrollPositions());
 				graphics::PhysicalTwoAxes<widgetapi::NativeScrollPosition> result;
 				switch(writingMode.blockFlowDirection) {
 					case presentation::HORIZONTAL_TB:
@@ -627,7 +627,7 @@ namespace ascension {
 			document().addListener(*this);
 			document().addRollbackListener(*this);
 
-//			updateScrollBars(AbstractTwoAxes<bool>(true, true), AbstractTwoAxes<bool>(true, true));
+//			updateScrollBars(FlowRelativeTwoAxes<bool>(true, true), FlowRelativeTwoAxes<bool>(true, true));
 			setMouseInputStrategy(std::shared_ptr<MouseInputStrategy>());
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
@@ -1667,7 +1667,7 @@ namespace ascension {
 //					scrolls_.horizontal.position = scrolls_.horizontal.maximum
 //						- scrolls_.horizontal.pageSize - scrolls_.horizontal.position + 1;
 //				scrolls_.resetBars(*this, 'a', false);
-//				updateScrollBars(AbstractTwoAxes<bool>(true, true), AbstractTwoAxes<bool>(true, true));
+//				updateScrollBars(FlowRelativeTwoAxes<bool>(true, true), FlowRelativeTwoAxes<bool>(true, true));
 
 #ifdef ASCENSION_USE_SYSTEM_CARET
 				if(!isFrozen() && (widgetapi::hasFocus(*this) /*|| handle() == Viewer::completionWindow_->getSafeHwnd()*/)) {
@@ -1857,7 +1857,7 @@ namespace ascension {
 		 * @param positions Describes which position(s) to update
 		 * @param properties Describes which property(ies) to update
 		 */
-		void TextViewer::updateScrollBars(const presentation::AbstractTwoAxes<bool>& positions, const presentation::AbstractTwoAxes<bool>& properties) {
+		void TextViewer::updateScrollBars(const presentation::FlowRelativeTwoAxes<bool>& positions, const presentation::FlowRelativeTwoAxes<bool>& properties) {
 //			checkInitialization();
 			assert(!isFrozen());
 			const auto needsUpdate = [](bool v) {return v;};
@@ -1970,7 +1970,7 @@ namespace ascension {
 		/// @see TextViewport#viewportBoundsInViewChanged
 		void TextViewer::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
 //			textRenderer().setTextWrapping(textRenderer().textWrapping(), widgetapi::createRenderingContext(*this).get());
-			updateScrollBars(presentation::AbstractTwoAxes<bool>(true, true), presentation::AbstractTwoAxes<bool>(true, true));
+			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
 		}
 
 		namespace {
@@ -2012,18 +2012,18 @@ namespace ascension {
 
 		/// @see TextViewportListener#viewportScrollPositionChanged
 		void TextViewer::viewportScrollPositionChanged(
-				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
+				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
 				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
 			assert(!isFrozen());
 
 			// 1. update the scroll positions
-			updateScrollBars(presentation::AbstractTwoAxes<bool>(true, true), presentation::AbstractTwoAxes<bool>(false, false));
+			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(false, false));
 //			closeCompletionProposalsPopup(*this);
 			hideToolTip();
 
 			// 2. calculate pixels to scroll
 			const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer().viewport());
-			presentation::AbstractTwoAxes<std::int32_t> abstractScrollOffsetInPixels;
+			presentation::FlowRelativeTwoAxes<std::int32_t> abstractScrollOffsetInPixels;
 			// 2-1. block dimension
 			{
 				graphics::font::VisualLine p(viewport->firstVisibleLine());
@@ -2118,8 +2118,8 @@ namespace ascension {
 		}
 
 		/// @see TextViewportListener#viewportScrollPropertiesChanged
-		void TextViewer::viewportScrollPropertiesChanged(const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
-			updateScrollBars(presentation::AbstractTwoAxes<bool>(true, true), presentation::AbstractTwoAxes<bool>(true, true));
+		void TextViewer::viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
+			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
 		}
 
 		/// @see VisualLinesListener#visualLinesDeleted

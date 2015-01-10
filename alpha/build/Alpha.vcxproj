@@ -377,7 +377,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\text\utf.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\timer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\directions.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\direction.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\actual-text-styles.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-collection.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-description.hpp" />
