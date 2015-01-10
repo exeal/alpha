@@ -89,6 +89,8 @@ namespace ascension {
 //				}
 			};
 
+			class Font;
+			class FontCollection;
 			class FontRenderContext;
 			class TextPaintOverride;
 			template<typename Length = Scalar> class TabExpander;
