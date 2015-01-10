@@ -9,8 +9,8 @@
 #ifndef ASCENSION_DECAY_OR_REFER_HPP
 #define ASCENSION_DECAY_OR_REFER_HPP
 
+#include <functional>
 #include <type_traits>
-#include <utility>
 
 namespace ascension {
 	namespace detail {

@@ -14,7 +14,9 @@
 
 #ifndef ASCENSION_WRITING_MODE_MAPPINGS_HPP
 #define ASCENSION_WRITING_MODE_MAPPINGS_HPP
-#include <ascension/directions.hpp>
+#include <ascension/graphics/physical-directions-dimensions.hpp>
+#include <ascension/graphics/font/line-relative-directions-dimensions.hpp>
+#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <ascension/presentation/writing-mode.hpp>	// WritingMode, ...
 
 namespace ascension {
