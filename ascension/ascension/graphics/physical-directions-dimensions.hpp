@@ -85,7 +85,7 @@ namespace ascension {
 		/**
 		 * A collection of all physical dimensions. This is a cartesian point.
 		 * @tparam T The coordinate type
-		 * @see presentation#AbstractTwoAxes
+		 * @see presentation#FlowRelativeTwoAxes
 		 */
 		template<typename T>
 		class PhysicalTwoAxes : public PhysicalTwoAxesBase<T>, private boost::additive<PhysicalTwoAxes<T>> {

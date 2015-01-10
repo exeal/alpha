@@ -59,9 +59,9 @@ namespace ascension {
 			second = mapTextRendererInlineProgressionDimensionToLineLayout(layout->writingMode(), second);
 
 			const boost::integer_range<Index> result(ordered(boost::irange(
-				layout->hitTestCharacter(presentation::AbstractTwoAxes<graphics::Scalar>(
+				layout->hitTestCharacter(presentation::FlowRelativeTwoAxes<graphics::Scalar>(
 					presentation::_ipd = std::min(first, second), presentation::_bpd = baseline)).insertionIndex(),		
-				layout->hitTestCharacter(presentation::AbstractTwoAxes<graphics::Scalar>(
+				layout->hitTestCharacter(presentation::FlowRelativeTwoAxes<graphics::Scalar>(
 					presentation::_ipd = std::max(first, second), presentation::_bpd = baseline)).insertionIndex())));
 			assert(layout->lineAt(*result.begin()) == line.subline);
 			assert(result.empty() || layout->lineAt(*result.end()) == line.subline);

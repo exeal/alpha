@@ -12,7 +12,6 @@
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
-#include <ascension/graphics/font/text-layout-styles.hpp>
 #include <ascension/graphics/font/text-run.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/corelib/range.hpp>
@@ -40,7 +39,7 @@ namespace ascension {
 		namespace font {
 			namespace detail {
 				std::shared_ptr<const graphics::font::Font> findMatchingFont(const StringPiece& textRun,
-						const graphics::font::FontCollection& collection, const graphics::font::ComputedFontSpecification& specification) {
+						const graphics::font::FontCollection& collection, const graphics::font::ActualFontSpecification& specification) {
 #if 0
 					void resolveFontSpecifications(const FontCollection& fontCollection,
 							std::shared_ptr<const TextRunStyle> requestedStyle, std::shared_ptr<const TextRunStyle> defaultStyle,
@@ -106,12 +105,12 @@ namespace ascension {
 				 * @param writingMode The writing mode used to compute the directions and orientation of @a border
 				 */
 				void paintBorder(graphics::PaintContext& context, const graphics::Rectangle& rectangle,
-						const graphics::PhysicalFourSides<graphics::font::ComputedBorderSide>& border, const presentation::WritingMode& writingMode) {
+						const graphics::PhysicalFourSides<graphics::font::ActualBorderSide>& border, const presentation::WritingMode& writingMode) {
 					using namespace ::ascension::graphics;	// TODO: 'detail' namespace should spread into individual namespaces.
 					using namespace ::ascension::graphics::font;
 					// TODO: not implemented.
-					for(PhysicalFourSides<ComputedBorderSide>::const_iterator side(std::begin(border)), e(std::end(border)); side != e; ++side) {
-						if(!side->hasVisibleStyle() || side->computedWidth() <= 0)
+					for(PhysicalFourSides<ActualBorderSide>::const_iterator side(std::begin(border)), e(std::end(border)); side != e; ++side) {
+						if(!side->hasVisibleStyle() || side->actualWidth() <= 0)
 							continue;
 						if(!boost::geometry::within(rectangle, context.boundsToPaint()))
 							continue;
@@ -158,8 +157,8 @@ namespace ascension {
 
 			// graphics.font free functions ///////////////////////////////////////////////////////////////////////////
 
-			void paintTextDecoration(PaintContext& context, const TextRun& run, const Point& origin, const ComputedTextDecoration& decoration) {
-				if(decoration.lines != presentation::TextDecoration::Line::NONE && !decoration.color.isFullyTransparent()) {
+			void paintTextDecoration(PaintContext& context, const TextRun& run, const Point& origin, const ActualTextDecoration& decoration) {
+				if(decoration.lines != presentation::styles::TextDecorationLineEnums::NONE && !decoration.color.isFullyTransparent()) {
 					// TODO: Not implemented.
 				}
 			}
@@ -271,8 +270,9 @@ namespace ascension {
 				presentation::FlowRelativeFourSides<Scalar> sides;
 				sides.start() = lineStartEdge(line);
 				sides.end() = sides.start() + measure(line);
+				const presentation::WritingMode wm(writingMode(*this));
 				const LineMetricsIterator lm(*this, line);
-				if(isHorizontal(writingMode().blockFlowDirection) || resolveTextOrientation(writingMode()) != presentation::SIDEWAYS_LEFT) {
+				if(isHorizontal(wm.blockFlowDirection) || resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT) {
 					sides.before() = lm.baselineOffset() - over;
 					sides.after() = lm.baselineOffset() + under;
 				} else {
@@ -374,8 +374,8 @@ namespace ascension {
 					Scalar offset = 0;
 					if(const FlowRelativeFourSides<Scalar>* const margin = textRun.margin())
 						offset += (lineInlineFlowDirection == LEFT_TO_RIGHT) ? margin->start() : margin->end();
-					if(const FlowRelativeFourSides<ComputedBorderSide>* const border = textRun.border())
-						offset += ((lineInlineFlowDirection == LEFT_TO_RIGHT) ? border->start() : border->end()).computedWidth();
+					if(const FlowRelativeFourSides<ActualBorderSide>* const border = textRun.border())
+						offset += ((lineInlineFlowDirection == LEFT_TO_RIGHT) ? border->start() : border->end()).actualWidth();
 					if(const FlowRelativeFourSides<Scalar>* const padding = textRun.padding())
 						offset += (lineInlineFlowDirection == LEFT_TO_RIGHT) ? padding->start() : padding->end();
 					return offset;
@@ -399,17 +399,18 @@ namespace ascension {
 				const Index line = lineAt(hit.characterIndex());
 
 				// compute inline-progression-dimension
+				const presentation::WritingMode wm(writingMode(*this));
 				const StringPiece::const_iterator at = textString_.data() + hit.characterIndex();
 				Scalar x = 0;	// line-relative position
 				BOOST_FOREACH(const std::unique_ptr<const TextRun>& run, runsForLine(line)) {
 					if(includes(boost::make_iterator_range(run->characterRange()), at)) {
-						x += lineRelativeGlyphContentOffset(*run, writingMode().inlineFlowDirection);
+						x += lineRelativeGlyphContentOffset(*run, wm.inlineFlowDirection);
 						x += run->hitToLogicalPosition(TextHit<>::leading(at - run->characterRange().begin()));
 						break;
 					}
 					x += allocationMeasure(*run);
 				}
-				Scalar ipd = (writingMode().inlineFlowDirection == presentation::LEFT_TO_RIGHT) ? x : (measure(line) - x);
+				Scalar ipd = (wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ? x : (measure(line) - x);
 				ipd += lineStartEdge(line);
 
 				return presentation::AbstractTwoAxes<Scalar>(presentation::_ipd = ipd, presentation::_bpd = LineMetricsIterator(*this, line).baselineOffset());
@@ -433,8 +434,9 @@ namespace ascension {
 					|| (bounds != nullptr && point.ipd() >= std::max(bounds->start(), bounds->end()));	// beyond 'end-edge' of line ?
 
 				if(!outsideInIpd) {
+					const presentation::WritingMode wm(writingMode(*this));
 					Scalar x = point.ipd() - lineStart, runLineLeft = 0;
-					if(writingMode().inlineFlowDirection == presentation::RIGHT_TO_LEFT)
+					if(wm.inlineFlowDirection == presentation::RIGHT_TO_LEFT)
 						x = measure(std::get<0>(line)) - x;
 					// 'x' is distance from line-left of 'line' to 'point' in inline-progression-dimension
 					// 'runLineLeft' is distance from line-left of 'line' to line-left of 'run' in ...
@@ -442,7 +444,7 @@ namespace ascension {
 						const Scalar runLineRight = runLineLeft + allocationMeasure(*run);
 						if(runLineRight > x) {
 							const TextHit<> hitInRun(run->hitTestCharacter(
-								x - runLineLeft - lineRelativeGlyphContentOffset(*run, writingMode().inlineFlowDirection), boost::none, nullptr));
+								x - runLineLeft - lineRelativeGlyphContentOffset(*run, wm.inlineFlowDirection), boost::none, nullptr));
 							const Index position = run->characterRange().begin() - textString_.data() + hitInRun.characterIndex();
 							return hitInRun.isLeadingEdge() ? TextHit<>::leading(position) : TextHit<>::trailing(position);
 						}
@@ -469,7 +471,7 @@ namespace ascension {
 			 * @note This method's semantics seems to be strange. Is containning RTL run means bidi?
 			 */
 			bool TextLayout::isBidirectional() const BOOST_NOEXCEPT {
-				if(writingMode().inlineFlowDirection == presentation::RIGHT_TO_LEFT)
+				if(boost::fusion::at_key<presentation::styles::Direction>(style()) == presentation::RIGHT_TO_LEFT)
 					return true;
 				BOOST_FOREACH(const std::unique_ptr<const TextRun>& run, runs_) {
 					if(run->direction() == presentation::RIGHT_TO_LEFT)
@@ -491,16 +493,17 @@ namespace ascension {
 			 * @return
 			 */
 			Point TextLayout::lineLeft(Index line) const {
-				if(isHorizontal(writingMode().blockFlowDirection)) {
-					if(writingMode().inlineFlowDirection == presentation::LEFT_TO_RIGHT)
+				if(isHorizontal(boost::fusion::at_key<presentation::styles::WritingMode>(parentStyle()))) {
+					if(boost::fusion::at_key<presentation::styles::Direction>(style()) == presentation::LEFT_TO_RIGHT)
 						return Point(geometry::_x = lineStartEdge(line), geometry::_y = 0.0f);
 					else
 						return Point(geometry::_x = -lineStartEdge(line) - measure(line), geometry::_y = 0.0f);
 				} else {
+					const presentation::WritingMode wm(writingMode(*this));
 					Scalar y = -lineStartEdge(line);
-					if(writingMode().inlineFlowDirection == presentation::RIGHT_TO_LEFT)
+					if(wm.inlineFlowDirection == presentation::RIGHT_TO_LEFT)
 						y -= measure(line);
-					if(resolveTextOrientation(writingMode()) == presentation::SIDEWAYS_LEFT)
+					if(resolveTextOrientation(wm) == presentation::SIDEWAYS_LEFT)
 						y = -y;
 					return Point(geometry::_x = 0.0f, geometry::_y = y);
 /*					if(writingMode().inlineFlowDirection == presentation::LEFT_TO_RIGHT) {
@@ -664,7 +667,8 @@ namespace ascension {
 			 */
 			void TextLayout::logicalHighlightShape(const boost::integer_range<Index>& range,
 					const boost::optional<graphics::Rectangle>& bounds, boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& shape) const {
-				const bool horizontal = isHorizontal(writingMode().blockFlowDirection);
+				const presentation::WritingMode wm(writingMode(*this));
+				const bool horizontal = isHorizontal(wm.blockFlowDirection);
 				boost::optional<boost::integer_range<Scalar>> linearBounds;
 				if(bounds)
 					linearBounds = horizontal ? geometry::range<0>(*bounds) : geometry::range<1>(*bounds);
@@ -672,7 +676,7 @@ namespace ascension {
 
 				const boost::integer_range<Index> orderedRange(ordered(range));
 				const boost::integer_range<Index> lines(boost::irange(lineAt(*orderedRange.begin()), lineAt(*orderedRange.end())));
-				const bool ltr = writingMode().inlineFlowDirection == presentation::LEFT_TO_RIGHT;
+				const bool ltr = wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT;
 				for(LineMetricsIterator line(*this, *lines.begin()); line.line() != *lines.end(); ++line) {
 					const Point baseline(line.baselineOffsetInPhysicalCoordinates());
 					Scalar lineOver, lineUnder;
@@ -680,7 +684,7 @@ namespace ascension {
 						lineOver = geometry::y(baseline) - line.ascent();
 						lineUnder = geometry::y(baseline) + line.descent() + line.leading();
 					} else {
-						const bool sidewaysLeft = resolveTextOrientation(writingMode()) == presentation::SIDEWAYS_LEFT;
+						const bool sidewaysLeft = resolveTextOrientation(wm) == presentation::SIDEWAYS_LEFT;
 						lineOver = geometry::x(baseline) + (!sidewaysLeft ? line.ascent() : -line.ascent());
 						lineUnder = geometry::x(baseline) - (!sidewaysLeft ? (line.descent() + line.leading()) : -(line.descent() + line.leading()));
 					}
@@ -693,7 +697,7 @@ namespace ascension {
 							else if(std::min(lineOver, lineUnder) >= geometry::bottom(*bounds))
 								break;
 						} else {
-							if(writingMode().blockFlowDirection == presentation::VERTICAL_RL) {
+							if(wm.blockFlowDirection == presentation::VERTICAL_RL) {
 								if(std::min(lineOver, lineUnder) >= geometry::right(*bounds))
 									continue;
 								else if(std::max(lineOver, lineUnder) <= geometry::left(*bounds))
@@ -721,7 +725,7 @@ namespace ascension {
 								selectionInRun.advance_end(textString_.data() - run->characterRange().begin());
 
 								Scalar glyphsLeft = x;	// line-left edge of glyphs content of the run
-								x += lineRelativeGlyphContentOffset(*run, writingMode().inlineFlowDirection);
+								x += lineRelativeGlyphContentOffset(*run, wm.inlineFlowDirection);
 
 								// compute leading and trailing edges highlight shape in the run
 								Scalar leading = run->hitToLogicalPosition(TextHit<>::leading(*selectionInRun.begin()));
@@ -730,7 +734,7 @@ namespace ascension {
 								trailing = glyphsLeft + ltr ? trailing : (font::measure(*run) - trailing);
 								Rectangle rectangle(
 									geometry::make<Rectangle>(
-										mapLineRelativeToPhysical(writingMode(),
+										mapLineRelativeToPhysical(wm,
 											LineRelativeFourSides<Scalar>(_over = lineOver, _under = lineUnder, _lineLeft = std::min(leading, trailing), _lineRight = std::max(leading, trailing)))));
 
 								if(bounds)
@@ -770,7 +774,7 @@ namespace ascension {
 				if(hits.back().characterIndex() == numberOfCharacters()) {	// handle EOL
 					assert(hits.back().isLeadingEdge());
 					hits.pop_back();
-					if(writingMode().inlineFlowDirection == presentation::LEFT_TO_RIGHT)
+					if(boost::fusion::at_key<presentation::styles::Direction>(style()) == presentation::LEFT_TO_RIGHT)
 						hits.push_back(TextHit<>::beforeOffset(numberOfCharacters()));
 					else {
 						const std::unique_ptr<const TextRun>& firstRunInLastLine = runsForLine(numberOfLines() - 1).front();

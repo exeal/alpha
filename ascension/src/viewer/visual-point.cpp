@@ -52,7 +52,7 @@ namespace ascension {
 				const graphics::font::TextLayout& layout = viewer.textRenderer().layouts().at(
 					np.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);	// this call may change the layouts
 				const float visibleLines = viewport->numberOfVisibleLines();
-				presentation::AbstractTwoAxes<boost::optional<graphics::font::TextViewportScrollOffset>> to;	// scroll destination
+				presentation::FlowRelativeTwoAxes<boost::optional<graphics::font::TextViewportScrollOffset>> to;	// scroll destination
 
 				// scroll if the point is outside of 'before-edge' or 'after-edge'
 				to.bpd() = std::min(p.visualLine(), viewport->scrollPositions().bpd());
@@ -735,7 +735,7 @@ namespace ascension {
 					const_cast<viewers::VisualPoint&>(p).rememberPositionInVisualLine();
 				if(nullptr != (layout = renderer.layouts().at(visualLine.line))) {
 					np.offsetInLine = layout->hitTestCharacter(
-						presentation::AbstractTwoAxes<graphics::Scalar>(
+						presentation::FlowRelativeTwoAxes<graphics::Scalar>(
 							presentation::_ipd = *p.positionInVisualLine_ - graphics::font::lineStartEdge(*layout, renderer.viewport()->contentMeasure()),
 							presentation::_bpd = graphics::font::TextLayout::LineMetricsIterator(*layout, visualLine.subline).baselineOffset())).insertionIndex();
 					if(layout->lineAt(np.offsetInLine) != visualLine.subline)

@@ -12,7 +12,7 @@
 #ifndef ASCENSION_TEXT_RUN_STYLE_HPP
 #define ASCENSION_TEXT_RUN_STYLE_HPP
 
-#include <ascension/directions.hpp>
+#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <ascension/presentation/detail/style-sequence.hpp>
 #include <ascension/presentation/styles/auxiliary.hpp>
 #include <ascension/presentation/styles/background.hpp>

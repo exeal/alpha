@@ -11,8 +11,8 @@
 
 #ifndef ASCENSION_STYLE_PROPERTY_HPP
 #define ASCENSION_STYLE_PROPERTY_HPP
-#include <ascension/directions.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
+#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <ascension/presentation/styles/length.hpp>
 #include <boost/fusion/algorithm/query/find.hpp>
 #include <boost/fusion/iterator/advance.hpp>

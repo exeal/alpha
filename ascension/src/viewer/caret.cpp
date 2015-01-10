@@ -705,7 +705,7 @@ namespace ascension {
 
 		/// @see TextViewportListener#viewportScrollPositionChanged
 		void Caret::viewportScrollPositionChanged(
-				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset>&,
+				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>&,
 				const graphics::font::VisualLine&) BOOST_NOEXCEPT {
 #ifdef ASCENSION_USE_SYSTEM_CARET
 			updateLocation();
@@ -713,7 +713,7 @@ namespace ascension {
 		}
 
 		/// @see TextViewportListener#viewportScrollPropertiesChanged
-		void Caret::viewportScrollPropertiesChanged(const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
+		void Caret::viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
 		}
 
 

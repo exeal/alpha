@@ -28,7 +28,7 @@ namespace ascension {
 				const Index subline = layout->lineAt(kernel::offsetInLine(caret));
 				boost::integer_range<graphics::Scalar> extent(layout->extent(boost::irange(subline, subline + 1)));
 
-				const presentation::AbstractTwoAxes<graphics::Scalar> leading(layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret))));
+				const presentation::FlowRelativeTwoAxes<graphics::Scalar> leading(layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret))));
 				extent = boost::irange(*extent.begin() - leading.bpd(), *extent.end() - leading.bpd());
 
 				graphics::Scalar trailing;

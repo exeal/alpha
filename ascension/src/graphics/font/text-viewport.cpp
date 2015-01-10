@@ -26,7 +26,7 @@ namespace ascension {
 
 			PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>
 			convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
-					const presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>>& positions) {
+					const presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>& positions) {
 				switch(viewport.textRenderer().computedBlockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
 						return PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>(positions.ipd(), positions.bpd());
@@ -42,10 +42,10 @@ namespace ascension {
 				}
 			}
 
-			presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>>
+			presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>
 			convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
 					const PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>& positions) {
-				presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>> result;
+				presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>> result;
 				switch(viewport.textRenderer().computedBlockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
 						result.bpd() = positions.y();
@@ -137,7 +137,7 @@ namespace ascension {
 			namespace {
 				Point lineStartEdge(const TextViewport& viewport, const VisualLine& line, const TextLayout* layout) {
 					const TextRenderer& renderer = viewport.textRenderer();
-					const presentation::AbstractTwoAxes<Scalar> lineStart(
+					const presentation::FlowRelativeTwoAxes<Scalar> lineStart(
 						presentation::_ipd = renderer.lineStartEdge(line) - viewport.scrollPositions().ipd(), presentation::_bpd = static_cast<Scalar>(0));
 
 					presentation::WritingMode writingMode;
@@ -338,7 +338,7 @@ namespace ascension {
 				assert(layout != nullptr);
 				const TextHit<> hitInLine(position.isLeadingEdge() ?
 					TextHit<>::leading(position.characterIndex().offsetInLine) : TextHit<>::trailing(position.characterIndex().offsetInLine));
-				presentation::AbstractTwoAxes<Scalar> abstractOffset(layout->hitToPoint(hitInLine));
+				presentation::FlowRelativeTwoAxes<Scalar> abstractOffset(layout->hitToPoint(hitInLine));
 				abstractOffset.bpd() = 0;	// because subline is already known
 				const PhysicalTwoAxes<Scalar> physicalOffset(presentation::mapAbstractToPhysical(layout->writingMode(), abstractOffset));
 
@@ -427,7 +427,7 @@ namespace ascension {
 			 * @param pages The number of pages to scroll
 			 */
 			void scrollPage(TextViewport& viewport, const PhysicalTwoAxes<TextViewportSignedScrollOffset>& pages) {
-				presentation::AbstractTwoAxes<TextViewportSignedScrollOffset> delta =
+				presentation::FlowRelativeTwoAxes<TextViewportSignedScrollOffset> delta =
 					mapPhysicalToAbstract(viewport.textRenderer().presentation().computeWritingMode(&viewport.textRenderer()), pages);
 				viewport.scrollBlockFlowPage(delta.bpd());
 				delta.bpd() = 0;
@@ -947,7 +947,7 @@ namespace ascension {
 
 			/// @see ComputedBlockFlowDirectionListener#computedBlockFlowDirectionChanged
 			void TextViewport::computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used) {
-				fireScrollPropertiesChanged(presentation::AbstractTwoAxes<bool>(presentation::_ipd = true, presentation::_bpd = true));
+				fireScrollPropertiesChanged(presentation::FlowRelativeTwoAxes<bool>(presentation::_ipd = true, presentation::_bpd = true));
 			}
 
 			/**
@@ -967,7 +967,7 @@ namespace ascension {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				updateDefaultLineExtent();
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				fireScrollPropertiesChanged(presentation::AbstractTwoAxes<bool>(presentation::_ipd = true, presentation::_bpd = false));
+				fireScrollPropertiesChanged(presentation::FlowRelativeTwoAxes<bool>(presentation::_ipd = true, presentation::_bpd = false));
 			}
 
 			/// @see kernel#AccessibleRegionChangedSignal
@@ -977,11 +977,11 @@ namespace ascension {
 
 			/// @internal Invokes @c TextViewportListener#viewportScrollPositionChanged
 			inline void TextViewport::fireScrollPositionChanged(
-					const presentation::AbstractTwoAxes<TextViewportScrollOffset>& positionsBeforeScroll,
+					const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>& positionsBeforeScroll,
 					const VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
 				static const decltype(frozenNotification_.count) minimumCount;
 				if(frozenNotification_.count == minimumCount)
-					listeners_.notify<const presentation::AbstractTwoAxes<TextViewportScrollOffset>&, const VisualLine&>(
+					listeners_.notify<const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>&, const VisualLine&>(
 						&TextViewportListener::viewportScrollPositionChanged, positionsBeforeScroll, firstVisibleLineBeforeScroll);
 				else if(frozenNotification_.positionBeforeChanged == boost::none) {
 					frozenNotification_.positionBeforeChanged = FrozenNotification::Position();
@@ -991,10 +991,10 @@ namespace ascension {
 			}
 
 			/// @internal Invokes @c TextViewportListener#viewportScrollPropertiesChanged
-			inline void TextViewport::fireScrollPropertiesChanged(const presentation::AbstractTwoAxes<bool>& dimensions) BOOST_NOEXCEPT {
+			inline void TextViewport::fireScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& dimensions) BOOST_NOEXCEPT {
 				static const decltype(frozenNotification_.count) minimumCount;
 				if(frozenNotification_.count == minimumCount)
-					listeners_.notify<const presentation::AbstractTwoAxes<bool>&>(
+					listeners_.notify<const presentation::FlowRelativeTwoAxes<bool>&>(
 						&TextViewportListener::viewportScrollPropertiesChanged, dimensions);
 				else {
 					if(dimensions.ipd())
@@ -1261,7 +1261,7 @@ namespace ascension {
 			 * This method does nothing if scroll is locked.
 			 * @param offsets The offsets to scroll in abstract dimensions in user units
 			 */
-			void TextViewport::scroll(const presentation::AbstractTwoAxes<TextViewportSignedScrollOffset>& offsets) {
+			void TextViewport::scroll(const presentation::FlowRelativeTwoAxes<TextViewportSignedScrollOffset>& offsets) {
 				if(isScrollLocked())
 					return;
 
@@ -1335,7 +1335,7 @@ namespace ascension {
 				if(pages > 0) {
 					const TextViewportNotificationLocker notificationLockGuard(this);
 					for(; pages > 0 && scrollPositions().bpd() < rangeBeforeScroll.back(); --pages) {
-						const presentation::AbstractTwoAxes<TextViewportSignedScrollOffset> delta(presentation::_bpd = pageSize<presentation::BlockFlowDirection>(*this), presentation::_ipd = 0);
+						const presentation::FlowRelativeTwoAxes<TextViewportSignedScrollOffset> delta(presentation::_bpd = pageSize<presentation::BlockFlowDirection>(*this), presentation::_ipd = 0);
 						scroll(delta);
 					}
 				} else if(pages < 0) {
@@ -1397,7 +1397,7 @@ namespace ascension {
 			 * This method does nothing if scroll is locked.
 			 * @param positions The destination of scroll in abstract dimensions in user units
 			 */
-			void TextViewport::scrollTo(const presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>>& positions) {
+			void TextViewport::scrollTo(const presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>& positions) {
 				if(isScrollLocked())
 					return;
 
@@ -1523,11 +1523,11 @@ namespace ascension {
 					throw std::underflow_error("");
 				if(--frozenNotification_.count == minimum) {
 					if(frozenNotification_.dimensionsPropertiesChanged.ipd() || frozenNotification_.dimensionsPropertiesChanged.bpd()) {
-						listeners_.notify<const presentation::AbstractTwoAxes<bool>&>(&TextViewportListener::viewportScrollPropertiesChanged, frozenNotification_.dimensionsPropertiesChanged);
-						frozenNotification_.dimensionsPropertiesChanged = presentation::AbstractTwoAxes<bool>(false, false);
+						listeners_.notify<const presentation::FlowRelativeTwoAxes<bool>&>(&TextViewportListener::viewportScrollPropertiesChanged, frozenNotification_.dimensionsPropertiesChanged);
+						frozenNotification_.dimensionsPropertiesChanged = presentation::FlowRelativeTwoAxes<bool>(false, false);
 					}
 					if(frozenNotification_.positionBeforeChanged != boost::none) {
-						listeners_.notify<const presentation::AbstractTwoAxes<TextViewportScrollOffset>&, const VisualLine&>(
+						listeners_.notify<const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>&, const VisualLine&>(
 							&TextViewportListener::viewportScrollPositionChanged,
 							boost::get(frozenNotification_.positionBeforeChanged).offsets, boost::get(frozenNotification_.positionBeforeChanged).line);
 						frozenNotification_.positionBeforeChanged = boost::none;
@@ -1568,7 +1568,7 @@ namespace ascension {
 					firstVisibleLine_.subline = 0;
 					adjustBpdScrollPositions();
 				}
-				fireScrollPropertiesChanged(presentation::AbstractTwoAxes<bool>(presentation::_ipd = longestLineChanged, presentation::_bpd = true));
+				fireScrollPropertiesChanged(presentation::FlowRelativeTwoAxes<bool>(presentation::_ipd = longestLineChanged, presentation::_bpd = true));
 			}
 
 			/// @see VisualLinesListener#visualLinesInserted
@@ -1582,7 +1582,7 @@ namespace ascension {
 					firstVisibleLine_.line += lines.size();
 					adjustBpdScrollPositions();
 				}
-				fireScrollPropertiesChanged(presentation::AbstractTwoAxes<bool>(presentation::_ipd = true/*longestLineChanged*/, presentation::_bpd = true));
+				fireScrollPropertiesChanged(presentation::FlowRelativeTwoAxes<bool>(presentation::_ipd = true/*longestLineChanged*/, presentation::_bpd = true));
 				repairUncalculatedLayouts();
 			}
 
@@ -1599,7 +1599,7 @@ namespace ascension {
 						adjustBpdScrollPositions();
 					}
 				}
-				fireScrollPropertiesChanged(presentation::AbstractTwoAxes<bool>(presentation::_ipd = longestLineChanged, presentation::_bpd = sublinesDifference != 0));
+				fireScrollPropertiesChanged(presentation::FlowRelativeTwoAxes<bool>(presentation::_ipd = longestLineChanged, presentation::_bpd = sublinesDifference != 0));
 				repairUncalculatedLayouts();
 			}
 

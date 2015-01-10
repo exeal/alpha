@@ -355,14 +355,14 @@ namespace ascension {
 
 		/// @see graphics.font.TextViewportListener.viewportScrollPositionChanged
 		void DefaultContentAssistant::viewportScrollPositionChanged(
-				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset>&,
+				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>&,
 				const graphics::font::VisualLine&) BOOST_NOEXCEPT {
 			viewerBoundsChanged();
 		}
 
 		/// @see graphics.font.TextViewportListener.viewportScrollPropertiesChanged
 		void DefaultContentAssistant::viewportScrollPropertiesChanged(
-				const presentation::AbstractTwoAxes<bool>&) BOOST_NOEXCEPT {
+				const presentation::FlowRelativeTwoAxes<bool>&) BOOST_NOEXCEPT {
 		}
 	}
 }

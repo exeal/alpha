@@ -2,14 +2,14 @@
  * @file document.hpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2012, 2014
+ * @date 2006-2012, 2014-2015
  */
 
 #ifndef ASCENSION_DOCUMENT_HPP
 #define ASCENSION_DOCUMENT_HPP
 
 #include <ascension/config.hpp>				// ASCENSION_DEFAULT_NEWLINE
-#include <ascension/directions.hpp>
+#include <ascension/direction.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/gap-vector.hpp>	// detail.GapVector
 #include <ascension/corelib/listeners.hpp>

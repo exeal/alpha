@@ -14,7 +14,7 @@
 
 //#include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
-#include <ascension/directions.hpp>
+#include <ascension/direction.hpp>
 #include <ascension/presentation/styles/auxiliary.hpp>
 #include <ascension/presentation/styles/background.hpp>
 #include <ascension/presentation/styles/box.hpp>

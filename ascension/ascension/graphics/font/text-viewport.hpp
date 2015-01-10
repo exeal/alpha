@@ -12,6 +12,7 @@
 
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/scope-guard.hpp>
+#include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-renderer-observers.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
@@ -70,7 +71,7 @@ namespace ascension {
 				/// @name View Positions
 				/// @{
 				const VisualLine& firstVisibleLine() const BOOST_NOEXCEPT;
-				const presentation::AbstractTwoAxes<TextViewportScrollOffset>& scrollPositions() const BOOST_NOEXCEPT;
+				const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>& scrollPositions() const BOOST_NOEXCEPT;
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				ScrollOffset blockFlowScrollOffsetInFirstVisibleVisualLine() const BOOST_NOEXCEPT;
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -80,11 +81,11 @@ namespace ascension {
 				/// @{
 				bool isScrollLocked() const BOOST_NOEXCEPT;
 				void lockScroll();
-				void scroll(const presentation::AbstractTwoAxes<TextViewportSignedScrollOffset>& offsets);
+				void scroll(const presentation::FlowRelativeTwoAxes<TextViewportSignedScrollOffset>& offsets);
 				void scroll(const PhysicalTwoAxes<TextViewportSignedScrollOffset>& offsets);
 				void scrollBlockFlowPage(TextViewportSignedScrollOffset pages);
-				void scrollTo(const presentation::AbstractTwoAxes<TextViewportScrollOffset>& positions);
-				void scrollTo(const presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>>& positions);
+				void scrollTo(const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>& positions);
+				void scrollTo(const presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>& positions);
 				void scrollTo(const PhysicalTwoAxes<TextViewportScrollOffset>& positions);
 				void scrollTo(const PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>& positions);
 				void scrollTo(const VisualLine& line, TextViewportScrollOffset ipd);
@@ -101,9 +102,9 @@ namespace ascension {
 				TextViewportScrollOffset calculateBpdScrollPosition(const boost::optional<VisualLine>& line) const BOOST_NOEXCEPT;
 				void documentAccessibleRegionChanged(const kernel::Document& document);
 				void fireScrollPositionChanged(
-					const presentation::AbstractTwoAxes<TextViewportScrollOffset>& positionsBeforeScroll,
+					const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>& positionsBeforeScroll,
 					const VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT;
-				void fireScrollPropertiesChanged(const presentation::AbstractTwoAxes<bool>& dimensions) BOOST_NOEXCEPT;
+				void fireScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& dimensions) BOOST_NOEXCEPT;
 				void repairUncalculatedLayouts();
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				void updateDefaultLineExtent();
@@ -126,7 +127,7 @@ namespace ascension {
 #endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				boost::signals2::scoped_connection documentAccessibleRegionChangedConnection_;
 				Rectangle boundsInView_;
-				presentation::AbstractTwoAxes<TextViewportScrollOffset> scrollPositions_;
+				presentation::FlowRelativeTwoAxes<TextViewportScrollOffset> scrollPositions_;
 				VisualLine firstVisibleLine_;
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				boost::value_initialized<ScrollOffset> blockFlowScrollOffsetInFirstVisibleVisualLine_;
@@ -136,14 +137,14 @@ namespace ascension {
 				struct FrozenNotification {
 					boost::value_initialized<std::size_t> count;
 					struct Position : private boost::equality_comparable<Position> {
-						presentation::AbstractTwoAxes<TextViewportScrollOffset> offsets;
+						presentation::FlowRelativeTwoAxes<TextViewportScrollOffset> offsets;
 						VisualLine line;
 						bool operator==(const Position& other) const BOOST_NOEXCEPT {
 							return offsets == other.offsets && line == other.line;
 						}
 					};
 					boost::optional<Position> positionBeforeChanged;
-					presentation::AbstractTwoAxes<bool> dimensionsPropertiesChanged;
+					presentation::FlowRelativeTwoAxes<bool> dimensionsPropertiesChanged;
 					boost::optional<Rectangle> boundsBeforeChanged;
 				} frozenNotification_;
 				bool repairingLayouts_;
@@ -209,10 +210,10 @@ namespace ascension {
 
 			/// @defgroup scroll_positions_in_viewport Scroll Positions in Viewport
 			/// @{
-			PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>
+			FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>
 				convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
-					const presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>>& positions);
-			presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>>
+					const presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>& positions);
+			presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>
 				convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
 					const PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>& positions);
 			Scalar inlineProgressionOffsetInViewerGeometry(
@@ -276,7 +277,7 @@ namespace ascension {
 			 * Returns the current scroll positions.
 			 * @see #firstVisibleLine
 			 */
-			inline const presentation::AbstractTwoAxes<TextViewportScrollOffset>& TextViewport::scrollPositions() const BOOST_NOEXCEPT {
+			inline const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>& TextViewport::scrollPositions() const BOOST_NOEXCEPT {
 				return scrollPositions_;
 			}
 
@@ -285,8 +286,8 @@ namespace ascension {
 			 * This method does nothing if scroll is locked.
 			 * @param positions The destination of scroll in abstract dimensions in user units
 			 */
-			inline void TextViewport::scrollTo(const presentation::AbstractTwoAxes<TextViewportScrollOffset>& positions) {
-				 return scrollTo(presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>>(presentation::_ipd = positions.ipd(), presentation::_bpd = positions.bpd()));
+			inline void TextViewport::scrollTo(const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>& positions) {
+				 return scrollTo(presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>(presentation::_ipd = positions.ipd(), presentation::_bpd = positions.bpd()));
 			}
 
 			/**

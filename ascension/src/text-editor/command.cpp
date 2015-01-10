@@ -172,7 +172,7 @@ namespace ascension {
 					if(procedure == &kernel::locations::nextPage) {
 						graphics::font::TextViewportSignedScrollOffset offset = (direction == Direction::FORWARD) ? n : -n;
 						if(offset != 0) {
-							presentation::AbstractTwoAxes<graphics::font::TextViewportSignedScrollOffset> delta;
+							presentation::FlowRelativeTwoAxes<graphics::font::TextViewportSignedScrollOffset> delta;
 							delta.bpd() = offset;
 							delta.ipd() = 0;
 							target.textRenderer().viewport()->scroll(delta);

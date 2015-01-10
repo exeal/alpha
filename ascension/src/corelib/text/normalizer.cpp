@@ -1,7 +1,7 @@
 /**
  * @file normalizer.cpp
  * @author exeal
- * @date 2007-2014
+ * @date 2007-2015
  */
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_*
