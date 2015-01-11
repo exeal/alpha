@@ -210,7 +210,7 @@ namespace ascension {
 
 			/// @defgroup scroll_positions_in_viewport Scroll Positions in Viewport
 			/// @{
-			FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>
+			presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>
 				convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
 					const presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>& positions);
 			presentation::FlowRelativeTwoAxes<boost::optional<TextViewportScrollOffset>>
