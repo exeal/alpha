@@ -11,6 +11,11 @@
 #define ASCENSION_RULER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
+#include <ascension/graphics/font/actual-text-styles.hpp>
+#include <ascension/graphics/font/number-substitution.hpp>
+#include <ascension/presentation/styles/background.hpp>
+#include <ascension/presentation/styles/text.hpp>
+#include <ascension/presentation/styles/writing-modes.hpp>
 #include <boost/utility/value_init.hpp>
 
 
@@ -31,51 +36,40 @@ namespace ascension {
 				 */
 				bool visible;
 				/// Reading direction of the digits. See @c presentation#ReadingDirection.
+				presentation::styles::Direction readingDirection;
+				/// Alignment of the digits. See @c graphics#font#TextAlignment.
 				presentation::StyleProperty<
-					presentation::sp::Enumerated<
-						presentation::ReadingDirection, presentation::LEFT_TO_RIGHT
-					>, presentation::sp::Inherited
-				> readingDirection;
-				/// Alignment of the digits. See @c presentation#TextAlignment.
-				presentation::StyleProperty<
-					presentation::sp::Enumerated<
-						presentation::TextAlignment, presentation::TextAlignment::END
-					>,
-					presentation::sp::NotInherited
+					presentation::styles::Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextAlignment), graphics::font::TextAlignment::END>,
+					presentation::styles::Inherited<false>
 				> textAlignment;
 				/// Justification of the digits. See @c presentation#TextJustification.
-				presentation::StyleProperty<
-					presentation::sp::Enumerated<
-						presentation::TextJustification, presentation::TextJustification::AUTO
-					>,
-					presentation::sp::Inherited
-				> textJustification;
+				presentation::styles::TextJustification textJustification;
 				/// Start value of the line number. Default value is @c 1.
 				presentation::StyleProperty<
-					presentation::sp::Enumerated<Index, 1>,
-					presentation::sp::NotInherited
+					presentation::styles::Enumerated<Index, 1>,
+					presentation::styles::Inherited<false>
 				> startValue;
 				/// Minimum number of digits. Default value is @c 4.
 				presentation::StyleProperty<
-					presentation::sp::Enumerated<std::uint8_t, 4>,
-					presentation::sp::NotInherited
+					presentation::styles::Enumerated<std::uint8_t, 4>,
+					presentation::styles::Inherited<false>
 				> minimumDigits;
 				/// Padding width at the start. Default value is 6-pixel.
 				presentation::StyleProperty<
-					presentation::sp::Lengthed<6, presentation::Length::PIXELS>,
-					presentation::sp::NotInherited
+					presentation::styles::Lengthed<6, presentation::styles::Length::PIXELS>,
+					presentation::styles::Inherited<false>
 				> paddingStart;
 				/// Padding width at the end. Default value is 1-pixel.
 				presentation::StyleProperty<
-					presentation::sp::Lengthed<1, presentation::Length::PIXELS>,
-					presentation::sp::NotInherited
+					presentation::styles::Lengthed<1, presentation::styles::Length::PIXELS>,
+					presentation::styles::Inherited<false>
 				> paddingEnd;
 #if 1
 				/**
 				 * Color of the text. Default value is @c boost#none which is fallbacked to the
 				 * foreground of the text run style of the viewer's presentation global text style.
 				 */
-				presentation::ColorProperty<presentation::sp::Inherited> color;
+				presentation::styles::Color color;
 #else
 				/**
 				 * Color or style of the text. Default value is @c null which is fallbacked to the
@@ -84,14 +78,17 @@ namespace ascension {
 				std::shared_ptr<graphics::Paint> foreground;
 #endif
 				/// Color or style of the background.
-				presentation::Background background;
-				/// Style of the border-end. Default value is @c presentation#Border#Side().
-				/// @note Line margins area does not have other three border sides.
-				presentation::Border::Side borderEnd;
+				presentation::styles::BackgroundColor backgroundColor;
+				/// The 'border-end-color'.
+				presentation::styles::BorderColor borderEndColor;
+				/// The 'border-end-style'.
+				presentation::styles::BorderStyle borderEndStyle;
+				/// The 'border-end-width'.
+				presentation::styles::BorderWidth borderEndWidth;
 				/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
 				presentation::StyleProperty<
-					presentation::sp::Complex<presentation::NumberSubstitution>,
-					presentation::sp::NotInherited
+					presentation::styles::Complex<graphics::font::NumberSubstitution>,
+					presentation::styles::Inherited<false>
 				> numberSubstitution;
 
 				LineNumbers() BOOST_NOEXCEPT;
@@ -110,15 +107,18 @@ namespace ascension {
 				 * platform-dependent setting.
 				 */
 				presentation::StyleProperty<
-					presentation::sp::Complex<
-						boost::optional<presentation::Length>
-					>, presentation::sp::NotInherited
+					presentation::styles::Complex<
+						boost::optional<presentation::styles::Length>
+					>, presentation::styles::Inherited<false>
 				> width;
 				/// Color or style of the content.
-				presentation::Background background;
-				/// Style of the border-end. Default value is @c presentation#Border#Side().
-				/// @note An indicator margin does have other three border sides.
-				presentation::Border::Side borderEnd;
+				presentation::styles::BackgroundColor background;
+				/// The 'border-end-color'.
+				presentation::styles::BorderColor borderEndColor;
+				/// The 'border-end-style'.
+				presentation::styles::BorderStyle borderEndStyle;
+				/// The 'border-end-width'.
+				presentation::styles::BorderWidth borderEndWidth;
 
 				IndicatorMargin() BOOST_NOEXCEPT;
 			};
@@ -127,12 +127,12 @@ namespace ascension {
 			 * Color of the text. Default value is @c boost#none which is fallbacked to the
 			 * foreground of the text run style of the viewer's presentation global text style.
 			 */
-			presentation::ColorProperty<presentation::sp::Inherited> color;
+			presentation::styles::Color color;
 			/**
 			 * Color or style of the background. This can inherit the background of the text
 			 * run style of the viewer's presentation global text style.
 			 */
-			presentation::Background background;
+			presentation::styles::BackgroundColor background;
 			/**
 			 * Alignment (anchor) of the ruler. Must be either @c presentation#TextAlignment#START,
 			 * @c presentation#TextAlignment#END, @c presentation#TextAlignment#LEFT or
@@ -141,9 +141,8 @@ namespace ascension {
 			 * treated as top and bottom respectively.
 			 */
 			presentation::StyleProperty<
-				presentation::sp::Enumerated<
-					presentation::TextAlignment, presentation::TextAlignment::START
-				>, presentation::sp::NotInherited
+				presentation::styles::Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextAlignment), graphics::font::TextAlignment::START>,
+				presentation::styles::Inherited<true>
 			> alignment;
 			/// Style of the line numbers area. This can be @c null.
 			std::shared_ptr<const LineNumbers> lineNumbers;
@@ -179,12 +178,12 @@ namespace ascension {
 			private:
 				TextViewer& viewer_;
 				std::shared_ptr<const RulerStyles> declaredStyles_;
-				graphics::font::ComputedBorderSide
-					computedIndicatorMarginBorderEnd_, computedLineNumbersBorderEnd_;
+				graphics::font::ActualBorderSide
+					actualIndicatorMarginBorderEnd_, actualLineNumbersBorderEnd_;
 				boost::value_initialized<graphics::Scalar>	// in user units
-					computedIndicatorMarginContentWidth_, computedLineNumbersContentWidth_,
-					computedLineNumbersPaddingStart_, computedLineNumbersPaddingEnd_;
-				boost::value_initialized<std::uint8_t> computedLineNumberDigits_;
+					actualIndicatorMarginContentWidth_, actualLineNumbersContentWidth_,
+					actualLineNumbersPaddingStart_, actualLineNumbersPaddingEnd_;
+				boost::value_initialized<std::uint8_t> actualLineNumberDigits_;
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && 0
 				win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
 				win32::Handle<HBRUSH> indicatorMarginBrush_, lineNumbersBrush_;
