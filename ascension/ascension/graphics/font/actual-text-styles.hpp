@@ -18,34 +18,47 @@
 #include <ascension/presentation/styles/background.hpp>
 #include <ascension/presentation/styles/fonts.hpp>
 #include <ascension/presentation/styles/text-decor.hpp>
+#include <boost/fusion/container/map.hpp>
 
 namespace ascension {
 	namespace graphics {
 		class PaintContext;
 
 		namespace font {
-			/// "Actual Value"s of border style properties.
-			struct ActualBorderSide : private boost::equality_comparable<ActualBorderSide> {
-				/// The "Actual Value" of 'border-color' property.
-				presentation::styles::ComputedValue<presentation::styles::BorderColor>::type color;
-				/// The "Actual Value" of 'border-style' property.
-				presentation::styles::ComputedValue<presentation::styles::BorderStyle>::type style;
-				/// The "Actual Value" of 'border-width' property in user units (not in integer pixels).
-				graphics::Scalar width;
-
+			/**
+			 * "Actual Value"s of border style properties. This includes:
+			 * - The "Actual Value" of 'border-color' property.
+			 * - The "Actual Value" of 'border-style' property.
+			 * - The "Actual Value" of 'border-width' property in logical coordinate space units (not in integer pixels).
+			 */
+			struct ActualBorderSide : public boost::fusion::map<
+				boost::fusion::pair<
+					presentation::styles::BorderColor,
+					presentation::styles::ComputedValue<presentation::styles::BorderColor>::type
+				>,
+				boost::fusion::pair<
+					presentation::styles::BorderStyle,
+					presentation::styles::ComputedValue<presentation::styles::BorderStyle>::type
+				>,
+				boost::fusion::pair<
+					presentation::styles::BorderWidth,
+					graphics::Scalar
+				>
+			> {
 				/// Default constructor.
-				ActualBorderSide() BOOST_NOEXCEPT :
-					color(Color::TRANSPARENT_BLACK), style(presentation::styles::BorderStyleEnums::NONE), width(0) {}
-				/// Equality operator.
-				bool operator==(const ActualBorderSide& other) const BOOST_NOEXCEPT {
-					return color == other.color && style == other.style && width == other.width;
+				ActualBorderSide() BOOST_NOEXCEPT {
+					boost::fusion::at_key<presentation::styles::BorderColor>(*this) = Color::TRANSPARENT_BLACK;
+					boost::fusion::at_key<presentation::styles::BorderStyle>(*this) = presentation::styles::BorderStyleEnums::NONE;
+					boost::fusion::at_key<presentation::styles::BorderWidth>(*this) = 0;
 				}
 				/// Returns the actual width in user units (not in integer pixels).
 				graphics::Scalar actualWidth() const BOOST_NOEXCEPT {
-					return (style != presentation::styles::BorderStyleEnums::NONE) ? width : 0;
+					return (boost::fusion::at_key<presentation::styles::BorderStyle>(*this) != presentation::styles::BorderStyleEnums::NONE) ?
+						boost::fusion::at_key<presentation::styles::BorderWidth>(*this) : 0;
 				}
 				/// Returns @c true if this side has visible style (but may or may not consume place).
 				bool hasVisibleStyle() const BOOST_NOEXCEPT {
+					const auto style(boost::fusion::at_key<presentation::styles::BorderStyle>(*this));
 					return style != presentation::styles::BorderStyleEnums::NONE && style != presentation::styles::BorderStyleEnums::HIDDEN;
 				}
 				/// Returns @c true if the actual thickness of this side is zero.
@@ -57,112 +70,91 @@ namespace ascension {
 			/// Specialization of @c boost#hash_value function template for @c ActualBorderSide.
 			inline std::size_t hash_value(const ActualBorderSide& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
-				boost::hash_combine(seed, object.color);
-				boost::hash_combine(seed, object.style);
-				boost::hash_combine(seed, object.width);
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::BorderColor>(object));
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::BorderStyle>(object));
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::BorderWidth>(object));
 				return seed;
 			}
 
-			/// "Actual Value"s of font-related style properties.
-			struct ActualFontSpecification : private boost::equality_comparable<ActualFontSpecification> {
-				/// The "Actual Value" of 'font-family' property.
-				presentation::styles::ComputedValue<presentation::styles::FontFamily>::type families;
-				/// The "Actual Value" of 'font-size' property in points.
-				double pointSize;
-				/// The "Actual Value"s of other properties.
-				FontProperties properties;
-				/// The "Actual Value" of 'font-size-adjust' property.
-				presentation::styles::ComputedValue<presentation::styles::FontSizeAdjust>::type sizeAdjust;
-
-				/// Equality operator.
-				bool operator==(const ActualFontSpecification& other) const BOOST_NOEXCEPT {
-					return families == other.families && pointSize == other.pointSize
-						&& properties == other.properties && sizeAdjust == other.sizeAdjust;
-				}
-			};
+			/**
+			 * "Actual Value"s of font-related style properties. This includes:
+			 * - The "Actual Value" of 'font-family' property.
+			 * - The "Actual Value" of 'font-size' property in points.
+			 * - The "Actual Value"s of other properties.
+			 * - The "Actual Value" of 'font-size-adjust' property.
+			 */
+			typedef boost::fusion::map<
+				boost::fusion::pair<presentation::styles::FontFamily, presentation::styles::ComputedValue<presentation::styles::FontFamily>::type>,
+				boost::fusion::pair<presentation::styles::FontSize, double>,
+				boost::fusion::pair<void, FontProperties>,
+				boost::fusion::pair<presentation::styles::FontSizeAdjust, presentation::styles::ComputedValue<presentation::styles::FontSizeAdjust>::type>
+			> ActualFontSpecification;
 
 			/// Specialization of @c boost#hash_value function template for @c ActualFontSpecification.
 			inline std::size_t hash_value(const ActualFontSpecification& object) BOOST_NOEXCEPT {
-				std::size_t seed = boost::hash_range(std::begin(object.families), std::end(object.families));
-				boost::hash_combine(seed, object.pointSize);
-				boost::hash_combine(seed, object.properties);
-				if(object.sizeAdjust != boost::none)
-					boost::hash_combine(seed, boost::get(object.sizeAdjust));
+				const auto& families = boost::fusion::at_key<presentation::styles::FontFamily>(object);
+				std::size_t seed = boost::hash_range(std::begin(families), std::end(families));
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::FontSize>(object));
+				boost::hash_combine(seed, boost::fusion::at_key<void>(object));
+				const auto sizeAdjust(boost::fusion::at_key<presentation::styles::FontSizeAdjust>(object));
+				if(sizeAdjust != boost::none)
+					boost::hash_combine(seed, boost::get(sizeAdjust));
 				return seed;
 			}
 
-			/// "Actual Value"s of text decoration style properties.
-			struct ActualTextDecoration : private boost::equality_comparable<ActualTextDecoration> {
-				/// The "Actual Value" of 'text-decoration-line' property.
-				presentation::styles::ComputedValue<presentation::styles::TextDecorationLine>::type lines;
-				/// The "Actual Value" of 'text-decoration-color' property.
-				presentation::styles::ComputedValue<presentation::styles::TextDecorationColor>::type color;
-				/// The "Actual Value" of 'text-decoration-style' property.
-				presentation::styles::ComputedValue<presentation::styles::TextDecorationStyle>::type style;
-				/// The "Actual Value" of 'text-decoration-skip' property.
-				presentation::styles::ComputedValue<presentation::styles::TextDecorationSkip>::type skip;
-				/// The "Actual Value" of 'text-underline-position' property.
-				presentation::styles::ComputedValue<presentation::styles::TextUnderlinePosition>::type underlinePosition;
-
-				/// Default constructor initializes the members with initial values.
-				ActualTextDecoration() BOOST_NOEXCEPT :
-					lines(presentation::styles::TextDecorationLineEnums::NONE),
-					color(Color::TRANSPARENT_BLACK),
-					style(presentation::styles::TextDecorationStyleEnums::SOLID),
-					skip(presentation::styles::TextDecorationSkipEnums::OBJECTS),
-					underlinePosition(presentation::styles::TextUnderlinePositionEnums::AUTO) {}
-				/// Initializes the all members with the given computed values.
-				ActualTextDecoration(
-					const presentation::styles::ComputedValue<presentation::styles::TextDecorationLine>::type& lines,
-					const presentation::styles::ComputedValue<presentation::styles::TextDecorationColor>::type& color,
-					const presentation::styles::ComputedValue<presentation::styles::TextDecorationStyle>::type& style,
-					const presentation::styles::ComputedValue<presentation::styles::TextDecorationSkip>::type& skip,
-					const presentation::styles::ComputedValue<presentation::styles::TextUnderlinePosition>::type& underlinePosition) :
-					lines(lines), color(color), style(style), skip(skip), underlinePosition(underlinePosition) {}
-				/// Equality operator.
-				bool operator==(const ActualTextDecoration& other) const BOOST_NOEXCEPT {
-					return lines == other.lines && color == other.color
-						&& style == other.style && skip == other.skip && underlinePosition == other.underlinePosition;
-				}
-			};
+			/**
+			 * "Actual Value"s of text decoration style properties. This includes:
+			 * - The "Actual Value" of 'text-decoration-line' property.
+			 * - The "Actual Value" of 'text-decoration-color' property.
+			 * - The "Actual Value" of 'text-decoration-style' property.
+			 * - The "Actual Value" of 'text-decoration-skip' property.
+			 * - The "Actual Value" of 'text-underline-position' property.
+			 */
+			typedef presentation::detail::TransformedAsMap<
+				boost::fusion::vector<
+					presentation::styles::TextDecorationLine,
+					presentation::styles::TextDecorationColor,
+					presentation::styles::TextDecorationStyle,
+					presentation::styles::TextDecorationSkip,
+					presentation::styles::TextUnderlinePosition
+				>,
+				presentation::detail::KeyValueConverter<presentation::styles::ComputedValue>
+			> ActualTextDecoration;
 
 			/// Specialization of @c boost#hash_value function template for @c ActualTextDecoration.
 			inline std::size_t hash_value(const ActualTextDecoration& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
-				boost::hash_combine<int>(seed, object.lines);
-				boost::hash_combine(seed, object.color);
-				boost::hash_combine<int>(seed, object.style);
-				boost::hash_combine<int>(seed, object.skip);
-				boost::hash_combine<int>(seed, object.underlinePosition);
+				boost::hash_combine<int>(seed, boost::fusion::at_key<presentation::styles::TextDecorationLine>(object));
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextDecorationColor>(object));
+				boost::hash_combine<int>(seed, boost::fusion::at_key<presentation::styles::TextDecorationStyle>(object));
+				boost::hash_combine<int>(seed, boost::fusion::at_key<presentation::styles::TextDecorationSkip>(object));
+				boost::hash_combine<int>(seed, boost::fusion::at_key<presentation::styles::TextUnderlinePosition>(object));
 				return seed;
 			}
 
-			/// "Actual Value"s of text emphasis style properties.
-			struct ActualTextEmphasis : private boost::equality_comparable<ActualTextEmphasis> {
-				/// The "Actual Value" of 'text-emphasis-style' property.
-				presentation::styles::ComputedValue<presentation::styles::TextEmphasisStyle>::type style;
-				/// The "Actual Value" of 'text-emphasis-color' property.
-				presentation::styles::ComputedValue<presentation::styles::TextEmphasisColor>::type color;
-				/// The "Actual Value" of 'text-emphasis-position' property.
-				presentation::styles::ComputedValue<presentation::styles::TextEmphasisPosition>::type position;
-
-				/// Default constructor initializes the members with initial values.
-				ActualTextEmphasis() BOOST_NOEXCEPT :
-					style(/*presentation::styles::TextEmphasisStyleEnums::NONE*/), color(Color::TRANSPARENT_BLACK),
-					position(static_cast<BOOST_SCOPED_ENUM_NATIVE(presentation::styles::TextEmphasisPositionEnums)>(presentation::styles::TextEmphasisPositionEnums::OVER | presentation::styles::TextEmphasisPositionEnums::RIGHT)) {}
-				/// Equality operator.
-				bool operator==(const ActualTextEmphasis& other) const BOOST_NOEXCEPT {
-					return style == other.style && color == other.color && position == other.position;
-				}
-			};
+			/**
+			 * "Actual Value"s of text emphasis style properties.
+			 * - The "Actual Value" of 'text-emphasis-style' property.
+			 * - The "Actual Value" of 'text-emphasis-color' property.
+			 * - The "Actual Value" of 'text-emphasis-position' property.
+			 */
+			typedef presentation::detail::TransformedAsMap<
+				boost::fusion::vector<
+					presentation::styles::TextEmphasisStyle,
+					presentation::styles::TextEmphasisColor,
+					presentation::styles::TextEmphasisPosition
+				>,
+				presentation::detail::KeyValueConverter<presentation::styles::ComputedValue>
+			> ActualTextEmphasis;
 
 			/// Specialization of @c boost#hash_value function template for @c ActualTextEmphasis.
 			inline std::size_t hash_value(const ActualTextEmphasis& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
-				if(object.style != boost::none)
-					boost::hash_combine<int>(seed, boost::get(object.style));
-				boost::hash_combine(seed, object.color);
-				boost::hash_combine(seed, object.position);
+				const auto& style = boost::fusion::at_key<presentation::styles::TextEmphasisStyle>(object);
+				if(style != boost::none)
+					boost::hash_combine<int>(seed, boost::get(style));
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextEmphasisColor>(object));
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextEmphasisPosition>(object));
 				return seed;
 			}
 
@@ -170,6 +162,28 @@ namespace ascension {
 				void paintBorder(PaintContext& context, const int& rectangle,
 					const PhysicalFourSides<ActualBorderSide>& style, const presentation::WritingMode& writingMode);
 			}
+
+			struct ActualTextRunStyleCore {
+				presentation::styles::ComputedValue<presentation::styles::Color>::type color;
+				presentation::styles::ComputedValue<presentation::styles::BackgroundColor>::type backgroundColor;
+				PhysicalFourSides<ActualBorderSide> borders;
+				ActualTextDecoration textDecoration;
+				ActualTextEmphasis textEmphasis;
+//				ActualTextShadow textShadow;
+
+				explicit ActualTextRunStyleCore(const presentation::ComputedTextRunStyle& computed) :
+					color(boost::fusion::at_key<presentation::styles::Color>(computed)),
+					backgroundColor(boost::fusion::at_key<presentation::styles::BackgroundColor>(computed)),
+					borders(boost::fusion::at_key<>(computed)),
+					textDecoration(
+						boost::fusion::at_key<presentation::styles::TextDecorationLine>(computed),
+						boost::fusion::at_key<presentation::styles::TextDecorationColor>(computed),
+						boost::fusion::at_key<presentation::styles::TextDecorationStyle>(computed),
+						boost::fusion::at_key<presentation::styles::TextDecorationSkip>(computed),
+						boost::fusion::at_key<presentation::styles::TextUnderlinePosition>(computed)),
+					textEmphasis(boost::fusion::at_key<decltype(textEmphasis)>(computed))/*,
+					textShadow(boost::fusion::at_key<decltype(textShadow)>(computed))*/ {}
+			};
 		}
 	}
 } // namespace ascension.graphics.font
