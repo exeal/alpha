@@ -15,12 +15,18 @@
 #ifndef ACTUAL_TEXT_STYLES_HPP
 #define ACTUAL_TEXT_STYLES_HPP
 
+#include <ascension/graphics/physical-directions-dimensions.hpp>
+#include <ascension/presentation/detail/style-sequence.hpp>
 #include <ascension/presentation/styles/background.hpp>
 #include <ascension/presentation/styles/fonts.hpp>
 #include <ascension/presentation/styles/text-decor.hpp>
 #include <boost/fusion/container/map.hpp>
 
 namespace ascension {
+	namespace presentation {
+		struct ComputedTextRunStyle;
+	}
+
 	namespace graphics {
 		class PaintContext;
 
@@ -171,18 +177,7 @@ namespace ascension {
 				ActualTextEmphasis textEmphasis;
 //				ActualTextShadow textShadow;
 
-				explicit ActualTextRunStyleCore(const presentation::ComputedTextRunStyle& computed) :
-					color(boost::fusion::at_key<presentation::styles::Color>(computed)),
-					backgroundColor(boost::fusion::at_key<presentation::styles::BackgroundColor>(computed)),
-					borders(boost::fusion::at_key<>(computed)),
-					textDecoration(
-						boost::fusion::at_key<presentation::styles::TextDecorationLine>(computed),
-						boost::fusion::at_key<presentation::styles::TextDecorationColor>(computed),
-						boost::fusion::at_key<presentation::styles::TextDecorationStyle>(computed),
-						boost::fusion::at_key<presentation::styles::TextDecorationSkip>(computed),
-						boost::fusion::at_key<presentation::styles::TextUnderlinePosition>(computed)),
-					textEmphasis(boost::fusion::at_key<decltype(textEmphasis)>(computed))/*,
-					textShadow(boost::fusion::at_key<decltype(textShadow)>(computed))*/ {}
+				explicit ActualTextRunStyleCore(const presentation::ComputedTextRunStyle& computed);
 			};
 		}
 	}
