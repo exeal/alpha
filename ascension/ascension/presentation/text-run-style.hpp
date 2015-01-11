@@ -24,6 +24,7 @@
 #include <ascension/presentation/styles/text-decor.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
 #include <boost/flyweight/flyweight_fwd.hpp>
+#include <boost/fusion/algorithm/transformation/join.hpp>
 #include <boost/fusion/container/vector.hpp>
 
 namespace ascension {
@@ -154,6 +155,17 @@ namespace ascension {
 				>
 			> {};
 		}
+
+		/// "Declared Value"s of @c TextRunStyle.
+		class DeclaredTextRunStyle : public boost::fusion::result_of::join<DeclaredTextRunStyle1, DeclaredTextRunStyle2>::type {};
+		/// "Specified Value"s of @c TextRunStyle.
+		struct SpecifiedTextRunStyle : boost::fusion::result_of::join<
+			styles::SpecifiedValue<TextRunStyle1>::type, styles::SpecifiedValue<TextRunStyle2>::type
+		>::type {};
+		/// "Computed Value"s of @c TextRunStyle.
+		struct ComputedTextRunStyle : boost::fusion::result_of::join<
+			styles::ComputedValue<TextRunStyle1>::type, styles::ComputedValue<TextRunStyle2>::type
+		>::type {};
 
 		boost::flyweight<styles::ComputedValue<TextRunStyle1>::type> compute(
 			const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,

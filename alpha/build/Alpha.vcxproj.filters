@@ -488,6 +488,9 @@
     <ClCompile Include="..\..\ascension\src\kernel\document-character-iterator.cpp">
       <Filter>ascension\Source Files\kernel</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\actual-text-styles.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">

@@ -79,6 +79,11 @@ namespace ascension {
 			> {};
 		}
 
+		/// "Specified Value"s of @c TextToplevelStyle.
+		struct SpecifiedTextToplevelStyle : styles::SpecifiedValue<TextToplevelStyle> {};
+		/// "Computed Value"s of @c TextToplevelStyle.
+		struct ComputedTextToplevelStyle : styles::ComputedValue<TextToplevelStyle> {};
+
 		boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type> compute(const styles::SpecifiedValue<TextToplevelStyle>::type& specifiedValues);
 		std::size_t hash_value(const styles::ComputedValue<TextToplevelStyle>::type& style);
 	}

@@ -198,6 +198,7 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\collator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\identifier-syntax.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\normalizer.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\font\actual-text-styles.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\default-special-character-renderer.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
