@@ -18,7 +18,7 @@
 #include <ascension/graphics/geometry/geometry.hpp>
 #include <ascension/presentation/text-line-style.hpp>	// presentation.ComputedTextLineStyle
 #include <ascension/presentation/text-toplevel-style.hpp>	// presentation.ComputedTextToplevelStyle
-#include <boost/flyweight/flyweight.hpp>
+#include <boost/flyweight.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/multi/geometries/multi_polygon.hpp>
 #include <boost/operators.hpp>
