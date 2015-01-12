@@ -2,13 +2,14 @@
  * @file ruler.cpp
  * @author exeal
  * @date 2010-10-27 created (separated code from layout.cpp)
- * @date 2010-2014
+ * @date 2010-2015
  */
 
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/glyph-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
 #include <boost/core/null_deleter.hpp>
@@ -21,10 +22,6 @@
 namespace ascension {
 	namespace viewers {
 		// RulerStyles.LineNumbers ////////////////////////////////////////////////////////////////////////////////////
-
-		/// Constructor initializes the all members to their default values.
-		RulerStyles::LineNumbers::LineNumbers() BOOST_NOEXCEPT : visible(false) {
-		}
 
 		/**
 		 * Returns line numbers style of the given @c RulerStyles.
@@ -40,10 +37,6 @@ namespace ascension {
 		}
 
 		// RulerStyles.IndicatorMargin ////////////////////////////////////////////////////////////////////////////////
-
-		/// Constructor initializes the all members to their default values.
-		RulerStyles::IndicatorMargin::IndicatorMargin() BOOST_NOEXCEPT : visible(false), width(presentation::Length(0)) {
-		}
 
 		/**
 		 * Returns indicator margin style of the given @c RulerStyles.
@@ -63,7 +56,7 @@ namespace ascension {
 
 			// TODO: support locale-dependent number format.
 
-			void drawLineNumber(graphics::PaintContext& context, const graphics::Point& origin, Index lineNumber, const presentation::NumberSubstitution& ns) {
+			void drawLineNumber(graphics::PaintContext& context, const graphics::Point& origin, Index lineNumber, const graphics::font::NumberSubstitution& ns) {
 				// format number string
 				std::array<wchar_t, 128> s;	// TODO: Oops, is this sufficient?
 				// TODO: std.swprintf may be slow.
@@ -85,7 +78,7 @@ namespace ascension {
 			RulerPainter::RulerPainter(viewers::TextViewer& viewer, std::shared_ptr<const viewers::RulerStyles> initialStyles /* = nullptr */) : viewer_(viewer), declaredStyles_(initialStyles) {
 				if(declaredStyles_.get() == nullptr)
 					declaredStyles_ = std::make_shared<viewers::RulerStyles>();
-				computeAllocationWidth();
+				computeActualStyles();
 			}
 
 			/**
@@ -94,51 +87,45 @@ namespace ascension {
 			 * @return The snap alignment of the ruler in the text viewer
 			 */
 			graphics::PhysicalDirection RulerPainter::alignment() const {
-				presentation::TextAlignment computedAlignment;
-				if(!declaredStyles().alignment.inherits())
-					computedAlignment = declaredStyles().alignment.get();
-				else {
-					std::shared_ptr<const presentation::TextLineStyle> defaultLineStyle(defaultTextLineStyle(viewer_.presentation().textToplevelStyle()));
-					assert(defaultLineStyle.get() != nullptr);
-					computedAlignment = !defaultLineStyle->textAlignment.inherits() ?
-						defaultLineStyle->textAlignment.get() : declaredStyles().alignment.initialValue();
+				// compute "Computed Value"
+//				presentation::styles::cascade();
+				presentation::styles::SpecifiedValue<RulerStyles::Alignment>::type specifiedAlignment;
+				presentation::styles::specifiedValueFromCascadedValue<RulerStyles::Alignment>(
+					declaredStyles().alignment, nullptr, specifiedAlignment);
+				const presentation::styles::ComputedValue<RulerStyles::Alignment>::type
+					computedAlignment(presentation::styles::computeAsSpecified<RulerStyles::Alignment>(specifiedAlignment));
+
+				// compute "Actual Value"
+				const presentation::WritingMode writingMode(viewer_.presentation().computeWritingMode());
+				graphics::PhysicalDirection actualAlignment;
+				switch(boost::native_value(computedAlignment)) {
+					case graphics::font::TextAlignment::START:
+					default:	// invalid property value
+						actualAlignment = presentation::mapFlowRelativeToPhysical(writingMode, presentation::FlowRelativeDirection::INLINE_START);
+						break;
+					case graphics::font::TextAlignment::END:
+						actualAlignment = presentation::mapFlowRelativeToPhysical(writingMode, presentation::FlowRelativeDirection::INLINE_END);
+						break;
+					case graphics::font::TextAlignment::LEFT:
+						actualAlignment = presentation::mapLineRelativeToPhysical(writingMode, graphics::font::LineRelativeDirection::LINE_LEFT);
+						break;
+					case graphics::font::TextAlignment::RIGHT:
+						actualAlignment = presentation::mapLineRelativeToPhysical(writingMode, graphics::font::LineRelativeDirection::LINE_RIGHT);
+						break;
 				}
 
-				using presentation::detail::PhysicalTextAnchor;
-				using presentation::detail::computePhysicalTextAnchor;
-				const presentation::WritingMode writingMode(viewer_.presentation().computeWritingMode(&viewer_.textRenderer()));
-				PhysicalTextAnchor anchor;
-				switch(boost::native_value(declaredStyles().alignment.getOrInitial())) {
-					case presentation::TextAlignment::START:
-						anchor = computePhysicalTextAnchor(presentation::TextAnchor::START, writingMode.inlineFlowDirection);
-						break;
-					case presentation::TextAlignment::END:
-						anchor = computePhysicalTextAnchor(presentation::TextAnchor::END, writingMode.inlineFlowDirection);
-						break;
-					case presentation::TextAlignment::LEFT:
-						anchor = PhysicalTextAnchor::LEFT;
-						break;
-					case presentation::TextAlignment::RIGHT:
-						anchor = PhysicalTextAnchor::RIGHT;
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-				switch(boost::native_value(anchor)) {
-					// TODO: 'text-orientation' is ignored.
-					case PhysicalTextAnchor::LEFT:
-						return presentation::isHorizontal(writingMode.blockFlowDirection) ? graphics::PhysicalDirection::LEFT : graphics::PhysicalDirection::TOP;
-					case PhysicalTextAnchor::RIGHT:
-						return presentation::isHorizontal(writingMode.blockFlowDirection) ? graphics::PhysicalDirection::RIGHT : graphics::PhysicalDirection::BOTTOM;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
+				assert(presentation::isHorizontal(writingMode.blockFlowDirection)
+					|| actualAlignment == graphics::PhysicalDirection::TOP || actualAlignment == graphics::PhysicalDirection::BOTTOM);
+				assert(presentation::isVertical(writingMode.blockFlowDirection)
+					|| actualAlignment == graphics::PhysicalDirection::LEFT || actualAlignment == graphics::PhysicalDirection::RIGHT);
+
+				return actualAlignment;
 			}
 		} // namespace detail
 
 		namespace {
 			graphics::Scalar computeMaximumNumberGlyphsExtent(graphics::RenderingContext2D& context, std::shared_ptr<const graphics::font::Font> font,
-					std::uint8_t digits, const presentation::WritingMode& writingMode, const presentation::NumberSubstitution& numberSubstitution) {
+					std::uint8_t digits, const presentation::WritingMode& writingMode, const graphics::font::NumberSubstitution& numberSubstitution) {
 				std::shared_ptr<const graphics::font::Font> oldFont(context.font());
 				context.setFont(font);
 /*
@@ -205,93 +192,16 @@ namespace ascension {
 		}
 
 		namespace detail {
-			/// Recomputes the total width of the ruler.
-			void RulerPainter::computeAllocationWidth() BOOST_NOEXCEPT {
-				// (ruler-total-width) = (line-numbers-width) + (indicator-margin-width)
-				//   (indicator-margin-width) = (indicator-margin-border-width) + (indicator-margin-content-width)
-				//   (line-numbers-width) = (line-numbers-exterior-width) + (line-numbers-interior-width) + (line-numbers-content-width)
-				//     (line-numbers-exterior-width) = (line-numbers-border-width) + (line-numbers-space-width)
-				//     (line-numbers-interior-width) = (line-numbers-padding-start) + (line-numbers-padding-end)
-				//     (line-numbers-content-width) = max((glyphs-extent), (average-glyph-extent) * (minimum-digits-setting))
+			/// @internal Computes the maximum number of digits of line numbers.
+			inline std::uint8_t RulerPainter::computeMaximumDigitsForLineNumbers() const BOOST_NOEXCEPT {
+				// compute 'start-value'
+//				presentation::styles::cascade();
+				presentation::styles::SpecifiedValue<RulerStyles::LineNumbersStartValue>::type specifiedStartValue;
+				presentation::styles::specifiedValueFromCascadedValue(lineNumbers(declaredStyles())->startValue, nullptr, specifiedStartValue);
+				const presentation::styles::ComputedValue<RulerStyles::LineNumbersStartValue>::type computedStartValue(presentation::styles::computeAsSpecified(specifiedStartValue));
 
-				std::unique_ptr<graphics::RenderingContext2D> context(viewers::widgetapi::createRenderingContext(viewer_));
-
-				// compute the width of the line numbers
-				decltype(computedLineNumbersBorderEnd_) computedLineNumbersBorderEnd;
-				decltype(computedLineNumbersContentWidth_) computedLineNumbersContentWidth;
-				decltype(computedLineNumbersPaddingStart_) computedLineNumbersPaddingStart;
-				decltype(computedLineNumbersPaddingEnd_) computedLineNumbersPaddingEnd;
-				decltype(computedLineNumberDigits_) computedLineNumberDigits;
-				if(lineNumbers(declaredStyles())->visible) {
-					std::shared_ptr<const viewers::RulerStyles::LineNumbers> declaredStyle(lineNumbers(declaredStyles()));
-					boost::get(computedLineNumberDigits) = computeMaximumDigitsForLineNumbers();
-					const graphics::Scalar glyphsExtent = computeMaximumNumberGlyphsExtent(
-						*context, viewer_.textRenderer().defaultFont(), computedLineNumberDigits,
-						viewer_.presentation().computeWritingMode(&viewer_.textRenderer()),
-						declaredStyle->numberSubstitution.getOrInitial());
-					const graphics::Scalar minimumExtent = context->fontMetrics(viewer_.textRenderer().defaultFont())->averageCharacterWidth() * computedLineNumberDigits;
-					boost::get(computedLineNumbersContentWidth) = std::max(glyphsExtent, minimumExtent);
-
-					// 'padding-start' and 'padding-end'
-					const graphics::Dimension referenceBox(
-						graphics::geometry::_dx = computedLineNumbersContentWidth, graphics::geometry::_dy = computedLineNumbersContentWidth);
-					const presentation::Length::Context lengthContext(context.get(), &referenceBox);
-					boost::get(computedLineNumbersPaddingStart) = static_cast<graphics::Scalar>(declaredStyle->paddingStart.getOrInitial().value(lengthContext));
-					boost::get(computedLineNumbersPaddingEnd) = static_cast<graphics::Scalar>(declaredStyle->paddingEnd.getOrInitial().value(lengthContext));
-
-					// 'border-end'
-					computedLineNumbersBorderEnd.color =
-						computeColor(&declaredStyle->borderEnd.color, &declaredStyles_->color, viewer_.presentation().textToplevelStyle());
-					declaredStyle->borderEnd.color;
-					computedLineNumbersBorderEnd.style = declaredStyle->borderEnd.style.getOrInitial();
-					computedLineNumbersBorderEnd.width = declaredStyle->borderEnd.width.getOrInitial().value(lengthContext);
-//					const Scalar spaceWidth = 0;
-//					const Scalar exteriorWidth = borderWidth + spaceWidth;
-				}
-
-				// compute the width of the indicator margin
-				decltype(computedIndicatorMarginBorderEnd_) computedIndicatorMarginBorderEnd;
-				decltype(computedIndicatorMarginContentWidth_) computedIndicatorMarginContentWidth;
-				if(indicatorMargin(declaredStyles())->visible) {
-					std::shared_ptr<const viewers::RulerStyles::IndicatorMargin> declaredStyle(indicatorMargin(declaredStyles()));
-
-					// 'width'
-					boost::optional<presentation::Length> contentWidth(declaredStyle->width.getOrInitial());
-					boost::get(computedIndicatorMarginContentWidth) = (contentWidth != boost::none) ?
-						static_cast<graphics::Scalar>(contentWidth->value(presentation::Length::Context(context.get(), nullptr)))
-						: platformIndicatorMarginWidthInPixels(isHorizontal(viewer_.textRenderer().computedBlockFlowDirection()));
-
-					// 'border-end'
-					computedIndicatorMarginBorderEnd.color =
-						computeColor(&declaredStyle->borderEnd.color, &declaredStyles_->color, viewer_.presentation().textToplevelStyle());
-					computedIndicatorMarginBorderEnd.style = declaredStyle->borderEnd.style.getOrInitial();
-					computedIndicatorMarginBorderEnd.width = declaredStyle->borderEnd.width.getOrInitial().value(presentation::Length::Context(
-						context.get(), &graphics::Dimension(
-							graphics::geometry::_dx = computedIndicatorMarginContentWidth,
-							graphics::geometry::_dy = computedIndicatorMarginContentWidth)));
-				}
-
-				// commit
-				const graphics::Scalar oldAllocationWidth = allocationWidth();
-				computedIndicatorMarginBorderEnd_ = computedIndicatorMarginBorderEnd;
-				computedLineNumbersBorderEnd_ = computedLineNumbersBorderEnd;
-				computedIndicatorMarginContentWidth_ = computedIndicatorMarginContentWidth;
-				computedLineNumbersContentWidth_ = computedLineNumbersContentWidth;
-				computedLineNumbersPaddingStart_ = computedLineNumbersPaddingStart;
-				computedLineNumbersPaddingEnd_ = computedLineNumbersPaddingEnd;
-				if(allocationWidth() != oldAllocationWidth) {
-					viewers::widgetapi::scheduleRedraw(viewer_, false);
-#ifdef ASCENSION_USE_SYSTEM_CARET
-					viewer_.caret().updateLocation();
-#endif
-				}
-			}
-
-			/// Computes the maximum number of digits of line numbers.
-			std::uint8_t RulerPainter::computeMaximumDigitsForLineNumbers() const BOOST_NOEXCEPT {
 				std::uint8_t n = 1;
-				const Index startValue = lineNumbers(declaredStyles())->startValue.getOrInitial();
-				Index lines = viewer_.document().numberOfLines() + startValue - 1;
+				Index lines = viewer_.document().numberOfLines() + computedStartValue - 1;
 				while(lines >= 10) {
 					lines /= 10;
 					++n;
@@ -566,6 +476,88 @@ namespace ascension {
 #endif
 
 				context.restore();
+			}
+
+			/// @internal Recomputes the "Actual Value"s of the style properties.
+			void RulerPainter::recomputeActualStyles() BOOST_NOEXCEPT {
+				// (ruler-total-width) = (line-numbers-width) + (indicator-margin-width)
+				//   (indicator-margin-width) = (indicator-margin-border-width) + (indicator-margin-content-width)
+				//   (line-numbers-width) = (line-numbers-exterior-width) + (line-numbers-interior-width) + (line-numbers-content-width)
+				//     (line-numbers-exterior-width) = (line-numbers-border-width) + (line-numbers-space-width)
+				//     (line-numbers-interior-width) = (line-numbers-padding-start) + (line-numbers-padding-end)
+				//     (line-numbers-content-width) = max((glyphs-extent), (average-glyph-extent) * (minimum-digits-setting))
+
+				std::unique_ptr<graphics::RenderingContext2D> context(viewers::widgetapi::createRenderingContext(viewer_));
+
+				// compute the actual width of the line numbers
+				decltype(actualLineNumbersBorderEnd_) actualLineNumbersBorderEnd;
+				decltype(actualLineNumbersContentWidth_) actualLineNumbersContentWidth;
+				decltype(actualLineNumbersPaddingStart_) actualLineNumbersPaddingStart;
+				decltype(actualLineNumbersPaddingEnd_) actualLineNumbersPaddingEnd;
+				decltype(actualLineNumberDigits_) actualLineNumberDigits;
+				if(boost::fusion::find<RulerStyles::Visibility>(*lineNumbers(declaredStyles()))) {
+					std::shared_ptr<const viewers::RulerStyles::LineNumbers> declaredStyle(lineNumbers(declaredStyles()));
+					boost::get(actualLineNumberDigits) = computeMaximumDigitsForLineNumbers();
+					const graphics::Scalar glyphsExtent = computeMaximumNumberGlyphsExtent(
+						*context, viewer_.textRenderer().defaultFont(), actualLineNumberDigits,
+						viewer_.presentation().computeWritingMode(),
+						declaredStyle->numberSubstitution.getOrInitial());
+					const graphics::Scalar minimumExtent = context->fontMetrics(viewer_.textRenderer().defaultFont())->averageCharacterWidth() * actualLineNumberDigits;
+					boost::get(actualLineNumbersContentWidth) = std::max(glyphsExtent, minimumExtent);
+
+					// 'padding-start' and 'padding-end'
+					const graphics::Dimension referenceBox(
+						graphics::geometry::_dx = computedLineNumbersContentWidth, graphics::geometry::_dy = computedLineNumbersContentWidth);
+					const presentation::Length::Context lengthContext(context.get(), &referenceBox);
+					boost::get(actualLineNumbersPaddingStart) = static_cast<graphics::Scalar>(declaredStyle->paddingStart.getOrInitial().value(lengthContext));
+					boost::get(actualLineNumbersPaddingEnd) = static_cast<graphics::Scalar>(declaredStyle->paddingEnd.getOrInitial().value(lengthContext));
+
+					// 'border-end'
+					actualLineNumbersBorderEnd.color =
+						computeColor(&declaredStyle->borderEnd.color, &declaredStyles_->color, viewer_.presentation().textToplevelStyle());
+					declaredStyle->borderEnd.color;
+					actualLineNumbersBorderEnd.style = declaredStyle->borderEnd.style.getOrInitial();
+					actualLineNumbersBorderEnd.width = declaredStyle->borderEnd.width.getOrInitial().value(lengthContext);
+//					const Scalar spaceWidth = 0;
+//					const Scalar exteriorWidth = borderWidth + spaceWidth;
+				}
+
+				// compute the actual width of the indicator margin
+				decltype(actualIndicatorMarginBorderEnd_) actualIndicatorMarginBorderEnd;
+				decltype(actualIndicatorMarginContentWidth_) actualIndicatorMarginContentWidth;
+				if(indicatorMargin(declaredStyles())->visible) {
+					std::shared_ptr<const viewers::RulerStyles::IndicatorMargin> declaredStyle(indicatorMargin(declaredStyles()));
+
+					// 'width'
+					boost::optional<presentation::Length> contentWidth(declaredStyle->width.getOrInitial());
+					boost::get(actualIndicatorMarginContentWidth) = (contentWidth != boost::none) ?
+						static_cast<graphics::Scalar>(contentWidth->value(presentation::Length::Context(context.get(), nullptr)))
+						: platformIndicatorMarginWidthInPixels(isHorizontal(viewer_.textRenderer().computedBlockFlowDirection()));
+
+					// 'border-end'
+					actualIndicatorMarginBorderEnd.color =
+						computeColor(&declaredStyle->borderEnd.color, &declaredStyles_->color, viewer_.presentation().textToplevelStyle());
+					actualIndicatorMarginBorderEnd.style = declaredStyle->borderEnd.style.getOrInitial();
+					actualIndicatorMarginBorderEnd.width = declaredStyle->borderEnd.width.getOrInitial().value(presentation::Length::Context(
+						context.get(), &graphics::Dimension(
+							graphics::geometry::_dx = actualIndicatorMarginContentWidth,
+							graphics::geometry::_dy = actualIndicatorMarginContentWidth)));
+				}
+
+				// commit
+				const graphics::Scalar oldAllocationWidth = allocationWidth();
+				actualIndicatorMarginBorderEnd_ = actualIndicatorMarginBorderEnd;
+				actualLineNumbersBorderEnd_ = actualLineNumbersBorderEnd;
+				actualIndicatorMarginContentWidth_ = actualIndicatorMarginContentWidth;
+				actualLineNumbersContentWidth_ = actualLineNumbersContentWidth;
+				actualLineNumbersPaddingStart_ = actualLineNumbersPaddingStart;
+				actualLineNumbersPaddingEnd_ = actualLineNumbersPaddingEnd;
+				if(allocationWidth() != oldAllocationWidth) {
+					viewers::widgetapi::scheduleRedraw(viewer_, false);
+#ifdef ASCENSION_USE_SYSTEM_CARET
+					viewer_.caret().updateLocation();
+#endif
+				}
 			}
 
 			void RulerPainter::scroll(const graphics::font::VisualLine& from) {

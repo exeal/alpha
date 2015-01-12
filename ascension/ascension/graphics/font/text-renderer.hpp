@@ -18,15 +18,17 @@
 #include <memory>	// std.shared_ptr, std.unique_ptr
 
 namespace ascension {
+//	namespace presentation {
+//		struct ComputedStyledTextRunIterator;
+//	}
+
 	namespace graphics {
 		namespace font {
 
 			class TextViewport;
 
 			// documentation is text-renderer.cpp
-			class TextRenderer :
-				public presentation::GlobalTextStyleSwitch,
-				public presentation::TextToplevelStyleListener {
+			class TextRenderer /*: public presentation::TextToplevelStyleListener*/ {
 			public:
 				/**
 				 * @see TextRenderer#lineRelativeAlignment, TextAlignment, TextAnchor
@@ -74,25 +76,17 @@ namespace ascension {
 				void addComputedBlockFlowDirectionListener(ComputedBlockFlowDirectionListener& listener);
 				presentation::BlockFlowDirection computedBlockFlowDirection() const BOOST_NOEXCEPT;
 				void removeComputedBlockFlowDirectionListener(ComputedBlockFlowDirectionListener& listener);
-				void setWritingMode(decltype(presentation::TextToplevelStyle().writingMode) writingMode);
-				// presentation.GlobalTextStyleSwitch
-				WritingMode writingMode() const BOOST_NOEXCEPT;
 				/// @}
 
-				/// @name Other Global Text Style Switch
+				/// @name Shortcuts to Presentation
 				/// @{
-				void setDirection(Direction direction);
-				void setTextAlignment(TextAlignment textAlignment);
-				void setTextOrientation(TextOrientation textOrientation);
-				void setWhiteSpace(WhiteSpace whiteSpace);
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				Scalar textWrappingMeasureInPixels() const BOOST_NOEXCEPT;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-				// presentation.GlobalTextStyleSwitch
-				Direction direction() const override BOOST_NOEXCEPT;
-				TextAlignment textAlignment() const override BOOST_NOEXCEPT;
-				TextOrientation textOrientation() const override BOOST_NOEXCEPT;
-				WhiteSpace whiteSpace() const override BOOST_NOEXCEPT;
+				presentation::ReadingDirection direction() const BOOST_NOEXCEPT;
+				TextAlignment textAlignment() const BOOST_NOEXCEPT;
+				presentation::TextOrientation textOrientation() const BOOST_NOEXCEPT;
+				presentation::BlockFlowDirection writingMode() const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Default (Globally Nominal) Font
@@ -122,14 +116,14 @@ namespace ascension {
 				void buildLineLayoutConstructionParameters(Index line,
 					const RenderingContext2D& graphics2D,
 					presentation::styles::ComputedValue<presentation::TextLineStyle>::type& lineStyle,
-					std::unique_ptr<ComputedStyledTextRunIterator>& runStyles) const;
+					std::unique_ptr<presentation::ComputedStyledTextRunIterator>& runStyles) const;
 				const FontCollection& fontCollection() const BOOST_NOEXCEPT;
 
 			private:
 				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
 				void updateComputedBlockFlowDirectionChanged();
-				// presentation.TextToplevelStyleListener
-				void textToplevelStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used) override;
+//				// presentation.TextToplevelStyleListener
+//				void textToplevelStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used) override;
 			private:
 				presentation::Presentation& presentation_;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -142,11 +136,6 @@ namespace ascension {
 				std::shared_ptr<TextViewport> viewport_;
 //				class SpacePainter;
 //				std::unique_ptr<SpacePainter> spacePainter_;
-				Direction direction_;
-				TextAlignment textAlignment_;
-				TextOrientation textOrientation_;
-				WhiteSpace whiteSpace_;
-				decltype(presentation::TextToplevelStyle().writingMode) writingMode_;
 				presentation::BlockFlowDirection computedBlockFlowDirection_;
 				ascension::detail::Listeners<ComputedBlockFlowDirectionListener> computedBlockFlowDirectionListeners_;
 				ascension::detail::Listeners<DefaultFontListener> defaultFontListeners_;
@@ -162,7 +151,7 @@ namespace ascension {
 			}
 
 			/// @see presentation#GlobalTextStyleSwitch#direction
-			inline TextRenderer::Direction TextRenderer::direction() const BOOST_NOEXCEPT {
+			inline presentation::ReadingDirection TextRenderer::direction() const BOOST_NOEXCEPT {
 				return direction_;
 			}
 
@@ -185,22 +174,17 @@ namespace ascension {
 			}
 
 			/// @see presentation#GlobalTextStyleSwitch#textAlignment
-			inline TextRenderer::TextAlignment TextRenderer::textAlignment() const BOOST_NOEXCEPT {
+			inline TextAlignment TextRenderer::textAlignment() const BOOST_NOEXCEPT {
 				return textAlignment_;
 			}
 
 			/// @see presentation#GlobalTextStyleSwitch#textOrientation
-			inline TextRenderer::TextOrientation TextRenderer::textOrientation() const BOOST_NOEXCEPT {
+			inline presentation::TextOrientation TextRenderer::textOrientation() const BOOST_NOEXCEPT {
 				return textOrientation_;
 			}
 
-			/// @see presentation#GlobalTextStyleSwitch#whiteSpace
-			inline TextRenderer::WhiteSpace TextRenderer::whiteSpace() const BOOST_NOEXCEPT {
-				return whiteSpace_;
-			}
-
 			/// @see presentation#GlobalTextStyleSwitch#writingMode
-			inline TextRenderer::WritingMode TextRenderer::writingMode() const BOOST_NOEXCEPT {
+			inline presentation::BlockFlowDirection TextRenderer::writingMode() const BOOST_NOEXCEPT {
 				return writingMode_;
 			}
 
