@@ -149,6 +149,17 @@ namespace ascension {
 			/**
 			 * Computes the given "Specified Value" as specified.
 			 * @tparam Property The style property
+			 * @param specifiedValue The "Specified Value" of the style property to compute
+			 * @return The "Computed Value"
+			 */
+			template<typename Property>
+			inline typename ComputedValue<Property>::type computeAsSpecified(const typename SpecifiedValue<Property>::type& specifiedValue) {
+				return specifiedValue;
+			}
+
+			/**
+			 * Computes the given "Specified Value" as specified.
+			 * @tparam Property The style property
 			 * @tparam SpecifiedStyles The type of @a specifiedValues
 			 * @tparam ComputedStyles The type of @a computedValues
 			 * @param specifiedValues The set of the "Specified Value"s which contains the style property to compute
@@ -156,7 +167,7 @@ namespace ascension {
 			 */
 			template<typename Property, typename SpecifiedStyles, typename ComputedStyles>
 			inline void computeAsSpecified(const SpecifiedStyles& specifiedValues, ComputedStyles& computedValues) {
-				boost::fusion::at_key<Property>(computedValues) = boost::fusion::at_key<Property>(specifiedValues);
+				boost::fusion::at_key<Property>(computedValues) = computeAsSpecified(boost::fusion::at_key<Property>(specifiedValues));
 			}
 			/// @}
 		}
