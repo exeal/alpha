@@ -14,7 +14,6 @@
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
-#include <ascension/rules.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>

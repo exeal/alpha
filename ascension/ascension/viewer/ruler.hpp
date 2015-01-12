@@ -28,122 +28,100 @@ namespace ascension {
 		 * @see TextViewer#declaredRulerConfiguration, TextViewer#setConfiguration
 		 */
 		struct RulerStyles : std::enable_shared_from_this<RulerStyles> {
-			/// Style of the line numbers area.
-			struct LineNumbers : std::enable_shared_from_this<LineNumbers> {
-				/**
-				 * Whether the area is visible or not. Default value is @c false and the line
-				 * numbers is invisible.
-				 */
-				bool visible;
-				/// Reading direction of the digits. See @c presentation#ReadingDirection.
-				presentation::styles::Direction readingDirection;
-				/// Alignment of the digits. See @c graphics#font#TextAlignment.
-				presentation::StyleProperty<
-					presentation::styles::Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextAlignment), graphics::font::TextAlignment::END>,
-					presentation::styles::Inherited<false>
-				> textAlignment;
-				/// Justification of the digits. See @c presentation#TextJustification.
-				presentation::styles::TextJustification textJustification;
-				/// Start value of the line number. Default value is @c 1.
-				presentation::StyleProperty<
-					presentation::styles::Enumerated<Index, 1>,
-					presentation::styles::Inherited<false>
-				> startValue;
-				/// Minimum number of digits. Default value is @c 4.
-				presentation::StyleProperty<
-					presentation::styles::Enumerated<std::uint8_t, 4>,
-					presentation::styles::Inherited<false>
-				> minimumDigits;
-				/// Padding width at the start. Default value is 6-pixel.
-				presentation::StyleProperty<
-					presentation::styles::Lengthed<6, presentation::styles::Length::PIXELS>,
-					presentation::styles::Inherited<false>
-				> paddingStart;
-				/// Padding width at the end. Default value is 1-pixel.
-				presentation::StyleProperty<
-					presentation::styles::Lengthed<1, presentation::styles::Length::PIXELS>,
-					presentation::styles::Inherited<false>
-				> paddingEnd;
-#if 1
-				/**
-				 * Color of the text. Default value is @c boost#none which is fallbacked to the
-				 * foreground of the text run style of the viewer's presentation global text style.
-				 */
-				presentation::styles::Color color;
-#else
-				/**
-				 * Color or style of the text. Default value is @c null which is fallbacked to the
-				 * foreground of the text run style of the viewer's presentation global text style.
-				 */
-				std::shared_ptr<graphics::Paint> foreground;
-#endif
-				/// Color or style of the background.
-				presentation::styles::BackgroundColor backgroundColor;
-				/// The 'border-end-color'.
-				presentation::styles::BorderColor borderEndColor;
-				/// The 'border-end-style'.
-				presentation::styles::BorderStyle borderEndStyle;
-				/// The 'border-end-width'.
-				presentation::styles::BorderWidth borderEndWidth;
-				/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
-				presentation::StyleProperty<
-					presentation::styles::Complex<graphics::font::NumberSubstitution>,
-					presentation::styles::Inherited<false>
-				> numberSubstitution;
+			/// Whether the area is visible or not.
+			typedef presentation::StyleProperty<
+				presentation::styles::Enumerated<bool, false>,
+				presentation::styles::Inherited<false>
+			> Visibility;
 
-				LineNumbers() BOOST_NOEXCEPT;
-			};
+			/// Alignment of the line number digits. See @c graphics#font#TextAlignment.
+			typedef presentation::StyleProperty<
+				presentation::styles::Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextAlignment), graphics::font::TextAlignment::END>,
+				presentation::styles::Inherited<false>
+			> LineNumbersAlignment;
+
+			/// Start value of the line number.
+			typedef presentation::StyleProperty<
+				presentation::styles::Enumerated<Index, 1>,
+				presentation::styles::Inherited<false>
+			> LineNumbersStartValue;
+
+			/// Minimum number of the line number digits.
+			typedef presentation::StyleProperty<
+				presentation::styles::Enumerated<std::uint8_t, 4>,
+				presentation::styles::Inherited<false>
+			> LineNumbersMinimumDigits;
+
+			/// Padding width at the start.
+			typedef presentation::StyleProperty<
+				presentation::styles::Lengthed<6, presentation::styles::Length::PIXELS>,
+				presentation::styles::Inherited<false>
+			> LineNumbersPaddingStart;
+
+			/// Padding width at the end.
+			typedef presentation::StyleProperty<
+				presentation::styles::Lengthed<1, presentation::styles::Length::PIXELS>,
+				presentation::styles::Inherited<false>
+			> LineNumbersPaddingEnd;
+			
+			/// Width of the indicator margin. @c boost#none means to use platform-dependent setting.
+			typedef presentation::StyleProperty<
+				presentation::styles::Complex<
+					boost::optional<presentation::styles::Length>
+				>, presentation::styles::Inherited<false>
+			> IndicatorMarginWidth;
+
+			/// Style of the line numbers area.
+			typedef boost::fusion::vector<
+				Visibility,
+				presentation::styles::Direction,
+				LineNumbersAlignment,
+				presentation::styles::TextJustification,
+				LineNumbersStartValue,
+				LineNumbersMinimumDigits,
+				LineNumbersPaddingStart,
+				LineNumbersPaddingEnd,
+				presentation::styles::Color,
+				presentation::styles::BackgroundColor,
+				presentation::styles::BorderColor,	// 'border-end-color' property.
+				presentation::styles::BorderStyle,	// 'border-end-style' property.
+				presentation::styles::BorderWidth,	// 'border-end-width' property.
+				presentation::styles::NumberSubstitution
+			> LineNumbers;
 
 			/// Style of the indicator margin.
-			struct IndicatorMargin : std::enable_shared_from_this<IndicatorMargin> {
-				/**
-				 * Whether the indicator margin is visible or not. Default value is @c false
-				 * and the indicator margin is invisible.
-				 */
-				bool visible;
-				/**
-				 * Width of the indicator margin. Default value is
-				 * @c presentation#Inheritable&lt;graphics#Length&gt; which means to use
-				 * platform-dependent setting.
-				 */
-				presentation::StyleProperty<
-					presentation::styles::Complex<
-						boost::optional<presentation::styles::Length>
-					>, presentation::styles::Inherited<false>
-				> width;
-				/// Color or style of the content.
-				presentation::styles::BackgroundColor background;
-				/// The 'border-end-color'.
-				presentation::styles::BorderColor borderEndColor;
-				/// The 'border-end-style'.
-				presentation::styles::BorderStyle borderEndStyle;
-				/// The 'border-end-width'.
-				presentation::styles::BorderWidth borderEndWidth;
+			typedef boost::fusion::vector<
+				Visibility,
+				IndicatorMarginWidth,
+				presentation::styles::BackgroundColor,
+				presentation::styles::BorderColor,	// 'border-end-color' property.
+				presentation::styles::BorderStyle,	// 'border-end-style' property.
+				presentation::styles::BorderWidth	// 'border-end-width' property.
+			> IndicatorMargin;
 
-				IndicatorMargin() BOOST_NOEXCEPT;
-			};
-
-			/**
-			 * Color of the text. Default value is @c boost#none which is fallbacked to the
-			 * foreground of the text run style of the viewer's presentation global text style.
-			 */
-			presentation::styles::Color color;
-			/**
-			 * Color or style of the background. This can inherit the background of the text
-			 * run style of the viewer's presentation global text style.
-			 */
-			presentation::styles::BackgroundColor background;
 			/**
 			 * Alignment (anchor) of the ruler. Must be either @c presentation#TextAlignment#START,
 			 * @c presentation#TextAlignment#END, @c presentation#TextAlignment#LEFT or
-			 * @c presentation#TextAlignment#RIGHT. In vertical layout,
-			 * @c presentation#TextAlignment#LEFT and @c presentation#TextAlignment#RIGHT are
-			 * treated as top and bottom respectively.
+			 * @c presentation#TextAlignment#RIGHT. In vertical layout, @c presentation#TextAlignment#LEFT and
+			 * @c presentation#TextAlignment#RIGHT are treated as top and bottom respectively.
 			 */
-			presentation::StyleProperty<
+			typedef presentation::StyleProperty<
 				presentation::styles::Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextAlignment), graphics::font::TextAlignment::START>,
 				presentation::styles::Inherited<true>
-			> alignment;
+			> Alignment;
+
+			/**
+			 * Color of the text. Default value is @c boost#none which is fallbacked to the foreground of the text run
+			 * style of the viewer's presentation global text style.
+			 */
+			presentation::styles::Color color;
+			/**
+			 * Color or style of the background. This can inherit the background of the text run style of the viewer's
+			 * presentation global text style.
+			 */
+			presentation::styles::BackgroundColor background;
+			/// 'alignment' property.
+			presentation::styles::DeclaredValue<Alignment>::type alignment;
 			/// Style of the line numbers area. This can be @c null.
 			std::shared_ptr<const LineNumbers> lineNumbers;
 			/// Style of the indicator margin. This can be @c null.
@@ -171,10 +149,7 @@ namespace ascension {
 				void update() BOOST_NOEXCEPT;
 			private:
 				std::uint8_t computeMaximumDigitsForLineNumbers() const BOOST_NOEXCEPT;
-				void computeAllocationWidth() BOOST_NOEXCEPT;
-#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && 0
-				void updateGDIObjects() BOOST_NOEXCEPT;
-#endif
+				void recomputeActualStyles() BOOST_NOEXCEPT;
 			private:
 				TextViewer& viewer_;
 				std::shared_ptr<const RulerStyles> declaredStyles_;
@@ -184,13 +159,7 @@ namespace ascension {
 					actualIndicatorMarginContentWidth_, actualLineNumbersContentWidth_,
 					actualLineNumbersPaddingStart_, actualLineNumbersPaddingEnd_;
 				boost::value_initialized<std::uint8_t> actualLineNumberDigits_;
-#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && 0
-				win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
-				win32::Handle<HBRUSH> indicatorMarginBrush_, lineNumbersBrush_;
-				const bool enablesDoubleBuffering_;
-				win32::Handle<HDC> memoryDC_;
-				win32::Handle<HBITMAP> memoryBitmap_;
-#endif
+				presentation::styles::ComputedValue<presentation::styles::NumberSubstitution>::type actualNumberSubstitution_;
 			};
 
 			/**
@@ -213,7 +182,7 @@ namespace ascension {
 			 * @see #allocationWidth, #lineNumbersAllocationWidth, #indicatorMarginAllocationRectangle
 			 */
 			inline graphics::Scalar RulerPainter::indicatorMarginAllocationWidth() const BOOST_NOEXCEPT {
-				return computedIndicatorMarginContentWidth_ + computedIndicatorMarginBorderEnd_.computedWidth();
+				return actualIndicatorMarginContentWidth_ + actualIndicatorMarginBorderEnd_.actualWidth();
 			}
 
 			/**
@@ -222,8 +191,8 @@ namespace ascension {
 			 * @see #allocationWidth, #indicatorMarginWidth, #lineNumbersAllocationRectangle
 			 */
 			inline graphics::Scalar RulerPainter::lineNumbersAllocationWidth() const BOOST_NOEXCEPT {
-				return boost::get(computedLineNumbersContentWidth_) + boost::get(computedLineNumbersPaddingStart_)
-					+ boost::get(computedLineNumbersPaddingEnd_) + computedLineNumbersBorderEnd_.computedWidth();
+				return boost::get(actualLineNumbersContentWidth_) + boost::get(actualLineNumbersPaddingStart_)
+					+ boost::get(actualLineNumbersPaddingEnd_) + actualLineNumbersBorderEnd_.actualWidth();
 			}
 		}
 	}
