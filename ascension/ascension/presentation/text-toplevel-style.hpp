@@ -65,24 +65,21 @@ namespace ascension {
 			std::shared_ptr<const DeclaredTextLineStyle> linesStyle_;
 		};
 
+		/// "Specified Value"s of @c TextToplevelStyle.
+		struct SpecifiedTextToplevelStyle : presentation::detail::TransformedAsMap<
+			TextToplevelStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+		> {};
+
+		/// "Computed Value"s of @c TextToplevelStyle.
+		struct ComputedTextToplevelStyle : presentation::detail::TransformedAsMap<
+			TextToplevelStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
+		> {};
+
 		namespace styles {
 			template<> class DeclaredValue<TextToplevelStyle> : public boost::mpl::identity<DeclaredTextToplevelStyle> {};
-			template<> struct SpecifiedValue<TextToplevelStyle> : boost::mpl::identity<
-				presentation::detail::TransformedAsMap<
-					TextToplevelStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
-				>
-			> {};
-			template<> struct ComputedValue<TextToplevelStyle> : boost::mpl::identity<
-				presentation::detail::TransformedAsMap<
-					TextToplevelStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
-				>
-			> {};
+			template<> struct SpecifiedValue<TextToplevelStyle> : boost::mpl::identity<SpecifiedTextToplevelStyle> {};
+			template<> struct ComputedValue<TextToplevelStyle> : boost::mpl::identity<ComputedTextToplevelStyle> {};
 		}
-
-		/// "Specified Value"s of @c TextToplevelStyle.
-		struct SpecifiedTextToplevelStyle : styles::SpecifiedValue<TextToplevelStyle> {};
-		/// "Computed Value"s of @c TextToplevelStyle.
-		struct ComputedTextToplevelStyle : styles::ComputedValue<TextToplevelStyle> {};
 
 		boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type> compute(const styles::SpecifiedValue<TextToplevelStyle>::type& specifiedValues);
 		std::size_t hash_value(const styles::ComputedValue<TextToplevelStyle>::type& style);

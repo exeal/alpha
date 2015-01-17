@@ -132,6 +132,12 @@
     <Filter Include="ascension\Header Files\corelib\detail">
       <UniqueIdentifier>{a0841fc2-14fb-40cf-8d66-4cfa64aafa40}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\viewer\source">
+      <UniqueIdentifier>{0fd6312c-e5b4-41e8-9941-0c256024c26a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\viewer\source">
+      <UniqueIdentifier>{334ea55f-4ba3-4c91-a98f-d72d938da8fe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -231,9 +237,6 @@
       <Filter>ascension\Source Files\encodings</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp">
-      <Filter>ascension\Source Files\viewer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\ruler.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\viewer.cpp">
@@ -491,6 +494,18 @@
     <ClCompile Include="..\..\ascension\src\graphics\font\actual-text-styles.cpp">
       <Filter>ascension\Source Files\graphics\font</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\source\composite-ruler.cpp">
+      <Filter>ascension\Source Files\viewer\source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\source\line-number-ruler.cpp">
+      <Filter>ascension\Source Files\viewer\source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\source\indicator-margin.cpp">
+      <Filter>ascension\Source Files\viewer\source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\source\ruler-border-decorator.cpp">
+      <Filter>ascension\Source Files\viewer\source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -726,9 +741,6 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character-property.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\ruler.hpp">
-      <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
@@ -1080,6 +1092,27 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\direction.hpp">
       <Filter>ascension\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\composite-ruler.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\line-number-ruler.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\indicator-margin.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\abstract-ruler.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-border-decorator.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-decorator.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
