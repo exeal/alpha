@@ -183,6 +183,10 @@ namespace ascension {
 	}
 } // namespace ascension.graphics.font
 
+namespace boost {
+	using ascension::graphics::font::hash_value;
+}
+
 namespace std {
 	/// Specialization of @c std#hash class template for @c ActualBorderSide.
 	template<>

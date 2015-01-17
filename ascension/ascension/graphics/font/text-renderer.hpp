@@ -83,10 +83,6 @@ namespace ascension {
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				Scalar textWrappingMeasureInPixels() const BOOST_NOEXCEPT;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-				presentation::ReadingDirection direction() const BOOST_NOEXCEPT;
-				TextAlignment textAlignment() const BOOST_NOEXCEPT;
-				presentation::TextOrientation textOrientation() const BOOST_NOEXCEPT;
-				presentation::BlockFlowDirection writingMode() const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Default (Globally Nominal) Font
@@ -150,11 +146,6 @@ namespace ascension {
 				return computedBlockFlowDirection_;
 			}
 
-			/// @see presentation#GlobalTextStyleSwitch#direction
-			inline presentation::ReadingDirection TextRenderer::direction() const BOOST_NOEXCEPT {
-				return direction_;
-			}
-
 			/**
 			 * Returns the @c FontCollection object used by this @c TextRenderer.
 			 * @see #buildLineLayoutConstructionParameters
@@ -171,21 +162,6 @@ namespace ascension {
 			/// Returns the vector of layouts.
 			inline const LineLayoutVector& TextRenderer::layouts() const BOOST_NOEXCEPT {
 				return *layouts_;
-			}
-
-			/// @see presentation#GlobalTextStyleSwitch#textAlignment
-			inline TextAlignment TextRenderer::textAlignment() const BOOST_NOEXCEPT {
-				return textAlignment_;
-			}
-
-			/// @see presentation#GlobalTextStyleSwitch#textOrientation
-			inline presentation::TextOrientation TextRenderer::textOrientation() const BOOST_NOEXCEPT {
-				return textOrientation_;
-			}
-
-			/// @see presentation#GlobalTextStyleSwitch#writingMode
-			inline presentation::BlockFlowDirection TextRenderer::writingMode() const BOOST_NOEXCEPT {
-				return writingMode_;
 			}
 
 			/// Returns the presentation used by this object.

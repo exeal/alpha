@@ -252,6 +252,10 @@
     <ClCompile Include="..\..\ascension\src\viewer\current-line-highlighter.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\default-caret-shaper.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\default-mouse-input-strategy.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\source\composite-ruler.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\source\indicator-margin.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\source\line-number-ruler.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\source\ruler-border-decorator.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\viewer-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\virtual-box.cpp" />
@@ -337,7 +341,6 @@
     <ClCompile Include="..\..\ascension\src\encodings\unicode.cpp" />
     <ClCompile Include="..\..\ascension\src\encodings\vietnamese.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp" />
-    <ClCompile Include="..\..\ascension\src\viewer\ruler.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\viewer.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\document.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\fileio.cpp" />
@@ -460,7 +463,13 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\current-line-highlighter.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\default-caret-shaper.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\default-mouse-input-strategy.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\ruler.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\abstract-ruler.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\composite-ruler.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\indicator-margin.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\line-number-ruler.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-border-decorator.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-decorator.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\virtual-box.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp" />

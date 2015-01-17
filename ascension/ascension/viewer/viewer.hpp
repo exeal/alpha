@@ -15,12 +15,12 @@
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
-#include <ascension/viewer/ruler.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/widgetapi/event/key-input.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-button-input.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-wheel-input.hpp>
 #include <ascension/viewer/widgetapi/scrollable.hpp>
+#include <boost/utility/value_init.hpp>
 #include <algorithm>
 #include <array>
 #include <set>
@@ -59,6 +59,7 @@ namespace ascension {
 		/// Provides stuffs for source code editors.
 		/// @todo Need refinements.
 		namespace source {
+			class Ruler;
 			boost::optional<kernel::Region> getPointedIdentifier(const viewers::TextViewer& viewer);
 			boost::optional<kernel::Region> getNearestIdentifier(
 				const kernel::Document& document, const kernel::Position& position);
@@ -201,10 +202,8 @@ namespace ascension {
 			const kernel::Document& document() const;
 			presentation::Presentation& presentation() BOOST_NOEXCEPT;
 			const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
-			const RulerStyles& declaredRulerStyles() const BOOST_NOEXCEPT;
 			unsigned long scrollRate(bool horizontal) const BOOST_NOEXCEPT;
-			void setConfiguration(const Configuration* general,
-				std::shared_ptr<const RulerStyles> ruler, bool synchronizeUI);
+			void setConfiguration(const Configuration& general, bool synchronizeUI);
 			Renderer& textRenderer() BOOST_NOEXCEPT;
 			const Renderer& textRenderer() const BOOST_NOEXCEPT;
 			/// @}
@@ -217,6 +216,12 @@ namespace ascension {
 			bool hidesCaret() const BOOST_NOEXCEPT;
 			void setCaretShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
 			void showCaret() BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Ruler
+			/// @{
+			std::shared_ptr<const source::Ruler> ruler() const BOOST_NOEXCEPT;	// TODO: This method should be defined by source.SourceViewer.
+			void setRuler(std::shared_ptr<const source::Ruler> ruler);	// TODO: This method should be defined by source.SourceViewer.
 			/// @}
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
@@ -434,6 +439,7 @@ namespace ascension {
 			std::unique_ptr<Renderer> renderer_;
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
+			std::shared_ptr<const source::Ruler> ruler_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			win32::Handle<HWND>::Type toolTip_;
 			std::basic_string<WCHAR> tipText_;
@@ -441,7 +447,6 @@ namespace ascension {
 			// strategies and listeners
 			std::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
 			std::shared_ptr<widgetapi::DropTarget> dropTargetHandler_;
-			std::unique_ptr<detail::RulerPainter> rulerPainter_;
 			std::unique_ptr<contentassist::ContentAssistant> contentAssistant_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			win32::com::SmartPointer<detail::AbstractAccessibleProxy> accessibleProxy_;
@@ -518,7 +523,6 @@ namespace ascension {
 
 			friend class VisualPoint;
 			friend class VirtualBox;
-			friend class detail::RulerPainter;
 			friend class CaretShapeUpdater;
 			friend class Renderer;
 		};
@@ -568,14 +572,6 @@ namespace ascension {
 		/// Returns the content assistant or @c null if not registered.
 		inline contentassist::ContentAssistant* TextViewer::contentAssistant() const BOOST_NOEXCEPT {
 			return contentAssistant_.get();
-		}
-		
-		/**
-		 * Returns the ruler's declared styles.
-		 * @see #configuration, #setConfiguration
-		 */
-		inline const RulerStyles& TextViewer::declaredRulerStyles() const BOOST_NOEXCEPT {
-			return rulerPainter_->declaredStyles();
 		}
 		
 		/// Returns the document.
