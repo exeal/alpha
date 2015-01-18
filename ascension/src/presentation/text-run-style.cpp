@@ -345,5 +345,17 @@ namespace ascension {
 			static const DeclaredTextRunStyle2 SINGLETON;
 			return SINGLETON;
 		}
+
+#ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
+		/// Default constructor.
+		DeclaredTextRunStyle::DeclaredTextRunStyle() {
+		}
+#endif
+
+		/// Returns a @c DeclaredTextRunStyle instance filled with @c styles#UNSET values.
+		const DeclaredTextRunStyle& DeclaredTextRunStyle::unsetInstance() {
+			static const DeclaredTextRunStyle SINGLETON;
+			return SINGLETON;
+		}
 	}
 }

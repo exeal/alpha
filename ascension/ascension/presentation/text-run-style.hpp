@@ -131,41 +131,58 @@ namespace ascension {
 //		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(SpecifiedTextRunStyle);
 //		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(ComputedTextRunStyle);
 
+		/// "Specified Value"s of @c TextRunStyle1.
+		struct SpecifiedTextRunStyle1 : presentation::detail::TransformedAsMap<
+			TextRunStyle1, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+		> {};
+
+		/// "Specified Value"s of @c TextRunStyle2.
+		struct SpecifiedTextRunStyle2 : presentation::detail::TransformedAsMap<
+			TextRunStyle2, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+		> {};
+
+		/// "Specified Value"s of @c TextRunStyle.
+		struct SpecifiedTextRunStyle : boost::fusion::result_of::join<SpecifiedTextRunStyle1, SpecifiedTextRunStyle2>::type {};
+
+		/// "Computed Value"s of @c TextRunStyle1.
+		struct ComputedTextRunStyle1 : presentation::detail::TransformedAsMap<
+			TextRunStyle1, presentation::detail::KeyValueConverter<styles::ComputedValue>
+		> {};
+
+		/// "Computed Value"s of @c TextRunStyle2.
+		struct ComputedTextRunStyle2 : presentation::detail::TransformedAsMap<
+			TextRunStyle2, presentation::detail::KeyValueConverter<styles::ComputedValue>
+		> {};
+
+		/// "Computed Value"s of @c TextRunStyle.
+		struct ComputedTextRunStyle : boost::fusion::result_of::join<ComputedTextRunStyle1, ComputedTextRunStyle2>::type {};
+
 		namespace styles {
 			template<> class DeclaredValue<TextRunStyle1> : public ValueBase<TextRunStyle1, DeclaredTextRunStyle1> {};
 			template<> class DeclaredValue<TextRunStyle2> : public ValueBase<TextRunStyle2, DeclaredTextRunStyle2> {};
-			template<> struct SpecifiedValue<TextRunStyle1> : boost::mpl::identity<
-				presentation::detail::TransformedAsMap<
-					TextRunStyle1, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
-				>
-			> {};
-			template<> struct SpecifiedValue<TextRunStyle2> : boost::mpl::identity<
-				presentation::detail::TransformedAsMap<
-					TextRunStyle2, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
-				>
-			> {};
-			template<> struct ComputedValue<TextRunStyle1> : boost::mpl::identity<
-				presentation::detail::TransformedAsMap<
-					TextRunStyle1, presentation::detail::KeyValueConverter<styles::ComputedValue>
-				>
-			> {};
-			template<> struct ComputedValue<TextRunStyle2> : boost::mpl::identity<
-				presentation::detail::TransformedAsMap<
-					TextRunStyle2, presentation::detail::KeyValueConverter<styles::ComputedValue>
-				>
-			> {};
+			template<> struct SpecifiedValue<TextRunStyle1> : boost::mpl::identity<SpecifiedTextRunStyle1> {};
+			template<> struct SpecifiedValue<TextRunStyle2> : boost::mpl::identity<SpecifiedTextRunStyle2> {};
+			template<> struct ComputedValue<TextRunStyle1> : boost::mpl::identity<ComputedTextRunStyle1> {};
+			template<> struct ComputedValue<TextRunStyle2> : boost::mpl::identity<ComputedTextRunStyle2> {};
 		}
 
 		/// "Declared Value"s of @c TextRunStyle.
-		class DeclaredTextRunStyle : public boost::fusion::result_of::join<DeclaredTextRunStyle1, DeclaredTextRunStyle2>::type {};
-		/// "Specified Value"s of @c TextRunStyle.
-		struct SpecifiedTextRunStyle : boost::fusion::result_of::join<
-			styles::SpecifiedValue<TextRunStyle1>::type, styles::SpecifiedValue<TextRunStyle2>::type
-		>::type {};
-		/// "Computed Value"s of @c TextRunStyle.
-		struct ComputedTextRunStyle : boost::fusion::result_of::join<
-			styles::ComputedValue<TextRunStyle1>::type, styles::ComputedValue<TextRunStyle2>::type
-		>::type {};
+		class DeclaredTextRunStyle : public boost::fusion::result_of::as_map<
+			boost::fusion::result_of::as_vector<
+				boost::fusion::result_of::join<
+					boost::fusion::result_of::as_vector<DeclaredTextRunStyle1>::type,
+					boost::fusion::result_of::as_vector<DeclaredTextRunStyle2>::type
+				>::type
+			>::type
+		>::type {
+		public:
+#ifndef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
+			DeclaredTextRunStyle() = default;
+#else
+			DeclaredTextRunStyle();
+#endif
+			static const DeclaredTextRunStyle& unsetInstance();
+		};
 
 		boost::flyweight<styles::ComputedValue<TextRunStyle1>::type> compute(
 			const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,
