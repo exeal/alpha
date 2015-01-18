@@ -95,24 +95,21 @@ namespace ascension {
 		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(ComputedTextLineStyle);
 #endif
 
+		/// "Specified Value"s of @c TextLineStyle.
+		struct SpecifiedTextLineStyle : presentation::detail::TransformedAsMap<
+			TextLineStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+		> {};
+
+		/// "Computed Value"s of @c TextLineStyle.
+		struct ComputedTextLineStyle : presentation::detail::TransformedAsMap<
+			TextLineStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
+		> {};
+
 		namespace styles {
 			template<> class DeclaredValue<TextLineStyle> : public boost::mpl::identity<DeclaredTextLineStyle> {};
-			template<> struct SpecifiedValue<TextLineStyle> : boost::mpl::identity<
-				presentation::detail::TransformedAsMap<
-					TextLineStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
-				>
-			> {};
-			template<> struct ComputedValue<TextLineStyle> : boost::mpl::identity<
-				presentation::detail::TransformedAsMap<
-					TextLineStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
-				>
-			> {};
+			template<> struct SpecifiedValue<TextLineStyle> : boost::mpl::identity<SpecifiedTextLineStyle> {};
+			template<> struct ComputedValue<TextLineStyle> : boost::mpl::identity<ComputedTextLineStyle> {};
 		}
-
-		/// "Specified Value"s of @c TextLineStyle.
-		struct SpecifiedTextLineStyle : styles::SpecifiedValue<TextLineStyle> {};
-		/// "Computed Value"s of @c TextLineStyle.
-		struct ComputedTextLineStyle : styles::ComputedValue<TextLineStyle> {};
 
 		boost::flyweight<styles::ComputedValue<TextLineStyle>::type> compute(
 			const styles::SpecifiedValue<TextLineStyle>::type& specifiedValues, const styles::Length::Context& context);
