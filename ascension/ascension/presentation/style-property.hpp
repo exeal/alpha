@@ -167,7 +167,7 @@ namespace ascension {
 			 */
 			template<typename Property, typename SpecifiedStyles, typename ComputedStyles>
 			inline void computeAsSpecified(const SpecifiedStyles& specifiedValues, ComputedStyles& computedValues) {
-				boost::fusion::at_key<Property>(computedValues) = computeAsSpecified(boost::fusion::at_key<Property>(specifiedValues));
+				boost::fusion::at_key<Property>(computedValues) = computeAsSpecified<Property>(boost::fusion::at_key<Property>(specifiedValues));
 			}
 			/// @}
 		}
