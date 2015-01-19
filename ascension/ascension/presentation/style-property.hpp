@@ -120,32 +120,7 @@ namespace ascension {
 			template<typename Property>
 			struct ComputedValue<FlowRelativeFourSides<Property>>
 				: ValueBase<FlowRelativeFourSides<Property>, FlowRelativeFourSides<typename ComputedValue<Property>::type>> {};
-#if 0
-			/**
-			 * @tparam TransformedSequence
-			 * @tparam DefinedType
-			 */
-			template<typename TransformedSequence, typename DefinedType>
-			class FindByDefinedType {
-				typedef typename boost::fusion::result_of::find<typename TransformedSequence::Definition, DefinedType>::type FoundInDefinition;
-				typedef typename boost::fusion::result_of::distance<
-					typename boost::fusion::result_of::begin<typename TransformedSequence::Definition>::type, FoundInDefinition
-				>::type Position;
-				typedef typename boost::fusion::result_of::begin<TransformedSequence>::type Begin;
-			public:
-				typedef typename boost::fusion::result_of::advance<Begin, Position>::type type;
-			};
 
-			template<typename DefinedType, typename TransformedSequence>
-			inline typename FindByDefinedType<TransformedSequence, DefinedType>::type findByDefinedType(TransformedSequence& sequence) {
-				return FindByDefinedType<TransformedSequence, DefinedType>::type(sequence);
-			}
-
-			template<typename DefinedType, typename TransformedSequence>
-			inline const typename FindByDefinedType<const TransformedSequence, DefinedType>::type findByDefinedType(const TransformedSequence& sequence) {
-				return FindByDefinedType<const TransformedSequence, DefinedType>::type(sequence);
-			}
-#endif
 			/**
 			 * Computes the given "Specified Value" as specified.
 			 * @tparam Property The style property

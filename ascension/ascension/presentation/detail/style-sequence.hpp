@@ -78,26 +78,18 @@ namespace ascension {
 			};
 
 			template<typename Sequence, typename Converter>
-			struct TransformedAsVector : boost::fusion::result_of::as_vector<
-				typename boost::fusion::result_of::transform<
-					Sequence, Converter
+			struct TransformAsVector : boost::mpl::identity<
+				typename boost::fusion::result_of::as_vector<
+					typename boost::fusion::result_of::transform<Sequence, Converter>::type
 				>::type
-			>::type {
-#if 0
-				typedef Sequence Definition;	// used by FindByDefinedType
-#endif
-			};
+			> {};
 
 			template<typename Sequence, typename Converter>
-			struct TransformedAsMap : boost::fusion::result_of::as_map<
-				typename boost::fusion::result_of::transform<
-					Sequence, Converter
+			struct TransformAsMap : boost::mpl::identity<
+				typename boost::fusion::result_of::as_map<
+					typename boost::fusion::result_of::transform<Sequence, Converter>::type
 				>::type
-			>::type {
-#if 0
-				typedef Sequence Definition;	// used by FindByDefinedType
-#endif
-			};
+			> {};
 		}
 	}
 }
