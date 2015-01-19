@@ -18,6 +18,7 @@
 #include <ascension/graphics/font/line-relative-directions-dimensions.hpp>
 #include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <ascension/presentation/writing-mode.hpp>	// WritingMode, ...
+#include <type_traits>
 
 namespace ascension {
 	namespace presentation {
@@ -149,17 +150,21 @@ namespace ascension {
 
 		/// @defgroup abstract_physical_axes Abstract and Physical Axes Mappings
 		/// @brief Free functions map between abstract and physical axes.
+		/// @note These mappings are not described in "W3C CSS Writing Modes Level 3". Any mappings are performed based
+		///       on the neutral origin (0, 0) which is a both abstract and physical point.
 		/// @{
 		/**
-		 * Maps abstract axes into corresponding physical one.
+		 * Maps flow-relative axes into corresponding physical one.
+		 * @tparam T An arithmetic type
 		 * @param writingMode The writing mode
-		 * @param from The abstract axes to map
+		 * @param from The flow-relative axes to map
 		 * @return The mapped physical axes
 		 * @throw UnknownValueException @a writingMode or @a from is invalid
-		 * @see mapPhysicalToAbstract
+		 * @see mapPhysicalToFlowRelative
 		 */
 		template<typename T>
-		inline graphics::PhysicalTwoAxes<T> mapAbstractToPhysical(const WritingMode& writingMode, const FlowRelativeTwoAxes<T>& from) {
+		inline graphics::PhysicalTwoAxes<T> mapFlowRelativeToPhysical(const WritingMode& writingMode,
+				const FlowRelativeTwoAxes<T>& from, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr) {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
 					return graphics::PhysicalTwoAxes<T>(
@@ -181,15 +186,17 @@ namespace ascension {
 		}
 
 		/**
-		 * Maps physical axes into corresponding abstract one.
+		 * Maps physical axes into corresponding flow-relative one.
+		 * @tparam T An arithmetic type
 		 * @param writingMode The writing mode
 		 * @param from The physical axes to map
-		 * @return The mapped avstract axes
+		 * @return The mapped flow-relative axes
 		 * @throw UnknownValueException @a writingMode or @a from is invalid
-		 * @see mapAbstractToPhysical
+		 * @see mapFlowRelativeToPhysical
 		 */
 		template<typename T>
-		inline FlowRelativeTwoAxes<T> mapPhysicalToAbstract(const WritingMode& writingMode, const graphics::PhysicalTwoAxes<T>& from) {
+		inline FlowRelativeTwoAxes<T> mapPhysicalToFlowRelative(const WritingMode& writingMode,
+				const graphics::PhysicalTwoAxes<T>& from, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr) {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
 					return FlowRelativeTwoAxes<T>(
@@ -224,19 +231,26 @@ namespace ascension {
 		 */
 		template<typename T>
 		inline graphics::PhysicalFourSides<T> mapFlowRelativeToPhysical(const WritingMode& writingMode, const FlowRelativeFourSides<T>& from) {
-			const FlowRelativeTwoAxes<T> sources[2] = {
-				FlowRelativeTwoAxes<T>(_ipd = from.start(), _bpd = from.before()),
-				FlowRelativeTwoAxes<T>(_ipd = from.end(), _bpd = from.after())
-			};
-			const graphics::PhysicalTwoAxes<T> destinations[2] = {
-				mapAbstractToPhysical(writingMode, sources[0]), mapAbstractToPhysical(writingMode, sources[1])
-			};
-			return graphics::PhysicalFourSides<T>(
-				graphics::_top = std::min(destinations[0].y(), destinations[1].y()),
-				graphics::_right = std::max(destinations[0].x(), destinations[1].x()),
-				graphics::_bottom = std::max(destinations[0].y(), destinations[1].y()),
-				graphics::_left = std::min(destinations[0].x(), destinations[1].x())
-			);
+			const bool ltr = writingMode.blockFlowDirection == LEFT_TO_RIGHT;
+			if(isHorizontal(writingMode.blockFlowDirection))
+				return graphics::PhysicalFourSides<T>(
+					graphics::_top = from.blockStart(),
+					graphics::_right = ltr ? from.inlineStart() : from.inlineEnd(),
+					graphics::_bottom = from.blockEnd(),
+					graphics::_left = ltr ? from.inlineEnd() : from.inlineStart()
+				);
+			else {
+				const bool verticalRl = writingMode.blockFlowDirection == VERTICAL_RL;
+				bool ttb = ltr;
+				if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
+					ttb = !ttb;
+				return graphics::PhysicalFourSides<T>(
+					graphics::_top = ttb ? from.inlineStart() : from.inlineEnd(),
+					graphics::_right = verticalRl ? from.blockStart() : from.blockEnd(),
+					graphics::_bottom = ttb ? from.inlineEnd() : from.inlineStart(),
+					graphics::_left = verticalRl ? from.blockEnd() : from.blockStart()
+				);
+			}
 		}
 
 		/**
@@ -268,19 +282,26 @@ namespace ascension {
 		 */
 		template<typename T>
 		inline FlowRelativeFourSides<T> mapPhysicalToFlowRelative(const WritingMode& writingMode, const graphics::PhysicalFourSides<T>& from) {
-			const graphics::PhysicalTwoAxes<T> sources[2] = {
-				graphics::PhysicalTwoAxes<T>(graphics::_x = from.left(), graphics::_y = from.top()),
-				graphics::PhysicalTwoAxes<T>(graphics::_x = from.right(), graphics::_y = from.bottom())
-			};
-			const FlowRelativeTwoAxes<T> destinations[2] = {
-				mapPhysicalToAbstract(writingMode, sources[0]), mapPhysicalToAbstract(writingMode, sources[1])
-			};
-			return FlowRelativeFourSides<T>(
-				_before = std::min(destinations[0].bpd(), destinations[1].bpd()),
-				_after = std::max(destinations[0].bpd(), destinations[1].bpd()),
-				_start = std::min(destinations[0].ipd(), destinations[1].ipd()),
-				_end = std::max(destinations[0].ipd(), destinations[1].ipd())
-			);
+			const bool ltr = writingMode.blockFlowDirection == LEFT_TO_RIGHT;
+			if(isHorizontal(writingMode.blockFlowDirection))
+				return FlowRelativeFourSides<T>(
+					_blockStart = from.top(),
+					_blockEnd = from.bottom(),
+					_inlineStart = ltr ? from.left() : from.right(),
+					_inlineEnd = ltr ? from.right() : from.left()
+				);
+			else {
+				const bool verticalRl = writingMode.blockFlowDirection == VERTICAL_RL;
+				bool ttb = ltr;
+				if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
+					ttb = !ttb;
+				return FlowRelativeFourSides<T>(
+					_blockStart = verticalRl ? from.right() : from.left(),
+					_blockEnd = verticalRl ? from.left() : from.right(),
+					_inlineStart = ttb ? from.top() : from.bottom(),
+					_inlineEnd = ttb ? from.bottom() : from.top()
+				);
+			}
 		}
 
 		/**
