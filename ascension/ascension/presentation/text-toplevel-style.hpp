@@ -48,9 +48,9 @@ namespace ascension {
 #endif
 		/// "Declared Values" of @c TextToplevelStyle.
 		class DeclaredTextToplevelStyle : 
-			public detail::TransformedAsMap<
+			public detail::TransformAsMap<
 				TextToplevelStyle, detail::ValueConverter<styles::DeclaredValue>
-			>,
+			>::type,
 			public std::enable_shared_from_this<DeclaredTextLineStyle> {
 		public:
 			DeclaredTextToplevelStyle();
@@ -66,14 +66,14 @@ namespace ascension {
 		};
 
 		/// "Specified Value"s of @c TextToplevelStyle.
-		struct SpecifiedTextToplevelStyle : presentation::detail::TransformedAsMap<
+		struct SpecifiedTextToplevelStyle : presentation::detail::TransformAsMap<
 			TextToplevelStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
-		> {};
+		>::type {};
 
 		/// "Computed Value"s of @c TextToplevelStyle.
-		struct ComputedTextToplevelStyle : presentation::detail::TransformedAsMap<
+		struct ComputedTextToplevelStyle : presentation::detail::TransformAsMap<
 			TextToplevelStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
-		> {};
+		>::type {};
 
 		namespace styles {
 			template<> class DeclaredValue<TextToplevelStyle> : public boost::mpl::identity<DeclaredTextToplevelStyle> {};

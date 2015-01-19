@@ -116,7 +116,7 @@ namespace ascension {
 			 * - The "Actual Value" of 'text-decoration-skip' property.
 			 * - The "Actual Value" of 'text-underline-position' property.
 			 */
-			typedef presentation::detail::TransformedAsMap<
+			typedef presentation::detail::TransformAsMap<
 				boost::fusion::vector<
 					presentation::styles::TextDecorationLine,
 					presentation::styles::TextDecorationColor,
@@ -125,7 +125,7 @@ namespace ascension {
 					presentation::styles::TextUnderlinePosition
 				>,
 				presentation::detail::KeyValueConverter<presentation::styles::ComputedValue>
-			> ActualTextDecoration;
+			>::type ActualTextDecoration;
 
 			/// Specialization of @c boost#hash_value function template for @c ActualTextDecoration.
 			inline std::size_t hash_value(const ActualTextDecoration& object) BOOST_NOEXCEPT {
@@ -144,14 +144,14 @@ namespace ascension {
 			 * - The "Actual Value" of 'text-emphasis-color' property.
 			 * - The "Actual Value" of 'text-emphasis-position' property.
 			 */
-			typedef presentation::detail::TransformedAsMap<
+			typedef presentation::detail::TransformAsMap<
 				boost::fusion::vector<
 					presentation::styles::TextEmphasisStyle,
 					presentation::styles::TextEmphasisColor,
 					presentation::styles::TextEmphasisPosition
 				>,
 				presentation::detail::KeyValueConverter<presentation::styles::ComputedValue>
-			> ActualTextEmphasis;
+			>::type ActualTextEmphasis;
 
 			/// Specialization of @c boost#hash_value function template for @c ActualTextEmphasis.
 			inline std::size_t hash_value(const ActualTextEmphasis& object) BOOST_NOEXCEPT {
@@ -177,7 +177,8 @@ namespace ascension {
 				ActualTextEmphasis textEmphasis;
 //				ActualTextShadow textShadow;
 
-				explicit ActualTextRunStyleCore(const presentation::ComputedTextRunStyle& computed);
+				explicit ActualTextRunStyleCore(const presentation::ComputedTextRunStyle& computed,
+					const presentation::WritingMode& writingMode, const RenderingContext2D& context);
 			};
 		}
 	}

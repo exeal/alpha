@@ -98,9 +98,9 @@ namespace ascension {
 
 		/// "Declared Values" of @c TextRunStyle1.
 		class DeclaredTextRunStyle1 :
-			public detail::TransformedAsMap<
+			public detail::TransformAsMap<
 				TextRunStyle1, detail::ValueConverter<styles::DeclaredValue>
-			>,
+			>::type,
 			public std::enable_shared_from_this<DeclaredTextRunStyle1> {
 		public:
 #ifndef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
@@ -113,9 +113,9 @@ namespace ascension {
 
 		/// "Declared Values" of @c TextRunStyle2.
 		class DeclaredTextRunStyle2 :
-			public detail::TransformedAsMap<
+			public detail::TransformAsMap<
 				TextRunStyle2, detail::ValueConverter<styles::DeclaredValue>
-			>,
+			>::type,
 			public std::enable_shared_from_this<DeclaredTextRunStyle2> {
 		public:
 #ifndef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
@@ -132,27 +132,27 @@ namespace ascension {
 //		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(ComputedTextRunStyle);
 
 		/// "Specified Value"s of @c TextRunStyle1.
-		struct SpecifiedTextRunStyle1 : presentation::detail::TransformedAsMap<
+		struct SpecifiedTextRunStyle1 : presentation::detail::TransformAsMap<
 			TextRunStyle1, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
-		> {};
+		>::type {};
 
 		/// "Specified Value"s of @c TextRunStyle2.
-		struct SpecifiedTextRunStyle2 : presentation::detail::TransformedAsMap<
+		struct SpecifiedTextRunStyle2 : presentation::detail::TransformAsMap<
 			TextRunStyle2, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
-		> {};
+		>::type {};
 
 		/// "Specified Value"s of @c TextRunStyle.
 		struct SpecifiedTextRunStyle : boost::fusion::result_of::join<SpecifiedTextRunStyle1, SpecifiedTextRunStyle2>::type {};
 
 		/// "Computed Value"s of @c TextRunStyle1.
-		struct ComputedTextRunStyle1 : presentation::detail::TransformedAsMap<
+		struct ComputedTextRunStyle1 : presentation::detail::TransformAsMap<
 			TextRunStyle1, presentation::detail::KeyValueConverter<styles::ComputedValue>
-		> {};
+		>::type {};
 
 		/// "Computed Value"s of @c TextRunStyle2.
-		struct ComputedTextRunStyle2 : presentation::detail::TransformedAsMap<
+		struct ComputedTextRunStyle2 : presentation::detail::TransformAsMap<
 			TextRunStyle2, presentation::detail::KeyValueConverter<styles::ComputedValue>
-		> {};
+		>::type {};
 
 		/// "Computed Value"s of @c TextRunStyle.
 		struct ComputedTextRunStyle : boost::fusion::result_of::join<ComputedTextRunStyle1, ComputedTextRunStyle2>::type {};
