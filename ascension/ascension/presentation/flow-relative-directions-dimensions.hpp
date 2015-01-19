@@ -154,8 +154,8 @@ namespace ascension {
 #ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 		BOOST_PARAMETER_NAME(blockStart)
 		BOOST_PARAMETER_NAME(blockEnd)
-		BOOST_PARAMETER_NAME(lineStart)
-		BOOST_PARAMETER_NAME(lineEnd)
+		BOOST_PARAMETER_NAME(inlineStart)
+		BOOST_PARAMETER_NAME(inlineEnd)
 #endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 		/// Base type of @c FlowRelativeFourSides class template.
@@ -171,14 +171,14 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			FlowRelativeFourSidesBase(const Arguments& arguments) {
-//				blockStart() = arguments[_before | value_type()];
-//				blockEnd() = arguments[_after | value_type()];
-//				lineStart() = arguments[_start | value_type()];
-//				lineEnd() = arguments[_end | value_type()];
-				blockStart() = arguments[_before.operator|(value_type())];
-				blockEnd() = arguments[_after.operator|(value_type())];
-				lineStart() = arguments[_start.operator|(value_type())];
-				lineEnd() = arguments[_end.operator|(value_type())];
+//				blockStart() = arguments[_blockStart | value_type()];
+//				blockEnd() = arguments[_blockEnd | value_type()];
+//				inlineStart() = arguments[_inlineStart | value_type()];
+//				inlineEnd() = arguments[_inlineEnd | value_type()];
+				blockStart() = arguments[_blockStart.operator|(value_type())];
+				blockEnd() = arguments[_blockEnd.operator|(value_type())];
+				inlineStart() = arguments[_inlineStart.operator|(value_type())];
+				inlineEnd() = arguments[_inlineEnd.operator|(value_type())];
 			}
 			/// Returns a reference to value of @a direction.
 			reference operator[](FlowRelativeDirection direction) {
@@ -198,13 +198,13 @@ namespace ascension {
 			/// Returns a reference to 'block-end' value.
 			const_reference blockEnd() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_END>(*this);}
 			/// Returns a reference to 'line-start' value.
-			reference lineStart() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::LINE_START>(*this);}
+			reference inlineStart() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_START>(*this);}
 			/// Returns a reference to 'line-start' value.
-			const_reference lineStart() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::LINE_START>(*this);}
+			const_reference inlineStart() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_START>(*this);}
 			/// Returns a reference to 'line-end' value.
-			reference lineEnd() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::LINE_END>(*this);}
+			reference inlineEnd() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_END>(*this);}
 			/// Returns a reference to 'line-end' value.
-			const_reference lineEnd() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::LINE_END>(*this);}
+			const_reference inlineEnd() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_END>(*this);}
 #ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 			/// Returns a reference to 'before' value.
 			reference before() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BEFORE>(*this);}
@@ -248,8 +248,8 @@ namespace ascension {
 				(required
 					(blockStart, (value_type))
 					(blockEnd, (value_type))
-					(lineStart, (value_type))
-					(lineEnd, (value_type))))
+					(inlineStart, (value_type))
+					(inlineEnd, (value_type))))
 			template<typename U>
 #if !defined(BOOST_COMP_MSVC) || BOOST_COMP_MSVC >= BOOST_VERSION_NUMBER(11, 0, 0)
 			FlowRelativeFourSides(const U& other, typename std::enable_if<std::is_constructible<T, const U&>::value>::type* = nullptr)
@@ -261,16 +261,16 @@ namespace ascension {
 			FlowRelativeFourSides& operator+=(const FlowRelativeTwoAxes<T>& other) {
 				blockStart() += other.bpd();
 				blockEnd() += other.bpd();
-				lineStart() += other.ipd();
-				lineEnd() += other.ipd();
+				inlineStart() += other.ipd();
+				inlineEnd() += other.ipd();
 				return *this;
 			}
 			/// Compound-subtract operator calls same operators of @c T for the all elements.
 			FlowRelativeFourSides& operator-=(const FlowRelativeTwoAxes<T>& other) {
 				blockStart() -= other.bpd();
 				blockEnd() -= other.bpd();
-				lineStart() -= other.ipd();
-				lineEnd() -= other.ipd();
+				inlineStart() -= other.ipd();
+				inlineEnd() -= other.ipd();
 				return *this;
 			}
 		};
@@ -282,12 +282,12 @@ namespace ascension {
 		 */
 		template<typename ArgumentPack>
 		inline auto makeFlowRelativeFourSides(const ArgumentPack& arguments)
-				-> FlowRelativeFourSides<typename ascension::detail::DecayOrRefer<decltype(arguments[_before])>::Type> {
-			typedef typename ascension::detail::DecayOrRefer<decltype(arguments[_before])>::Type Coordinate;
-			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_after])>::Type, Coordinate>::value, "");
-			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_start])>::Type, Coordinate>::value, "");
-			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_end])>::Type, Coordinate>::value, "");
-			return FlowRelativeFourSides<Coordinate>(_before = arguments[_before], _after = arguments[_after], _start = arguments[_start], _end = arguments[_end]);
+				-> FlowRelativeFourSides<typename ascension::detail::DecayOrRefer<decltype(arguments[_blockStart])>::Type> {
+			typedef typename ascension::detail::DecayOrRefer<decltype(arguments[_blockStart])>::Type Coordinate;
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_blockEnd])>::Type, Coordinate>::value, "");
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_inlineStart])>::Type, Coordinate>::value, "");
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_inlineEnd])>::Type, Coordinate>::value, "");
+			return FlowRelativeFourSides<Coordinate>(arguments);
 		}
 
 		/**
@@ -313,7 +313,7 @@ namespace ascension {
 		template<typename T>
 		inline boost::integer_range<T> inlineRange(const FlowRelativeFourSides<T>& sides) {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
-			return boost::irange(sides.lineStart(), sides.lineEnd());
+			return boost::irange(sides.inlineStart(), sides.inlineEnd());
 		}
 
 		/**
