@@ -15,6 +15,7 @@
 #include <boost/geometry/algorithms/assign.hpp>
 #include <boost/geometry/algorithms/make.hpp>
 #include <boost/geometry/algorithms/transform.hpp>
+#include <boost/geometry/strategies/transform/matrix_transformers.hpp>
 #include <boost/parameter.hpp>
 #include <boost/range/irange.hpp>
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
