@@ -131,7 +131,7 @@ namespace ascension {
 			 */
 			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
 				const Scalar indent = lineIndent(layout, contentMeasure, subline);
-				return (layout.writingMode().inlineFlowDirection == presentation::LEFT_TO_RIGHT) ? indent : contentMeasure - indent;
+				return (boost::fusion::at_key<presentation::styles::Direction>(layout.style()) == presentation::LEFT_TO_RIGHT) ? indent : contentMeasure - indent;
 			}
 
 			namespace {
@@ -140,15 +140,8 @@ namespace ascension {
 					const presentation::FlowRelativeTwoAxes<Scalar> lineStart(
 						presentation::_ipd = renderer.lineStartEdge(line) - viewport.scrollPositions().ipd(), presentation::_bpd = static_cast<Scalar>(0));
 
-					presentation::WritingMode writingMode;
-					if(layout != nullptr)
-						writingMode = layout->writingMode();
-					else {
-						writingMode.blockFlowDirection = renderer.computedBlockFlowDirection();
-						writingMode.inlineFlowDirection = renderer.direction().getOrInitial();
-						writingMode.textOrientation = renderer.textOrientation().getOrInitial();
-					}
-					Point result(geometry::make<Point>(presentation::mapAbstractToPhysical(writingMode, lineStart)));
+					const presentation::WritingMode wm((layout != nullptr) ? writingMode(*layout) : renderer.presentation().computeWritingMode());
+					Point result(geometry::make<Point>(presentation::mapFlowRelativeToPhysical(wm, lineStart)));
 
 					switch(renderer.lineRelativeAlignment()) {
 						case TextRenderer::LEFT:
@@ -204,11 +197,13 @@ namespace ascension {
 
 			namespace {
 				inline bool isNegativeVertical(const TextLayout& layout) {
-					const presentation::WritingMode& writingMode = layout.writingMode();
-					if(writingMode.blockFlowDirection == presentation::VERTICAL_RL)
-						return presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT;
-					else if(writingMode.blockFlowDirection == presentation::VERTICAL_LR)
-						return presentation::resolveTextOrientation(writingMode) != presentation::SIDEWAYS_LEFT;
+					if(presentation::isHorizontal(boost::fusion::at_key<presentation::styles::WritingMode>(layout.parentStyle()))) {
+						const presentation::WritingMode wm(writingMode(layout));
+						if(wm.blockFlowDirection == presentation::VERTICAL_RL)
+							return presentation::resolveTextOrientation(wm) == presentation::SIDEWAYS_LEFT;
+						else if(wm.blockFlowDirection == presentation::VERTICAL_LR)
+							return presentation::resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT;
+					}
 					return false;
 				}
 
@@ -340,7 +335,7 @@ namespace ascension {
 					TextHit<>::leading(position.characterIndex().offsetInLine) : TextHit<>::trailing(position.characterIndex().offsetInLine));
 				presentation::FlowRelativeTwoAxes<Scalar> abstractOffset(layout->hitToPoint(hitInLine));
 				abstractOffset.bpd() = 0;	// because subline is already known
-				const PhysicalTwoAxes<Scalar> physicalOffset(presentation::mapAbstractToPhysical(layout->writingMode(), abstractOffset));
+				const PhysicalTwoAxes<Scalar> physicalOffset(presentation::mapFlowRelativeToPhysical(writingMode(*layout), abstractOffset));
 
 				// compute the result
 				geometry::translate(p, Dimension(geometry::_dx = physicalOffset.x(), geometry::_dy = physicalOffset.y()));
@@ -427,8 +422,8 @@ namespace ascension {
 			 * @param pages The number of pages to scroll
 			 */
 			void scrollPage(TextViewport& viewport, const PhysicalTwoAxes<TextViewportSignedScrollOffset>& pages) {
-				presentation::FlowRelativeTwoAxes<TextViewportSignedScrollOffset> delta =
-					mapPhysicalToAbstract(viewport.textRenderer().presentation().computeWritingMode(&viewport.textRenderer()), pages);
+				presentation::FlowRelativeTwoAxes<TextViewportSignedScrollOffset> delta(
+					mapPhysicalToFlowRelative(viewport.textRenderer().presentation().computeWritingMode(), pages));
 				viewport.scrollBlockFlowPage(delta.bpd());
 				delta.bpd() = 0;
 				delta.ipd() *= pageSize<presentation::ReadingDirection>(viewport);
@@ -455,7 +450,8 @@ namespace ascension {
 					assert(layout != nullptr);
 					const BaselineIterator baseline(viewport, line);
 					// locate the position in the line
-					const bool horizontal = isHorizontal(layout->writingMode().blockFlowDirection);
+					const presentation::WritingMode wm(writingMode(*layout));
+					const bool horizontal = presentation::isHorizontal(wm.blockFlowDirection);
 					const PhysicalTwoAxes<Scalar> lineLocalPoint(horizontal ?
 						Point(
 							geometry::_x = mapViewportIpdToLineLayout(viewport, *layout, geometry::x(p)),
@@ -463,7 +459,7 @@ namespace ascension {
 						: Point(
 							geometry::_x = geometry::x(p) + geometry::x(baseline.positionInViewport()),
 							geometry::_y = mapViewportIpdToLineLayout(viewport, *layout, geometry::y(p))));
-					TextHit<> hitInLine(layout->hitTestCharacter(mapPhysicalToAbstract(layout->writingMode(), lineLocalPoint), &outside));
+					TextHit<> hitInLine(layout->hitTestCharacter(mapPhysicalToFlowRelative(wm, lineLocalPoint), &outside));
 					if(abortNoCharacter && outside)
 						return boost::none;
 
@@ -1319,7 +1315,7 @@ namespace ascension {
 			 * @param offsets The offsets to scroll in physical dimensions in user units
 			 */
 			void TextViewport::scroll(const PhysicalTwoAxes<TextViewportSignedScrollOffset>& offsets) {
-				return scroll(mapPhysicalToAbstract(textRenderer().presentation().computeWritingMode(&textRenderer()), offsets));
+				return scroll(mapPhysicalToFlowRelative(textRenderer().presentation().computeWritingMode(), offsets));
 			}
 
 			/**
