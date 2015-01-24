@@ -151,24 +151,14 @@ namespace ascension {
 			}
 		}
 
-		/**
-		 * Computes @c TextRunStyle1.
-		 * @param specifiedValues The "Specified Value"s to compute
-		 * @param context The length context
-		 * @param parentComputedValues1 The "Computed Value"s of the parent element
-		 * @param parentComputedValues2 The "Computed Value"s of the parent element
-		 * @param[out] computedValues The "Computed Value"s
-		 */
-		boost::flyweight<styles::ComputedValue<TextRunStyle1>::type> compute(
+		void compute1(
 				const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,
 				const styles::Length::Context& context,
-				const styles::ComputedValue<TextRunStyle1>::type& parentComputedValues1,
-				const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues2) {
-			styles::ComputedValue<TextRunStyle1>::type computedValues;
-
+				const styles::ComputedValue<TextRunStyle1>::type& parentComputedValues,
+				styles::ComputedValue<TextRunStyle1>::type& computedValues) {
 			computeColor(
 				boost::fusion::at_key<styles::Color>(specifiedValues),
-				boost::fusion::at_key<styles::Color>(parentComputedValues1),
+				boost::fusion::at_key<styles::Color>(parentComputedValues),
 				boost::fusion::at_key<styles::Color>(computedValues));
 			const auto& computedColor = boost::fusion::at_key<styles::Color>(computedValues);
 
@@ -188,7 +178,7 @@ namespace ascension {
 			computeFontSize(
 				boost::fusion::at_key<styles::FontSize>(specifiedValues),
 				context,
-				boost::fusion::at_key<styles::FontSize>(parentComputedValues1),
+				boost::fusion::at_key<styles::FontSize>(parentComputedValues),
 				Pixels(12),	// TODO: This is temporary.
 				boost::fusion::at_key<styles::FontSize>(computedValues));
 			const auto& computedFontSize = boost::fusion::at_key<styles::FontSize>(computedValues);
@@ -206,25 +196,31 @@ namespace ascension {
 				boost::fusion::at_key<styles::AlignmentAdjust>(specifiedValues),
 				context,
 				boost::fusion::at_key<styles::AlignmentAdjust>(computedValues));
-
-			return boost::flyweight<styles::ComputedValue<TextRunStyle1>::type>(computedValues);
 		}
 
 		/**
-		 * Computes @c TextRunStyle.
+		 * Computes @c TextRunStyle1.
 		 * @param specifiedValues The "Specified Value"s to compute
 		 * @param context The length context
-		 * @param computedColor The "Computed Value"s of the "color" property
+		 * @param parentComputedValues1 The "Computed Value"s of the parent element
 		 * @param parentComputedValues2 The "Computed Value"s of the parent element
 		 * @param[out] computedValues The "Computed Value"s
 		 */
-		boost::flyweight<styles::ComputedValue<TextRunStyle2>::type> compute(
+		boost::flyweight<styles::ComputedValue<TextRunStyle1>::type> compute(
+				const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,
+				const styles::Length::Context& context,
+				const styles::ComputedValue<TextRunStyle1>::type& parentComputedValues) {
+			styles::ComputedValue<TextRunStyle1>::type computed;
+			compute1(specifiedValues, context, parentComputedValues, computed);
+			return boost::flyweight<styles::ComputedValue<TextRunStyle1>::type>(computed);
+		}
+
+		void compute2(
 				const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
 				const styles::Length::Context& context,
 				const styles::ComputedValue<styles::Color>::type& computedColor,
-				const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues2) {
-			styles::ComputedValue<TextRunStyle2>::type computedValues;
-
+				const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues,
+				styles::ComputedValue<TextRunStyle2>::type computedValues) {
 			styles::computeAsSpecified<styles::TextTransform>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::WhiteSpace>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::Hyphens>(specifiedValues, computedValues);
@@ -246,12 +242,28 @@ namespace ascension {
 
 			styles::computeAsSpecified<styles::ShapingEnabled>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
+		}
 
-			return boost::flyweight<styles::ComputedValue<TextRunStyle2>::type>(computedValues);
+		/**
+		 * Computes @c TextRunStyle.
+		 * @param specifiedValues The "Specified Value"s to compute
+		 * @param context The length context
+		 * @param computedColor The "Computed Value"s of the "color" property
+		 * @param parentComputedValues2 The "Computed Value"s of the parent element
+		 * @param[out] computedValues The "Computed Value"s
+		 */
+		boost::flyweight<styles::ComputedValue<TextRunStyle2>::type> compute(
+				const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
+				const styles::Length::Context& context,
+				const styles::ComputedValue<styles::Color>::type& computedColor,
+				const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues) {
+			styles::ComputedValue<TextRunStyle2>::type computed;
+			compute2(specifiedValues, context, computedColor, parentComputedValues, computed);
+			return boost::flyweight<styles::ComputedValue<TextRunStyle2>::type>(computed);
 		}
 
 		/// Extend @c boost#hash_value for @c styles#ComputedValue&lt;TextRunStyle1&gt;#type.
-		std::size_t hash_value(const styles::ComputedValue<TextRunStyle1>::type& style) {
+		std::size_t _hash_value1(const styles::ComputedValue<TextRunStyle1>::type& style) {
 			std::size_t seed = 0;
 
 			boost::hash_combine(seed, boost::fusion::at_key<styles::Color>(style));
@@ -291,7 +303,7 @@ namespace ascension {
 		}
 
 		/// Extend @c boost#hash_value for @c styles#ComputedValue&lt;TextRunStyle2&gt;#type.
-		std::size_t hash_value(const styles::ComputedValue<TextRunStyle2>::type& style) {
+		std::size_t _hash_value2(const styles::ComputedValue<TextRunStyle2>::type& style) {
 			std::size_t seed = 0;
 
 			boost::hash_combine(seed, boost::fusion::at_key<styles::TextTransform>(style));
@@ -345,7 +357,7 @@ namespace ascension {
 			static const DeclaredTextRunStyle2 SINGLETON;
 			return SINGLETON;
 		}
-
+/*
 #ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
 		/// Default constructor.
 		DeclaredTextRunStyle::DeclaredTextRunStyle() {
@@ -357,5 +369,5 @@ namespace ascension {
 			static const DeclaredTextRunStyle SINGLETON;
 			return SINGLETON;
 		}
-	}
+*/	}
 }

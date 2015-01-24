@@ -24,14 +24,16 @@
 #include <ascension/presentation/styles/text-decor.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
 #include <boost/flyweight/flyweight_fwd.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
+#if 0
+#	include <boost/fusion/algorithm/transformation/join.hpp>
+#endif
 #include <boost/fusion/container/vector.hpp>
 
 namespace ascension {
 	namespace presentation {
 		/**
 		 * A text run style collection, part 1.
-		 * @see TextRunStyle2
+		 * @see TextRunStyle2, TextRunStyle
 		 * @see TextLineStyle, TextToplevelStyle, StyledTextRunIterator
 		 */
 		typedef boost::fusion::vector<
@@ -67,7 +69,7 @@ namespace ascension {
 
 		/**
 		 * A text run style collection, part 2.
-		 * @see TextRunStyle1
+		 * @see TextRunStyle1, TextRunStyle
 		 * @see TextLineStyle, TextToplevelStyle, StyledTextRunIterator
 		 */
 		typedef boost::fusion::vector<
@@ -95,7 +97,18 @@ namespace ascension {
 			styles::ShapingEnabled,						// 'shaping-enabled' property
 			styles::NumberSubstitution					// 'number-substitution' property
 		> TextRunStyle2;
-
+#if 0
+		/**
+		 * A text run style collection.
+		 * @see TextRunStyle1, TextRunStyle2
+		 * @see TextLineStyle, TextToplevelStyle, StyledTextRunIterator
+		 * @note This structure is defined as joint of the multiple subparts (TextRunStyleN), because some compilers
+		 *       use large memory and may crash when compile the client codes.
+		 */
+		typedef boost::fusion::result_of::as_vector<
+			boost::fusion::result_of::join<TextRunStyle1, TextRunStyle2>::type
+		>::type TextRunStyle;
+#endif
 		/// "Declared Values" of @c TextRunStyle1.
 		class DeclaredTextRunStyle1 :
 			public detail::TransformAsMap<
@@ -126,10 +139,14 @@ namespace ascension {
 			static const DeclaredTextRunStyle2& unsetInstance();
 		};
 
-		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextRunStyle1);
-		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextRunStyle2);
+#if 0
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextRunStyle);
 //		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(SpecifiedTextRunStyle);
 //		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(ComputedTextRunStyle);
+#else
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextRunStyle1);
+		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextRunStyle2);
+#endif
 
 		/// "Specified Value"s of @c TextRunStyle1.
 		struct SpecifiedTextRunStyle1 : presentation::detail::TransformAsMap<
@@ -141,9 +158,6 @@ namespace ascension {
 			TextRunStyle2, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
 		>::type {};
 
-		/// "Specified Value"s of @c TextRunStyle.
-		struct SpecifiedTextRunStyle : boost::fusion::result_of::join<SpecifiedTextRunStyle1, SpecifiedTextRunStyle2>::type {};
-
 		/// "Computed Value"s of @c TextRunStyle1.
 		struct ComputedTextRunStyle1 : presentation::detail::TransformAsMap<
 			TextRunStyle1, presentation::detail::KeyValueConverter<styles::ComputedValue>
@@ -153,18 +167,16 @@ namespace ascension {
 		struct ComputedTextRunStyle2 : presentation::detail::TransformAsMap<
 			TextRunStyle2, presentation::detail::KeyValueConverter<styles::ComputedValue>
 		>::type {};
+#if 0
+		/// "Specified Value"s of @c TextRunStyle.
+		struct SpecifiedTextRunStyle : presentation::detail::TransformAsMap<
+			TextRunStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+		>::type {};
 
 		/// "Computed Value"s of @c TextRunStyle.
-		struct ComputedTextRunStyle : boost::fusion::result_of::join<ComputedTextRunStyle1, ComputedTextRunStyle2>::type {};
-
-		namespace styles {
-			template<> class DeclaredValue<TextRunStyle1> : public ValueBase<TextRunStyle1, DeclaredTextRunStyle1> {};
-			template<> class DeclaredValue<TextRunStyle2> : public ValueBase<TextRunStyle2, DeclaredTextRunStyle2> {};
-			template<> struct SpecifiedValue<TextRunStyle1> : boost::mpl::identity<SpecifiedTextRunStyle1> {};
-			template<> struct SpecifiedValue<TextRunStyle2> : boost::mpl::identity<SpecifiedTextRunStyle2> {};
-			template<> struct ComputedValue<TextRunStyle1> : boost::mpl::identity<ComputedTextRunStyle1> {};
-			template<> struct ComputedValue<TextRunStyle2> : boost::mpl::identity<ComputedTextRunStyle2> {};
-		}
+		struct ComputedTextRunStyle : presentation::detail::TransformAsMap<
+			TextRunStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
+		>::type {};
 
 		/// "Declared Value"s of @c TextRunStyle.
 		class DeclaredTextRunStyle : public boost::fusion::result_of::as_map<
@@ -183,12 +195,25 @@ namespace ascension {
 #endif
 			static const DeclaredTextRunStyle& unsetInstance();
 		};
+#endif
+		namespace styles {
+			template<> class DeclaredValue<TextRunStyle1> : public ValueBase<TextRunStyle1, DeclaredTextRunStyle1> {};
+			template<> struct SpecifiedValue<TextRunStyle1> : boost::mpl::identity<SpecifiedTextRunStyle1> {};
+			template<> struct ComputedValue<TextRunStyle1> : boost::mpl::identity<ComputedTextRunStyle1> {};
+			template<> class DeclaredValue<TextRunStyle2> : public ValueBase<TextRunStyle2, DeclaredTextRunStyle2> {};
+			template<> struct SpecifiedValue<TextRunStyle2> : boost::mpl::identity<SpecifiedTextRunStyle2> {};
+			template<> struct ComputedValue<TextRunStyle2> : boost::mpl::identity<ComputedTextRunStyle2> {};
+#if 0
+			template<> class DeclaredValue<TextRunStyle> : public ValueBase<TextRunStyle, DeclaredTextRunStyle> {};
+			template<> struct SpecifiedValue<TextRunStyle> : boost::mpl::identity<SpecifiedTextRunStyle> {};
+			template<> struct ComputedValue<TextRunStyle> : boost::mpl::identity<ComputedTextRunStyle> {};
+#endif
+		}
 
 		boost::flyweight<styles::ComputedValue<TextRunStyle1>::type> compute(
 			const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,
 			const styles::Length::Context& context,
-			const styles::ComputedValue<TextRunStyle1>::type& parentComputedValues1,
-			const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues2);
+			const styles::ComputedValue<TextRunStyle1>::type& parentComputedValues);
 		boost::flyweight<styles::ComputedValue<TextRunStyle2>::type> compute(
 			const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
 			const styles::Length::Context& context,
