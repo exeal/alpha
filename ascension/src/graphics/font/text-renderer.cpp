@@ -148,8 +148,8 @@ namespace ascension {
 				// TODO: Not implemented.
 #endif
 				assert(defaultFont_.get() != nullptr);
-				presentation::FlowRelativeFourSides<presentation::Length> zeroSpaces;
-				zeroSpaces.fill(presentation::Length(0));
+				presentation::FlowRelativeFourSides<presentation::styles::Length> zeroSpaces;
+				zeroSpaces.fill(presentation::styles::Length(0));
 //				spacePainter_->update(*this, initialSize, zeroSpaces);
 /*				switch(PRIMARYLANGID(getUserDefaultUILanguage())) {
 					case LANG_CHINESE:
