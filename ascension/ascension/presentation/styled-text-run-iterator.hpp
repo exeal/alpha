@@ -12,7 +12,6 @@
 
 #ifndef ASCENSION_STYLED_TEXT_RUN_ITERATOR_HPP
 #define ASCENSION_STYLED_TEXT_RUN_ITERATOR_HPP
-
 #include <ascension/kernel/position.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <boost/flyweight/flyweight_fwd.hpp>
@@ -20,29 +19,6 @@
 
 namespace ascension {
 	namespace presentation {
-#if 0
-		/**
-		 * A @c StyledTextRun represents a text range with declared style. @c #beginning and
-		 * @c #end return pointers to characters in the line text string.
-		 * @note This class is not intended to be derived.
-		 * @see StyledTextRunIterator, StyledTextRunEnumerator
-		 */
-		struct StyledTextRun : public StringPiece, public FastArenaObject<StyledTextRun> {
-			/// The declared style in this text run.
-			std::shared_ptr<const TextRunStyle> style;
-			/// Default constructor.
-			StyledTextRun() BOOST_NOEXCEPT {}
-			/**
-			 * Constructor.
-			 * @param characterRange The range of the text run in the line
-			 * @param style The declared style of the text run. Can be @c null
-			 */
-			StyledTextRun(const StringPiece& characterRange,
-				std::shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT
-				: StringPiece(characterRange), style_(style) {}
-		};
-#endif
-
 		/**
 		 * Abstract input iterator to obtain text run style objects.
 		 * @tparam Style The return type of @c #currentStyle method
