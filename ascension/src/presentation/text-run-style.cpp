@@ -10,7 +10,17 @@
 
 namespace ascension {
 	namespace presentation {
-		namespace {
+#if 0
+#ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
+		/// Default constructor.
+		DeclaredTextRunStyle::DeclaredTextRunStyle() {
+		}
+#endif
+		/// Returns a @c DeclaredTextRunStyle instance filled with @c styles#UNSET values.
+		const DeclaredTextRunStyle& DeclaredTextRunStyle::unsetInstance() {
+			static const DeclaredTextRunStyle SINGLETON;
+			return SINGLETON;
+		}
 			void computeColor(const styles::SpecifiedValue<styles::Color>::type& specifiedValue,
 					const graphics::Color& computedParentColor, styles::ComputedValue<styles::Color>::type& computedValue) {
 				computedValue = boost::get_optional_value_or(specifiedValue, computedParentColor);
@@ -96,66 +106,12 @@ namespace ascension {
 				// TODO: [CSS3INLINE] does not describe the computation for other than <percentage>.
 				computedValue = Pixels::zero();
 			}
-
-			inline void computeWordSpacing(const styles::SpecifiedValue<styles::WordSpacing>::type& specifiedValue,
-					const styles::Length::Context& lengthContext, styles::ComputedValue<styles::WordSpacing>::type& computedValue) {
-				if(const styles::Length* const length = boost::get<styles::Length>(&specifiedValue)) {
-					if(styles::Length::isValidUnit(length->unitType())) {
-						computedValue = Pixels(length->value(lengthContext));
-						return;
-					}
-				}
-				// TODO: Handle <percentage> values.
-				computedValue = Pixels::zero();
-			}
-
-			inline void computeLetterSpacing(const styles::SpecifiedValue<styles::LetterSpacing>::type& specifiedValue,
-					const styles::Length::Context& lengthContext, styles::ComputedValue<styles::LetterSpacing>::type& computedValue) {
-				if(specifiedValue != boost::none && styles::Length::isValidUnit(specifiedValue->unitType()))
-					computedValue = Pixels(specifiedValue->value(lengthContext));
-				else
-					computedValue = Pixels::zero();
-			}
-
-			void computeTextDecoration(const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
-					const graphics::Color& foregroundColor, styles::ComputedValue<TextRunStyle2>::type& computedValues) {
-				boost::fusion::at_key<styles::TextDecorationLine>(computedValues)
-					= boost::fusion::at_key<styles::TextDecorationLine>(specifiedValues);
-				boost::fusion::at_key<styles::TextDecorationColor>(computedValues)
-					= boost::get_optional_value_or(boost::fusion::at_key<styles::TextDecorationColor>(specifiedValues), foregroundColor);
-				boost::fusion::at_key<styles::TextDecorationStyle>(computedValues)
-					= boost::fusion::at_key<styles::TextDecorationStyle>(specifiedValues);
-				boost::fusion::at_key<styles::TextDecorationSkip>(computedValues)
-					= boost::fusion::at_key<styles::TextDecorationSkip>(specifiedValues);
-				boost::fusion::at_key<styles::TextUnderlinePosition>(computedValues)
-					= boost::fusion::at_key<styles::TextUnderlinePosition>(specifiedValues);
-			}
-
-			void computeTextEmphasis(const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
-					const graphics::Color& foregroundColor, styles::ComputedValue<TextRunStyle2>::type& computedValues) {
-				if(const styles::TextEmphasisStyleEnums* keyword =
-						boost::get<styles::TextEmphasisStyleEnums>(&boost::fusion::at_key<styles::TextEmphasisStyle>(specifiedValues)))
-					boost::fusion::at_key<styles::TextEmphasisStyle>(computedValues) = static_cast<CodePoint>(boost::native_value(*keyword));
-				else if(const CodePoint* codePoint = boost::get<CodePoint>(&boost::fusion::at_key<styles::TextEmphasisStyle>(specifiedValues)))
-					boost::fusion::at_key<styles::TextEmphasisStyle>(computedValues) = *codePoint;
-				else
-					boost::fusion::at_key<styles::TextEmphasisStyle>(computedValues) = boost::none;
-				boost::fusion::at_key<styles::TextEmphasisColor>(computedValues)
-					= boost::get_optional_value_or(boost::fusion::at_key<styles::TextEmphasisColor>(specifiedValues), foregroundColor);
-				boost::fusion::at_key<styles::TextEmphasisPosition>(computedValues)
-					= boost::fusion::at_key<styles::TextEmphasisPosition>(specifiedValues);
-			}
-
-			inline void computeTextShadow() {
-				// TODO: Not implemented.
-			}
 		}
 
-		void compute1(
-				const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,
+		boost::flyweight<styles::ComputedValue<TextRunStyle>::type> compute(
+				const styles::SpecifiedValue<TextRunStyle>::type& specifiedValues,
 				const styles::Length::Context& context,
-				const styles::ComputedValue<TextRunStyle1>::type& parentComputedValues,
-				styles::ComputedValue<TextRunStyle1>::type& computedValues) {
+				const styles::ComputedValue<TextRunStyle>::type& parentComputedValues) {
 			computeColor(
 				boost::fusion::at_key<styles::Color>(specifiedValues),
 				boost::fusion::at_key<styles::Color>(parentComputedValues),
@@ -196,31 +152,7 @@ namespace ascension {
 				boost::fusion::at_key<styles::AlignmentAdjust>(specifiedValues),
 				context,
 				boost::fusion::at_key<styles::AlignmentAdjust>(computedValues));
-		}
 
-		/**
-		 * Computes @c TextRunStyle1.
-		 * @param specifiedValues The "Specified Value"s to compute
-		 * @param context The length context
-		 * @param parentComputedValues1 The "Computed Value"s of the parent element
-		 * @param parentComputedValues2 The "Computed Value"s of the parent element
-		 * @param[out] computedValues The "Computed Value"s
-		 */
-		boost::flyweight<styles::ComputedValue<TextRunStyle1>::type> compute(
-				const styles::SpecifiedValue<TextRunStyle1>::type& specifiedValues,
-				const styles::Length::Context& context,
-				const styles::ComputedValue<TextRunStyle1>::type& parentComputedValues) {
-			styles::ComputedValue<TextRunStyle1>::type computed;
-			compute1(specifiedValues, context, parentComputedValues, computed);
-			return boost::flyweight<styles::ComputedValue<TextRunStyle1>::type>(computed);
-		}
-
-		void compute2(
-				const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
-				const styles::Length::Context& context,
-				const styles::ComputedValue<styles::Color>::type& computedColor,
-				const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues,
-				styles::ComputedValue<TextRunStyle2>::type computedValues) {
 			styles::computeAsSpecified<styles::TextTransform>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::WhiteSpace>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::Hyphens>(specifiedValues, computedValues);
@@ -244,26 +176,7 @@ namespace ascension {
 			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
 		}
 
-		/**
-		 * Computes @c TextRunStyle.
-		 * @param specifiedValues The "Specified Value"s to compute
-		 * @param context The length context
-		 * @param computedColor The "Computed Value"s of the "color" property
-		 * @param parentComputedValues2 The "Computed Value"s of the parent element
-		 * @param[out] computedValues The "Computed Value"s
-		 */
-		boost::flyweight<styles::ComputedValue<TextRunStyle2>::type> compute(
-				const styles::SpecifiedValue<TextRunStyle2>::type& specifiedValues,
-				const styles::Length::Context& context,
-				const styles::ComputedValue<styles::Color>::type& computedColor,
-				const styles::ComputedValue<TextRunStyle2>::type& parentComputedValues) {
-			styles::ComputedValue<TextRunStyle2>::type computed;
-			compute2(specifiedValues, context, computedColor, parentComputedValues, computed);
-			return boost::flyweight<styles::ComputedValue<TextRunStyle2>::type>(computed);
-		}
-
-		/// Extend @c boost#hash_value for @c styles#ComputedValue&lt;TextRunStyle1&gt;#type.
-		std::size_t _hash_value1(const styles::ComputedValue<TextRunStyle1>::type& style) {
+		std::size_t hash_value(const styles::ComputedValue<TextRunStyle>::type& style) {
 			std::size_t seed = 0;
 
 			boost::hash_combine(seed, boost::fusion::at_key<styles::Color>(style));
@@ -299,13 +212,6 @@ namespace ascension {
 			boost::hash_combine(seed, boost::fusion::at_key<styles::AlignmentBaseline>(style));
 			boost::hash_combine(seed, boost::fusion::at_key<styles::AlignmentAdjust>(style));
 
-			return seed;
-		}
-
-		/// Extend @c boost#hash_value for @c styles#ComputedValue&lt;TextRunStyle2&gt;#type.
-		std::size_t _hash_value2(const styles::ComputedValue<TextRunStyle2>::type& style) {
-			std::size_t seed = 0;
-
 			boost::hash_combine(seed, boost::fusion::at_key<styles::TextTransform>(style));
 			boost::hash_combine(seed, boost::fusion::at_key<styles::WhiteSpace>(style));
 			boost::hash_combine(seed, boost::fusion::at_key<styles::Hyphens>(style));
@@ -333,41 +239,6 @@ namespace ascension {
 
 			return seed;
 		}
-
-#ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
-		/// Default constructor.
-		DeclaredTextRunStyle1::DeclaredTextRunStyle1() {
-		}
 #endif
-
-		/// Returns a @c DeclaredTextRunStyle1 instance filled with @c styles#UNSET values.
-		const DeclaredTextRunStyle1& DeclaredTextRunStyle1::unsetInstance() {
-			static const DeclaredTextRunStyle1 SINGLETON;
-			return SINGLETON;
-		}
-
-#ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
-		/// Default constructor.
-		DeclaredTextRunStyle2::DeclaredTextRunStyle2() {
-		}
-#endif
-
-		/// Returns a @c DeclaredTextRunStyle2 instance filled with @c styles#UNSET values.
-		const DeclaredTextRunStyle2& DeclaredTextRunStyle2::unsetInstance() {
-			static const DeclaredTextRunStyle2 SINGLETON;
-			return SINGLETON;
-		}
-/*
-#ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
-		/// Default constructor.
-		DeclaredTextRunStyle::DeclaredTextRunStyle() {
-		}
-#endif
-
-		/// Returns a @c DeclaredTextRunStyle instance filled with @c styles#UNSET values.
-		const DeclaredTextRunStyle& DeclaredTextRunStyle::unsetInstance() {
-			static const DeclaredTextRunStyle SINGLETON;
-			return SINGLETON;
-		}
-*/	}
+	}
 }
