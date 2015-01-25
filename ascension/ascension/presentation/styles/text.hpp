@@ -13,6 +13,7 @@
 
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
+#include <ascension/presentation/absolute-length.hpp>
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/styles/length.hpp>
 #include <tuple>
