@@ -26,9 +26,6 @@
 
 namespace ascension {
 	namespace presentation {
-		class DeclaredTextRunStyle1;
-		class DeclaredTextRunStyle2;
-
 		/**
 		 * A text line style collection.
 		 * @note @c TextLineStyle does not have style properties for text runs, but see @c DeclaredTextLineStyle.
@@ -66,26 +63,20 @@ namespace ascension {
 		/// "Declared Values" of @c TextLineStyle.
 		class DeclaredTextLineStyle :
 			public detail::TransformAsMap<
-				TextLineStyle, detail::ValueConverter<styles::DeclaredValue>
+				TextLineStyle, detail::KeyValueConverter<styles::DeclaredValue>
 			>::type,
 			public std::enable_shared_from_this<DeclaredTextLineStyle> {
 		public:
 			DeclaredTextLineStyle();
-			/// Returns the @c DeclaredTextRunStyle1 of this line element.
-			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextRunStyle1> runsStyle1() const BOOST_NOEXCEPT {
-				return runsStyle1_;
+			/// Returns the @c DeclaredTextRunStyle of this line element.
+			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextRunStyle> runsStyle() const BOOST_NOEXCEPT {
+				return runsStyle_;
 			}
-			/// Returns the @c DeclaredTextRunStyle2 of this line element.
-			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextRunStyle2> runsStyle2() const BOOST_NOEXCEPT {
-				return runsStyle2_;
-			}
-			void setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle1> newStyle) BOOST_NOEXCEPT;
-			void setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle2> newStyle) BOOST_NOEXCEPT;
+			void setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle> newStyle) BOOST_NOEXCEPT;
 			static const DeclaredTextLineStyle& unsetInstance();
 
 		private:
-			std::shared_ptr<const DeclaredTextRunStyle1> runsStyle1_;
-			std::shared_ptr<const DeclaredTextRunStyle2> runsStyle2_;
+			std::shared_ptr<const DeclaredTextRunStyle> runsStyle_;
 		};
 
 		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextLineStyle);

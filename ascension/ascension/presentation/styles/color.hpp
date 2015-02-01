@@ -49,9 +49,9 @@ namespace ascension {
 			public:
 				TypedColor() : Base() {}
 				TypedColor(const value_type& value) : Base(value) {}
-				TypedColor(const styles::InitialTag&) : Base(styles::INITIAL) {}
-				TypedColor(const styles::InheritTag&) : Base(styles::INHERIT) {}
-				TypedColor(const styles::UnsetTag&) : Base(styles::UNSET) {}
+				TypedColor(const InitialTag&) : Base(INITIAL) {}
+				TypedColor(const InheritTag&) : Base(INHERIT) {}
+				TypedColor(const UnsetTag&) : Base(UNSET) {}
 			};
 #endif
 			/**

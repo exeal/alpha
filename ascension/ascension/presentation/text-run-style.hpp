@@ -153,7 +153,9 @@ namespace ascension {
 //		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(ComputedTextRunStyle);
 
 		/// "Declared Value"s of @c TextRunStyle.
-		class DeclaredTextRunStyle : public BasicTextRunStyle<styles::DeclaredValuesOfParts> {
+		class DeclaredTextRunStyle :
+			public BasicTextRunStyle<styles::DeclaredValuesOfParts>,
+			public std::enable_shared_from_this<DeclaredTextRunStyle> {
 		public:
 #ifndef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
 			DeclaredTextRunStyle() = default;

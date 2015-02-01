@@ -49,9 +49,9 @@ namespace ascension {
 		/// "Declared Values" of @c TextToplevelStyle.
 		class DeclaredTextToplevelStyle : 
 			public detail::TransformAsMap<
-				TextToplevelStyle, detail::ValueConverter<styles::DeclaredValue>
+				TextToplevelStyle, detail::KeyValueConverter<styles::DeclaredValue>
 			>::type,
-			public std::enable_shared_from_this<DeclaredTextLineStyle> {
+			public std::enable_shared_from_this<DeclaredTextToplevelStyle> {
 		public:
 			DeclaredTextToplevelStyle();
 			/// Returns the @c DeclaredTextLineStyle of this toplevel element.
