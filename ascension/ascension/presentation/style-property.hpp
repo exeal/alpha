@@ -190,7 +190,7 @@ namespace ascension {
 				 * - If this property is 'inherited', set the inherit flag to @c true.
 				 * - Otherwise, initializes the property value with the initial value.
 				 */
-				DeclaredValue() : value_(initialValue()), defaultingKeyword_(INHERITED ? &styles::INHERIT : nullptr) {}
+				DeclaredValue() : value_(initialValue()), defaultingKeyword_(INHERITED ? &INHERIT : nullptr) {}
 #else
 				/// Default constructor sets 'unset' keyword.
 				DeclaredValue() : defaultingKeyword_(&UNSET) {}
@@ -298,7 +298,7 @@ namespace ascension {
 
 			private:
 				boost::optional<value_type> value_;
-				const styles::DefaultingKeyword* defaultingKeyword_;
+				const DefaultingKeyword* defaultingKeyword_;
 			};
 
 			template<typename Property>
@@ -320,13 +320,41 @@ namespace ascension {
 			}
 
 			/**
+			 * Converts the given "Computed Value" into a "Specified Value".
+			 * This function is used to implement @c inherit functions.
+			 * @tparam Property @c StyleProperty class template
+			 * @param computedValue The "Computed Value" to uncompute
+			 * @return The uncomputed "Specified Value"
+			 * @note This is not described in CSS Cascading and Inheritance Level 3.
+			 */
+			template<typename Property>
+			inline typename SpecifiedValue<Property>::type uncompute(const typename ComputedValue<Property>::type& computedValue) {
+				static_assert(std::is_convertible<typename SpecifiedValue<Property>::type, typename ComputedValue<Property>::type>::value, "");
+				return computedValue;
+			}
+
+			struct HandleAsRoot {};
+			BOOST_STATIC_CONSTEXPR HandleAsRoot HANDLE_AS_ROOT;
+
+			/**
 			 * Implements "Inheritance" process, as root element.
 			 * @tparam Property @c StyleProperty class template
 			 * @param[out] specifiedValue The calculated "Specified Value"
 			 */
 			template<typename Property>
-			inline void inherit(std::nullptr_t, typename SpecifiedValue<Property>::type& specifiedValue) {
-				specifiedValue = Property::initialValue();
+			inline void inherit(HandleAsRoot, typename SpecifiedValue<Property>::type& specifiedValue) {
+				specifiedValue = uncompute<Property>(Property::initialValue());
+			}
+
+			/**
+			 * Implements "Inheritance" process.
+			 * @tparam Property @c StyleProperty class template
+			 * @param parentComputedValue The "Computed Value" of the parent element
+			 * @param[out] specifiedValue The calculated "Specified Value"
+			 */
+			template<typename Property>
+			inline void inherit(const typename ComputedValue<Property>::type& parentComputedValue, typename SpecifiedValue<Property>::type& specifiedValue) {
+				 specifiedValue = uncompute<Property>(parentComputedValue);
 			}
 
 			/**
@@ -339,7 +367,7 @@ namespace ascension {
 			 */
 			template<typename Property, typename Function>
 			inline void inherit(Function parentComputedValueGenerator, typename SpecifiedValue<Property>::type& specifiedValue) {
-				specifiedValue = parentComputedValueGenerator();
+				 specifiedValue = uncompute<Property>(parentComputedValueGenerator());
 			}
 
 			/**
