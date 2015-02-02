@@ -103,6 +103,11 @@ namespace ascension {
 				Pixels
 			> FontSize;
 
+			template<>
+			inline SpecifiedValue<FontSize>::type uncompute<FontSize>(const ComputedValue<FontSize>::type& computedValue) {
+				return Length(computedValue.value(), Length::PIXELS);
+			}
+
 			/**
 			 * [Copied from CSS3] For any given font size, the apparent size and legibility of text varies across
 			 * fonts. For scripts such as Latin or Cyrillic that distinguish between upper and lowercase letters, the

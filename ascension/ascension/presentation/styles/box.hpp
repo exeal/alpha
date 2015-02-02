@@ -46,6 +46,18 @@ namespace ascension {
 				boost::variant<Pixels, Percentage, std::tuple<>>
 			> PaddingSide;
 
+			template<>			
+			inline SpecifiedValue<PaddingSide>::type uncompute<PaddingSide>(const ComputedValue<PaddingSide>::type& computedValue) {
+				if(const Pixels* const pixels = boost::get<Pixels>(&computedValue))
+					return Length(pixels->value(), Length::PIXELS);
+				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
+					return *percentage;
+				else if(const std::tuple<>* const autoValue = boost::get<std::tuple<>>(&computedValue))
+					return PaddingEnums::AUTO;
+				else
+					throw UnknownValueException("computedValue");
+			}
+
 			/// Enumerated values for @c MarginSide.
 			ASCENSION_SCOPED_ENUMS_BEGIN(MarginEnums)
 				/// Makes the margin depend on the available space, as defined in “Calculating widths, heights and
@@ -63,12 +75,24 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<Length, Percentage, MarginEnums>,
+					boost::variant<Length, Percentage, BOOST_SCOPED_ENUM_NATIVE(MarginEnums)>,
 					Length, 0
 				>,
 				Inherited<false>,
 				boost::variant<Pixels, Percentage, std::tuple<>>
 			> MarginSide;
+
+			template<>			
+			inline SpecifiedValue<MarginSide>::type uncompute<MarginSide>(const ComputedValue<MarginSide>::type& computedValue) {
+				if(const Pixels* const pixels = boost::get<Pixels>(&computedValue))
+					return Length(pixels->value(), Length::PIXELS);
+				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
+					return *percentage;
+				else if(const std::tuple<>* const autoValue = boost::get<std::tuple<>>(&computedValue))
+					return MarginEnums::AUTO;
+				else
+					throw UnknownValueException("computedValue");
+			}
 
 			/**
 			 * [Copied from CSS3] These properties specify the width and height of the content area or border area
@@ -83,6 +107,18 @@ namespace ascension {
 				Inherited<false>,
 				boost::variant<Pixels, Percentage, std::tuple<>>
 			> Measure;
+
+			template<>			
+			inline SpecifiedValue<Measure>::type uncompute<Measure>(const ComputedValue<Measure>::type& computedValue) {
+				if(const Pixels* const pixels = boost::get<Pixels>(&computedValue))
+					return Length(pixels->value(), Length::PIXELS);
+				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
+					return *percentage;
+				else if(const std::tuple<>* const autoValue = boost::get<std::tuple<>>(&computedValue))
+					return std::make_tuple();
+				else
+					throw UnknownValueException("computedValue");
+			}
 			/// @}
 		}
 	}

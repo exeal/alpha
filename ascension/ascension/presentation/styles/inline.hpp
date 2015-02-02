@@ -92,6 +92,20 @@ namespace ascension {
 				>
 			> LineHeight;
 
+			template<>
+			inline SpecifiedValue<LineHeight>::type uncompute<LineHeight>(const ComputedValue<LineHeight>::type& computedValue) {
+				if(const Number* const number = boost::get<Number>(&computedValue))
+					return *number;
+				else if(const Length* const length = boost::get<Length>(&computedValue))
+					return *length;
+				else if(const Pixels* const pixels = boost::get<Pixels>(&computedValue))
+					return Length(pixels->value(), Length::PIXELS);
+				else if(const std::tuple<>* const none = boost::get<std::tuple<>>(&computedValue))
+					return LineHeightEnums::NONE;
+				else
+					throw UnknownValueException("computedValue");
+			}
+
 			/// @see graphics#font#LineBoxContain
 			typedef StyleProperty<
 				Enumerated<
@@ -145,6 +159,11 @@ namespace ascension {
 				Pixels	// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
 			> AlignmentAdjust;
 
+			template<>			
+			inline SpecifiedValue<AlignmentAdjust>::type uncompute<AlignmentAdjust>(const ComputedValue<AlignmentAdjust>::type& computedValue) {
+				return Length(computedValue.value(), Length::PIXELS);
+			}
+
 			/// Enumerated values for @c BaselineShift. The documentation of the members are copied from CSS 3.
 			ASCENSION_SCOPED_ENUMS_BEGIN(BaselineShiftEnums)
 				// TODO: Describe the values.
@@ -170,6 +189,11 @@ namespace ascension {
 				Inherited<false>,
 				Pixels	// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
 			> BaselineShift;
+
+			template<>
+			inline SpecifiedValue<BaselineShift>::type uncompute<BaselineShift>(const ComputedValue<BaselineShift>::type& computedValue) {
+				return Length(computedValue.value(), Length::PIXELS);
+			}
 
 			/// Enumerated values for @c InlineBoxAlignment. The documentation of the members are copied from CSS 3.
 			ASCENSION_SCOPED_ENUMS_BEGIN(InlineBoxAlignmentEnums)
