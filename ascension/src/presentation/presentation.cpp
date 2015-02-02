@@ -109,25 +109,11 @@ namespace ascension {
 					const typename styles::ComputedValue<Styles>::type& parentComputedValues,
 					typename styles::SpecifiedValue<Styles>::type& specifiedValues) :
 					cascadedValues(cascadedValues), parentComputedValues(parentComputedValues), specifiedValues(specifiedValues) {}
-				template<typename SpecifiedValue>
-				void operator()(SpecifiedValue& specifiedValue) const {
-					typedef boost::fusion::result_of::find<
-						typename styles::SpecifiedValue<Styles>::type, SpecifiedValue
-					>::type I;
-					static_assert(
-						!std::is_same<
-							I, boost::fusion::result_of::end<
-								typename styles::SpecifiedValue<Styles>::type
-							>::type
-						>::value,
-						"SpecifiedValue was not found in SpecifiedTextLineStyle.");
-					typedef boost::fusion::result_of::distance<
-						boost::fusion::result_of::begin<
-							typename styles::SpecifiedValue<Styles>::type
-						>::type, I
-					>::type Index;
-					styles::specifiedValueFromCascadedValue<boost::fusion::result_of::value_at<Styles, Index>::type>(
-						boost::fusion::at<Index>(cascadedValues), boost::fusion::at<Index>(parentComputedValues), specifiedValue);
+				template<typename Property, typename SpecifiedValue>
+				void operator()(boost::fusion::pair<Property, SpecifiedValue>& p) const {
+					return styles::specifiedValueFromCascadedValue<Property>(
+						boost::fusion::at_key<Property>(cascadedValues),
+						boost::fusion::at_key<Property>(parentComputedValues), p.second);
 				}
 				const typename styles::DeclaredValue<Styles>::type& cascadedValues;
 				const typename styles::ComputedValue<Styles>::type& parentComputedValues;
@@ -140,7 +126,7 @@ namespace ascension {
 					const typename styles::ComputedValue<Styles>::type& parentComputedValues,
 					typename styles::SpecifiedValue<Styles>::type& specifiedValues) {
 				const SpecifiedValuesFromCascadedValues<Styles> compressor(cascadedValues, parentComputedValues, specifiedValues);
-//				boost::fusion::for_each(specifiedValues, compressor);
+				boost::fusion::for_each(specifiedValues, compressor);
 			}
 		}
 
@@ -192,7 +178,7 @@ namespace ascension {
 					const DeclaredTextRunStyle& cascaded = *declared;
 #endif
 					SpecifiedTextRunStyle specified;
-					specifiedValuesFromCascadedValues<TextRunStyle>(cascaded, parentComputedStyle_, specified);
+//					specifiedValuesFromCascadedValues<TextRunStyle>(cascaded, parentComputedStyle_, specified);
 					return compute(specified, context_, parentComputedStyle_);
 				}
 
@@ -230,26 +216,26 @@ namespace ascension {
 		 * @throw IndexOutOfBoundsException @a line is invalid
 		 */
 		WritingMode Presentation::computeWritingMode(boost::optional<Index> line /* = boost::none */) const {
-			const BlockFlowDirection writingMode = *boost::fusion::find<BlockFlowDirection>(computedStyles_->forToplevel.get());
+			const BlockFlowDirection writingMode = boost::fusion::at_key<styles::WritingMode>(computedStyles_->forToplevel.get());
 			if(line == boost::none)
-				return WritingMode(*boost::fusion::find<ReadingDirection>(computedStyles_->forLines.get()),
-					writingMode, *boost::fusion::find<TextOrientation>(computedStyles_->forLines.get()));
+				return WritingMode(boost::fusion::at_key<styles::Direction>(computedStyles_->forLines.get()),
+					writingMode, boost::fusion::at_key<styles::TextOrientation>(computedStyles_->forLines.get()));
 			else {
 				// compute 'direction' and 'text-orientation' properties
 				std::shared_ptr<const DeclaredTextLineStyle> declared;
 				if(textLineStyleDeclarator_.get() != nullptr)
 					declared = textLineStyleDeclarator_->declareTextLineStyle(boost::get(line));
 #if 0
-				const DeclaredTextLineStyle& cascaded = styles::cascade(declared);
+				const styles::DeclaredValue<TextLineStyle>::type& cascaded = styles::cascade(declared);
 #else
-				const DeclaredTextLineStyle& cascaded = *declared;
+				const styles::DeclaredValue<TextLineStyle>::type& cascaded = *declared;
 #endif
 				if(declared.get() == nullptr)
 					declared.reset(&DeclaredTextLineStyle::unsetInstance(), boost::null_deleter());
 
 				styles::SpecifiedValue<styles::Direction>::type specifiedDirection;
-				const auto& cascadedDirection(*boost::fusion::find<styles::DeclaredValue<styles::Direction>::type>(cascaded));
-				const auto& computedParentDirection(*boost::fusion::find<styles::ComputedValue<styles::Direction>::type>(computedStyles_->forLines.get()));
+				const auto& cascadedDirection(boost::fusion::at_key<styles::Direction>(cascaded));
+				const auto& computedParentDirection(boost::fusion::at_key<styles::Direction>(computedStyles_->forLines.get()));
 				static_assert(!std::is_same<std::decay<decltype(cascadedDirection)>::type, boost::mpl::void_>::value, "");
 				static_assert(!std::is_same<std::decay<decltype(computedParentDirection)>::type, boost::mpl::void_>::value, "");
 				styles::specifiedValueFromCascadedValue<styles::Direction>(
@@ -260,8 +246,8 @@ namespace ascension {
 					specifiedDirection);
 
 				styles::SpecifiedValue<styles::TextOrientation>::type specifiedTextOrientation;
-				const auto& cascadedTextOrientation(*boost::fusion::find<styles::DeclaredValue<styles::TextOrientation>::type>(cascaded));
-				const auto& computedParentTextOrientation(*boost::fusion::find<styles::ComputedValue<styles::TextOrientation>::type>(computedStyles_->forLines.get()));
+				const auto& cascadedTextOrientation(boost::fusion::at_key<styles::TextOrientation>(cascaded));
+				const auto& computedParentTextOrientation(boost::fusion::at_key<styles::TextOrientation>(computedStyles_->forLines.get()));
 				static_assert(!std::is_same<std::decay<decltype(cascadedTextOrientation)>::type, boost::mpl::void_>::value, "");
 				static_assert(!std::is_same<std::decay<decltype(computedParentTextOrientation)>::type, boost::mpl::void_>::value, "");
 				styles::specifiedValueFromCascadedValue<styles::TextOrientation>(
@@ -271,8 +257,8 @@ namespace ascension {
 					},
 					specifiedTextOrientation);
 
-				styles::ComputedValue<styles::Direction>::type computedDirection(specifiedDirection);	// TODO: compute as specified
-				styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(specifiedTextOrientation);	// TODO: compute as specified
+				styles::ComputedValue<styles::Direction>::type computedDirection(styles::computeAsSpecified<styles::Direction>(specifiedDirection));	// TODO: compute as specified
+				styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(styles::computeAsSpecified<styles::TextOrientation>(specifiedTextOrientation));	// TODO: compute as specified
 				return WritingMode(computedDirection, writingMode, computedTextOrientation);
 			}		
 		}
@@ -433,12 +419,12 @@ namespace ascension {
 			const DeclaredTextToplevelStyle& newlyCascaded = *newlyDeclared;
 #endif
 
-			const auto& cascadedWritingMode(*boost::fusion::find<styles::DeclaredValue<styles::WritingMode>::type>(newlyCascaded));
+			const auto& cascadedWritingMode(boost::fusion::at_key<styles::WritingMode>(newlyCascaded));
 			static_assert(!std::is_same<std::decay<decltype(cascadedWritingMode)>::type, boost::mpl::void_>::value, "");
 			SpecifiedTextToplevelStyle newlySpecified;
-			auto& specifiedWritingMode(*boost::fusion::find<styles::SpecifiedValue<styles::WritingMode>::type>(newlySpecified));
+			auto& specifiedWritingMode(boost::fusion::at_key<styles::WritingMode>(newlySpecified));
 			static_assert(!std::is_same<std::decay<decltype(specifiedWritingMode)>::type, boost::mpl::void_>::value, "");
-			styles::specifiedValueFromCascadedValue<styles::WritingMode>(cascadedWritingMode, nullptr, specifiedWritingMode);
+			styles::specifiedValueFromCascadedValue<styles::WritingMode>(cascadedWritingMode, styles::HANDLE_AS_ROOT, specifiedWritingMode);
 			boost::flyweight<ComputedTextToplevelStyle> newlyComputed(compute(newlySpecified));
 
 			// commit
