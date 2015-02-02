@@ -118,6 +118,16 @@ namespace ascension {
 				boost::variant<Integer, Pixels>
 			> TabSize;
 
+			template<>
+			inline SpecifiedValue<TabSize>::type uncompute<TabSize>(const ComputedValue<TabSize>::type& computedValue) {
+				if(const Integer* const integer = boost::get<Integer>(&computedValue))
+					return *integer;
+				else if(const Pixels* const pixels = boost::get<Pixels>(&computedValue))
+					return Length(pixels->value(), Length::PIXELS);
+				else
+					throw UnknownValueException("computedValue");
+			}
+
 			/// Enumerated values for @c LineBreak. The documentation of the members are copied from CSS 3.
 			ASCENSION_SCOPED_ENUMS_BEGIN(LineBreakEnums)
 				/// The UA determines the set of line-breaking restrictions to use, and it may vary the restrictions
@@ -352,6 +362,11 @@ namespace ascension {
 				Inherited<true>,
 				Pixels
 			> WordSpacing;
+
+			template<>
+			inline SpecifiedValue<WordSpacing>::type uncompute<WordSpacing>(const ComputedValue<WordSpacing>::type& computedValue) {
+				return Length(computedValue.value(), Length::PIXELS);
+			}
 #else
 			typedef SpacingLimit<
 				StyleProperty<
@@ -376,6 +391,11 @@ namespace ascension {
 				Inherited<true>,
 				Pixels
 			> LetterSpacing;
+
+			template<>
+			inline SpecifiedValue<LetterSpacing>::type uncompute<LetterSpacing>(const ComputedValue<LetterSpacing>::type& computedValue) {
+				return boost::make_optional(Length(computedValue.value(), Length::PIXELS));
+			}
 #else
 			typedef SpacingLimit<
 				StyleProperty<
@@ -409,6 +429,14 @@ namespace ascension {
 				 * @c #hanging and @c #eachLine with false.
 				 */
 				BasicTextIndent() : length(), hanging(false), eachLine(false) {}
+				/**
+				 * Creates a @c BasicTextIndent instance with the given values.
+				 * @param length The initial value of the @c #length member
+				 * @param hanging The initial value of the @c #hanging member
+				 * @param eachLine The initial value of the @c #eachLine member
+				 */
+				BasicTextIndent(const LengthType& length, BooleanType hanging, BooleanType eachLine)
+					: length(length), hanging(hanging), eachLine(eachLine) {}
 				/// Equality operator.
 				bool operator==(const BasicTextIndent<LengthType, BooleanType>& other) const {
 					return length == other.length && hanging == other.hanging && eachLine == other.eachLine;
@@ -444,6 +472,17 @@ namespace ascension {
 				Inherited<true>,
 				BasicTextIndent<boost::variant<Percentage, Pixels>, bool>
 			> TextIndent;
+
+			template<>			
+			inline SpecifiedValue<TextIndent>::type uncompute<TextIndent>(const ComputedValue<TextIndent>::type& computedValue) {
+				typedef boost::variant<Length, Percentage> SpecifiedTextIndentLength;
+				if(const Percentage* const percentage = boost::get<Percentage>(&computedValue.length))
+					return SpecifiedValue<TextIndent>::type(SpecifiedTextIndentLength(*percentage), computedValue.hanging, computedValue.eachLine);
+				else if(const Pixels* const pixels = boost::get<Pixels>(&computedValue.length))
+					return SpecifiedValue<TextIndent>::type(SpecifiedTextIndentLength(Length(pixels->value(), Length::PIXELS)), computedValue.hanging, computedValue.eachLine);
+				else
+					throw UnknownValueException("computedValue");
+			}
 			
 			/// Enumerated values for @c HangingPunctuation. The documentation of the members are copied from CSS 3.
 			ASCENSION_SCOPED_ENUMS_BEGIN(HangingPunctuationEnums)
