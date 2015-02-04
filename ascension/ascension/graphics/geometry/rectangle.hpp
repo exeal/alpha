@@ -62,11 +62,13 @@ namespace ascension {
 				BasicRectangle(const BasicRectangle& other) : BasicRectangleBase<Coordinate>((
 					_left = boost::geometry::get<boost::geometry::min_corner, 0>(other), _top = boost::geometry::get<boost::geometry::min_corner, 1>(other),
 					_right = boost::geometry::get<boost::geometry::max_corner, 0>(other), _bottom = boost::geometry::get<boost::geometry::max_corner, 1>(other))) {}
-				/// Copy-constructor for different template parameter.
-				template<typename U>
-				BasicRectangle(const BasicRectangle<U>& other) : BasicRectangleBase<Coordinate>((
-					_left = boost::geometry::get<boost::geometry::min_corner, 0>(other), _top = boost::geometry::get<boost::geometry::min_corner, 1>(other),
-					_right = boost::geometry::get<boost::geometry::max_corner, 0>(other), _bottom = boost::geometry::get<boost::geometry::max_corner, 1>(other))) {}
+				/// Copy-constructor for different coordinate type.
+				template<typename OtherCoordinate>
+				BasicRectangle(const BasicRectangle<OtherCoordinate>& other) : BasicRectangleBase<Coordinate>((
+					_left = static_cast<Coordinate>(boost::geometry::get<boost::geometry::min_corner, 0>(other)),
+					_top = static_cast<Coordinate>(boost::geometry::get<boost::geometry::min_corner, 1>(other)),
+					_right = static_cast<Coordinate>(boost::geometry::get<boost::geometry::max_corner, 0>(other)),
+					_bottom = static_cast<Coordinate>(boost::geometry::get<boost::geometry::max_corner, 1>(other)))) {}
 				/// Copy-constructor for different rectangle type.
 				template<typename Other>
 				BasicRectangle(const Other& other) : BasicRectangleBase<Coordinate>((

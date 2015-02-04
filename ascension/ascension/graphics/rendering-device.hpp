@@ -64,7 +64,7 @@ namespace ascension {
 			virtual std::uint16_t physicalDpiY() const = 0;
 
 			geometry::BasicDimension<std::uint32_t> size() const {
-				return geometry::BasicDimension<std::uint16_t>(geometry::_dx = width(), geometry::_dy = height());
+				return geometry::BasicDimension<std::uint32_t>(geometry::_dx = width(), geometry::_dy = height());
 			}
 			Dimension sizeInMillimeters() const {
 				return Dimension(geometry::_dx = widthInMillimeters(), geometry::_dy = heightInMillimeters());
