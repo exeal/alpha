@@ -50,13 +50,14 @@ namespace ascension {
 			std::unique_ptr<const graphics::font::TextLayout> isolatedLayout;
 			if(layout == nullptr)
 				layout = (isolatedLayout = viewer_.textRenderer().layouts().createIsolatedLayout(line.line)).get();
+			const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
 			const graphics::Scalar baseline = graphics::font::TextLayout::LineMetricsIterator(*layout, line.subline).baselineOffset();
 			graphics::Scalar first = *ipds_.begin(), second = *ipds_.end();
 			const graphics::Scalar lineStartOffset = viewer_.textRenderer().lineStartEdge(graphics::font::VisualLine(line.line, 0));
 			first -= lineStartOffset;
-			first = mapTextRendererInlineProgressionDimensionToLineLayout(layout->writingMode(), first);
+			first = mapTextRendererInlineProgressionDimensionToLineLayout(writingMode, first);
 			second -= lineStartOffset;
-			second = mapTextRendererInlineProgressionDimensionToLineLayout(layout->writingMode(), second);
+			second = mapTextRendererInlineProgressionDimensionToLineLayout(writingMode, second);
 
 			const boost::integer_range<Index> result(ordered(boost::irange(
 				layout->hitTestCharacter(presentation::FlowRelativeTwoAxes<graphics::Scalar>(
@@ -135,15 +136,16 @@ namespace ascension {
 
 			// first
 			const graphics::font::TextLayout* layout = viewer_.textRenderer().layouts().at(lines.first.line = region.first.line);
+			const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
 			ipds.first = layout->hitToPoint(graphics::font::TextHit<>::leading(region.first.offsetInLine)).ipd();
-			ipds.first = mapLineLayoutInlineProgressionDimensionToTextRenderer(layout->writingMode(), ipds.first);
+			ipds.first = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, ipds.first);
 			ipds.first += viewer_.textRenderer().lineStartEdge(graphics::font::VisualLine(lines.first.line, 0));
 			lines.first.subline = layout->lineAt(region.first.offsetInLine);
 
 			// second
 			layout = viewer_.textRenderer().layouts().at(lines.second.line = region.second.line);
 			ipds.second = layout->hitToPoint(graphics::font::TextHit<>::leading(region.second.offsetInLine)).ipd();
-			ipds.second = mapLineLayoutInlineProgressionDimensionToTextRenderer(layout->writingMode(), ipds.second);
+			ipds.second = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, ipds.second);
 			ipds.second += viewer_.textRenderer().lineStartEdge(graphics::font::VisualLine(lines.second.line, 0));
 			lines.second.subline = layout->lineAt(region.second.offsetInLine);
 
