@@ -59,6 +59,8 @@ namespace ascension {
 			// Auxiliary
 			styles::NumberSubstitution	// 'number-substitution' property
 		> TextLineStyle;
+		
+		class DeclaredTextRunStyle;
 
 		/// "Declared Values" of @c TextLineStyle.
 		class DeclaredTextLineStyle :

@@ -139,32 +139,19 @@ namespace ascension {
 
 		/// Default constructor.
 		DeclaredTextLineStyle::DeclaredTextLineStyle() {
-			setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle1>());
-			setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle2>());
+			setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle>());
 		}
 
 		/**
-		 * Sets the default @c DeclaredTextRunStyle1 of this line element.
-		 * @param newStyle The style collection to set. If @c null, this @c DeclaredTextLineStyle1 holds a
-		 *                 default-constructed @c DeclaredTextRunStyle1
+		 * Sets the default @c DeclaredTextRunStyle of this line element.
+		 * @param newStyle The style collection to set. If @c null, this @c DeclaredTextLineStyle holds a
+		 *                 default-constructed @c DeclaredTextRunStyle
 		 */
-		void DeclaredTextLineStyle::setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle1> newStyle) BOOST_NOEXCEPT {
+		void DeclaredTextLineStyle::setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle> newStyle) BOOST_NOEXCEPT {
 			if(newStyle.get() != nullptr)
-				runsStyle1_ = newStyle;
+				runsStyle_ = newStyle;
 			else
-				runsStyle1_ = std::shared_ptr<const DeclaredTextRunStyle1>(&DeclaredTextRunStyle1::unsetInstance(), boost::null_deleter());
-		}
-
-		/**
-		 * Sets the default @c DeclaredTextRunStyle2 of this line element.
-		 * @param newStyle The style collection to set. If @c null, this @c DeclaredTextLineStyle2 holds a
-		 *                 default-constructed @c DeclaredTextRunStyle2
-		 */
-		void DeclaredTextLineStyle::setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle2> newStyle) BOOST_NOEXCEPT {
-			if(newStyle.get() != nullptr)
-				runsStyle2_ = newStyle;
-			else
-				runsStyle2_ = std::shared_ptr<const DeclaredTextRunStyle2>(&DeclaredTextRunStyle2::unsetInstance(), boost::null_deleter());
+				runsStyle_ = std::shared_ptr<const DeclaredTextRunStyle>(&DeclaredTextRunStyle::unsetInstance(), boost::null_deleter());
 		}
 
 		/// Returns a @c DeclaredTextLineStyle instance filled with @c styles#UNSET values.
