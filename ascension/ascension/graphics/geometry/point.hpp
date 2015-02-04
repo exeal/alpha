@@ -59,9 +59,10 @@ namespace ascension {
 				BasicPoint() {}
 				/// Copy-constructor.
 				BasicPoint(const BasicPoint& other) : BasicPointBase<Coordinate>((_x = other.x_, _y = other.y_)) {}
-				/// Copy-constructor for different template parameter.
-				template<typename U>
-				BasicPoint(const BasicPoint<U>& other) : BasicPointBase<Coordinate>((_x = other.x_, _y = other.y_)) {}
+				/// Copy-constructor for different coordinate type.
+				template<typename OtherCoordinate>
+				explicit BasicPoint(const BasicPoint<OtherCoordinate>& other) :
+					BasicPointBase<Coordinate>((_x = static_cast<Coordinate>(other.x_), _y = static_cast<Coordinate>(other.y_))) {}
 				/// Copy-constructor for different point type.
 				template<typename Other>
 				BasicPoint(const Other& other, typename detail::EnableIfTagIs<Other, boost::geometry::point_tag>::type* = nullptr)
@@ -87,6 +88,7 @@ namespace ascension {
 			private:
 				using BasicPointBase<Coordinate>::x_;
 				using BasicPointBase<Coordinate>::y_;
+				template<typename U> friend class BasicPoint;
 				friend struct boost::geometry::traits::access<BasicPoint<Coordinate>, 0>;
 				friend struct boost::geometry::traits::access<BasicPoint<Coordinate>, 1>;
 			};

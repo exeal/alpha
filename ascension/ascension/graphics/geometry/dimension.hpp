@@ -57,12 +57,10 @@ namespace ascension {
 				BasicDimension() {}
 				/// Copy-constructor.
 				BasicDimension(const BasicDimension& other) : BasicDimensionBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
-				/// Copy-constructor for different template parameter.
-				template<typename U>
-				BasicDimension(const BasicDimension<U>& other) : BasicDimensionBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
-//				/// Copy-constructor for different dimension type.
-//				template<typename Other>
-//				BasicDimension(const Other& other) : BasicDimensionBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
+				/// Copy-constructor for different coordinate type.
+				template<typename OtherCoordinate>
+				explicit BasicDimension(const BasicDimension<OtherCoordinate>& other) :
+					BasicDimensionBase<Coordinate>((_dx = static_cast<Coordinate>(dx(other)), _dy = static_cast<Coordinate>(dy(other)))) {}
 				BOOST_PARAMETER_CONSTRUCTOR(
 					BasicDimension, (BasicDimensionBase<Coordinate>), tag,
 					(required
