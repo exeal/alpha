@@ -15,6 +15,7 @@
 #include <ascension/graphics/image.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/presentation/hyperlink/hyperlink.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/text-editor/session.hpp>	// texteditor.xxxIncrementalSearch
 #include <ascension/viewer/widgetapi/cursor.hpp>
@@ -82,12 +83,13 @@ namespace ascension {
 					if(geometry::dy(selectionBounds) > geometry::dy(clientBounds))
 						return std::unique_ptr<graphics::Image>();	// overflow
 					const graphics::font::TextLayout& layout = renderer.layouts()[line];
+					const presentation::WritingMode writingMode(graphics::font::writingMode(layout));
 					const Scalar indent = graphics::font::lineIndent(layout, viewport->contentMeasure());
 					for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
 						boost::optional<boost::integer_range<Index>> range(selectedRangeOnVisualLine(viewer.caret(), graphics::font::VisualLine(line, subline)));
 						if(range) {
 							range = boost::irange(*range->begin(), std::min(viewer.document().lineLength(line), *range->end()));
-							const graphics::Rectangle sublineBounds(geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(layout.writingMode(), layout.bounds(*range))));
+							const graphics::Rectangle sublineBounds(geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(writingMode, layout.bounds(*range))));
 							geometry::range<0>(selectionBounds) = boost::irange(
 								std::min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds)),
 								std::max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds)));
@@ -196,7 +198,8 @@ namespace ascension {
 					graphics::font::TextHit<kernel::Position>::leading(kernel::Position(selectedRegion.beginning().line, 0))));
 
 				// calculate 'dimensions'
-				dimensions = geometry::BasicRectangle<std::uint16_t>(geometry::negate(hotspot), size);
+				dimensions = geometry::BasicRectangle<std::uint16_t>(
+					static_cast<geometry::BasicPoint<std::uint16_t>>(geometry::negate(hotspot)), static_cast<geometry::BasicDimension<std::uint16_t>>(size));
 
 				return image;
 			}
@@ -581,7 +584,7 @@ namespace ascension {
 						|| (destination.line == selection_.initialLine
 							&& destination.offsetInLine < selection_.initialWordColumns.first)) {
 					WordBreakIterator<kernel::DocumentCharacterIterator> i(
-						kernel::DocumentCharacterIterator(document, destination), text::AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, id);
+						kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 					--i;
 					caret.select(kernel::Position(selection_.initialLine, selection_.initialWordColumns.second),
 						(i.base().tell().line == destination.line) ? i.base().tell() : kernel::Position(destination.line, 0));
@@ -589,7 +592,7 @@ namespace ascension {
 						|| (destination.line == selection_.initialLine
 							&& destination.offsetInLine > selection_.initialWordColumns.second)) {
 					text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
-						kernel::DocumentCharacterIterator(document, destination), text::AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, id);
+						kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 					++i;
 					caret.select(kernel::Position(selection_.initialLine, selection_.initialWordColumns.first),
 						(i.base().tell().line == destination.line) ?
@@ -899,19 +902,21 @@ namespace ascension {
 					const auto units(input.unitsToScroll());
 					assert(units != boost::none);
 					const graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset> offsets(
-						graphics::_x = graphics::geometry::dx(*units), graphics::_y = graphics::geometry::dy(*units));
+						graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(graphics::geometry::dx(*units)),
+						graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(graphics::geometry::dy(*units)));
 					viewport->scroll(offsets);
 					input.consume();
 				} else if(input.scrollType() == widgetapi::event::MouseWheelInput::WHEEL_BLOCK_SCROLL) {
 					const graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset> physicalPages(
-						graphics::_x = graphics::geometry::dx(input.wheelRotation()), graphics::_y = graphics::geometry::dy(input.wheelRotation()));
-					presentation::FlowRelativeTwoAxes<graphics::font::TextViewportSignedScrollOffset> abstractPages(
-						mapPhysicalToAbstract(viewer_->textRenderer().presentation().computeWritingMode(&viewer_->textRenderer()), physicalPages));
-					if(abstractPages.bpd() != 0) {
-						viewport->scrollBlockFlowPage(abstractPages.bpd());
-						abstractPages.bpd() = 0;
+						graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(graphics::geometry::dx(input.wheelRotation())),
+						graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(graphics::geometry::dy(input.wheelRotation())));
+					presentation::FlowRelativeTwoAxes<graphics::font::TextViewportSignedScrollOffset> flowRelativePages(
+						presentation::mapPhysicalToFlowRelative(viewer_->textRenderer().presentation().computeWritingMode(), physicalPages));
+					if(flowRelativePages.bpd() != 0) {
+						viewport->scrollBlockFlowPage(flowRelativePages.bpd());
+						flowRelativePages.bpd() = 0;
 					}
-					viewport->scroll(abstractPages);
+					viewport->scroll(flowRelativePages);
 					input.consume();
 				}
 #endif

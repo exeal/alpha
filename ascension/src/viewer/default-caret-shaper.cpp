@@ -105,17 +105,20 @@ namespace ascension {
 				if(advance == boost::none && (!caret.isOvertypeMode() || !isSelectionEmpty(caret)))
 					advance = systemDefinedCaretMeasure();
 				if(advance != boost::none) {
+					const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
 					presentation::FlowRelativeFourSides<std::int32_t> temp(
-						mapPhysicalToFlowRelative(layout->writingMode(), graphics::PhysicalFourSides<std::int32_t>(bounds)));
+						presentation::mapPhysicalToFlowRelative(writingMode, graphics::PhysicalFourSides<std::int32_t>(bounds)));
 					temp.end() = temp.start() + *advance;
-					boost::geometry::assign(bounds, graphics::geometry::make<graphics::Rectangle>(presentation::mapFlowRelativeToPhysical(layout->writingMode(), temp)));
+					boost::geometry::assign(bounds, graphics::geometry::make<graphics::Rectangle>(presentation::mapFlowRelativeToPhysical(writingMode, temp)));
 				}
 			} else
 				boost::geometry::assign_zero(bounds);
 
 			// create an image
 			Shape shape;
-			shape.image = createSolidCaretImage(graphics::geometry::size(bounds), boost::get_optional_value_or(color, graphics::Color::OPAQUE_BLACK));
+			shape.image = createSolidCaretImage(
+				static_cast<graphics::geometry::BasicDimension<std::uint32_t>>(graphics::geometry::size(bounds)),
+				boost::get_optional_value_or(color, graphics::Color::OPAQUE_BLACK));
 			boost::geometry::assign(shape.alignmentPoint, graphics::geometry::negate(graphics::geometry::topLeft(bounds)));
 			return std::move(shape);
 		}
