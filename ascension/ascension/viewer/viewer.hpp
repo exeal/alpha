@@ -114,8 +114,8 @@ namespace ascension {
 				>,
 #endif
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
-				public graphics::font::DefaultFontListener, public graphics::font::VisualLinesListener,
-				public graphics::font::TextViewportListener, public graphics::font::ComputedBlockFlowDirectionListener,
+				public graphics::font::VisualLinesListener, public graphics::font::TextViewportListener,
+				public graphics::font::ComputedBlockFlowDirectionListener,
 				private detail::MouseVanish<TextViewer>, public kernel::detail::PointCollection<VisualPoint> {
 		public:
 			/**
@@ -272,7 +272,7 @@ namespace ascension {
 
 			/// @name Geometries
 			/// @{
-			HitTestResult hitTest(const graphics::Point& pt) const;
+			virtual HitTestResult hitTest(const graphics::Point& p) const;
 			graphics::Rectangle textAreaAllocationRectangle() const BOOST_NOEXCEPT;
 			graphics::Rectangle textAreaContentRectangle() const BOOST_NOEXCEPT;
 			/// @}
@@ -295,12 +295,18 @@ namespace ascension {
 				const presentation::FlowRelativeTwoAxes<bool>& properties);
 
 		protected:
-			/// @name Overridable Caret Signals
+			/// @name Overridable @c Caret Signals
+			/// @{
 			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
 			virtual void matchBracketsChanged(const Caret& caret,
 				const boost::optional<std::pair<kernel::Position, kernel::Position>>& previouslyMatchedBrackets,
 				bool outsideOfView);
 			virtual void selectionShapeChanged(const Caret& caret);
+			/// @}
+
+			/// @ name Overridable @c TextRenderer Signals
+			/// @{
+			virtual void defaultFontChanged(const graphics::font::TextRenderer& textRenderer);
 			/// @}
 
 		private:
@@ -315,8 +321,6 @@ namespace ascension {
 			// kernel.DocumentRollbackListener
 			void documentUndoSequenceStarted(const kernel::Document& document) override;
 			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition) override;
-			// graphics.font.DefaultFontListener
-			void defaultFontChanged() BOOST_NOEXCEPT override;
 			// graphics.font.VisualLinesListener
 			void visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT override;
 			void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT override;
@@ -452,7 +456,8 @@ namespace ascension {
 			win32::com::SmartPointer<detail::AbstractAccessibleProxy> accessibleProxy_;
 #endif
 			boost::signals2::scoped_connection caretMotionConnection_,
-				matchBracketsChangedConnection_, selectionShapeChangedConnection_;
+				matchBracketsChangedConnection_, selectionShapeChangedConnection_,
+				defaultFontChangedConnection_;
 
 			// modes
 			struct ModeState {

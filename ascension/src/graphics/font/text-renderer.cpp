@@ -122,6 +122,14 @@ namespace ascension {
 			 * @c LineLayoutBuffer#deviceContext, @c ILayoutInformationProvider#layoutSettings, and
 			 * @c ILayoutInformationProvider#width methods are not defined (An internal extension
 			 * @c TextViewer#Renderer class implements these).
+			 *
+			 * <h3>The Default Font</h3>
+			 *
+			 * A @c TextRenderer holds an "Actual Value" of the font used to compute default text metrics. This font is
+			 * known as "Default Font" and be constructed based on the value of @c Presentation#computedTextRunStyle
+			 * method. You can get the default font by calling @c TextRenderer#defaultFont method. See also
+			 * @c TextRenderer#defaultFontChangedSignal method.
+			 *
 			 * @see TextLayout, LineLayoutBuffer, Presentation
 			 */
 
@@ -191,16 +199,6 @@ namespace ascension {
 			}
 
 			/**
-			 * Registers the default font selector listener.
-			 * @param listener The listener to be registered
-			 * @throw std#invalid_argument @a listener is already registered
-			 * @see #defaultFont
-			 */
-			void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
-				defaultFontListeners_.add(listener);
-			}
-
-			/**
 			 * Returns the distance from the baseline of the line @a from to the baseline of the line @a to in
 			 * block progression direction in user units.
 			 * @param lines The first and second lines
@@ -247,6 +245,11 @@ namespace ascension {
 				runStyles = presentation().computeTextRunStyles(line, lengthContext);
 			}
 
+			/// Returns the @c DefaultFontChangedSignal signal connector.
+			SignalConnector<TextRenderer::DefaultFontChangedSignal> TextRenderer::defaultFontChangedSignal() BOOST_NOEXCEPT {
+				return makeSignalConnector(defaultFontChangedSignal_);
+			}
+
 			/**
 			 * @fn ascension::graphics::font::TextRenderer::createLineLayout
 			 * Creates and returns the text layout for the specified line.
@@ -262,7 +265,7 @@ namespace ascension {
 
 			/// Returns the line relative alignment.
 			TextRenderer::LineRelativeAlignmentAxis TextRenderer::lineRelativeAlignment() const BOOST_NOEXCEPT {
-				const TextAlignment::value_type alignment(textAlignment().getOrInitial());
+				const TextAlignment alignment(textAlignment().getOrInitial());
 				switch(boost::native_value(alignment)) {
 					case font::TextAlignment::START:
 					case font::TextAlignment::END:
@@ -449,16 +452,6 @@ namespace ascension {
 				computedBlockFlowDirectionListeners_.remove(listener);
 			}
 
-			/**
-			 * Removes the default font selector listener.
-			 * @param listener The listener to be removed
-			 * @throw std#invalid_argument @a listener is not registered
-			 * @see #defaultFont
-			 */
-			void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
-				defaultFontListeners_.remove(listener);
-			}
-
 			/// @see GlobalTextStyleSwitch#setDirection
 			void TextRenderer::setDirection(Direction direction) {
 				direction_ = direction;
@@ -475,27 +468,6 @@ namespace ascension {
 					layouts().invalidate();
 					updateComputedBlockFlowDirectionChanged();
 				}
-			}
-
-			/**
-			 * Sets the new default font.
-			 * @param familyName The family name of the font
-			 * @param pointSize The size of the font in points
-			 */
-			void TextRenderer::setDefaultFont(const String& familyName, double pointSize) {
-				std::shared_ptr<const Font> newFont(fontCollection_.get(FontDescription(FontFamily(familyName), pointSize)));
-				assert(newFont.get() != nullptr);
-				std::swap(defaultFont_, newFont);
-				layouts().invalidate();
-#if 0
-				if(/*enablesDoubleBuffering_ &&*/ memoryBitmap_.get() != nullptr) {
-					BITMAP temp;
-					::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
-					if(temp.bmHeight != calculateMemoryBitmapSize(defaultFont()->metrics().linePitch()))
-						memoryBitmap_.reset();
-				}
-#endif
-				defaultFontListeners_.notify(&DefaultFontListener::defaultFontChanged);
 			}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -541,6 +513,41 @@ namespace ascension {
 				computedBlockFlowDirection_ = writingMode.blockFlowDirection;
 				computedBlockFlowDirectionListeners_.notify<presentation::BlockFlowDirection>(
 					&ComputedBlockFlowDirectionListener::computedBlockFlowDirectionChanged, used);
+			}
+
+			/// @internal Updates the @c defaultFont_.
+			inline void TextRenderer::updateDefaultFont() {
+				const auto& styles = presentation().computedTextRunStyle();
+				// TODO: Use ActualFontSpecification.
+				const FontProperties properties(
+					boost::fusion::at_key<presentation::styles::FontWeight>(styles),
+					boost::fusion::at_key<presentation::styles::FontStretch>(styles),
+					boost::fusion::at_key<presentation::styles::FontStyle>(styles));
+				// TODO: Replace with more suitable way...
+				const auto& fontFamilies = boost::fusion::at_key<presentation::styles::FontFamily>(styles);
+				String matchedFamily;
+				if(!fontFamilies.empty()) {
+					const auto i(findMatchingFontFamily(fontCollection_, fontFamilies));
+					if(i != boost::const_end(fontFamilies))
+						matchedFamily = *i;
+				}
+				const FontDescription description(
+					matchedFamily,
+					presentation::Points(boost::fusion::at_key<presentation::styles::FontSize>(styles)),
+					properties);
+				std::shared_ptr<const Font> newFont(fontCollection_.get(description));
+				assert(newFont.get() != nullptr);
+				std::swap(defaultFont_, newFont);
+				layouts().invalidate();
+#if 0
+				if(/*enablesDoubleBuffering_ &&*/ memoryBitmap_.get() != nullptr) {
+					BITMAP temp;
+					::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
+					if(temp.bmHeight != calculateMemoryBitmapSize(defaultFont()->metrics().linePitch()))
+						memoryBitmap_.reset();
+				}
+#endif
+				defaultFontChanged_(*this);
 			}
 
 			/// Returns the viewport.

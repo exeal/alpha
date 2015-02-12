@@ -145,7 +145,7 @@ namespace ascension {
 			document().removeListener(*this);
 			document().removeRollbackListener(*this);
 			textRenderer().removeComputedBlockFlowDirectionListener(*this);
-			textRenderer().removeDefaultFontListener(*this);
+			textRenderer().defaultFontChangedSignal().disconnect(defaultFontChangedConnection_);
 			textRenderer().layouts().removeVisualLinesListener(*this);
 			BOOST_FOREACH(VisualPoint* p, points_)
 				p->viewerDisposed();
@@ -209,13 +209,15 @@ namespace ascension {
 			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
 		}
 
-		/// @see DefaultFontListener#defaultFontChanged
-		void TextViewer::defaultFontChanged() BOOST_NOEXCEPT {
-			rulerPainter_->update();
+		/// @see TextRenderer#DefaultFontChangedSignal
+		void TextViewer::defaultFontChanged(const graphics::font::TextRenderer& textRenderer) {
+			if(&textRenderer == renderer_.get()) {
+//				rulerPainter_->update();
 #ifdef ASCENSION_USE_SYSTEM_CARET
-			caret().resetVisualization();
+				caret().resetVisualization();
 #endif
-			redrawLine(0, true);
+				redrawLine(0, true);
+			}
 		}
 
 		/// @see kernel#DocumentListener#documentAboutToBeChanged
@@ -254,9 +256,9 @@ namespace ascension {
 				}
 				freezeRegister_.resetLinesToRedraw(boost::irange(b, e));
 			}
-		//	invalidateLines(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
-			if(!isFrozen())
-				rulerPainter_->update();
+//			invalidateLines(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
+//			if(!isFrozen())
+//				rulerPainter_->update();
 		}
 
 		/// @see kernel#DocumentRollbackListener#documentUndoSequenceStarted
@@ -500,32 +502,32 @@ namespace ascension {
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer.viewport());
 				return *graphics::font::scrollableRange<Coordinate>(*viewport).end() - position - graphics::font::pageSize<Coordinate>(*viewport);
 			}
-			graphics::PhysicalTwoAxes<widgetapi::NativeScrollPosition>&& physicalScrollPosition(const TextViewer& textViewer) {
+			graphics::PhysicalTwoAxes<widgetapi::NativeScrollPosition> physicalScrollPosition(const TextViewer& textViewer) {
 				const graphics::font::TextRenderer& textRenderer = textViewer.textRenderer();
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer.viewport());
-				const presentation::WritingMode writingMode(textViewer.presentation().computeWritingMode(&textRenderer));
+				const presentation::WritingMode writingMode(textViewer.presentation().computeWritingMode());
 				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset> scrollPositions(viewport->scrollPositions());
-				graphics::PhysicalTwoAxes<widgetapi::NativeScrollPosition> result;
+				widgetapi::NativeScrollPosition x, y;
 				switch(writingMode.blockFlowDirection) {
 					case presentation::HORIZONTAL_TB:
-						result.x() = (writingMode.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
+						x = (writingMode.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
 							scrollPositions.ipd() : reverseScrollPosition<presentation::ReadingDirection>(textViewer, static_cast<widgetapi::NativeScrollPosition>(scrollPositions.ipd()));
-						result.y() = scrollPositions.bpd();
+						y = scrollPositions.bpd();
 						break;
 					case presentation::VERTICAL_RL:
-						result.x() = reverseScrollPosition<presentation::BlockFlowDirection>(textViewer, scrollPositions.bpd());
-						result.y() = scrollPositions.ipd();
+						x = reverseScrollPosition<presentation::BlockFlowDirection>(textViewer, scrollPositions.bpd());
+						y = scrollPositions.ipd();
 						break;
 					case presentation::VERTICAL_LR:
-						result.x() = scrollPositions.bpd();
-						result.y() = scrollPositions.ipd();
+						x = scrollPositions.bpd();
+						y = scrollPositions.ipd();
 						break;
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
-//				result.x() /= xScrollRate;
-//				result.y() /= yScrollRate;
-				return std::move(result);
+//				x /= xScrollRate;
+//				y /= yScrollRate;
+				return graphics::makePhysicalTwoAxes((graphics::_x = x, graphics::_y = y));
 			}
 		}
 
@@ -603,12 +605,12 @@ namespace ascension {
 			if(!boost::geometry::within(p, localBounds))
 				return OUT_OF_VIEWER;
 
-			const RulerStyles& rulerStyles = rulerPainter_->declaredStyles();
-			if(indicatorMargin(rulerStyles)->visible && boost::geometry::within(p, rulerPainter_->indicatorMarginAllocationRectangle()))
-				return INDICATOR_MARGIN;
-			else if(lineNumbers(rulerStyles)->visible && boost::geometry::within(p, rulerPainter_->lineNumbersAllocationRectangle()))
-				return LINE_NUMBERS;
-			else if(boost::geometry::within(p, textAreaContentRectangle()))
+//			const RulerStyles& rulerStyles = rulerPainter_->declaredStyles();
+//			if(indicatorMargin(rulerStyles)->visible && boost::geometry::within(p, rulerPainter_->indicatorMarginAllocationRectangle()))
+//				return INDICATOR_MARGIN;
+//			else if(lineNumbers(rulerStyles)->visible && boost::geometry::within(p, rulerPainter_->lineNumbersAllocationRectangle()))
+//				return LINE_NUMBERS;
+			if(boost::geometry::within(p, textAreaContentRectangle()))
 				return TEXT_AREA_CONTENT_RECTANGLE;
 			else {
 				assert(boost::geometry::within(p, textAreaAllocationRectangle()));
@@ -829,7 +831,7 @@ namespace ascension {
 			textRenderer().addComputedBlockFlowDirectionListener(*this);
 //			renderer_->addFontListener(*this);
 //			renderer_->addVisualLinesListener(*this);
-			rulerPainter_.reset(new detail::RulerPainter(*this));
+//			rulerPainter_.reset(new detail::RulerPainter(*this));
 
 			caret_.reset(new Caret(*this));
 			caretMotionConnection_ = caret().motionSignal().connect(
@@ -839,7 +841,7 @@ namespace ascension {
 			selectionShapeChangedConnection_ = caret().selectionShapeChangedSignal().connect(
 				std::bind(&TextViewer::selectionShapeChanged, this, std::placeholders::_1));
 	
-			renderer_->addDefaultFontListener(*this);
+			defaultFontChangedConnection_ = renderer_->defaultFontChangedSignal().connect();
 			renderer_->layouts().addVisualLinesListener(*this);
 
 			initializeNativeObjects();
@@ -896,7 +898,7 @@ namespace ascension {
 				using widgetapi::event::UserInput;
 				static kernel::Position(*const nextCharacterLocation)(const kernel::Point&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
 
-				const presentation::WritingMode writingMode(viewer.presentation().computeWritingMode(&viewer.textRenderer()));
+				const presentation::WritingMode writingMode(viewer.presentation().computeWritingMode());
 				const FlowRelativeDirection abstractDirection = mapPhysicalToFlowRelative(writingMode, direction);
 				const Direction logicalDirection = (abstractDirection == FlowRelativeDirection::AFTER || abstractDirection == FlowRelativeDirection::END) ? Direction::FORWARD : Direction::BACKWARD;
 				switch(boost::native_value(abstractDirection)) {
@@ -1472,8 +1474,8 @@ namespace ascension {
 
 //			Timer tm(L"TextViewer.paint");
 
-			// paint the ruler
-			rulerPainter_->paint(context);
+//			// paint the ruler
+//			rulerPainter_->paint(context);
 
 			// paint the text area
 			textRenderer().paint(context);
@@ -1532,7 +1534,7 @@ namespace ascension {
 #endif
 
 			using graphics::Scalar;
-			const presentation::WritingMode writingMode(presentation().computeWritingMode(&textRenderer()));
+			const presentation::WritingMode writingMode(presentation().computeWritingMode());
 			std::array<Scalar, 2> beforeAndAfter;	// in viewport (distances from before-edge of the viewport)
 			graphics::font::BaselineIterator baseline(*textRenderer().viewport(), graphics::font::VisualLine(*lines.begin(), 0));
 			std::get<0>(beforeAndAfter) = *baseline;
