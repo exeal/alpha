@@ -130,7 +130,7 @@ namespace ascension {
 		 *       use large memory and may crash when compile the client codes.
 		 */
 		template<template<typename> class Transformation>
-		struct BasicTextRunStyle {
+		struct BasicTextRunStyle : private boost::equality_comparable<BasicTextRunStyle<Transformation>> {
 			typename Transformation<TextRunStyleParts::Colors>::type colors;
 			typename Transformation<TextRunStyleParts::BackgroundsAndBorders>::type backgroundsAndBorders;
 			typename Transformation<TextRunStyleParts::BasicBoxModel>::type basicBoxModel;
@@ -140,6 +140,18 @@ namespace ascension {
 			typename Transformation<TextRunStyleParts::TextDecoration>::type textDecoration;
 			typename Transformation<TextRunStyleParts::WritingModes>::type writingModes;
 			typename Transformation<TextRunStyleParts::Auxiliary>::type auxiliary;
+
+			bool operator==(const BasicTextRunStyle<Transformation>& other) const {
+				return colors == other.colors
+					&& backgroundsAndBorders == other.backgroundsAndBorders
+					&& basicBoxModel == other.basicBoxModel
+					&& fonts == other.fonts
+					&& inlineLayout == other.inlineLayout
+					&& text == other.text
+					&& textDecoration == other.textDecoration
+					&& writingModes == other.writingModes
+					&& auxiliary == other.auxiliary;
+			}
 		};
 
 		typedef BasicTextRunStyle<boost::mpl::identity> TextRunStyle;
@@ -173,7 +185,6 @@ namespace ascension {
 
 		boost::flyweight<styles::ComputedValue<TextRunStyle>::type> compute(
 			const styles::SpecifiedValue<TextRunStyle>::type& specifiedValues,
-			const styles::Length::Context& context,
 			const styles::ComputedValue<TextRunStyle>::type& parentComputedValues);
 		std::size_t hash_value(const styles::ComputedValue<TextRunStyle>::type& style);
 	}

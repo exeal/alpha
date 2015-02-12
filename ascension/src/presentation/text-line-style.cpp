@@ -13,12 +13,60 @@
 namespace ascension {
 	namespace presentation {
 		namespace {
+#if 1
+			inline void computeLineHeight(
+					const styles::SpecifiedValue<styles::LineHeight>::type& specifiedValue,
+					styles::ComputedValue<styles::LineHeight>::type& computedValue) {
+				if(const styles::LineHeightEnums* const keyword = boost::get<styles::LineHeightEnums>(&specifiedValue)) {
+					if(*keyword == styles::LineHeightEnums::NONE) {
+						computedValue = std::make_tuple();
+						return;
+					}
+				} else if(const styles::Length* const length = boost::get<styles::Length>(&specifiedValue)) {
+					computedValue = *length;
+					return;
+				} else if(const styles::Number* const number = boost::get<styles::Number>(&specifiedValue)) {
+					computedValue = *number;
+					return;
+				} else if(const styles::Percentage* const percentage = boost::get<styles::Percentage>(&specifiedValue)) {
+					computedValue = *percentage;
+					return;
+				}
+				computedValue = static_cast<styles::Number>(1.1f);	// [CSS3-INLINE] recommends between 1.0 to 1.2 for 'normal'
+			}
+#else
+			inline void computeLineHeight(const styles::SpecifiedValue<LineHeight>::type& specifiedValue,
+					const Pixels& computedFontSize, styles::ComputedValue<LineHeight>::type& computedValue) {
+				if(const LineHeightEnums* const keyword = boost::get<LineHeightEnums>(&specifiedValue)) {
+					if(*keyword == LineHeightEnums::NONE) {
+						computedValue = std::make_tuple();
+						return;
+					}
+				} else if(const Length* const length = boost::get<Length>(&specifiedValue)) {
+					if(Length::isValidUnit(length->unitType()) && length->valueInSpecifiedUnits() >= 0) {
+						computedValue = *length;
+						return;
+					}
+				} else if(const Number* const number = boost::get<Number>(&specifiedValue)) {
+					if(*number >= 0) {
+						computedValue = *number;
+						return;
+					}
+				} else if(const Percentage* const percentage = boost::get<Percentage>(&specifiedValue)) {
+					if(*percentage >= 0) {
+						computedValue = computedFontSize * boost::rational_cast<Number>(*percentage);
+						return;
+					}
+				}
+				computedValue = static_cast<Number>(1.1f);	// [CSS3-INLINE] recommends between 1.0 to 1.2 for 'normal'
+			}
+
 			inline void computeBaselineShift(const styles::SpecifiedValue<styles::BaselineShift>::type& specifiedValue,
 					const styles::Length::Context& lengthContext, styles::ComputedValue<styles::BaselineShift>::type& computedValue) {
 				// TODO: [CSS3INLINE] does not describe the computation for other than <percentage>.
 				computedValue = Pixels::zero();
 			}
-
+#endif
 			void computeTabSize(const styles::SpecifiedValue<styles::TabSize>::type& specifiedValue,
 					const styles::Length::Context& context, styles::ComputedValue<styles::TabSize>::type& computedValue) {
 				if(const styles::Integer* const integer = boost::get<styles::Integer>(&specifiedValue)) {
@@ -43,7 +91,7 @@ namespace ascension {
 					illegal = false;
 				} else if(const styles::Length* const length = boost::get<styles::Length>(&specifiedValue.length)) {
 					if(styles::Length::isValidUnit(length->unitType())) {
-						computedValue.length = Pixels(length->value(context));
+						computedValue.length = *length;
 						illegal = false;
 					}
 				}
@@ -59,43 +107,31 @@ namespace ascension {
 		/**
 		 * Computes @c TextLineStyle.
 		 * @param specifiedValues The "Specified Value"s to compute
-		 * @param context The length context
 		 * @return The "Computed Value"s
 		 */
-		boost::flyweight<styles::ComputedValue<TextLineStyle>::type> compute(
-				const styles::SpecifiedValue<TextLineStyle>::type& specifiedValues, const styles::Length::Context& context) {
+		boost::flyweight<styles::ComputedValue<TextLineStyle>::type> compute(const styles::SpecifiedValue<TextLineStyle>::type& specifiedValues) {
 			styles::ComputedValue<TextLineStyle>::type computedValues;
 			styles::computeAsSpecified<styles::Direction>(specifiedValues, computedValues);
 //			styles::computeAsSpecified<styles::UnicodeBidi>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::TextOrientation>(specifiedValues, computedValues);
 
-			styles::detail::computeLineHeight(
+			computeLineHeight(
 				boost::fusion::at_key<styles::LineHeight>(specifiedValues),
-				Pixels(styles::Length(1, styles::Length::EM_HEIGHT).value(context)),
 				boost::fusion::at_key<styles::LineHeight>(computedValues));
 			styles::computeAsSpecified<styles::LineBoxContain>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::DominantBaseline>(specifiedValues, computedValues);
-			computeBaselineShift(
-				boost::fusion::at_key<styles::BaselineShift>(specifiedValues),
-				context,
-				boost::fusion::at_key<styles::BaselineShift>(computedValues));
+			styles::computeAsSpecified<styles::BaselineShift>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::InlineBoxAlignment>(specifiedValues, computedValues);
 
 			styles::computeAsSpecified<styles::WhiteSpace>(specifiedValues, computedValues);
-			computeTabSize(
-				boost::fusion::at_key<styles::TabSize>(specifiedValues),
-				context,
-				boost::fusion::at_key<styles::TabSize>(computedValues));
+			styles::computeAsSpecified<styles::TabSize>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::LineBreak>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::WordBreak>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::OverflowWrap>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::TextAlignment>(specifiedValues, computedValues);	// TODO: Handle 'match-parent' keyword correctly.
 			styles::computeAsSpecified<styles::TextAlignmentLast>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::TextJustification>(specifiedValues, computedValues);
-			computeTextIndent(
-				boost::fusion::at_key<styles::TextIndent>(specifiedValues),
-				context,
-				boost::fusion::at_key<styles::TextIndent>(computedValues));
+			styles::computeAsSpecified<styles::TextIndent>(specifiedValues, computedValues);
 			styles::computeAsSpecified<styles::HangingPunctuation>(specifiedValues, computedValues);
 
 //			styles::computeAsSpecified<styles::Measure>(specifiedValues, computedValues);

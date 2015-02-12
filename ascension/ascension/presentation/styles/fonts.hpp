@@ -40,7 +40,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Complex<
-					std::vector<graphics::font::FontFamily>
+					std::vector<String>
 				>, Inherited<true>
 			> FontFamily;
 
@@ -99,14 +99,8 @@ namespace ascension {
 					>,
 					BOOST_SCOPED_ENUM_NATIVE(AbsoluteFontSize), AbsoluteFontSize::MEDIUM
 				>,
-				Inherited<true>,
-				Pixels
+				Inherited<true>
 			> FontSize;
-
-			template<>
-			inline SpecifiedValue<FontSize>::type uncompute<FontSize>(const ComputedValue<FontSize>::type& computedValue) {
-				return Length(computedValue.value(), Length::PIXELS);
-			}
 
 			/**
 			 * [Copied from CSS3] For any given font size, the apparent size and legibility of text varies across
