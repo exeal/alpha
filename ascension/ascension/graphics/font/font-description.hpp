@@ -13,6 +13,9 @@
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
 #	include <pangomm/fontdescription.h>
 #endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDI) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDIPLUS)
+#	include <ascension/win32/windows.hpp>
+#endif
 
 namespace ascension {
 	namespace graphics {
@@ -29,7 +32,7 @@ namespace ascension {
 				 * @param properties The other properties
 				 * @throw std#underflow_error @a pointSize is negative
 				 */
-				FontDescription(const FontFamily& family,
+				FontDescription(const String& family,
 						double pointSize, const FontProperties& properties = FontProperties())
 						: family_(family), pointSize_(pointSize), properties_(properties) {
 					if(pointSize < 0.0)
@@ -42,7 +45,7 @@ namespace ascension {
 						&& properties_ == other.properties_;
 				}
 				/// Returns the font family.
-				const FontFamily& family() const BOOST_NOEXCEPT {return family_;}
+				const String& family() const BOOST_NOEXCEPT {return family_;}
 				/// Returns the size in points.
 				double pointSize() const BOOST_NOEXCEPT {return pointSize_;}
 				/// Returns the other properties.
@@ -53,7 +56,7 @@ namespace ascension {
 				 * Sets the family name.
 				 * @param family The new font family
 				 */
-				FontDescription& setFamilyName(const FontFamily& family) {
+				FontDescription& setFamily(const String& family) {
 					return (family_ = family), *this;
 				}
 				/**
@@ -69,7 +72,7 @@ namespace ascension {
 				}
 
 			private:
-				FontFamily family_;
+				String family_;
 				double pointSize_;
 				FontProperties properties_;
 			};
@@ -77,7 +80,7 @@ namespace ascension {
 			/// Specialization of @c boost#hash_value function template for @c FontDescription.
 			inline std::size_t hash_value(const FontDescription& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
-				boost::hash_combine(seed, object.family().name());
+				boost::hash_combine(seed, object.family());
 				boost::hash_combine(seed, object.pointSize());
 				boost::hash_combine(seed, object.properties());
 				return seed;

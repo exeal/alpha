@@ -10,9 +10,14 @@
 #ifndef ASCENSION_FONT_PROPERTIES_HPP
 #define ASCENSION_FONT_PROPERTIES_HPP
 
-#include <ascension/graphics/font/font-family.hpp>
+#include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <boost/functional/hash.hpp>
+#include <boost/operators.hpp>
+#include <cmath>		// std.floor
+#include <cstdint>
 #include <functional>	// std.hash
+#include <iosfwd>		// std.char_traits
+#include <stdexcept>
 
 namespace ascension {
 	namespace graphics {
@@ -205,6 +210,7 @@ namespace ascension {
 //				boost::hash_combine<int>(seed, boost::native_value(object.orientation));
 				return seed;
 			}
+		}
 	}
 }
 

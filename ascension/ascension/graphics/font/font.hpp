@@ -20,6 +20,9 @@
 #	include <unordered_map>
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #include <vector>
+#if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
+#	include <ascension/win32/handle.hpp>
+#endif
 
 namespace ascension {
 
