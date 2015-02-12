@@ -2,7 +2,7 @@
  * @file presentation.cpp
  * @author exeal
  * @date 2003-2007 (was LineLayout.cpp)
- * @date 2007-2014
+ * @date 2007-2015
  */
 
 #include <ascension/corelib/range.hpp>
@@ -56,10 +56,24 @@ namespace ascension {
 		};
 
 		/**
+		 * @class ascension::presentation::Presentation
+		 * A bridge between the document and visual styled text.
+		 *
+		 * <h3>The Default (Reading) Direction</h3>
+		 *
+		 * This value is used only when the all other rules declared @c styles#Direction style property as 'unset'. All
+		 * other rules take precedence over the default direction. You can set this value by calling
+		 * @c #setDefaultDirection method. The default value is @c ASCENSION_DEFAULT_TEXT_READING_DIRECTION.
+		 *
+		 * @note This class is not intended to be subclassed.
+		 * @see kernel#Document, kernel#DocumentPartitioner
+		 */
+
+		/**
 		 * Constructor.
 		 * @param document The target document
 		 */
-		Presentation::Presentation(kernel::Document& document) BOOST_NOEXCEPT : document_(document) {
+		Presentation::Presentation(kernel::Document& document) BOOST_NOEXCEPT : document_(document), defaultDirection_(ASCENSION_DEFAULT_TEXT_READING_DIRECTION) {
 			setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle>());
 			document_.addListener(*this);
 		}
@@ -102,30 +116,44 @@ namespace ascension {
 		}
 
 		namespace {
-			template<typename Styles>
+			template<typename Styles, typename ParentComputedValues>
 			struct SpecifiedValuesFromCascadedValues {
 				SpecifiedValuesFromCascadedValues(
 					const typename styles::DeclaredValue<Styles>::type& cascadedValues,
-					const typename styles::ComputedValue<Styles>::type& parentComputedValues,
+					const ParentComputedValues& parentComputedValues,
 					typename styles::SpecifiedValue<Styles>::type& specifiedValues) :
 					cascadedValues(cascadedValues), parentComputedValues(parentComputedValues), specifiedValues(specifiedValues) {}
 				template<typename Property, typename SpecifiedValue>
 				void operator()(boost::fusion::pair<Property, SpecifiedValue>& p) const {
+					return handle<Property, SpecifiedValue, ParentComputedValues>(p);
+				}
+				const typename styles::DeclaredValue<Styles>::type& cascadedValues;
+				const ParentComputedValues& parentComputedValues;
+				mutable typename styles::SpecifiedValue<Styles>::type& specifiedValues;	// mutable because of boost.fusion.for_each
+			private:
+				template<typename Property, typename SpecifiedValue, typename P>
+				void handle(boost::fusion::pair<Property, SpecifiedValue>& p,
+						typename std::enable_if<!std::is_same<P, styles::HandleAsRoot>::value>::type* = nullptr) const {
 					return styles::specifiedValueFromCascadedValue<Property>(
 						boost::fusion::at_key<Property>(cascadedValues),
 						boost::fusion::at_key<Property>(parentComputedValues), p.second);
 				}
-				const typename styles::DeclaredValue<Styles>::type& cascadedValues;
-				const typename styles::ComputedValue<Styles>::type& parentComputedValues;
-				mutable typename styles::SpecifiedValue<Styles>::type& specifiedValues;	// mutable because of boost.fusion.for_each
+				template<typename Property, typename SpecifiedValue, typename P>
+				void handle(boost::fusion::pair<Property, SpecifiedValue>& p,
+						typename std::enable_if<std::is_same<P, styles::HandleAsRoot>::value>::type* = nullptr) const {
+					return styles::specifiedValueFromCascadedValue<Property>(
+						boost::fusion::at_key<Property>(cascadedValues), styles::HANDLE_AS_ROOT, p.second);
+				}
 			};
 
-			template<typename Styles>
-			void specifiedValuesFromCascadedValues(
+			template<typename Styles, typename ParentComputedValues>
+			inline void specifiedValuesFromCascadedValues(
 					const typename styles::DeclaredValue<Styles>::type& cascadedValues,
-					const typename styles::ComputedValue<Styles>::type& parentComputedValues,
+					const ParentComputedValues& parentComputedValues,
 					typename styles::SpecifiedValue<Styles>::type& specifiedValues) {
-				const SpecifiedValuesFromCascadedValues<Styles> compressor(cascadedValues, parentComputedValues, specifiedValues);
+				static_assert(std::is_same<ParentComputedValues, typename styles::ComputedValue<Styles>::type>::value
+					|| std::is_same<typename std::decay<ParentComputedValues>::type, styles::HandleAsRoot>::value, "");
+				const SpecifiedValuesFromCascadedValues<Styles, ParentComputedValues> compressor(cascadedValues, parentComputedValues, specifiedValues);
 				boost::fusion::for_each(specifiedValues, compressor);
 			}
 		}
@@ -133,13 +161,11 @@ namespace ascension {
 		/**
 		 * Returns the style of the specified text line.
 		 * @param line The line number
-		 * @param lengthContext 
 		 * @param[out] result The computed text line style
 		 * @throw BadPositionException @a line is outside of the document
 		 * @throw NullPointerException Internal @c Length#value call may throw this exception
 		 */
-		void Presentation::computeTextLineStyle(Index line,
-				const styles::Length::Context& lengthContext, ComputedTextLineStyle& result) const {
+		void Presentation::computeTextLineStyle(Index line, ComputedTextLineStyle& result) const {
 			if(line >= document_.numberOfLines())
 				throw kernel::BadPositionException(kernel::Position(line, 0));
 
@@ -156,9 +182,9 @@ namespace ascension {
 		namespace {		
 			class ComputedStyledTextRunIteratorImpl : public ComputedStyledTextRunIterator {
 			public:
-				ComputedStyledTextRunIteratorImpl(std::unique_ptr<DeclaredStyledTextRunIterator> declaration,
-						const styles::Length::Context& context, const ComputedTextRunStyle& parentComputedStyle)
-						: declaration_(std::move(declaration)), context_(context), parentComputedStyle_(parentComputedStyle) {
+				ComputedStyledTextRunIteratorImpl(
+						std::unique_ptr<DeclaredStyledTextRunIterator> declaration, const ComputedTextRunStyle& parentComputedStyle)
+						: declaration_(std::move(declaration)), parentComputedStyle_(parentComputedStyle) {
 				}
 				// ComputedStyledTextRunIterator
 				bool isDone() const override BOOST_NOEXCEPT {
@@ -179,32 +205,30 @@ namespace ascension {
 #endif
 					SpecifiedTextRunStyle specified;
 //					specifiedValuesFromCascadedValues<TextRunStyle>(cascaded, parentComputedStyle_, specified);
-					return compute(specified, context_, parentComputedStyle_);
+					return compute(specified, parentComputedStyle_);
 				}
 
 			private:
 				std::unique_ptr<DeclaredStyledTextRunIterator> declaration_;
-				const styles::Length::Context& context_;
 				const ComputedTextRunStyle& parentComputedStyle_;
 			};
 		}
 
 		/**
 		 * Returns the styles of the text runs in the specified line.
-		 * @param line The line
-		 * @param lengthContext 
+		 * @param line The line 
 		 * @return An iterator enumerates the styles of the text runs in the line, or @c null if the line has no styled
 		 *         text runs
 		 * @throw BadPositionException @a line is outside of the document
 		 */
-		std::unique_ptr<ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line, const styles::Length::Context& lengthContext) const {
+		std::unique_ptr<ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line) const {
 			if(line >= document_.numberOfLines())
 				throw kernel::BadPositionException(kernel::Position(line, 0));
 			if(textRunStyleDeclarator_.get() != nullptr) {
 				std::unique_ptr<DeclaredStyledTextRunIterator> declaration(textRunStyleDeclarator_->declareTextRunStyle(line));
 				if(declaration.get() != nullptr)
 					return std::unique_ptr<ComputedStyledTextRunIterator>(
-						new ComputedStyledTextRunIteratorImpl(std::move(declaration), lengthContext, computedStyles_->forRuns.get()));
+						new ComputedStyledTextRunIteratorImpl(std::move(declaration), computedStyles_->forRuns.get()));
 			}
 			return std::unique_ptr<ComputedStyledTextRunIterator>();
 		}
@@ -257,8 +281,8 @@ namespace ascension {
 					},
 					specifiedTextOrientation);
 
-				styles::ComputedValue<styles::Direction>::type computedDirection(styles::computeAsSpecified<styles::Direction>(specifiedDirection));	// TODO: compute as specified
-				styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(styles::computeAsSpecified<styles::TextOrientation>(specifiedTextOrientation));	// TODO: compute as specified
+				styles::ComputedValue<styles::Direction>::type computedDirection(styles::computeAsSpecified<styles::Direction>(specifiedDirection));
+				styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(styles::computeAsSpecified<styles::TextOrientation>(specifiedTextOrientation));
 				return WritingMode(computedDirection, writingMode, computedTextOrientation);
 			}		
 		}
@@ -378,6 +402,15 @@ namespace ascension {
 				}
 			}
 		}
+
+		/**
+		 * Sets the default direction.
+		 */
+		void Presentation::setDefaultDirection(ReadingDirection direction) {
+			if(direction != defaultDirection_) {
+				defaultDirection_ = direction;
+			}
+		}
 		
 		/**
 		 * Sets the hyperlink detector.
@@ -411,29 +444,38 @@ namespace ascension {
 		 * @see #declaredTextToplevelStyle, ComputedTextToplevelStyleListener
 		 */
 		void Presentation::setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle> newStyle) {
-			std::shared_ptr<const DeclaredTextToplevelStyle> newlyDeclared = (newStyle.get() != nullptr) ? newStyle
+			std::shared_ptr<const DeclaredTextToplevelStyle> newlyDeclaredToplevelStyles = (newStyle.get() != nullptr) ? newStyle
 				: std::shared_ptr<const DeclaredTextToplevelStyle>(&DeclaredTextToplevelStyle::unsetInstance(), boost::null_deleter());
 #if 0
-			const DeclaredTextToplevelStyle& newlyCascaded = styles::cascade(newlyDeclared);
+			const DeclaredTextToplevelStyle& newlyCascadedToplevelStyles = styles::cascade(newlyDeclaredToplevelStyles);
 #else
-			const DeclaredTextToplevelStyle& newlyCascaded = *newlyDeclared;
+			const DeclaredTextToplevelStyle& newlyCascadedToplevelStyles = *newlyDeclaredToplevelStyles;
 #endif
 
-			const auto& cascadedWritingMode(boost::fusion::at_key<styles::WritingMode>(newlyCascaded));
+			const auto& cascadedWritingMode(boost::fusion::at_key<styles::WritingMode>(newlyCascadedToplevelStyles));
 			static_assert(!std::is_same<std::decay<decltype(cascadedWritingMode)>::type, boost::mpl::void_>::value, "");
-			SpecifiedTextToplevelStyle newlySpecified;
-			auto& specifiedWritingMode(boost::fusion::at_key<styles::WritingMode>(newlySpecified));
+			SpecifiedTextToplevelStyle newlySpecifiedToplevelStyles;
+			auto& specifiedWritingMode(boost::fusion::at_key<styles::WritingMode>(newlySpecifiedToplevelStyles));
 			static_assert(!std::is_same<std::decay<decltype(specifiedWritingMode)>::type, boost::mpl::void_>::value, "");
 			styles::specifiedValueFromCascadedValue<styles::WritingMode>(cascadedWritingMode, styles::HANDLE_AS_ROOT, specifiedWritingMode);
-			boost::flyweight<ComputedTextToplevelStyle> newlyComputed(compute(newlySpecified));
+			boost::flyweight<ComputedTextToplevelStyle> newlyComputedToplevelStyles(compute(newlySpecifiedToplevelStyles));
+
+#if 0
+			const DeclaredTextLineStyle& newlyCascadedLineStyles = styles::cascade(newlyDeclaredToplevelStyles->linesStyle);
+#else
+			const DeclaredTextLineStyle& newlyCascadedLineStyles = *newlyDeclaredToplevelStyles->linesStyle();
+#endif
+			styles::SpecifiedValue<TextLineStyle>::type newlySpecifiedLineStyles;
+			specifiedValuesFromCascadedValues<TextLineStyle>(newlyCascadedLineStyles, styles::HANDLE_AS_ROOT, newlySpecifiedLineStyles);
+			boost::flyweight<styles::ComputedValue<TextLineStyle>::type> newlyComputedLineStyles(compute(newlySpecifiedLineStyles));
 
 			// commit
 			std::shared_ptr<const DeclaredTextToplevelStyle> previouslyDeclared(declaredTextToplevelStyle_);
 			boost::flyweight<ComputedTextToplevelStyle> previouslyComputed(computedStyles_->forToplevel);
 			using boost::swap;
 			using std::swap;
-			swap(newlyDeclared, declaredTextToplevelStyle_);
-			swap(newlyComputed, computedStyles_->forToplevel);
+			swap(newlyDeclaredToplevelStyles, declaredTextToplevelStyle_);
+			swap(newlyComputedToplevelStyles, computedStyles_->forToplevel);
 			if(previouslyDeclared.get() != nullptr)
 				computedTextToplevelStyleListeners_.notify
 					<std::shared_ptr<const DeclaredTextToplevelStyle>, boost::flyweight<ComputedTextToplevelStyle>>(
