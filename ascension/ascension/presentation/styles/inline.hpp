@@ -87,7 +87,7 @@ namespace ascension {
 				boost::variant<
 					Number,			// for 'normal' and <number>
 					Length,			// for <length>
-					Pixels,			// for <percentage>
+					Percentage,		// for <percentage>
 					std::tuple<>	// for 'none' keyword
 				>
 			> LineHeight;
@@ -98,8 +98,8 @@ namespace ascension {
 					return *number;
 				else if(const Length* const length = boost::get<Length>(&computedValue))
 					return *length;
-				else if(const Pixels* const pixels = boost::get<Pixels>(&computedValue))
-					return Length(pixels->value(), Length::PIXELS);
+				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
+					return *percentage;
 				else if(const std::tuple<>* const none = boost::get<std::tuple<>>(&computedValue))
 					return LineHeightEnums::NONE;
 				else
@@ -155,14 +155,9 @@ namespace ascension {
 					boost::variant<BOOST_SCOPED_ENUM_NATIVE(AlignmentAdjustEnums), Percentage, Length>,
 					BOOST_SCOPED_ENUM_NATIVE(AlignmentAdjustEnums), AlignmentAdjustEnums::AUTO
 				>,
-				Inherited<false>,
-				Pixels	// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
+				Inherited<false>
+				// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
 			> AlignmentAdjust;
-
-			template<>			
-			inline SpecifiedValue<AlignmentAdjust>::type uncompute<AlignmentAdjust>(const ComputedValue<AlignmentAdjust>::type& computedValue) {
-				return Length(computedValue.value(), Length::PIXELS);
-			}
 
 			/// Enumerated values for @c BaselineShift. The documentation of the members are copied from CSS 3.
 			ASCENSION_SCOPED_ENUMS_BEGIN(BaselineShiftEnums)
@@ -186,14 +181,9 @@ namespace ascension {
 					boost::variant<BOOST_SCOPED_ENUM_NATIVE(BaselineShiftEnums), Percentage, Length>,
 					BOOST_SCOPED_ENUM_NATIVE(BaselineShiftEnums), BaselineShiftEnums::BASELINE
 				>,
-				Inherited<false>,
-				Pixels	// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
+				Inherited<false>
+				// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
 			> BaselineShift;
-
-			template<>
-			inline SpecifiedValue<BaselineShift>::type uncompute<BaselineShift>(const ComputedValue<BaselineShift>::type& computedValue) {
-				return Length(computedValue.value(), Length::PIXELS);
-			}
 
 			/// Enumerated values for @c InlineBoxAlignment. The documentation of the members are copied from CSS 3.
 			ASCENSION_SCOPED_ENUMS_BEGIN(InlineBoxAlignmentEnums)
@@ -216,34 +206,6 @@ namespace ascension {
 				>, Inherited<false>
 			> InlineBoxAlignment;
 			/// @}
-
-			namespace detail {
-				inline void computeLineHeight(const SpecifiedValue<LineHeight>::type& specifiedValue,
-						const Pixels& computedFontSize, ComputedValue<LineHeight>::type& computedValue) {
-					if(const LineHeightEnums* const keyword = boost::get<LineHeightEnums>(&specifiedValue)) {
-						if(*keyword == LineHeightEnums::NONE) {
-							computedValue = std::make_tuple();
-							return;
-						}
-					} else if(const Length* const length = boost::get<Length>(&specifiedValue)) {
-						if(Length::isValidUnit(length->unitType()) && length->valueInSpecifiedUnits() >= 0) {
-							computedValue = *length;
-							return;
-						}
-					} else if(const Number* const number = boost::get<Number>(&specifiedValue)) {
-						if(*number >= 0) {
-							computedValue = *number;
-							return;
-						}
-					} else if(const Percentage* const percentage = boost::get<Percentage>(&specifiedValue)) {
-						if(*percentage >= 0) {
-							computedValue = computedFontSize * boost::rational_cast<Number>(*percentage);
-							return;
-						}
-					}
-					computedValue = static_cast<Number>(1.1f);	// [CSS3-INLINE] recommends between 1.0 to 1.2 for 'normal'
-				}
-			}
 		}
 	}
 }

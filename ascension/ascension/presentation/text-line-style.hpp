@@ -105,7 +105,7 @@ namespace ascension {
 		}
 
 		boost::flyweight<styles::ComputedValue<TextLineStyle>::type> compute(
-			const styles::SpecifiedValue<TextLineStyle>::type& specifiedValues, const styles::Length::Context& context);
+			const styles::SpecifiedValue<TextLineStyle>::type& specifiedValues);
 		std::size_t hash_value(const styles::ComputedValue<TextLineStyle>::type& style);
 	}
 } // namespace ascension.presentation

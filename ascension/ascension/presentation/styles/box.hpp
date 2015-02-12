@@ -43,13 +43,13 @@ namespace ascension {
 					Length, 0
 				>,
 				Inherited<false>,
-				boost::variant<Pixels, Percentage, std::tuple<>>
+				boost::variant<Length, Percentage, std::tuple<>>
 			> PaddingSide;
 
 			template<>			
 			inline SpecifiedValue<PaddingSide>::type uncompute<PaddingSide>(const ComputedValue<PaddingSide>::type& computedValue) {
-				if(const Pixels* const pixels = boost::get<Pixels>(&computedValue))
-					return Length(pixels->value(), Length::PIXELS);
+				if(const Length* const length = boost::get<Length>(&computedValue))
+					return *length;
 				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
 					return *percentage;
 				else if(const std::tuple<>* const autoValue = boost::get<std::tuple<>>(&computedValue))
@@ -79,13 +79,13 @@ namespace ascension {
 					Length, 0
 				>,
 				Inherited<false>,
-				boost::variant<Pixels, Percentage, std::tuple<>>
+				boost::variant<Length, Percentage, std::tuple<>>
 			> MarginSide;
 
 			template<>			
 			inline SpecifiedValue<MarginSide>::type uncompute<MarginSide>(const ComputedValue<MarginSide>::type& computedValue) {
-				if(const Pixels* const pixels = boost::get<Pixels>(&computedValue))
-					return Length(pixels->value(), Length::PIXELS);
+				if(const Length* const length = boost::get<Length>(&computedValue))
+					return *length;
 				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
 					return *percentage;
 				else if(const std::tuple<>* const autoValue = boost::get<std::tuple<>>(&computedValue))
@@ -104,21 +104,8 @@ namespace ascension {
 					boost::variant<Length, Percentage, std::tuple<>>,
 					boost::mpl::int_<2>
 				>,
-				Inherited<false>,
-				boost::variant<Pixels, Percentage, std::tuple<>>
+				Inherited<false>
 			> Measure;
-
-			template<>			
-			inline SpecifiedValue<Measure>::type uncompute<Measure>(const ComputedValue<Measure>::type& computedValue) {
-				if(const Pixels* const pixels = boost::get<Pixels>(&computedValue))
-					return Length(pixels->value(), Length::PIXELS);
-				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
-					return *percentage;
-				else if(const std::tuple<>* const autoValue = boost::get<std::tuple<>>(&computedValue))
-					return std::make_tuple();
-				else
-					throw UnknownValueException("computedValue");
-			}
 			/// @}
 		}
 	}

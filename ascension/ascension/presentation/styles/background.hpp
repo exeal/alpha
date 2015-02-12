@@ -130,8 +130,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Complex<Length, &detail::makeMediumBorderWidth>,
-				Inherited<false>,
-				Pixels
+				Inherited<false>
 			> BorderWidth;
 
 			/**
