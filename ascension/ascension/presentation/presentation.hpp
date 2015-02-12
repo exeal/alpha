@@ -3,7 +3,7 @@
  * Provides classes define appearance and presentation of a text editor user interface.
  * @author exeal
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2014
+ * @date 2006-2015
  */
 
 #ifndef ASCENSION_PRESENTATION_HPP
@@ -11,7 +11,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/kernel/document.hpp>
-#include <ascension/presentation/styles/length.hpp>	// Length.Context
+#include <ascension/presentation/writing-mode.hpp>
 #include <boost/core/noncopyable.hpp>
 #include <boost/flyweight.hpp>
 #include <boost/optional.hpp>
@@ -104,18 +104,12 @@ namespace ascension {
 		class DeclaredTextToplevelStyle;
 		class GlobalTextStyleSwitch;
 		class TextRunStyleDeclarator;
-		struct WritingMode;
 
 		namespace hyperlink {
 			class Hyperlink;
 			class HyperlinkDetector;
 		}
 
-		/**
-		 * A bridge between the document and visual styled text.
-		 * @note This class is not intended to be subclassed.
-		 * @see kernel#Document, kernel#DocumentPartitioner
-		 */
 		class Presentation : public kernel::DocumentListener, private boost::noncopyable {
 		public:
 			explicit Presentation(kernel::Document& document) BOOST_NOEXCEPT;
@@ -139,6 +133,12 @@ namespace ascension {
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const;
 			/// @}
 
+			/// @name Default Writing Modes
+			/// @{
+			ReadingDirection defaultDirection() const BOOST_NOEXCEPT;
+			void setDefaultDirection(ReadingDirection direction);
+			/// @}
+
 			/// @name Computed Toplevel Styles
 			/// @{
 			const ComputedTextLineStyle& computedTextLineStyle() const BOOST_NOEXCEPT;
@@ -148,10 +148,8 @@ namespace ascension {
 
 			/// @name Styles Computation
 			/// @{
-			void computeTextLineStyle(Index line,
-				const styles::Length::Context& lengthContext, ComputedTextLineStyle& result) const;
-			std::unique_ptr<ComputedStyledTextRunIterator>
-				computeTextRunStyles(Index line, const styles::Length::Context& lengthContext) const;
+			void computeTextLineStyle(Index line, ComputedTextLineStyle& result) const;
+			std::unique_ptr<ComputedStyledTextRunIterator> computeTextRunStyles(Index line) const;
 			WritingMode computeWritingMode(boost::optional<Index> line = boost::none) const;
 			/// @}
 
@@ -180,6 +178,7 @@ namespace ascension {
 			std::shared_ptr<TextLineStyleDeclarator> textLineStyleDeclarator_;
 			std::shared_ptr<TextRunStyleDeclarator> textRunStyleDeclarator_;
 			std::list<std::shared_ptr<TextLineColorSpecifier>> textLineColorSpecifiers_;
+			ReadingDirection defaultDirection_;
 			ascension::detail::Listeners<ComputedTextToplevelStyleListener> computedTextToplevelStyleListeners_;
 			struct ComputedStyles;
 			std::unique_ptr<ComputedStyles> computedStyles_;
@@ -197,6 +196,11 @@ namespace ascension {
 		inline const DeclaredTextToplevelStyle& Presentation::declaredTextToplevelStyle() const BOOST_NOEXCEPT {
 			assert(declaredTextToplevelStyle_.get() != nullptr);
 			return *declaredTextToplevelStyle_;
+		}
+
+		/// Returns the default direction.
+		inline ReadingDirection Presentation::defaultDirection() const BOOST_NOEXCEPT {
+			return defaultDirection_;
 		}
 
 	}
