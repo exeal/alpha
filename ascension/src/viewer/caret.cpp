@@ -857,7 +857,7 @@ namespace ascension {
 		void selectWord(Caret& caret) {
 			text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
 				kernel::DocumentCharacterIterator(caret.document(), caret.position()),
-				text::AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, detail::identifierSyntax(caret));
+				text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, detail::identifierSyntax(caret));
 			caret.endRectangleSelection();
 			if(kernel::locations::isEndOfLine(caret)) {
 				if(kernel::locations::isBeginningOfLine(caret))	// an empty line
@@ -1162,19 +1162,19 @@ namespace ascension {
 
 			text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
 				kernel::DocumentCharacterIterator(caret.document(), caret),
-				text::AbstractWordBreakIterator::START_OF_ALPHANUMERICS, detail::identifierSyntax(caret));
+				text::WordBreakIteratorBase::START_OF_ALPHANUMERICS, detail::identifierSyntax(caret));
 			kernel::Position pos[4];
 
 			// find the backward word (1st-word-*)...
 			pos[0] = (--i).base().tell();
-			i.setComponent(text::AbstractWordBreakIterator::END_OF_ALPHANUMERICS);
+			i.setComponent(text::WordBreakIteratorBase::END_OF_ALPHANUMERICS);
 			pos[1] = (++i).base().tell();
 			if(pos[1] == pos[0])	// the word is empty
 				return false;
 
 			// ...and then backward one (2nd-word-*)
 			i.base().seek(caret);
-			i.setComponent(text::AbstractWordBreakIterator::START_OF_ALPHANUMERICS);
+			i.setComponent(text::WordBreakIteratorBase::START_OF_ALPHANUMERICS);
 			pos[2] = (++i).base().tell();
 			if(pos[2] == caret.position())
 				return false;
