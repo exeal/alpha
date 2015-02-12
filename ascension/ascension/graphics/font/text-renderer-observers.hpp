@@ -36,18 +36,6 @@ namespace ascension {
 				friend class TextRenderer;
 			};
 
-			/**
-			 * Interface for objects which are interested in change of the default font of
-			 * @c TextRenderer.
-			 * @see TextRenderer#addDefaultFontListener, TextRenderer#removeDefaultFontListener
-			 */
-			class DefaultFontListener {
-			private:
-				/// The font settings was changed.
-				virtual void defaultFontChanged() = 0;
-				friend class TextRenderer;
-			};
-
 			class InlineObject;
 			class TextPaintOverride;
 

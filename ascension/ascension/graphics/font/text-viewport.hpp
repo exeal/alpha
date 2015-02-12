@@ -36,8 +36,7 @@ namespace ascension {
 
 			/**
 			 */
-			class TextViewport : public DefaultFontListener, public VisualLinesListener,
-				public ComputedBlockFlowDirectionListener, private boost::noncopyable {
+			class TextViewport : public VisualLinesListener, public ComputedBlockFlowDirectionListener, private boost::noncopyable {
 			public:
 				~TextViewport() BOOST_NOEXCEPT;
 

@@ -10,6 +10,7 @@
 #define ASCENSION_TEXT_RENDERER_HPP
 
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
+#include <ascension/corelib/signals.hpp>
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-renderer-observers.hpp>
@@ -85,12 +86,11 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				/// @}
 
-				/// @name Default (Globally Nominal) Font
+				/// @name The Default Font
 				/// @{
-				void addDefaultFontListener(DefaultFontListener& listener);
 				std::shared_ptr<const Font> defaultFont() const BOOST_NOEXCEPT;
-				void removeDefaultFontListener(DefaultFontListener& listener);
-				void setDefaultFont(const String& familyName, double pointSize);
+				typedef boost::signals2::signal<void(const TextRenderer&)> DefaultFontChangedSignal;
+				SignalConnector<DefaultFontChangedSignal> defaultFontChangedSignal() BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Text Metrics
@@ -118,6 +118,7 @@ namespace ascension {
 			private:
 				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
 				void updateComputedBlockFlowDirectionChanged();
+				void updateDefaultFont();
 //				// presentation.TextToplevelStyleListener
 //				void textToplevelStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used) override;
 			private:
@@ -134,7 +135,7 @@ namespace ascension {
 //				std::unique_ptr<SpacePainter> spacePainter_;
 				presentation::BlockFlowDirection computedBlockFlowDirection_;
 				ascension::detail::Listeners<ComputedBlockFlowDirectionListener> computedBlockFlowDirectionListeners_;
-				ascension::detail::Listeners<DefaultFontListener> defaultFontListeners_;
+				DefaultFontChangedSignal defaultFontChangedSignal_;
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 				mutable win32::Handle<HDC> memoryDC_;
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
