@@ -11,15 +11,18 @@
 
 namespace ascension {
 	namespace presentation {
-		/// Default constructor.
+		/**
+		 * Default constructor.
+		 * @post @c *#linesStyle() == @c DeclaredTextLineStyle#unsetInstance()
+		 */
 		DeclaredTextToplevelStyle::DeclaredTextToplevelStyle() {
 			setLinesStyle(std::shared_ptr<const DeclaredTextLineStyle>());
 		}
 
 		/**
 		 * Sets the default @c DeclaredTextLineStyle of this toplevel element.
-		 * @param newStyle The style collection to set. If @c null, this @c DeclaredTextToplevelStyle holds a
-		 *                 default-constructed @c DeclaredTextLineStyle
+		 * @param newStyle The style collection to set. If @c null, this @c DeclaredTextToplevelStyle holds the value
+		 *                 of @c DeclaredTextLineStyle#unsetInstance()
 		 */
 		void DeclaredTextToplevelStyle::setLinesStyle(std::shared_ptr<const DeclaredTextLineStyle> newStyle) BOOST_NOEXCEPT {
 			if(newStyle.get() != nullptr)
@@ -34,7 +37,7 @@ namespace ascension {
 			return SINGLETON;
 		}
 
-		inline boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type> compute(const styles::SpecifiedValue<TextToplevelStyle>::type& specifiedValues) {
+		boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type> compute(const styles::SpecifiedValue<TextToplevelStyle>::type& specifiedValues) {
 			styles::ComputedValue<TextToplevelStyle>::type computedValues;
 			boost::fusion::at_key<styles::WritingMode>(computedValues) = boost::fusion::at_key<styles::WritingMode>(specifiedValues);
 			return boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type>(computedValues);
