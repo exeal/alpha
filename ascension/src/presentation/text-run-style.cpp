@@ -182,14 +182,19 @@ namespace ascension {
 			}
 		}
 
+		/**
+		 * Computes the given "Specified Value" of @c TextRunStyle.
+		 * @param specifiedValues The "Specified Value"s to compute
+		 * @param parentComputedColor The inherited 'color' value used to handle 'currentColor' of the 'color' property
+		 */
 		boost::flyweight<styles::ComputedValue<TextRunStyle>::type> compute(
 				const styles::SpecifiedValue<TextRunStyle>::type& specifiedValues,
-				const styles::ComputedValue<TextRunStyle>::type& parentComputedValues) {
+				const styles::ComputedValue<styles::Color>::type& parentComputedColor) {
 			styles::ComputedValue<TextRunStyle>::type computedValues;
 
 			computeColor(
 				boost::fusion::at_key<styles::Color>(specifiedValues.colors),
-				boost::fusion::at_key<styles::Color>(parentComputedValues.colors),
+				parentComputedColor,
 				boost::fusion::at_key<styles::Color>(computedValues.colors));
 			const auto& computedColor = boost::fusion::at_key<styles::Color>(computedValues.colors);
 
@@ -257,6 +262,11 @@ namespace ascension {
 			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues.auxiliary, computedValues.auxiliary);
 
 			return boost::flyweight<styles::ComputedValue<TextRunStyle>::type>(computedValues);
+		}
+
+		boost::flyweight<styles::ComputedValue<TextRunStyle>::type> compute(
+				const styles::SpecifiedValue<TextRunStyle>::type& specifiedValues, styles::HandleAsRoot) {
+			return compute(specifiedValues, boost::get(styles::Color::initialValue()));
 		}
 
 		std::size_t hash_value(const styles::ComputedValue<TextRunStyle>::type& style) {

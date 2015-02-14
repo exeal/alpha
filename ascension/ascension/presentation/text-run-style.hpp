@@ -185,7 +185,9 @@ namespace ascension {
 
 		boost::flyweight<styles::ComputedValue<TextRunStyle>::type> compute(
 			const styles::SpecifiedValue<TextRunStyle>::type& specifiedValues,
-			const styles::ComputedValue<TextRunStyle>::type& parentComputedValues);
+			const styles::ComputedValue<styles::Color>::type& parentComputedColor);
+		boost::flyweight<styles::ComputedValue<TextRunStyle>::type> compute(
+			const styles::SpecifiedValue<TextRunStyle>::type& specifiedValues, styles::HandleAsRoot);
 		std::size_t hash_value(const styles::ComputedValue<TextRunStyle>::type& style);
 	}
 } // namespace ascension.presentation
