@@ -62,7 +62,7 @@ namespace ascension {
 			struct BasicColorSpec {
 				static const bool INHERITED = InheritedOrNot::value;
 				static boost::optional<graphics::Color> initialValue() BOOST_NOEXCEPT {
-					return boost::none;
+					return boost::make_optional(graphics::Color::OPAQUE_BLACK);	// the initial value "depends on user agent"
 				}
 			};
 
@@ -75,34 +75,15 @@ namespace ascension {
 			 * @see XSL 1.1, 7.18.1 "color" (http://www.w3.org/TR/xsl/#color)
 			 */
 			typedef TypedColor<BasicColorSpec<Inherited<true>>> Color;
-#if 0
+
 			/**
-			 * Computes the specified color properties with inheritance and defaulting.
-			 * @tparam InheritedOrNotForCurrentColor The template parameter for @a current
-			 * @tparam InheritedOrNotForParentColor The template parameter for @a parent
-			 * @tparam InheritedOrNotForAncestorColor The template parameter for @a ancestor
-			 * @param current The declared color property of the current element
-			 * @param parent The declared color property of the parent element
-			 * @param ancestor The declared color property of the ancestor element
-			 * @return A computed color value
+			 * Returns "Specified Value" of 'currentColor' in CSS3.
+			 * @see CSS Color Module Level 3, 4.4. ÅecurrentColorÅf color keyword
+			 *      (http://www.w3.org/TR/css3-color/#currentcolor)
 			 */
-			template<typename InheritedOrNotForCurrent,
-				typename InheritedOrNotForParent, typename InheritedOrNotForAncestor>
-			inline graphics::Color computeColor(
-					const Color<InheritedOrNotForCurrent>* current,
-					const Color<InheritedOrNotForParent>* parent,
-					const Color<InheritedOrNotForAncestor>& ancestor) {
-				if(current != nullptr && !current->inherits() && current->get() != boost::none)
-					return *current->get();
-				else if(parent != nullptr && !parent->inherits() && parent->get() != boost::none)
-					return *parent->get();
-				else if(!ancestor.inherits() && ancestor.get() != boost::none)
-					return *ancestor.get();
-				else
-					return boost::get_optional_value_or(graphics::SystemColors::get(
-						graphics::SystemColors::WINDOW_TEXT), graphics::Color::OPAQUE_BLACK);
+			BOOST_CONSTEXPR inline SpecifiedValue<Color>::type currentColor() BOOST_NOEXCEPT {
+				return boost::none;
 			}
-#endif
 			/// @}
 		}
 	}

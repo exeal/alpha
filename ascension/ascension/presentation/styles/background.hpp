@@ -32,7 +32,7 @@ namespace ascension {
 			/// A tag type for @c BackgroundColor.
 			struct BackgroundColorSpec : BasicColorSpec<Inherited<false>> {
 				static boost::optional<graphics::Color> initialValue() BOOST_NOEXCEPT {
-					return graphics::Color::TRANSPARENT_BLACK;
+					return boost::make_optional(graphics::Color::TRANSPARENT_BLACK);
 				}
 			};
 
