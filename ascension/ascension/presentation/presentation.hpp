@@ -169,6 +169,7 @@ namespace ascension {
 
 		private:
 			void clearHyperlinksCache() BOOST_NOEXCEPT;
+			std::shared_ptr<const DeclaredTextLineStyle> declaredTextLineStyle(Index line) const;
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
