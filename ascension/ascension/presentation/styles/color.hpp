@@ -76,6 +76,11 @@ namespace ascension {
 			 */
 			typedef TypedColor<BasicColorSpec<Inherited<true>>> Color;
 
+			template<>
+			inline typename SpecifiedValue<Color>::type uncompute<Color>(const typename styles::ComputedValue<Color>::type& computedValue) {
+				return boost::make_optional(computedValue);
+			}
+
 			/**
 			 * Returns "Specified Value" of 'currentColor' in CSS3.
 			 * @see CSS Color Module Level 3, 4.4. ÅecurrentColorÅf color keyword
