@@ -313,10 +313,10 @@ namespace ascension {
 			 * @param declaredValue The "Declared Value" to process
 			 * @param[out] cascadedValue The "Cascaded Value"
 			 */
-			template<typename Property>
-			inline void cascade(const boost::optional<Property>& declaredValue, boost::optional<Property>& cascadedValue) {
+			template<typename SinglePassReadableRange>
+			inline typename boost::range_iterator<SinglePassReadableRange>::type cascade(const SinglePassReadableRange& declaredValues) {
 				// TODO: This code is temporary.
-				cascadedValue = declaredValue;
+				return boost::begin(declaredValues);
 			}
 
 			/**
@@ -329,7 +329,8 @@ namespace ascension {
 			 */
 			template<typename Property>
 			inline typename SpecifiedValue<Property>::type uncompute(const typename ComputedValue<Property>::type& computedValue) {
-				static_assert(std::is_convertible<typename SpecifiedValue<Property>::type, typename ComputedValue<Property>::type>::value, "");
+				static_assert(std::is_convertible<typename ComputedValue<Property>::type, typename SpecifiedValue<Property>::type>::value,
+					"\"Computed Value\" of the style property must be convertible to \"Specified Value\".");
 				return computedValue;
 			}
 
@@ -343,7 +344,10 @@ namespace ascension {
 			 */
 			template<typename Property>
 			inline void inherit(HandleAsRoot, typename SpecifiedValue<Property>::type& specifiedValue) {
-				specifiedValue = uncompute<Property>(Property::initialValue());
+				static_assert(
+					std::is_convertible<decltype(Property::initialValue()), typename SpecifiedValue<Property>::type>::value,
+					"\"Initial Value\" of the style property must be convertible to \"Specified Value\".");
+				specifiedValue = Property::initialValue();
 			}
 
 			/**
