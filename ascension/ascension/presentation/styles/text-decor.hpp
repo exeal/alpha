@@ -198,6 +198,14 @@ namespace ascension {
 				boost::optional<CodePoint>
 			> TextEmphasisStyle;
 
+			template<>
+			inline typename SpecifiedValue<TextEmphasisStyle>::type uncompute<TextEmphasisStyle>(const typename ComputedValue<TextEmphasisStyle>::type& computedValue) {
+				if(computedValue == boost::none)
+					return std::make_tuple();
+				else
+					return boost::get(computedValue);
+			}
+
 			/// A tag type for @c TextEmphasisColor.
 			struct TextEmphasisColorSpec : BasicColorSpec<Inherited<true>> {};
 
