@@ -4,7 +4,7 @@
  * @author exeal
  * @date 2010-10-21 separated from common.hpp
  * @date 2010-11-06 separated from basic-types.hpp
- * @date 2012-2013
+ * @date 2012-2015
  */
 
 #ifndef ASCENSION_STRING_PIECE_HPP
@@ -109,19 +109,31 @@ namespace ascension {
 	static_assert(sizeof(StringPiece::value_type) == 2, "");
 	static_assert(sizeof(StringPiece::value_type) == sizeof(gunichar2), "");
 
-	inline Glib::ustring&& toGlibUstring(const StringPiece& s) {
+	/**
+	 * Converts the given @c StringPiece into a @c Glib#ustring.
+	 * @param s The @c StringPiece to convert
+	 * @return The converted @c Glib#ustring
+	 * @throw Glib#Error @c g_utf16_to_utf8 failed
+	 */
+	inline Glib::ustring toGlibUstring(const StringPiece& s) {
 		GError* error;
 		std::shared_ptr<const char> p(::g_utf16_to_utf8(reinterpret_cast<const gunichar2*>(s.cbegin()), s.length(), nullptr, nullptr, &error), &::g_free);
 		if(p.get() == nullptr)
-			throw *error;
+			Glib::Error::throw_exception(error);
 		return Glib::ustring(p.get());
 	}
 
-	inline String&& fromGlibUstring(const Glib::ustring& s) {
+	/**
+	 * Converts the given @c Glib#ustring into a @c String.
+	 * @param s The @c Glib::string to convert
+	 * @return The converted @c String
+	 * @throw Glib#Error @c g_utf8_to_utf16 failed
+	 */
+	inline String fromGlibUstring(const Glib::ustring& s) {
 		GError* error;
 		std::shared_ptr<const gunichar2> p(::g_utf8_to_utf16(s.data(), s.length(), nullptr, nullptr, &error), &::g_free);
 		if(p.get() == nullptr)
-			throw *error;
+			Glib::Error::throw_exception(error);
 		return String(reinterpret_cast<const Char*>(p.get()));
 	}
 #endif
