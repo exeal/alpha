@@ -14,7 +14,8 @@ namespace ascension {
 			namespace {
 				/***/
 				PhysicalFourSides<ActualBorderSide> makeActualBorderSides(
-						const presentation::ComputedTextRunStyle& computed, const presentation::WritingMode& writingMode, const RenderingContext2D& context) {
+						const presentation::styles::ComputedValuesOfParts<presentation::TextRunStyleParts::BackgroundsAndBorders>::type& computed,
+						const presentation::WritingMode& writingMode, const presentation::styles::Length::Context& context) {
 					presentation::FlowRelativeFourSides<ActualBorderSide> abstractSides;
 					const auto& computedColors = boost::fusion::at_key<presentation::FlowRelativeFourSides<presentation::styles::BorderColor>>(computed);
 					const auto& computedStyles = boost::fusion::at_key<presentation::FlowRelativeFourSides<presentation::styles::BorderStyle>>(computed);
@@ -22,7 +23,7 @@ namespace ascension {
 					for(std::size_t i = 0; i < std::extent<decltype(abstractSides)>::value; ++i) {
 						boost::fusion::at_key<presentation::styles::BorderColor>(abstractSides[i]) = computedColors[i];
 						boost::fusion::at_key<presentation::styles::BorderStyle>(abstractSides[i]) = computedStyles[i];
-						boost::fusion::at_key<presentation::styles::BorderWidth>(abstractSides[i]) = computedWidths[i].value();	// TODO: Convert pixels into user units.
+						boost::fusion::at_key<presentation::styles::BorderWidth>(abstractSides[i]) = computedWidths[i].value(context);
 					}
 
 					return presentation::mapFlowRelativeToPhysical(writingMode, abstractSides);
@@ -35,21 +36,21 @@ namespace ascension {
 			 * @param writingMode The writing modes to map flow-relative bounds into physical
 			 * @param context The rendering context to map between pixels and user units
 			 */
-			ActualTextRunStyleCore::ActualTextRunStyleCore(
-					const presentation::ComputedTextRunStyle& computed, const presentation::WritingMode& writingMode, const RenderingContext2D& context) :
-				color(boost::fusion::at_key<presentation::styles::Color>(computed)),
-				backgroundColor(boost::fusion::at_key<presentation::styles::BackgroundColor>(computed)),
-				borders(makeActualBorderSides(computed, writingMode, context)),
+			ActualTextRunStyleCore::ActualTextRunStyleCore(const presentation::ComputedTextRunStyle& computed,
+					const presentation::WritingMode& writingMode, const presentation::styles::Length::Context& context) :
+				color(boost::fusion::at_key<presentation::styles::Color>(computed.colors)),
+				backgroundColor(boost::fusion::at_key<presentation::styles::BackgroundColor>(computed.backgroundsAndBorders)),
+				borders(makeActualBorderSides(computed.backgroundsAndBorders, writingMode, context)),
 				textDecoration(
-					boost::fusion::at_key<presentation::styles::TextDecorationLine>(computed),
-					boost::fusion::at_key<presentation::styles::TextDecorationColor>(computed),
-					boost::fusion::at_key<presentation::styles::TextDecorationStyle>(computed),
-					boost::fusion::at_key<presentation::styles::TextDecorationSkip>(computed),
-					boost::fusion::at_key<presentation::styles::TextUnderlinePosition>(computed)),
+					boost::fusion::at_key<presentation::styles::TextDecorationLine>(computed.textDecoration),
+					boost::fusion::at_key<presentation::styles::TextDecorationColor>(computed.textDecoration),
+					boost::fusion::at_key<presentation::styles::TextDecorationStyle>(computed.textDecoration),
+					boost::fusion::at_key<presentation::styles::TextDecorationSkip>(computed.textDecoration),
+					boost::fusion::at_key<presentation::styles::TextUnderlinePosition>(computed.textDecoration)),
 				textEmphasis(
-					boost::fusion::at_key<presentation::styles::TextEmphasisStyle>(computed),
-					boost::fusion::at_key<presentation::styles::TextEmphasisColor>(computed),
-					boost::fusion::at_key<presentation::styles::TextEmphasisPosition>(computed))/*,
+					boost::fusion::at_key<presentation::styles::TextEmphasisStyle>(computed.textDecoration),
+					boost::fusion::at_key<presentation::styles::TextEmphasisColor>(computed.textDecoration),
+					boost::fusion::at_key<presentation::styles::TextEmphasisPosition>(computed.textDecoration))/*,
 				textShadow(boost::fusion::at_key<decltype(textShadow)>(computed))*/ {}
 		}
 	}

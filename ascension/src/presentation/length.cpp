@@ -2,7 +2,7 @@
  * @file length.cpp
  * @author exeal
  * @date 2011-06-20 created.
- * @date 2011-2014
+ * @date 2011-2015
  */
 
 #include <ascension/corelib/basic-exceptions.hpp>	// NullPointerException
@@ -35,20 +35,20 @@ namespace ascension {
 				}
 
 				template<typename AbsoluteLengthType>
-				inline BOOST_CONSTEXPR graphics::Scalar toPixels(graphics::Scalar length, const graphics::RenderingContext2D*, Length::Mode) BOOST_NOEXCEPT {
+				inline BOOST_CONSTEXPR graphics::Scalar toPixels(Number length, const graphics::RenderingContext2D*, Length::Mode) BOOST_NOEXCEPT {
 					return length * AbsoluteLengthType::Scale::num / AbsoluteLengthType::Scale::den;
 				}
 			}
 
 			/**
-			 * Constructor.
+			 * Creates a @c Length with the given value, unit and mode.
 			 * @param valueInSpecifiedUnits The initial value
 			 * @param unitType The initial unit type for the value
 			 * @param mode The initial mode
 			 * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other @c #Unit
 			 *                          constants defined on this class)
 			 */
-			Length::Length(graphics::Scalar valueInSpecifiedUnits /* = 0.0 */, Unit unitType /* = PIXELS */, Mode mode /* = OTHER */) : mode_(mode) {
+			Length::Length(Number valueInSpecifiedUnits /* = 0.0 */, Unit unitType /* = PIXELS */, Mode mode /* = OTHER */) : mode_(mode) {
 				newValueSpecifiedUnits(unitType, valueInSpecifiedUnits);	// may throw NotSupportedError
 			}
 
@@ -57,14 +57,15 @@ namespace ascension {
 			 * this attribute will cause @c #valueInSpecifiedUnits() and @c #valueAsString() to be updated
 			 * automatically to reflect this setting.
 			 * @param value The new value
-			 * @param context The rendering context used to resolve relative value. Can be @c null if @c #unitType() is
-			 *                absolute
-			 * @param contextSize The size used to resolve percentage value. Can be @c null
-			 * @throw NullPointerException @a context is @c null although @c #unitType() is relative
+			 * @param context The context used to map between absolute and relative values
+			 * @throw NullPointerException @a context.graphics2D is @c null although @c #unitType() is relative
+			 * @throw NullPointerException @a context.viewport is @c null although @c #unitType() is viewport-relative
 			 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__value
 			 */
 			void Length::setValue(graphics::Scalar value, const Context& context) {
 				switch(unitType()) {
+					case NUMBER:
+						return setValueInSpecifiedUnits(value);
 					case EM_HEIGHT:
 						if(context.graphics2D == nullptr)
 							throw NullPointerException("context.graphics2D");
@@ -144,14 +145,15 @@ namespace ascension {
 
 			/**
 			 * [Copied from SVG 1.1 documentation] Returns the value as a floating point value, in user units.
-			 * @param context The rendering context used to resolve relative value. Can be @c null if @c #unitType() is
-			 *                absolute
-			 * @param contextSize The size used to resolve percentage value
-			 * @throw NullPointerException @a context is @c null although @c #unitType() is relative
+			 * @param context The context used to map between absolute and relative values
+			 * @throw NullPointerException @a context.graphics2D is @c null although @c #unitType() is relative
+			 * @throw NullPointerException @a context.viewport is @c null although @c #unitType() is viewport-relative
 			 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__value
 			 */
 			graphics::Scalar Length::value(const Context& context) const {
 				switch(unitType()) {
+					case NUMBER:
+						return valueInSpecifiedUnits();
 					case EM_HEIGHT:
 						if(context.graphics2D == nullptr)
 							throw NullPointerException("context.graphics2D");
