@@ -5,7 +5,7 @@
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 separated from presentation.hpp
  * @date 2011-05-13 separated from text-style.hpp
- * @date 2011-2014
+ * @date 2011-2015
  */
 
 #ifndef ASCENSION_LENGTH_HPP
@@ -54,7 +54,6 @@ namespace ascension {
 					UNKNOWN,
 					/// No unit type was provided (i.e., a unitless value was specified), which indicates a value in
 					/// user units.
-					/// @note Ascension does not support this value at all. Use @c Number.
 					NUMBER,
 					/// @}
 
@@ -153,13 +152,22 @@ namespace ascension {
 					WIDTH, HEIGHT, OTHER
 				};
 
+				/**
+				 * A @c Context object is used to convert between absolute and relative values.
+				 * @see #convertToSpecifiedUnits, #setValue, #value
+				 */
 				struct Context {
-					/// The rendering context used to resolve relative value. Can be @c null if
-					/// @c Length#unitType() is absolute.
+					/// The rendering context used to resolve relative value.
+					/// Can be @c null if @c Length#unitType() is absolute.
 					const graphics::RenderingContext2D* graphics2D;
-					/// The size of the viewport in user units. This is used to resolve
-					/// viewport-relative or percentage values. Can be @c null.
+					/// The size of the viewport in user units used to resolve viewport-relative values.
+					/// Can be @c null if @c Length#unitType() is not viewport-relative.
 					const graphics::Dimension* viewport;
+					/**
+					 * Creates @c Context with the given parameters.
+					 * @param graphics2D The initial value of @c #graphics2D member
+					 * @param viewport The initial value of @c #viewport member
+					 */
 					Context(const graphics::RenderingContext2D* graphics2D,
 						const graphics::Dimension* viewport) BOOST_NOEXCEPT
 						: graphics2D(graphics2D), viewport(viewport) {}
@@ -172,7 +180,7 @@ namespace ascension {
 				/// @name Attributes
 				/// @{
 				Unit unitType() const BOOST_NOEXCEPT;
-				Number value(const Context& context) const;
+				graphics::Scalar value(const Context& context) const;
 				Number valueInSpecifiedUnits() const;
 //				String valueAsString() const;
 				/// @}
@@ -181,7 +189,7 @@ namespace ascension {
 				/// @{
 				void convertToSpecifiedUnits(Unit unitType, const Context& context);
 				void newValueSpecifiedUnits(Unit unitType, Number valueInSpecifiedUnits);
-				void setValue(Number value, const Context& context);
+				void setValue(graphics::Scalar value, const Context& context);
 //				void setValueAsString(const StringPiece&);
 				void setValueInSpecifiedUnits(Number value) BOOST_NOEXCEPT;
 				/// @}
@@ -219,12 +227,11 @@ namespace ascension {
 			 * @c #MILIMIETERS, @c #valueInSpecifiedUnits() would be changed to the numeric value 5 and
 			 * @c #valueAsString() would be changed to "5mm".
 			 * @param unitType The unit type to switch to
-			 * @param context The rendering context used to resolve relative value. Can be @c null if both
-			 *                @c #unitType() and @a unitType are absolute
-			 * @param contextSize The size used to resolve percentage value. Can be @c null
+			 * @param context The context used to map between absolute and relative values
 			 * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other @c #Unit
 			 *                          constants defined on this class)
-			 * @throw NullPointerException @a context is @c null although @c #unitType() and/or @a unitType is relative
+			 * @throw NullPointerException @a context.graphics2D is @c null although @c #unitType() is relative
+			 * @throw NullPointerException @a context.viewport is @c null although @c #unitType() is viewport-relative
 			 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__convertToSpecifiedUnits
 			 */
 			inline void Length::convertToSpecifiedUnits(Unit unitType, const Context& context) {
@@ -235,7 +242,7 @@ namespace ascension {
 
 			/// Returns @c true if the specified @c #Unit value is valid.
 			inline bool Length::isValidUnit(Length::Unit unit) BOOST_NOEXCEPT {
-				return unit >= EM_HEIGHT && unit <= DEVICE_INDEPENDENT_PIXELS;
+				return unit >= NUMBER && unit <= DEVICE_INDEPENDENT_PIXELS;
 			}
 
 			/**

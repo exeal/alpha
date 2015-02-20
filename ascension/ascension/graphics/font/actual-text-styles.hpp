@@ -178,7 +178,7 @@ namespace ascension {
 //				ActualTextShadow textShadow;
 
 				explicit ActualTextRunStyleCore(const presentation::ComputedTextRunStyle& computed,
-					const presentation::WritingMode& writingMode, const RenderingContext2D& context);
+					const presentation::WritingMode& writingMode, const presentation::styles::Length::Context& context);
 			};
 		}
 	}
