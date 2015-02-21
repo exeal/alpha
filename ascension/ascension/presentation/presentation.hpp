@@ -74,33 +74,10 @@ namespace ascension {
 			friend class Presentation;
 		};
 
-		class DeclaredTextToplevelStyle;
-		struct ComputedTextToplevelStyle;
-
-		/**
-		 * Interface for objects which are interested in change of the computed toplevel text style of @c Presentation.
-		 * @see Presentation#addComputedTextToplevelStyleListener, Presentation#computedTextToplevelStyle,
-		 *      Presentation#declaredTextToplevelStyle, Presentation#removeComputedTextToplevelStyleListener,
-		 *      Presentation#setDeclaredTextToplevelStyle
-		 */
-		class ComputedTextToplevelStyleListener {
-		public:
-			/// Destructor.
-			virtual ~ComputedTextToplevelStyleListener() BOOST_NOEXCEPT {}
-			/**
-			 * The computed toplevel text style of @c Presentation was changed.
-			 * @param previouslyDeclared The declared style used before the change
-			 * @param previouslyComputed The computed style used before the change
-			 * @see Presentation#declaredTextToplevelStyle, Presentation#setDeclaredTextToplevelStyle
-			 */
-			virtual void computedTextToplevelStyleChanged(
-				std::shared_ptr<const DeclaredTextToplevelStyle> previouslyDeclared,
-				boost::flyweight<ComputedTextToplevelStyle> previouslyComputed) = 0;
-		};
-
 		struct ComputedStyledTextRunIterator;
 		struct ComputedTextLineStyle;
 		struct ComputedTextRunStyle;
+		struct ComputedTextToplevelStyle;
 		class DeclaredTextToplevelStyle;
 		class GlobalTextStyleSwitch;
 		class TextRunStyleDeclarator;
@@ -123,9 +100,7 @@ namespace ascension {
 
 			/// @name Styles Declaration
 			/// @{
-			void addComputedTextToplevelStyleListener(ComputedTextToplevelStyleListener& listener);
 			const DeclaredTextToplevelStyle& declaredTextToplevelStyle() const BOOST_NOEXCEPT;
-			void removeComputedTextToplevelStyleListener(ComputedTextToplevelStyleListener& listener);
 			void setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle> newStyle);
 			void setTextLineStyleDeclarator(std::shared_ptr<TextLineStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
 			void setTextRunStyleDeclarator(std::shared_ptr<TextRunStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
@@ -144,6 +119,10 @@ namespace ascension {
 			const ComputedTextLineStyle& computedTextLineStyle() const BOOST_NOEXCEPT;
 			const ComputedTextRunStyle& computedTextRunStyle() const BOOST_NOEXCEPT;
 			const ComputedTextToplevelStyle& computedTextToplevelStyle() const BOOST_NOEXCEPT;
+			typedef boost::signals2::signal<
+				void(const Presentation&, std::shared_ptr<const DeclaredTextToplevelStyle>, boost::flyweight<ComputedTextToplevelStyle>)
+			> ComputedTextToplevelStyleChanged;
+			SignalConnector<ComputedTextToplevelStyleChanged> computedTextToplevelStyleChangedSignal() BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Styles Computation
@@ -180,9 +159,9 @@ namespace ascension {
 			std::shared_ptr<TextRunStyleDeclarator> textRunStyleDeclarator_;
 			std::list<std::shared_ptr<TextLineColorSpecifier>> textLineColorSpecifiers_;
 			ReadingDirection defaultDirection_;
-			ascension::detail::Listeners<ComputedTextToplevelStyleListener> computedTextToplevelStyleListeners_;
 			struct ComputedStyles;
 			std::unique_ptr<ComputedStyles> computedStyles_;
+			ComputedTextToplevelStyleChanged computedTextToplevelStyleChangedSignal_;
 			std::shared_ptr<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
 			mutable std::list<Hyperlinks*> hyperlinks_;
