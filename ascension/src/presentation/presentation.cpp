@@ -70,6 +70,16 @@ namespace ascension {
 		 */
 
 		/**
+		 * @typedef ascension::presentation::Presentation::ComputedTextToplevelStyleChangedSignal
+		 * The signal which gets emitted when the computed text toplevel style of @c Presentation was changed.
+		 * @param presentation The @c Presentation object
+		 * @param previouslyDeclared The declared style used before the change
+		 * @param previouslyComputed The computed style used before the change
+		 * @see #computedTextToplevelStyle, #computedTextToplevelStyleChangedSignal, #declaredTextToplevelStyle,
+		 *      #setDeclaredTextToplevelStyle
+		 */
+
+		/**
 		 * Constructor.
 		 * @param document The target document
 		 */
@@ -82,16 +92,6 @@ namespace ascension {
 		Presentation::~Presentation() BOOST_NOEXCEPT {
 			document_.removeListener(*this);
 			clearHyperlinksCache();
-		}
-		
-		/**
-		 * Registers the text toplevel style listener.
-		 * @param listener The listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 * @see #removeTextToplevelStyleListener, #computedTextToplevelStyle
-		 */
-		void Presentation::addComputedTextToplevelStyleListener(ComputedTextToplevelStyleListener& listener) {
-			computedTextToplevelStyleListeners_.add(listener);
 		}
 
 		/**
@@ -130,6 +130,11 @@ namespace ascension {
 		/// Returns the "Computed Value" of the toplevel style declared by @c #setDeclaredTextToplevelStyle method.
 		const ComputedTextToplevelStyle& Presentation::computedTextToplevelStyle() const BOOST_NOEXCEPT {
 			return computedStyles_->forToplevel.get();
+		}
+
+		/// Returns @c ComputedTextToplevelStyleChanged signal.
+		SignalConnector<Presentation::ComputedTextToplevelStyleChanged> Presentation::computedTextToplevelStyleChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(computedTextToplevelStyleChangedSignal_);
 		}
 
 		namespace {
@@ -442,16 +447,6 @@ namespace ascension {
 		}
 
 		/**
-		 * Removes the computed text toplevel style listener.
-		 * @param listener The listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 * @see #addComputedTextToplevelStyleListener, #computedTextToplevelStyle
-		 */
-		void Presentation::removeComputedTextToplevelStyleListener(ComputedTextToplevelStyleListener& listener) {
-			computedTextToplevelStyleListeners_.remove(listener);
-		}
-
-		/**
 		 * Removes the specified text line color specifier.
 		 * @param specifier The director to remove
 		 */
@@ -556,9 +551,7 @@ namespace ascension {
 			swap(newlyComputedLineStyles, computedStyles_->forLines);
 			swap(newlyComputedRunStyles, computedStyles_->forRuns);
 			if(previouslyDeclared.get() != nullptr)
-				computedTextToplevelStyleListeners_.notify
-					<std::shared_ptr<const DeclaredTextToplevelStyle>, boost::flyweight<ComputedTextToplevelStyle>>(
-						&ComputedTextToplevelStyleListener::computedTextToplevelStyleChanged, previouslyDeclared, previouslyComputed);
+				computedTextToplevelStyleChangedSignal_(*this, previouslyDeclared, previouslyComputed);
 		}
 		
 		/**
