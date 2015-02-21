@@ -9,6 +9,7 @@
 #ifndef ASCENSION_FONT_DESCRIPTION_HPP
 #define ASCENSION_FONT_DESCRIPTION_HPP
 
+#include <ascension/graphics/font/font-family.hpp>
 #include <ascension/graphics/font/font-properties.hpp>
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
 #	include <pangomm/fontdescription.h>
@@ -32,7 +33,7 @@ namespace ascension {
 				 * @param properties The other properties
 				 * @throw std#underflow_error @a pointSize is negative
 				 */
-				FontDescription(const String& family,
+				FontDescription(const FontFamily& family,
 						double pointSize, const FontProperties& properties = FontProperties())
 						: family_(family), pointSize_(pointSize), properties_(properties) {
 					if(pointSize < 0.0)
@@ -45,7 +46,7 @@ namespace ascension {
 						&& properties_ == other.properties_;
 				}
 				/// Returns the font family.
-				const String& family() const BOOST_NOEXCEPT {return family_;}
+				const FontFamily& family() const BOOST_NOEXCEPT {return family_;}
 				/// Returns the size in points.
 				double pointSize() const BOOST_NOEXCEPT {return pointSize_;}
 				/// Returns the other properties.
@@ -56,7 +57,7 @@ namespace ascension {
 				 * Sets the family name.
 				 * @param family The new font family
 				 */
-				FontDescription& setFamily(const String& family) {
+				FontDescription& setFamily(const FontFamily& family) {
 					return (family_ = family), *this;
 				}
 				/**
@@ -72,7 +73,7 @@ namespace ascension {
 				}
 
 			private:
-				String family_;
+				FontFamily family_;
 				double pointSize_;
 				FontProperties properties_;
 			};
