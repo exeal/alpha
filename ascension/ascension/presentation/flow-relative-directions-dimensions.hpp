@@ -295,7 +295,7 @@ namespace ascension {
 		 * @tparam T An arithmetic type
 		 * @param sides The flow-relative four sides
 		 * @return A range
-		 * @see inlineFlowRange, horizontalRange, verticalRange
+		 * @see inlineRange, horizontalRange, verticalRange
 		 */
 		template<typename T>
 		inline boost::integer_range<T> blockRange(const FlowRelativeFourSides<T>& sides) {
@@ -308,7 +308,7 @@ namespace ascension {
 		 * @tparam T An arithmetic type
 		 * @param sides The flow-relative four sides
 		 * @return A range
-		 * @see blockFlowRange, horizontalRange, verticalRange
+		 * @see blockRange, horizontalRange, verticalRange
 		 */
 		template<typename T>
 		inline boost::integer_range<T> inlineRange(const FlowRelativeFourSides<T>& sides) {
