@@ -114,11 +114,11 @@ namespace ascension {
 							continue;
 						if(!boost::geometry::within(rectangle, context.boundsToPaint()))
 							continue;
-						const Color& color = side->color;
+						const Color& color = boost::fusion::at_key<presentation::styles::BorderColor>(*side);
 						if(color.isFullyTransparent())
 							continue;
 						context.setStrokeStyle(std::make_shared<SolidColor>(color));
-						context.setLineWidth(side->width);
+						context.setLineWidth(boost::fusion::at_key<presentation::styles::BorderWidth>(*side));
 //						context.setStrokeDashArray();
 //						context.setStrokeDashOffset();
 						context.beginPath();
@@ -158,7 +158,8 @@ namespace ascension {
 			// graphics.font free functions ///////////////////////////////////////////////////////////////////////////
 
 			void paintTextDecoration(PaintContext& context, const TextRun& run, const Point& origin, const ActualTextDecoration& decoration) {
-				if(decoration.lines != presentation::styles::TextDecorationLineEnums::NONE && !decoration.color.isFullyTransparent()) {
+				if(boost::fusion::at_key<presentation::styles::TextDecorationLine>(decoration) != presentation::styles::TextDecorationLineEnums::NONE
+						&& !boost::fusion::at_key<presentation::styles::TextDecorationColor>(decoration).isFullyTransparent()) {
 					// TODO: Not implemented.
 				}
 			}
@@ -346,7 +347,7 @@ namespace ascension {
 			 * @return A hit describing the character and edge (leading or trailing) under the specified point
 			 * @see TextRun#hitTestCharacter
 			 */
-			TextHit<> TextLayout::hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, bool* outOfBounds /* = nullptr */) const {
+			TextHit<> TextLayout::hitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point, bool* outOfBounds /* = nullptr */) const {
 				return internalHitTestCharacter(point, nullptr, outOfBounds);
 			}
 
@@ -362,7 +363,7 @@ namespace ascension {
 			 * @return A hit describing the character and edge (leading or trailing) under the specified point
 			 * @see TextRun#hitTestCharacter
 			 */
-			TextHit<> TextLayout::hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
+			TextHit<> TextLayout::hitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds /* = nullptr */) const {
 				return internalHitTestCharacter(point, &bounds, outOfBounds);
 			}
@@ -388,12 +389,12 @@ namespace ascension {
 			 * @return The returned point. The point is in abstract coordinates
 			 * @throw IndexOutOfBoundsException @a hit is not valid for the @c TextLayout
 			 */
-			presentation::AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit<>& hit) const {
+			presentation::FlowRelativeTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit<>& hit) const {
 				if(hit.insertionIndex() > numberOfCharacters())
 					throw IndexOutOfBoundsException("hit");
 
 				if(isEmpty())
-					return presentation::AbstractTwoAxes<Scalar>(presentation::_ipd = 0.0f, presentation::_bpd = LineMetricsIterator(*this, 0).baselineOffset());
+					return presentation::FlowRelativeTwoAxes<Scalar>(presentation::_ipd = 0.0f, presentation::_bpd = LineMetricsIterator(*this, 0).baselineOffset());
 
 				// locate line
 				const Index line = lineAt(hit.characterIndex());
@@ -413,13 +414,13 @@ namespace ascension {
 				Scalar ipd = (wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ? x : (measure(line) - x);
 				ipd += lineStartEdge(line);
 
-				return presentation::AbstractTwoAxes<Scalar>(presentation::_ipd = ipd, presentation::_bpd = LineMetricsIterator(*this, line).baselineOffset());
+				return presentation::FlowRelativeTwoAxes<Scalar>(presentation::_ipd = ipd, presentation::_bpd = LineMetricsIterator(*this, line).baselineOffset());
 			}
 
 			/// @internal Implements @c #hitTestCharacter methods.
-			TextHit<> TextLayout::internalHitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
+			TextHit<> TextLayout::internalHitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
-				const auto line(locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(blockFlowRange(*bounds)) : boost::none));
+				const auto line(locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(presentation::blockRange(*bounds)) : boost::none));
 				const auto runsInLine(runsForLine(std::get<0>(line)));
 				const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(std::get<0>(line)));
 				assert(characterRangeInLine.end() == runsInLine.end()[-1]->characterRange().end());
