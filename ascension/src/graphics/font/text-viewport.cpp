@@ -853,9 +853,11 @@ namespace ascension {
 				documentAccessibleRegionChangedConnection_ =
 					this->textRenderer().presentation().document().accessibleRegionChangedSignal().connect(
 						std::bind(&TextViewport::documentAccessibleRegionChanged, this, std::placeholders::_1));
-				this->textRenderer().addDefaultFontListener(*this);
+				defaultFontChangedConnection_ = this->textRenderer().defaultFontChangedSignal().connect(
+					std::bind(&TextViewport::defaultFontChanged, this, std::placeholders::_1));
 				this->textRenderer().layouts().addVisualLinesListener(*this);
-				this->textRenderer().addComputedBlockFlowDirectionListener(*this);
+				computedTextToplevelStyleChangedConnection_ = this->textRenderer().presentation().computedTextToplevelStyleChangedSignal().connect(
+					std::bind(&TextViewport::computedTextToplevelStyleChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				updateDefaultLineExtent();
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -863,9 +865,7 @@ namespace ascension {
 
 			/// Destructor.
 			TextViewport::~TextViewport() BOOST_NOEXCEPT {
-				textRenderer().removeDefaultFontListener(*this);
 				textRenderer().layouts().removeVisualLinesListener(*this);
-				textRenderer().removeComputedBlockFlowDirectionListener(*this);
 			}
 
 			/**
@@ -941,8 +941,9 @@ namespace ascension {
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 			}
 
-			/// @see ComputedBlockFlowDirectionListener#computedBlockFlowDirectionChanged
-			void TextViewport::computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used) {
+			/// @see ComputedBlockFlowDirectionListener#computedTextToplevelStyleChanged
+			void TextViewport::computedTextToplevelStyleChanged(const presentation::Presentation&,
+					std::shared_ptr<const presentation::DeclaredTextToplevelStyle>, boost::flyweight<presentation::ComputedTextToplevelStyle>) {
 				fireScrollPropertiesChanged(presentation::FlowRelativeTwoAxes<bool>(presentation::_ipd = true, presentation::_bpd = true));
 			}
 
@@ -958,8 +959,8 @@ namespace ascension {
 						geometry::dx(boundsInView()) : geometry::dy(boundsInView())));
 			}
 
-			/// @see DefaultFontListener#defaultFontChanged
-			void TextViewport::defaultFontChanged() BOOST_NOEXCEPT {
+			/// @see TextRenderer#DefaultFontChangedSignal
+			void TextViewport::defaultFontChanged(const TextRenderer&) BOOST_NOEXCEPT {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				updateDefaultLineExtent();
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD

@@ -36,7 +36,7 @@ namespace ascension {
 
 			/**
 			 */
-			class TextViewport : public VisualLinesListener, public ComputedBlockFlowDirectionListener, private boost::noncopyable {
+			class TextViewport : public VisualLinesListener, private boost::noncopyable {
 			public:
 				~TextViewport() BOOST_NOEXCEPT;
 
@@ -108,8 +108,8 @@ namespace ascension {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				void updateDefaultLineExtent();
 #endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				// DefaultFontListener
-				void defaultFontChanged();
+				// TextRenderer.DefaultFontChangedSignal
+				void defaultFontChanged(const TextRenderer& textRenderer);
 				// VisualLinesListener
 				void visualLinesDeleted(const boost::integer_range<Index>& lines,
 					Index sublines, bool longestLineChanged) BOOST_NOEXCEPT;
@@ -117,14 +117,16 @@ namespace ascension {
 				void visualLinesModified(
 					const boost::integer_range<Index>& lines, SignedIndex sublinesDifference,
 					bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT;
-				// ComputedBlockFlowDirectionListener
-				void computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used);
+				// Presentation.ComputedTextToplevelStyleChangedSignal
+				void computedTextToplevelStyleChanged(
+					const presentation::Presentation& presentation,
+					std::shared_ptr<const presentation::DeclaredTextToplevelStyle> previouslyDeclared,
+					boost::flyweight<presentation::ComputedTextToplevelStyle> previouslyComputed);
 			private:
 				TextRenderer& textRenderer_;
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				boost::flyweight<FontRenderContext> fontRenderContext_;
 #endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				boost::signals2::scoped_connection documentAccessibleRegionChangedConnection_;
 				Rectangle boundsInView_;
 				presentation::FlowRelativeTwoAxes<TextViewportScrollOffset> scrollPositions_;
 				VisualLine firstVisibleLine_;
@@ -148,6 +150,8 @@ namespace ascension {
 				} frozenNotification_;
 				bool repairingLayouts_;
 				ascension::detail::Listeners<TextViewportListener> listeners_;
+				boost::signals2::scoped_connection computedTextToplevelStyleChangedConnection_,
+					documentAccessibleRegionChangedConnection_, defaultFontChangedConnection_;
 				friend std::shared_ptr<TextViewport> detail::createTextViewport(TextRenderer& textRenderer);
 			};
 
