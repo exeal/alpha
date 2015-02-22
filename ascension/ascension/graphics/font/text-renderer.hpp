@@ -15,21 +15,17 @@
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-renderer-observers.hpp>
 #include <ascension/presentation/presentation.hpp>
-#include <ascension/presentation/text-style.hpp>
+//#include <ascension/presentation/text-style.hpp>
 #include <memory>	// std.shared_ptr, std.unique_ptr
 
 namespace ascension {
-//	namespace presentation {
-//		struct ComputedStyledTextRunIterator;
-//	}
-
 	namespace graphics {
 		namespace font {
 
 			class TextViewport;
 
 			// documentation is text-renderer.cpp
-			class TextRenderer /*: public presentation::TextToplevelStyleListener*/ {
+			class TextRenderer {
 			public:
 				/**
 				 * @see TextRenderer#lineRelativeAlignment, TextAlignment, TextAnchor
@@ -53,8 +49,6 @@ namespace ascension {
 					const FontCollection& fontCollection, const Dimension& initialSize);
 				TextRenderer(const TextRenderer& other);
 				virtual ~TextRenderer() BOOST_NOEXCEPT;
-				presentation::Presentation& presentation() BOOST_NOEXCEPT;
-				const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
 
 				/// @name Viewport
 				/// @{
@@ -72,15 +66,11 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				/// @}
 
-				/// @name Block Flow Direction
+				/// @name Presentation
 				/// @{
-				void addComputedBlockFlowDirectionListener(ComputedBlockFlowDirectionListener& listener);
 				presentation::BlockFlowDirection computedBlockFlowDirection() const BOOST_NOEXCEPT;
-				void removeComputedBlockFlowDirectionListener(ComputedBlockFlowDirectionListener& listener);
-				/// @}
-
-				/// @name Shortcuts to Presentation
-				/// @{
+				presentation::Presentation& presentation() BOOST_NOEXCEPT;
+				const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				Scalar textWrappingMeasureInPixels() const BOOST_NOEXCEPT;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
@@ -117,10 +107,7 @@ namespace ascension {
 
 			private:
 				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
-				void updateComputedBlockFlowDirectionChanged();
 				void updateDefaultFont();
-//				// presentation.TextToplevelStyleListener
-//				void textToplevelStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used) override;
 			private:
 				presentation::Presentation& presentation_;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -133,8 +120,6 @@ namespace ascension {
 				std::shared_ptr<TextViewport> viewport_;
 //				class SpacePainter;
 //				std::unique_ptr<SpacePainter> spacePainter_;
-				presentation::BlockFlowDirection computedBlockFlowDirection_;
-				ascension::detail::Listeners<ComputedBlockFlowDirectionListener> computedBlockFlowDirectionListeners_;
 				DefaultFontChangedSignal defaultFontChangedSignal_;
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 				mutable win32::Handle<HDC> memoryDC_;
@@ -144,7 +129,7 @@ namespace ascension {
 
 			/// Returns the computed block-flow-direction.
 			inline presentation::BlockFlowDirection TextRenderer::computedBlockFlowDirection() const BOOST_NOEXCEPT {
-				return computedBlockFlowDirection_;
+				return boost::fusion::at_key<presentation::styles::WritingMode>(presentation().computedTextToplevelStyle());
 			}
 
 			/**

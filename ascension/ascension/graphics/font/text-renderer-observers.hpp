@@ -12,30 +12,10 @@
 #define ASCENSION_TEXT_RENDERER_OBSERVERS_HPP
 
 #include <ascension/corelib/basic-types.hpp>		// Index
-#include <ascension/presentation/writing-mode.hpp>	// presentation.BlockFlowDirection
 
 namespace ascension {
 	namespace graphics {
 		namespace font {
-
-			class TextRenderer;
-
-			/**
-			 * @see TextRenderer#addComputedBlockFlowDirectionListener,
-			 *      TextRenderer#removeComputedBlockFlowDirectionListener,
-			 *      presentation#TextToplevelStyleListener
-			 */
-			class ComputedBlockFlowDirectionListener {
-			private:
-				/**
-				 * The computed block flow direction of the text renderer was changed.
-				 * @param used The block flow direction used
-				 */
-				virtual void computedBlockFlowDirectionChanged(
-					presentation::BlockFlowDirection used) = 0;
-				friend class TextRenderer;
-			};
-
 			class InlineObject;
 			class TextPaintOverride;
 
