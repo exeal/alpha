@@ -10,6 +10,7 @@
 #define ASCENSION_PRESENTATION_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
+#include <ascension/corelib/signals.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <boost/core/noncopyable.hpp>
