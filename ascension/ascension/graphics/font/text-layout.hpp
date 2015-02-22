@@ -11,7 +11,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
-//#include <ascension/directions.hpp>
+#include <ascension/direction.hpp>
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
