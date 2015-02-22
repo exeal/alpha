@@ -136,6 +136,9 @@ namespace ascension {
 //					boost::optional<String>
 //				>, Inherited
 //			> FontLanguageOverride;
+
+			Pixels useFontSize(const ComputedValue<FontSize>::type& computedValue,
+				const Length::Context& context, const Pixels& computedParentFontSize, const Pixels& mediumFontSize);
 			/// @}
 		}
 	}

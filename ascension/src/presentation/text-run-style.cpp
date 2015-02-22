@@ -70,43 +70,6 @@ namespace ascension {
 				}
 			}
 #if 0
-			inline void computeFontSize(const styles::SpecifiedValue<styles::FontSize>::type& specifiedValue,
-					/*const styles::Length::Context& lengthContext,*/ const Pixels& computedParentFontSize, const Pixels& mediumFontSize,
-					styles::ComputedValue<styles::FontSize>::type& computedValue) {
-				if(const styles::AbsoluteFontSize* const absoluteFontSize = boost::get<styles::AbsoluteFontSize>(&specifiedValue)) {
-					// TODO: styles.AbsoluteFontSize should be double constant, not enum?
-					static const std::array<styles::Number,
-						styles::AbsoluteFontSize::XX_LARGE - styles::AbsoluteFontSize::XX_SMALL + 1>
-							ABSOLUTE_SIZE_RATIOS = {3.f / 5.f, 3.f / 4.f, 8.f / 9.f, 1.f, 6.f / 5.f, 3.f / 2.f, 2.f / 1.f};
-					static_assert(styles::AbsoluteFontSize::XX_SMALL == 0, "");
-					if(*absoluteFontSize >= styles::AbsoluteFontSize::XX_SMALL && *absoluteFontSize <= styles::AbsoluteFontSize::XX_LARGE) {
-						computedValue = mediumFontSize * ABSOLUTE_SIZE_RATIOS[boost::underlying_cast<std::size_t>(*absoluteFontSize)];
-						return;
-					}
-				} else if(const styles::RelativeFontSize* const relativeFontSize = boost::get<styles::RelativeFontSize>(&specifiedValue)) {
-					static const styles::Number RELATIVE_FACTOR = 1.2f;	// TODO: Is this right ?
-					switch(boost::native_value(*relativeFontSize)) {
-						case styles::RelativeFontSize::LARGER:
-							computedValue = computedParentFontSize * RELATIVE_FACTOR;
-							return;
-						case styles::RelativeFontSize::SMALLER:
-							computedValue = computedParentFontSize / RELATIVE_FACTOR;
-							return;
-					}
-				} else if(const styles::Length* const length = boost::get<styles::Length>(&specifiedValue)) {
-					if(length->valueInSpecifiedUnits() >= 0.0) {
-						computedValue = Pixels(length->value(lengthContext));
-						return;
-					}
-				} else if(const styles::Percentage* const percentage = boost::get<styles::Percentage>(&specifiedValue)) {
-					if(*percentage >= 0) {	// [CSS3-FONTS] does not disallow negative value, but...
-						computedValue = computedParentFontSize * boost::rational_cast<styles::Number>(*percentage);
-						return;
-					}
-				}
-				computedValue = mediumFontSize;
-			}
-
 			inline void computeAlignmentAdjust(const styles::SpecifiedValue<styles::AlignmentAdjust>::type& specifiedValue,
 					const styles::Length::Context& lengthContext, styles::ComputedValue<styles::AlignmentAdjust>::type& computedValue) {
 				// TODO: [CSS3INLINE] does not describe the computation for other than <percentage>.
@@ -331,6 +294,43 @@ namespace ascension {
 			boost::hash_combine(seed, boost::fusion::at_key<styles::NumberSubstitution>(style.auxiliary));
 
 			return seed;
+		}
+
+		namespace styles {
+			/**
+			 * Converts the "Computed Value" of @c FontSize into "Used Value".
+			 * @param computedValue The "Computed Value"
+			 * @param computedParentFontSize The "Computed Value" of the parent element
+			 * @param mediumFontSize The pixel size for 'medium' value
+			 * @return The "Used Value" in pixels
+			 */
+			Pixels useFontSize(const ComputedValue<FontSize>::type& computedValue,
+				const Length::Context& context, const Pixels& computedParentFontSize, const Pixels& mediumFontSize) {
+				if(const AbsoluteFontSize* const absoluteFontSize = boost::get<AbsoluteFontSize>(&computedValue)) {
+					// TODO: AbsoluteFontSize should be double constant, not enum?
+					static const std::array<Number, AbsoluteFontSize::XX_LARGE - AbsoluteFontSize::XX_SMALL + 1>
+						ABSOLUTE_SIZE_RATIOS = {3.f / 5.f, 3.f / 4.f, 8.f / 9.f, 1.f, 6.f / 5.f, 3.f / 2.f, 2.f / 1.f};
+					static_assert(AbsoluteFontSize::XX_SMALL == 0, "");
+					if(*absoluteFontSize >= AbsoluteFontSize::XX_SMALL && *absoluteFontSize <= AbsoluteFontSize::XX_LARGE) {
+						return mediumFontSize * ABSOLUTE_SIZE_RATIOS[boost::underlying_cast<std::size_t>(*absoluteFontSize)];
+					}
+				} else if(const RelativeFontSize* const relativeFontSize = boost::get<RelativeFontSize>(&computedValue)) {
+					static const Number RELATIVE_FACTOR = 1.2f;	// TODO: Is this right ?
+					switch(boost::native_value(*relativeFontSize)) {
+						case RelativeFontSize::LARGER:
+							return computedParentFontSize * RELATIVE_FACTOR;
+						case RelativeFontSize::SMALLER:
+							return computedParentFontSize / RELATIVE_FACTOR;
+					}
+				} else if(const Length* const length = boost::get<Length>(&computedValue)) {
+					if(length->valueInSpecifiedUnits() >= 0.0)
+						return Pixels(length->value(context));
+				} else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue)) {
+					if(*percentage >= 0)	// [CSS3-FONTS] does not disallow negative value, but...
+						return computedParentFontSize * boost::rational_cast<Number>(*percentage);
+				}
+				return mediumFontSize;
+			}
 		}
 	}
 }
