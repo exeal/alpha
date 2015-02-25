@@ -237,6 +237,11 @@ namespace ascension {
 				runStyles = presentation().computeTextRunStyles(line/*, lengthContext*/);
 			}
 
+			/// Returns the computed block-flow-direction.
+			presentation::BlockFlowDirection TextRenderer::computedBlockFlowDirection() const BOOST_NOEXCEPT {
+				return boost::fusion::at_key<presentation::styles::WritingMode>(presentation().computedTextToplevelStyle());
+			}
+
 			/// Returns the @c DefaultFontChangedSignal signal connector.
 			SignalConnector<TextRenderer::DefaultFontChangedSignal> TextRenderer::defaultFontChangedSignal() BOOST_NOEXCEPT {
 				return makeSignalConnector(defaultFontChangedSignal_);
