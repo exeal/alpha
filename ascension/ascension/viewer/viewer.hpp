@@ -3,7 +3,7 @@
  * This header defines several visual presentation classes.
  * @author exeal
  * @date 2003-2006 was EditView.h
- * @date 2006-2014
+ * @date 2006-2015
  */
 
 #ifndef ASCENSION_VIEWER_HPP
@@ -115,7 +115,6 @@ namespace ascension {
 #endif
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				public graphics::font::VisualLinesListener, public graphics::font::TextViewportListener,
-				public graphics::font::ComputedBlockFlowDirectionListener,
 				private detail::MouseVanish<TextViewer>, public kernel::detail::PointCollection<VisualPoint> {
 		public:
 			/**
@@ -302,6 +301,10 @@ namespace ascension {
 
 			/// @ name Overridable @c TextRenderer Signals
 			/// @{
+			virtual void computedTextToplevelStyleChanged(
+				const presentation::Presentation& presentation,
+				const presentation::DeclaredTextToplevelStyle& previouslyDeclared,
+				const presentation::ComputedTextToplevelStyle& previouslyComputed);
 			virtual void defaultFontChanged(const graphics::font::TextRenderer& textRenderer);
 			/// @}
 
@@ -317,20 +320,6 @@ namespace ascension {
 			// kernel.DocumentRollbackListener
 			void documentUndoSequenceStarted(const kernel::Document& document) override;
 			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition) override;
-			// graphics.font.VisualLinesListener
-			void visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT override;
-			void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT override;
-			void visualLinesModified(const boost::integer_range<Index>& lines,
-				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT override;
-			// graphics.font.TextViewportListener
-			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
-			void viewportScrollPositionChanged(
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
-				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
-			void viewportScrollPropertiesChanged(
-				const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
-			// graphics.font.ComputedBlockFlowDirectionListener
-			void computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used) override;
 			// detail.PointCollection<VisualPoint>
 			void addNewPoint(VisualPoint& point) override {points_.insert(&point);}
 			void removePoint(VisualPoint& point) override {points_.erase(&point);}
@@ -419,6 +408,21 @@ namespace ascension {
 #endif
 			/// @}
 
+		private:
+			// graphics.font.VisualLinesListener
+			void visualLinesDeleted(const boost::integer_range<Index>& lines,
+				Index sublines, bool longestLineChanged) BOOST_NOEXCEPT override;
+			void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT override;
+			void visualLinesModified(const boost::integer_range<Index>& lines,
+				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT override;
+			// graphics.font.TextViewportListener
+			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
+			void viewportScrollPositionChanged(
+				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
+				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
+			void viewportScrollPropertiesChanged(
+				const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
+
 			// enumerations
 		private:
 			// timer identifiers
@@ -453,7 +457,7 @@ namespace ascension {
 #endif
 			boost::signals2::scoped_connection caretMotionConnection_,
 				matchBracketsChangedConnection_, selectionShapeChangedConnection_,
-				defaultFontChangedConnection_;
+				computedTextToplevelStyleChangedConnection_, defaultFontChangedConnection_;
 
 			// modes
 			struct ModeState {
@@ -512,7 +516,7 @@ namespace ascension {
 
 			// input state
 			std::unique_ptr<CaretBlinker> caretBlinker_;	// null when the caret is set to invisible
-			unsigned long mouseInputDisabledCount_;
+			boost::value_initialized<std::size_t> mouseInputDisabledCount_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			std::shared_ptr<GtkIMContext> inputMethodContext_;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -551,7 +555,9 @@ namespace ascension {
 		 * Returns @c true if the viewer allows the mouse operations.
 		 * @see #enableMouseInput
 		 */
-		inline bool TextViewer::allowsMouseInput() const BOOST_NOEXCEPT {return mouseInputDisabledCount_ == 0;} 
+		inline bool TextViewer::allowsMouseInput() const BOOST_NOEXCEPT {
+			return boost::get(mouseInputDisabledCount_) == 0;
+		} 
 
 		/// Informs the end user of <strong>safe</strong> error.
 		inline void TextViewer::beep() BOOST_NOEXCEPT {doBeep();}
@@ -603,7 +609,7 @@ namespace ascension {
 		 * @see #allowsMouseInput
 		 */
 		inline void TextViewer::enableMouseInput(bool enable) {
-			if(mouseInputDisabledCount_ != 0 || !enable)
+			if(boost::get(mouseInputDisabledCount_) != 0 || !enable)
 				mouseInputDisabledCount_ += !enable ? 1 : -1;
 		}
 
