@@ -273,6 +273,7 @@ namespace ascension {
 
 		protected:
 			virtual void doBeep() BOOST_NOEXCEPT;
+			virtual graphics::Rectangle doTextAreaAllocationRectangle() const BOOST_NOEXCEPT;
 			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::Rectangle& rect);
 			virtual void unfrozen(const boost::integer_range<Index>& linesToRedraw);
 
@@ -299,7 +300,7 @@ namespace ascension {
 			virtual void selectionShapeChanged(const Caret& caret);
 			/// @}
 
-			/// @ name Overridable @c TextRenderer Signals
+			/// @ name Overridable Signal Slots
 			/// @{
 			virtual void computedTextToplevelStyleChanged(
 				const presentation::Presentation& presentation,

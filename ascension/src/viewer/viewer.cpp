@@ -26,6 +26,7 @@
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
+#include <boost/geometry/algorithms/intersection.hpp>
 #include <boost/geometry/algorithms/within.hpp>
 #ifdef _DEBUG
 #	include <boost/log/trivial.hpp>
@@ -105,6 +106,20 @@ namespace ascension {
 		 *   TextViewer::documentChanged(document, change);
 		 * }
 		 * @endcode
+		 *
+		 * <h3>The Text Context Area</h3>
+		 *
+		 * (This concept is based on "Area Model" of XSL 1.1/2.0.)
+		 *
+		 * The text area of a @c TextViewer is a rectangular portion which shows the text content. This area has a
+		 * "content-rectangle", "border-rectangle", "padding-rectangle", "spaces" and "allocation-rectangle" defined in
+		 * XSL 1.1/2.0.
+		 *
+		 * The "allocation-rectangle" is defined by @c #textAreaAllocationRectangle method. This is overridable by
+		 * @c #doTextAreaAllocationRectangle virtual method. A @c TextViewer paints only inside of the
+		 * "allocation-rectangle". As default, @c #textAreaAllocationRectangle returns "local-bounds" and all portion
+		 * is painted. But if the derived class specified the smaller rectangle for "allocation-rectangle", the outside
+		 * should be painted by the derived class (also should override @c #paint method).
 		 *
 		 * <h3>Windows specific features</h3>
 		 *
@@ -345,6 +360,15 @@ namespace ascension {
 				return;
 
 			return showContextMenu(widgetapi::event::LocatedUserInput(location, buttons, modifiers), nativeEvent);
+		}
+
+		/**
+		 * Returns the "allocation-rectangle" of the text area.
+		 * @return The "allocation-rectangle" in local-coordinates.
+		 * @see #textAreaAllocationRectangle
+		 */
+		graphics::Rectangle TextViewer::doTextAreaAllocationRectangle() const BOOST_NOEXCEPT {
+			return widgetapi::bounds(*this, false);
 		}
 
 		/**
@@ -1769,31 +1793,12 @@ namespace ascension {
 
 		/**
 		 * Returns the 'allocation-rectangle' of the text area, in local-coordinates.
-		 * @see #bounds, #textAreaContentRectangle
+		 * @see #doTextAreaAllocationRectangle, textAreaContentRectangle
 		 */
 		graphics::Rectangle TextViewer::textAreaAllocationRectangle() const BOOST_NOEXCEPT {
-			using graphics::PhysicalDirection;
-			const graphics::Rectangle window(widgetapi::bounds(*this, false));
-			graphics::PhysicalFourSides<graphics::Scalar> result(window);
-			if(rulerPainter_.get() != nullptr) {
-				switch(boost::native_value(rulerPainter_->alignment())) {
-					case PhysicalDirection::LEFT:
-						result.left() += rulerPainter_->allocationWidth();
-						break;
-					case PhysicalDirection::TOP:
-						result.top() += rulerPainter_->allocationWidth();
-						break;
-					case PhysicalDirection::RIGHT:
-						result.right() -= rulerPainter_->allocationWidth();
-						break;
-					case PhysicalDirection::BOTTOM:
-						result.bottom() -= rulerPainter_->allocationWidth();
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-			}
-			return graphics::geometry::make<graphics::Rectangle>(result);
+			graphics::Rectangle requested(doTextAreaAllocationRectangle()), temp;
+			const bool b = boost::geometry::intersection(graphics::geometry::normalize(requested), widgetapi::bounds(*this, false), temp);
+			return temp;
 		}
 
 		/**
