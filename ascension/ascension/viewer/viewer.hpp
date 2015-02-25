@@ -136,7 +136,7 @@ namespace ascension {
 
 			/**
 			 * A general configuration of the viewer.
-			 * @see TextViewer#getConfigurations, TextViewer#setConfigurations
+			 * @see TextViewer#configurations, TextViewer#setConfigurations
 			 */
 			struct Configuration /*: public graphics::LayoutSettings*/ {
 				/// Foreground color of active selected text. Standard setting is @c COLOR_HIGHLIGHTTEXT.
@@ -198,7 +198,7 @@ namespace ascension {
 			presentation::Presentation& presentation() BOOST_NOEXCEPT;
 			const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
 			unsigned long scrollRate(bool horizontal) const BOOST_NOEXCEPT;
-			void setConfiguration(const Configuration& general, bool synchronizeUI);
+			void setConfiguration(const Configuration& newConfiguration, bool synchronizeUI);
 			Renderer& textRenderer() BOOST_NOEXCEPT;
 			const Renderer& textRenderer() const BOOST_NOEXCEPT;
 			/// @}

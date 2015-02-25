@@ -1646,53 +1646,48 @@ namespace ascension {
 
 		/**
 		 * Updates the configurations.
-		 * @param general The general configurations. @c null to unchange
-		 * @param ruler The configurations about the ruler. @c null to unchange
+		 * @param newConfiguration The new configurations
 		 * @param synchronizeUI Set @c true to change the window style according to the new style. This sets
 		 *                      @c WS_EX_LEFTSCROLLBAR, @c WS_EX_RIGHTSCROLLBAR, @c WS_EX_LTRREADING and
 		 *                      @c WS_EX_RTLREADING styles
 		 * @throw UnknownValueException The content of @a verticalRuler is invalid
 		 */
-		void TextViewer::setConfiguration(const Configuration* general, std::shared_ptr<const RulerStyles> ruler, bool synchronizeUI) {
-			if(ruler != nullptr)
-				rulerPainter_->setStyles(ruler);
-			if(general != nullptr) {
-//				const Inheritable<ReadingDirection> oldReadingDirection(configuration_.readingDirection);
-//				assert(!oldReadingDirection.inherits());
-				configuration_ = *general;
-				textRenderer().viewport()->setBoundsInView(textAreaContentRectangle());	// TODO: Should we call resized() instead?
-				renderer_->layouts().invalidate();
+		void TextViewer::setConfiguration(const Configuration& newConfiguration, bool synchronizeUI) {
+//			const Inheritable<ReadingDirection> oldReadingDirection(configuration_.readingDirection);
+//			assert(!oldReadingDirection.inherits());
+			configuration_ = newConfiguration;
+			textRenderer().viewport()->setBoundsInView(textAreaContentRectangle());	// TODO: Should we call resized() instead?
+			renderer_->layouts().invalidate();
 
-//				if((oldReadingDirection == LEFT_TO_RIGHT && configuration_.readingDirection == RIGHT_TO_LEFT)
-//						|| (oldReadingDirection == RIGHT_TO_LEFT && configuration_.readingDirection == LEFT_TO_RIGHT))
-//					scrolls_.horizontal.position = scrolls_.horizontal.maximum
-//						- scrolls_.horizontal.pageSize - scrolls_.horizontal.position + 1;
-//				scrolls_.resetBars(*this, 'a', false);
-//				updateScrollBars(FlowRelativeTwoAxes<bool>(true, true), FlowRelativeTwoAxes<bool>(true, true));
+//			if((oldReadingDirection == LEFT_TO_RIGHT && configuration_.readingDirection == RIGHT_TO_LEFT)
+//					|| (oldReadingDirection == RIGHT_TO_LEFT && configuration_.readingDirection == LEFT_TO_RIGHT))
+//				scrolls_.horizontal.position = scrolls_.horizontal.maximum
+//					- scrolls_.horizontal.pageSize - scrolls_.horizontal.position + 1;
+//			scrolls_.resetBars(*this, 'a', false);
+//			updateScrollBars(FlowRelativeTwoAxes<bool>(true, true), FlowRelativeTwoAxes<bool>(true, true));
 
 #ifdef ASCENSION_USE_SYSTEM_CARET
-				if(!isFrozen() && (widgetapi::hasFocus(*this) /*|| handle() == Viewer::completionWindow_->getSafeHwnd()*/)) {
-					caret().resetVisualization();
-					caret().updateLocation();
-				}
+			if(!isFrozen() && (widgetapi::hasFocus(*this) /*|| handle() == Viewer::completionWindow_->getSafeHwnd()*/)) {
+				caret().resetVisualization();
+				caret().updateLocation();
+			}
 #endif
-				if(synchronizeUI) {
+			if(synchronizeUI) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-					if(get_direction() != Gtk::TEXT_DIR_NONE)
-						set_direction((configuration_.readingDirection == presentation::LEFT_TO_RIGHT) ? Gtk::TEXT_DIR_LTR : Gtk::TEXT_DIR_RTL);
-//					set_placement();
+				if(get_direction() != Gtk::TEXT_DIR_NONE)
+					set_direction((configuration_.readingDirection == presentation::LEFT_TO_RIGHT) ? Gtk::TEXT_DIR_LTR : Gtk::TEXT_DIR_RTL);
+//				set_placement();
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-					LONG style = ::GetWindowLongW(handle().get(), GWL_EXSTYLE);
-					if(configuration_.readingDirection == LEFT_TO_RIGHT) {
-						style &= ~(WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
-						style |= WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR;
-					} else {
-						style &= ~(WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
-						style |= WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR;
-					}
-					::SetWindowLongW(handle().get(), GWL_EXSTYLE, style);
-#endif
+				LONG style = ::GetWindowLongW(handle().get(), GWL_EXSTYLE);
+				if(configuration_.readingDirection == LEFT_TO_RIGHT) {
+					style &= ~(WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
+					style |= WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR;
+				} else {
+					style &= ~(WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
+					style |= WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR;
 				}
+				::SetWindowLongW(handle().get(), GWL_EXSTYLE, style);
+#endif
 			}
 			widgetapi::scheduleRedraw(*this, false);
 		}
