@@ -26,6 +26,10 @@
 #undef ASCENSION_PIXELFUL_SCROLL_IN_BPD	// provisional
 
 namespace ascension {
+	namespace presentation {
+		class DeclaredTextToplevelStyle;
+	}
+
 	namespace graphics {
 		namespace font {
 			class TextViewport;
@@ -120,8 +124,8 @@ namespace ascension {
 				// Presentation.ComputedTextToplevelStyleChangedSignal
 				void computedTextToplevelStyleChanged(
 					const presentation::Presentation& presentation,
-					std::shared_ptr<const presentation::DeclaredTextToplevelStyle> previouslyDeclared,
-					boost::flyweight<presentation::ComputedTextToplevelStyle> previouslyComputed);
+					const presentation::DeclaredTextToplevelStyle& previouslyDeclared,
+					const presentation::ComputedTextToplevelStyle& previouslyComputed);
 			private:
 				TextRenderer& textRenderer_;
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD

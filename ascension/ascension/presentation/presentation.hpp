@@ -14,7 +14,6 @@
 #include <ascension/kernel/document.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <boost/core/noncopyable.hpp>
-#include <boost/flyweight.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
 
@@ -121,7 +120,7 @@ namespace ascension {
 			const ComputedTextRunStyle& computedTextRunStyle() const BOOST_NOEXCEPT;
 			const ComputedTextToplevelStyle& computedTextToplevelStyle() const BOOST_NOEXCEPT;
 			typedef boost::signals2::signal<
-				void(const Presentation&, std::shared_ptr<const DeclaredTextToplevelStyle>, boost::flyweight<ComputedTextToplevelStyle>)
+				void(const Presentation&, const DeclaredTextToplevelStyle&, const ComputedTextToplevelStyle&)
 			> ComputedTextToplevelStyleChanged;
 			SignalConnector<ComputedTextToplevelStyleChanged> computedTextToplevelStyleChangedSignal() BOOST_NOEXCEPT;
 			/// @}
