@@ -15,6 +15,7 @@
 #include <ascension/presentation/text-run-style.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <boost/core/null_deleter.hpp>
+#include <boost/flyweight.hpp>
 #include <boost/foreach.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 
@@ -274,18 +275,20 @@ namespace ascension {
 					const std::shared_ptr<const DeclaredTextRunStyle> declaredParentStyles(declaredLineStyles->runsStyle());
 					assert(declaredParentStyles.get() != nullptr);
 //					styles::cascade(declaredParentStyles);
+					// TODO: Wow, ugly code...
 					styles::SpecifiedValue<TextRunStyle>::type specifiedParentStyles;
-					specifiedValuesFromCascadedValues(declaredParentStyles->colors, computedTextRunStyle().colors, specifiedParentStyles.colors);
-					specifiedValuesFromCascadedValues(declaredParentStyles->backgroundsAndBorders, computedTextRunStyle().backgroundsAndBorders, specifiedParentStyles.backgroundsAndBorders);
-					specifiedValuesFromCascadedValues(declaredParentStyles->basicBoxModel, computedTextRunStyle().basicBoxModel, specifiedParentStyles.basicBoxModel);
-					specifiedValuesFromCascadedValues(declaredParentStyles->fonts, computedTextRunStyle().fonts, specifiedParentStyles.fonts);
-					specifiedValuesFromCascadedValues(declaredParentStyles->inlineLayout, computedTextRunStyle().inlineLayout, specifiedParentStyles.inlineLayout);
-					specifiedValuesFromCascadedValues(declaredParentStyles->text, computedTextRunStyle().text, specifiedParentStyles.text);
-					specifiedValuesFromCascadedValues(declaredParentStyles->textDecoration, computedTextRunStyle().textDecoration, specifiedParentStyles.textDecoration);
-					specifiedValuesFromCascadedValues(declaredParentStyles->writingModes, computedTextRunStyle().writingModes, specifiedParentStyles.writingModes);
-					specifiedValuesFromCascadedValues(declaredParentStyles->auxiliary, computedTextRunStyle().auxiliary, specifiedParentStyles.auxiliary);
+					const styles::ComputedValue<TextRunStyle>::type& computedToplevelStyles = computedTextRunStyle();
+					specifiedValuesFromCascadedValues(declaredParentStyles->colors, computedToplevelStyles.colors, specifiedParentStyles.colors);
+					specifiedValuesFromCascadedValues(declaredParentStyles->backgroundsAndBorders, computedToplevelStyles.backgroundsAndBorders, specifiedParentStyles.backgroundsAndBorders);
+					specifiedValuesFromCascadedValues(declaredParentStyles->basicBoxModel, computedToplevelStyles.basicBoxModel, specifiedParentStyles.basicBoxModel);
+					specifiedValuesFromCascadedValues(declaredParentStyles->fonts, computedToplevelStyles.fonts, specifiedParentStyles.fonts);
+					specifiedValuesFromCascadedValues(declaredParentStyles->inlineLayout, computedToplevelStyles.inlineLayout, specifiedParentStyles.inlineLayout);
+					specifiedValuesFromCascadedValues(declaredParentStyles->text, computedToplevelStyles.text, specifiedParentStyles.text);
+					specifiedValuesFromCascadedValues(declaredParentStyles->textDecoration, computedToplevelStyles.textDecoration, specifiedParentStyles.textDecoration);
+					specifiedValuesFromCascadedValues(declaredParentStyles->writingModes, computedToplevelStyles.writingModes, specifiedParentStyles.writingModes);
+					specifiedValuesFromCascadedValues(declaredParentStyles->auxiliary, computedToplevelStyles.auxiliary, specifiedParentStyles.auxiliary);
 					const boost::flyweight<styles::ComputedValue<TextRunStyle>::type> computedParentStyles(
-						compute(specifiedParentStyles, boost::fusion::at_key<styles::Color>(computedTextRunStyle().colors)));
+						compute(specifiedParentStyles, boost::fusion::at_key<styles::Color>(computedToplevelStyles.colors)));
 					return std::unique_ptr<ComputedStyledTextRunIterator>(
 						new ComputedStyledTextRunIteratorImpl(std::move(declaredRunStyles), computedParentStyles));
 				}
@@ -337,8 +340,10 @@ namespace ascension {
 					},
 					specifiedTextOrientation);
 
-				styles::ComputedValue<styles::Direction>::type computedDirection(styles::computeAsSpecified<styles::Direction>(specifiedDirection));
-				styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(styles::computeAsSpecified<styles::TextOrientation>(specifiedTextOrientation));
+				styles::ComputedValue<styles::Direction>::type computedDirection(
+					styles::computeAsSpecified<styles::Direction>(specifiedDirection));
+				styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(
+					styles::computeAsSpecified<styles::TextOrientation>(specifiedTextOrientation));
 				return WritingMode(computedDirection, writingMode, computedTextOrientation);
 			}		
 		}
@@ -551,7 +556,7 @@ namespace ascension {
 			swap(newlyComputedLineStyles, computedStyles_->forLines);
 			swap(newlyComputedRunStyles, computedStyles_->forRuns);
 			if(previouslyDeclared.get() != nullptr)
-				computedTextToplevelStyleChangedSignal_(*this, previouslyDeclared, previouslyComputed);
+				computedTextToplevelStyleChangedSignal_(*this, *previouslyDeclared, previouslyComputed.get());
 		}
 		
 		/**

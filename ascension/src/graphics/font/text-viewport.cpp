@@ -943,7 +943,7 @@ namespace ascension {
 
 			/// @see ComputedBlockFlowDirectionListener#computedTextToplevelStyleChanged
 			void TextViewport::computedTextToplevelStyleChanged(const presentation::Presentation&,
-					std::shared_ptr<const presentation::DeclaredTextToplevelStyle>, boost::flyweight<presentation::ComputedTextToplevelStyle>) {
+					const presentation::DeclaredTextToplevelStyle&, const presentation::ComputedTextToplevelStyle&) {
 				fireScrollPropertiesChanged(presentation::FlowRelativeTwoAxes<bool>(presentation::_ipd = true, presentation::_bpd = true));
 			}
 
