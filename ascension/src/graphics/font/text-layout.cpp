@@ -4,7 +4,7 @@
  * @date 2003-2006 (was TextLayout.cpp)
  * @date 2006-2011
  * @date 2010-11-20 renamed from ascension/layout.cpp
- * @date 2012, 2014
+ * @date 2012, 2014-2015
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
@@ -18,6 +18,8 @@
 #include <ascension/corelib/shared-library.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/presentation/text-line-style.hpp>	// presentation.ComputedTextLineStyle
+#include <ascension/presentation/text-toplevel-style.hpp>	// presentation.ComputedTextToplevelStyle
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
@@ -164,8 +166,22 @@ namespace ascension {
 				}
 			}
 
+			/// Returns the writing modes of the given @c TextLayout object.
+			presentation::WritingMode writingMode(const TextLayout& textLayout) BOOST_NOEXCEPT {
+				namespace styles = presentation::styles;
+				return presentation::WritingMode(
+					boost::fusion::at_key<styles::Direction>(textLayout.style()),
+					boost::fusion::at_key<styles::WritingMode>(textLayout.parentStyle()),
+					boost::fusion::at_key<styles::TextOrientation>(textLayout.style()));
+			}
+
 
 			// TextLayout /////////////////////////////////////////////////////////////////////////////////////////////
+
+			struct TextLayout::Styles {
+				boost::flyweight<presentation::styles::ComputedValue<presentation::TextToplevelStyle>::type> forToplevel;
+				boost::flyweight<presentation::styles::ComputedValue<presentation::TextLineStyle>::type> forLine;
+			};
 
 			namespace {
 				// Returns distance from line-left edge of allocation-rectangle to one of content-rectangle.
@@ -281,6 +297,12 @@ namespace ascension {
 					sides.after() = lm.baselineOffset() + over;
 				}
 				return sides;
+			}
+
+			/// Returns the base bidirectional embedding level of this @c TextLayout.
+			std::uint8_t TextLayout::characterLevel() const BOOST_NOEXCEPT {
+				const auto direction(boost::fusion::at_key<presentation::styles::Direction>(style()));
+				return (direction == presentation::RIGHT_TO_LEFT) ? 1 : 0;
 			}
 
 			/**
@@ -922,7 +944,10 @@ namespace ascension {
 					return right ? x + (x - longestLineWidth()) % tabWidth : x - (tabWidth - (x - longestLineWidth()) % tabWidth);
 			}
 #endif
-
+			/// Returns the "Computed Value" of @c presentation#TextToplevelStyle of this layout.
+			const presentation::ComputedTextToplevelStyle& TextLayout::parentStyle() const BOOST_NOEXCEPT {
+				return styles_->forToplevel.get();
+			}
 #if 0
 			/**
 			 * Returns the computed reading direction of the line.
@@ -1032,6 +1057,10 @@ namespace ascension {
 				}
 			}
 
+			/// Returns the "Computed Value" of @c presentation#TextLineStyle of this layout.
+			const presentation::ComputedTextLineStyle& TextLayout::style() const BOOST_NOEXCEPT {
+				return styles_->forLine.get();
+			}
 #if 0
 			/**
 			 * Returns the styled text run containing the specified offset in the line.
@@ -1080,6 +1109,28 @@ namespace ascension {
 				if(line > layout.numberOfLines())
 					throw IndexOutOfBoundsException("line");
 				resetBaselineOffset();
+			}
+
+			/// Returns the baseline of the current line.
+			DominantBaseline TextLayout::LineMetricsIterator::baseline() const {
+				return boost::fusion::at_key<presentation::styles::DominantBaseline>(layout_->style());
+			}
+
+			/**
+			 */
+			Point TextLayout::LineMetricsIterator::baselineOffsetInPhysicalCoordinates() const {
+				if(layout_ == nullptr)
+					throw NoSuchElementException();
+				switch(boost::fusion::at_key<presentation::styles::WritingMode>(layout_->parentStyle())) {
+					case presentation::HORIZONTAL_TB:
+						return Point(geometry::_x = 0.0f, geometry::_y = baselineOffset());
+					case presentation::VERTICAL_RL:
+			 			return Point(geometry::_x = -baselineOffset(), geometry::_y = 0.0f);
+					case presentation::VERTICAL_LR:
+			 			return Point(geometry::_x = +baselineOffset(), geometry::_y = 0.0f);
+					default:
+						ASCENSION_ASSERT_NOT_REACHED();
+				}
 			}
 
 			/// Implements decrement operators.
