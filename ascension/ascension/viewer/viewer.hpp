@@ -54,18 +54,6 @@ namespace ascension {
 		class Caret;
 		class VirtualBox;
 		class VisualPoint;
-		class TextViewer;
-
-		/// Provides stuffs for source code editors.
-		/// @todo Need refinements.
-		namespace source {
-			class Ruler;
-			boost::optional<kernel::Region> getPointedIdentifier(const viewers::TextViewer& viewer);
-			boost::optional<kernel::Region> getNearestIdentifier(
-				const kernel::Document& document, const kernel::Position& position);
-			bool getNearestIdentifier(const kernel::Document& document,
-				const kernel::Position& position, Index* startOffsetInLine, Index* endOffsetInLine);
-		}
 	}
 
 	namespace contentassist {
