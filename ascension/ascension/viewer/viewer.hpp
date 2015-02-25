@@ -275,6 +275,7 @@ namespace ascension {
 		protected:
 			virtual void doBeep() BOOST_NOEXCEPT;
 			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::Rectangle& rect);
+			virtual void unfrozen(const boost::integer_range<Index>& linesToRedraw);
 
 			// helpers
 		private:

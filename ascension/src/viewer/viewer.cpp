@@ -1825,19 +1825,26 @@ namespace ascension {
 				} catch(const std::underflow_error&) {
 					// ignore
 				}
-				if(!freezeRegister_.isFrozen()) {
-/*					if(scrolls_.changed) {
-						updateScrollBars();
-						widgetapi::scheduleRedraw(*this, false);
-					} else*/ if(!linesToRedraw.empty())
-						redrawLines(linesToRedraw);
-
-					rulerPainter_->update();
-
-					caretMoved(caret(), caret().selectedRegion());
-					widgetapi::redrawScheduledRegion(*this);
-				}
+				if(!freezeRegister_.isFrozen())
+					unfrozen(linesToRedraw);
 			}
+		}
+
+		/**
+		 * This method is called when the frozen state of the viewer was revoked.
+		 * If the derived class overriden this method, should call @c TextViewer#unfrozen.
+		 * @param linesToRedraw The line numbers which were scheduled to redraw
+		 * @note @c TextViewer#unfrozen calls @c widgetapi#redrawScheduledRegion.
+		 */
+		void TextViewer::unfrozen(const boost::integer_range<Index>& linesToRedraw) {
+/*			if(scrolls_.changed) {
+				updateScrollBars();
+				widgetapi::scheduleRedraw(*this, false);
+			} else*/ if(!linesToRedraw.empty())
+				redrawLines(linesToRedraw);
+
+			caretMoved(caret(), caret().selectedRegion());
+			widgetapi::redrawScheduledRegion(*this);
 		}
 
 		namespace {
