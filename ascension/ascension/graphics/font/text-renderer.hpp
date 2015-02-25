@@ -99,9 +99,9 @@ namespace ascension {
 				/// @}
 
 			protected:
-				void buildLineLayoutConstructionParameters(Index line,
-					const RenderingContext2D& graphics2D,
-					presentation::styles::ComputedValue<presentation::TextLineStyle>::type& lineStyle,
+				void buildLineLayoutConstructionParameters(
+					Index line, const RenderingContext2D& graphics2D,
+					presentation::ComputedTextLineStyle& lineStyle,
 					std::unique_ptr<presentation::ComputedStyledTextRunIterator>& runStyles) const;
 				const FontCollection& fontCollection() const BOOST_NOEXCEPT;
 
@@ -126,11 +126,6 @@ namespace ascension {
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
 #endif // ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 			};
-
-			/// Returns the computed block-flow-direction.
-			inline presentation::BlockFlowDirection TextRenderer::computedBlockFlowDirection() const BOOST_NOEXCEPT {
-				return boost::fusion::at_key<presentation::styles::WritingMode>(presentation().computedTextToplevelStyle());
-			}
 
 			/**
 			 * Returns the @c FontCollection object used by this @c TextRenderer.
