@@ -599,7 +599,7 @@ namespace ascension {
 		 * @return The result
 		 * @see TextViewer#HitTestResult
 		 */
-		TextViewer::HitTestResult TextViewer::hitTest(const graphics::Point& p) const {
+		const TextViewer::HitTestResult& TextViewer::hitTest(const graphics::Point& p) const {
 //			checkInitialization();
 			const graphics::Rectangle localBounds(widgetapi::bounds(*this, false));
 			if(!boost::geometry::within(p, localBounds))

@@ -122,22 +122,17 @@ namespace ascension {
 			 * Result of hit test.
 			 * @see #hitTest
 			 */
-			enum HitTestResult {
-				/// The point is the indicator margin in the ruler.
-				INDICATOR_MARGIN = 1 << 0,
-				/// The point is the line numbers area in the ruler.
-				LINE_NUMBERS = 1 << 1,
-				/// The point is 'padding-start' of the text area.
-				TEXT_AREA_PADDING_START = 1 << 2,
-				/// The point is 'content-rectangle' of the text area.
-				TEXT_AREA_CONTENT_RECTANGLE = 1 << 3,
-				/// A mask for ruler.
-				RULER_MASK = INDICATOR_MARGIN | LINE_NUMBERS,
-				/// A mask for text area.
-				TEXT_AREA_MASK = TEXT_AREA_PADDING_START | TEXT_AREA_CONTENT_RECTANGLE,
-				/// The point is outside of the local bounds of the text viewer.
-				OUT_OF_VIEWER = 0
-			};
+			struct HitTestResult {};
+			/// The point is the indicator margin in the ruler.
+			BOOST_STATIC_CONSTEXPR HitTestResult INDICATOR_MARGIN;
+			/// The point is the line numbers area in the ruler.
+			BOOST_STATIC_CONSTEXPR HitTestResult LINE_NUMBERS;
+			/// The point is 'padding-start' of the text area.
+			BOOST_STATIC_CONSTEXPR HitTestResult TEXT_AREA_PADDING_START;
+			/// The point is 'content-rectangle' of the text area.
+			BOOST_STATIC_CONSTEXPR HitTestResult TEXT_AREA_CONTENT_RECTANGLE;
+			/// The point is outside of the local bounds of the text viewer.
+			BOOST_STATIC_CONSTEXPR HitTestResult OUT_OF_VIEWER;
 
 			/**
 			 * A general configuration of the viewer.
@@ -272,7 +267,7 @@ namespace ascension {
 
 			/// @name Geometries
 			/// @{
-			virtual HitTestResult hitTest(const graphics::Point& p) const;
+			virtual const HitTestResult& hitTest(const graphics::Point& p) const;
 			graphics::Rectangle textAreaAllocationRectangle() const BOOST_NOEXCEPT;
 			graphics::Rectangle textAreaContentRectangle() const BOOST_NOEXCEPT;
 			/// @}
