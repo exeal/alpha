@@ -200,12 +200,6 @@ namespace ascension {
 			void showCaret() BOOST_NOEXCEPT;
 			/// @}
 
-			/// @name Ruler
-			/// @{
-			std::shared_ptr<const source::Ruler> ruler() const BOOST_NOEXCEPT;	// TODO: This method should be defined by source.SourceViewer.
-			void setRuler(std::shared_ptr<const source::Ruler> ruler);	// TODO: This method should be defined by source.SourceViewer.
-			/// @}
-
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 			/// @name Global IME (Only Windows)
 			/// @{
@@ -273,7 +267,6 @@ namespace ascension {
 			void initializeGraphics();
 			void initializeNativeObjects();
 			void paintCaret(graphics::PaintContext& context);
-			void repaintRuler();
 			void updateScrollBars(
 				const presentation::FlowRelativeTwoAxes<bool>& positions,
 				const presentation::FlowRelativeTwoAxes<bool>& properties);
@@ -432,7 +425,6 @@ namespace ascension {
 			std::unique_ptr<Renderer> renderer_;
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
-			std::shared_ptr<const source::Ruler> ruler_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			win32::Handle<HWND>::Type toolTip_;
 			std::basic_string<WCHAR> tipText_;
@@ -559,7 +551,7 @@ namespace ascension {
 
 		/**
 		 * Returns the general configuration.
-		 * @see #rulerConfiguration, #setConfiguration
+		 * @see #setConfiguration
 		 */
 		inline const TextViewer::Configuration& TextViewer::configuration() const BOOST_NOEXCEPT {
 			return configuration_;

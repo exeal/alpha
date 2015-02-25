@@ -892,9 +892,12 @@ namespace ascension {
 					horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition)));
 
 			// ruler width
-			if((horizontal && rulerPainter_->alignment() == graphics::PhysicalDirection::LEFT)
-					|| (!horizontal && rulerPainter_->alignment() == graphics::PhysicalDirection::TOP))
-				offset += rulerPainter_->allocationWidth();
+			const graphics::Rectangle localBounds(widgetapi::bounds(*this, false));
+			const graphics::Rectangle allocationRectangle(textAreaAllocationRectangle());
+			if(horizontal)
+				offset += graphics::geometry::left(allocationRectangle) - graphics::geometry::left(localBounds);
+			else
+				offset += graphics::geometry::top(allocationRectangle) - graphics::geometry::top(localBounds);
 
 			return offset;
 
@@ -1502,9 +1505,6 @@ namespace ascension {
 
 //			Timer tm(L"TextViewer.paint");
 
-//			// paint the ruler
-//			rulerPainter_->paint(context);
-
 			// paint the text area
 			textRenderer().paint(context);
 
@@ -1612,12 +1612,6 @@ namespace ascension {
 			}
 
 			widgetapi::scheduleRedraw(*this, boundsToRedraw, false);
-		}
-
-		/// Redraws the ruler.
-		void TextViewer::repaintRuler() {
-			widgetapi::scheduleRedraw(*this, graphics::geometry::joined(
-				rulerPainter_->indicatorMarginAllocationRectangle(), rulerPainter_->lineNumbersAllocationRectangle()), false);
 		}
 
 		/// @see Widget#resized
@@ -2114,12 +2108,7 @@ namespace ascension {
 						Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = static_cast<Scalar>(geometry::y(scrollOffsetsInPixels)))), false);
 			}
 
-			// 4. scroll the ruler
-			rulerPainter_->scroll(firstVisibleLineBeforeScroll);
-
-			// TODO: Step 3 and step 4 should reverse?
-
-			// 5. repaint
+			// 4. repaint
 			widgetapi::redrawScheduledRegion(*this);
 		}
 
@@ -2135,7 +2124,6 @@ namespace ascension {
 //				scrolls_.firstVisibleLine.line -= length(lines);
 //				scrolls_.vertical.position -= static_cast<int>(sublines);
 //				scrolls_.vertical.maximum -= static_cast<int>(sublines);
-				repaintRuler();
 			} else if(*lines.begin() > viewport->firstVisibleLine().line	// deleted the first visible line and/or after it
 					|| (*lines.begin() == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //				scrolls_.vertical.maximum -= static_cast<int>(sublines);
@@ -2154,7 +2142,6 @@ namespace ascension {
 //				scrolls_.firstVisibleLine.line += length(lines);
 //				scrolls_.vertical.position += static_cast<int>(length(lines));
 //				scrolls_.vertical.maximum += static_cast<int>(length(lines));
-				repaintRuler();
 			} else if(*lines.begin() > viewport->firstVisibleLine().line	// inserted at or after the first visible line
 					|| (*lines.begin() == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //				scrolls_.vertical.maximum += static_cast<int>(length(lines));
@@ -2176,7 +2163,6 @@ namespace ascension {
 				if(*lines.end() < viewport->firstVisibleLine().line) {	// changed before visible area
 //					scrolls_.vertical.position += sublinesDifference;
 //					scrolls_.vertical.maximum += sublinesDifference;
-					repaintRuler();
 				} else if(*lines.begin() > viewport->firstVisibleLine().line	// changed at or after the first visible line
 						|| (*lines.begin() == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //					scrolls_.vertical.maximum += sublinesDifference;
