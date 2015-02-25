@@ -2,7 +2,7 @@
  * @file viewer.cpp
  * @author exeal
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
- * @date 2006-2014
+ * @date 2006-2015
  */
 
 #include <ascension/content-assist/content-assist.hpp>
@@ -13,6 +13,9 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/presentation/styled-text-run-iterator.hpp>
+#include <ascension/presentation/text-line-style.hpp>
+#include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/text-editor/session.hpp>
@@ -21,7 +24,6 @@
 #include <ascension/viewer/default-mouse-input-strategy.hpp>
 #include <ascension/viewer/viewer.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
-#include <limits>	// std.numeric_limit
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
 #include <boost/geometry/algorithms/within.hpp>
@@ -30,6 +32,7 @@
 //#	define ASCENSIOB_DIAGNOSE_INHERENT_DRAWING
 //#	define ASCENSION_TRACE_DRAWING_STRING
 #endif // _DEBUG
+#include <limits>	// std.numeric_limit
 
 namespace ascension {
 	namespace viewers {
@@ -121,7 +124,7 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Glib::ObjectBase("ascension.viewers.TextViewer"),
 #endif
-				presentation_(presentation), mouseInputDisabledCount_(0) {
+				presentation_(presentation) {
 			initialize(nullptr);
 
 			// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
@@ -135,7 +138,7 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Glib::ObjectBase("ascension.viewers.TextViewer"),
 #endif
-				presentation_(other.presentation_), mouseInputDisabledCount_(0) {
+				presentation_(other.presentation_) {
 			initialize(&other);
 			modeState_ = other.modeState_;
 		}
@@ -144,8 +147,6 @@ namespace ascension {
 		TextViewer::~TextViewer() {
 			document().removeListener(*this);
 			document().removeRollbackListener(*this);
-			textRenderer().removeComputedBlockFlowDirectionListener(*this);
-			textRenderer().defaultFontChangedSignal().disconnect(defaultFontChangedConnection_);
 			textRenderer().layouts().removeVisualLinesListener(*this);
 			BOOST_FOREACH(VisualPoint* p, points_)
 				p->viewerDisposed();
@@ -204,8 +205,9 @@ namespace ascension {
 				widgetapi::redrawScheduledRegion(*this);
 		}
 
-		/// @see ComputedWritingModeListener#computedBlockFlowDirectionChanged
-		void TextViewer::computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used) {
+		/// @see Presentation#ComputedTextToplevelStyleChangedSignal
+		void TextViewer::computedTextToplevelStyleChanged(const presentation::Presentation&,
+				const presentation::DeclaredTextToplevelStyle&, const presentation::ComputedTextToplevelStyle&) {
 			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
 		}
 
@@ -628,6 +630,8 @@ namespace ascension {
 			document().addListener(*this);
 			document().addRollbackListener(*this);
 
+			presentation().computedTextToplevelStyleChangedSignal().connect(
+				std::bind(&TextViewer::computedTextToplevelStyleChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 //			updateScrollBars(FlowRelativeTwoAxes<bool>(true, true), FlowRelativeTwoAxes<bool>(true, true));
 			setMouseInputStrategy(std::shared_ptr<MouseInputStrategy>());
 
@@ -828,7 +832,6 @@ namespace ascension {
 		/// @internal
 		void TextViewer::initializeGraphics() {
 			renderer_.reset(/*(other != nullptr) ? new Renderer(*other->renderer_, *this) : */new Renderer(*this));
-			textRenderer().addComputedBlockFlowDirectionListener(*this);
 //			renderer_->addFontListener(*this);
 //			renderer_->addVisualLinesListener(*this);
 //			rulerPainter_.reset(new detail::RulerPainter(*this));
@@ -841,7 +844,8 @@ namespace ascension {
 			selectionShapeChangedConnection_ = caret().selectionShapeChangedSignal().connect(
 				std::bind(&TextViewer::selectionShapeChanged, this, std::placeholders::_1));
 	
-			defaultFontChangedConnection_ = renderer_->defaultFontChangedSignal().connect();
+			defaultFontChangedConnection_ =
+				renderer_->defaultFontChangedSignal().connect(std::bind(&TextViewer::defaultFontChanged, this, std::placeholders::_1));
 			renderer_->layouts().addVisualLinesListener(*this);
 
 			initializeNativeObjects();
@@ -1276,11 +1280,11 @@ namespace ascension {
 					break;
 				case GDK_KEY_Shift_L:
 					if(input.hasModifier(UserInput::CONTROL_DOWN) && configuration_.readingDirection == presentation::RIGHT_TO_LEFT)
-						textRenderer().setDirection(presentation::LEFT_TO_RIGHT);
+						presentation().setDefaultDirection(presentation::LEFT_TO_RIGHT);
 					break;
 				case GDK_KEY_Shift_R:
 					if(input.hasModifier(UserInput::CONTROL_DOWN) && configuration_.readingDirection == presentation::LEFT_TO_RIGHT)
-						textRenderer().setDirection(presentation::RIGHT_TO_LEFT);
+						presentation().setDefaultDirection(presentation::RIGHT_TO_LEFT);
 					break;
 				case GDK_KEY_Copy:
 					copySelection(caret(), true);
@@ -1305,9 +1309,9 @@ namespace ascension {
 				case VK_SHIFT:
 					if(input.hasModifier(UserInput::CONTROL_DOWN)) {
 						if(::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == RIGHT_TO_LEFT)
-							textRenderer().setDirection(LEFT_TO_RIGHT);
+							presentation().setDefaultDirection(LEFT_TO_RIGHT);
 						else if(::GetKeyState(VK_RSHIFT) < 0 && configuration_.readingDirection == LEFT_TO_RIGHT)
-							textRenderer().setDirection(RIGHT_TO_LEFT);
+							presentation().setDefaultDirection(RIGHT_TO_LEFT);
 						}
 					break;
 #endif
@@ -1611,12 +1615,6 @@ namespace ascension {
 			ti.rect = viewerBounds;
 			::SendMessageW(toolTip_.get(), TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			rulerPainter_->update();
-			if(rulerPainter_->alignment() != graphics::PhysicalDirection::LEFT && rulerPainter_->alignment() != graphics::PhysicalDirection::TOP) {
-//				recreateCaret();
-//				redrawVerticalRuler();
-				widgetapi::scheduleRedraw(*this, false);	// hmm...
-			}
 			if(contentAssistant() != 0)
 				contentAssistant()->viewerBoundsChanged();
 		}
@@ -1872,7 +1870,7 @@ namespace ascension {
 				return;
 
 #if 1
-			const presentation::WritingMode writingMode(presentation().computeWritingMode(&textRenderer()));
+			const presentation::WritingMode writingMode(presentation().computeWritingMode());
 			assert(!isFrozen());
 
 			// update the scroll bar in inline-progression-dimension
@@ -2070,8 +2068,8 @@ namespace ascension {
 						- inlineProgressionOffsetInViewerGeometry(*viewport, viewport->scrollPositions().ipd()))
 				: std::numeric_limits<std::int32_t>::max();
 			// 2-3. calculate physical offsets
-			const auto scrollOffsetsInPixels(presentation::mapAbstractToPhysical(
-				presentation().computeWritingMode(&textRenderer()), abstractScrollOffsetInPixels));
+			const auto scrollOffsetsInPixels(presentation::mapFlowRelativeToPhysical(
+				presentation().computeWritingMode(), abstractScrollOffsetInPixels));
 
 			// 3. scroll the graphics device
 			namespace geometry = graphics::geometry;
@@ -2289,12 +2287,13 @@ namespace ascension {
 		/// @see graphics#font#TextRenderer#createLineLayout
 		std::unique_ptr<const graphics::font::TextLayout> TextViewer::Renderer::createLineLayout(Index line) const {
 			const std::unique_ptr<graphics::RenderingContext2D> renderingContext(widgetapi::createRenderingContext(viewer_));
-			graphics::font::ComputedTextLineStyle lineStyle;
-			std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> runStyles;
+			presentation::styles::ComputedValue<presentation::TextLineStyle>::type lineStyle;
+			std::unique_ptr<presentation::ComputedStyledTextRunIterator> runStyles;
 			buildLineLayoutConstructionParameters(line, *renderingContext, lineStyle, runStyles);
-			return std::unique_ptr<const graphics::font::TextLayout>(new graphics::font::TextLayout(
-				viewer_.document().line(line), lineStyle, std::move(runStyles), fontCollection(),
-				renderingContext->fontRenderContext()));
+			return std::unique_ptr<const graphics::font::TextLayout>(
+				new graphics::font::TextLayout(
+					viewer_.document().line(line), presentation().computedTextToplevelStyle(),
+					lineStyle, std::move(runStyles), fontCollection(), renderingContext->fontRenderContext()));
 		}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
