@@ -506,6 +506,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\source\ruler-border-decorator.cpp">
       <Filter>ascension\Source Files\viewer\source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\source\utility.cpp">
+      <Filter>ascension\Source Files\viewer\source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1116,6 +1119,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-properties.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\utility.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
