@@ -12,7 +12,8 @@
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
-#include <ascension/presentation/text-style.hpp>
+#include <ascension/presentation/text-line-style.hpp>
+#include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <tuple>
 #define BOOST_THREAD_NO_LIB
@@ -509,9 +510,9 @@ namespace ascension {
 			 * @note This function may change the layout.
 			 * @see #modelToView, #viewToModelInBounds, TextLayout#hitTestCharacter
 			 */
-			TextHit<kernel::Position>&& viewToModel(const TextViewport& viewport,
+			TextHit<kernel::Position> viewToModel(const TextViewport& viewport,
 					const Point& pointInView, kernel::locations::CharacterUnit snapPolicy /* = kernel::locations::GRAPHEME_CLUSTER */) {
-				return std::move(*internalViewToModel(viewport, pointInView, false, snapPolicy));
+				return boost::get(internalViewToModel(viewport, pointInView, false, snapPolicy));
 			}
 
 			/**
