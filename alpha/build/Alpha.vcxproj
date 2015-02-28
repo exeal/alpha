@@ -256,6 +256,7 @@
     <ClCompile Include="..\..\ascension\src\viewer\source\indicator-margin.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\line-number-ruler.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\ruler-border-decorator.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\source\utility.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\viewer-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\virtual-box.cpp" />
@@ -471,6 +472,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-border-decorator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-decorator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\utility.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\virtual-box.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp" />
