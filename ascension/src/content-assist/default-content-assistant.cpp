@@ -250,7 +250,10 @@ namespace ascension {
 
 			// determine the horizontal orientation of the window
 			proposalsPopup_->setWritingMode(
-				textViewer_->textRenderer().layouts().at(kernel::line(textViewer_->caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT).writingMode());
+				graphics::font::writingMode(
+					textViewer_->textRenderer().layouts().at(
+						kernel::line(textViewer_->caret()),
+						graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)));
 			proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 			updatePopupBounds();
 
@@ -282,8 +285,10 @@ namespace ascension {
 
 			using namespace ascension::graphics;
 			if(const std::shared_ptr<const font::TextViewport> viewport = textViewer_->textRenderer().viewport()) {
-				const presentation::WritingMode& writingMode = textViewer_->textRenderer().layouts().at(
-					kernel::line(textViewer_->caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT).writingMode();
+				const presentation::WritingMode writingMode(
+					graphics::font::writingMode(
+						textViewer_->textRenderer().layouts().at(
+							kernel::line(textViewer_->caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)));
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				const Glib::RefPtr<const Gdk::Screen> screen(textViewer_->get_screen());
@@ -363,6 +368,18 @@ namespace ascension {
 		/// @see graphics.font.TextViewportListener.viewportScrollPropertiesChanged
 		void DefaultContentAssistant::viewportScrollPropertiesChanged(
 				const presentation::FlowRelativeTwoAxes<bool>&) BOOST_NOEXCEPT {
+		}
+	}
+
+	namespace viewer {
+		namespace utils {
+			/// Closes the opened completion proposals popup immediately.
+			void closeCompletionProposalsPopup(TextViewer& viewer) BOOST_NOEXCEPT {
+				if(contentassist::ContentAssistant* ca = viewer.contentAssistant()) {
+					if(contentassist::ContentAssistant::CompletionProposalsUI* cpui = ca->completionProposalsUI())
+						cpui->close();
+				}
+			}
 		}
 	}
 }

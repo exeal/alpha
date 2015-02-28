@@ -4,7 +4,7 @@
  * @date 2003-2006 was CompletionWindow.cpp
  * @date 2006-2012 was content-assist.cpp
  * @date 2012-03-12 separated from content-assist.cpp
- * @date 2014
+ * @date 2014-2015
  */
 
 #include <ascension/content-assist/default-completion-proposal.hpp>
@@ -13,6 +13,7 @@
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/source/utility.hpp>
 #include <boost/foreach.hpp>
 
 
@@ -100,7 +101,7 @@ namespace ascension {
 					i.seek(currentPartition.region.end());
 				if(i.tell() >= currentPartition.region.end()) {
 					if(i.tell().offsetInLine == i.line().length())
-						i.next();
+						++i;
 					document.partitioner().partition(i.tell(), currentPartition);
 					continue;
 				}
@@ -112,14 +113,14 @@ namespace ascension {
 						identifiers.insert(String(s, e));	// automatically merged
 						i.seek(kernel::Position(i.tell().line, e - bol));
 					} else {
-						if(syntax_.isIdentifierContinueCharacter(i.current()))
+						if(syntax_.isIdentifierContinueCharacter(*i))
 							followingNIDs = true;
-						i.next();
+						++i;
 					}
 				} else {
-					if(!syntax_.isIdentifierContinueCharacter(i.current()))
+					if(!syntax_.isIdentifierContinueCharacter(*i))
 						followingNIDs = false;
-					i.next();
+					++i;
 				}
 			}
 			BOOST_FOREACH(const String& identifier, identifiers)
