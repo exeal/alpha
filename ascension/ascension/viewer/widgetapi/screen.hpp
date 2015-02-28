@@ -21,7 +21,7 @@
 #endif
 
 namespace ascension {	
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			class Screen : public graphics::RenderingDevice {
 			public:

@@ -8,7 +8,7 @@
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		void copySelection(Caret& caret, bool useKillRing) {
 			// TODO: Not implemented.
 		}

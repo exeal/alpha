@@ -15,7 +15,7 @@
 #include <boost/optional.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace source {
 			/// A ruler (column) displaying line numbers.
 			class LineNumberRuler : public AbstractRuler {

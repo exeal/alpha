@@ -15,7 +15,7 @@
 
 // fwd. decl.
 namespace ascension {
-	namespace viewers {class TextViewer;}
+	namespace viewer {class TextViewer;}
 }
 
 namespace alpha {
@@ -67,7 +67,7 @@ namespace alpha {
 		public:
 			InteractiveReplacementCallback();
 			~InteractiveReplacementCallback() throw();
-			void setTextViewer(ascension::viewers::TextViewer& textViewer) throw();
+			void setTextViewer(ascension::viewer::TextViewer& textViewer) throw();
 		private:
 			ascension::searcher::IInteractiveReplacementCallback::Action
 				queryReplacementAction(const ascension::kernel::Region& matchedRegion, bool canUndo);
@@ -75,7 +75,7 @@ namespace alpha {
 			void replacementStarted(const ascension::kernel::Document& document, const ascension::kernel::Region& scope);
 		private:
 			HMENU menu_;
-			ascension::viewers::TextViewer* textViewer_;
+			ascension::viewer::TextViewer* textViewer_;
 		};
 	}
 }

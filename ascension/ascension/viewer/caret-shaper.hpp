@@ -26,7 +26,7 @@ namespace ascension {
 		class Position;
 	}
 
-	namespace viewers {
+	namespace viewer {
 		class Caret;
 		class TextViewer;
 
@@ -89,6 +89,6 @@ namespace ascension {
 			StaticShapeChangedSignal staticShapeChangedSignal_;
 		};
 	}
-} // namespace ascension.viewers
+} // namespace ascension.viewer
 
 #endif // !ASCENSION_CARET_SHAPER_HPP

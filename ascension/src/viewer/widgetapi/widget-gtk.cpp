@@ -22,7 +22,7 @@
 #	endif
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			graphics::Rectangle bounds(Proxy<const Widget> widget, bool includeFrame) {
 				if(includeFrame && widget->get_has_window()) {

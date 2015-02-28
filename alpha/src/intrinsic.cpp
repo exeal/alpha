@@ -86,16 +86,16 @@ namespace alpha {
 					static_cast<ascension::texteditor::Command::NumericPrefix>(n))();
 		}
 
-		template<bool(*procedure)(ascension::viewers::Caret&)>
+		template<bool(*procedure)(ascension::viewer::Caret&)>
 		bool transpose(boost::python::object ed /*, boost::python::ssize_t n*/) {
 			return ascension::texteditor::commands::TranspositionCommand(extractEditor(ed), procedure)();
 		}
 
 		void tryToBeginRectangleSelection(boost::python::object ed) {
 			EditorView& viewer = extractEditor(ed);
-			ascension::viewers::Caret& caret = viewer.caret();
+			ascension::viewer::Caret& caret = viewer.caret();
 			// the following code is copied from ascension/text-editor.cpp
-			ascension::viewers::utils::closeCompletionProposalsPopup(viewer);
+			ascension::viewer::utils::closeCompletionProposalsPopup(viewer);
 			if(ascension::texteditor::Session* const session = viewer.document().session()) {
 				if(session->incrementalSearcher().isRunning())
 					session->incrementalSearcher().end();
@@ -138,14 +138,14 @@ namespace alpha {
 
 		boost::python::def("backward_page",
 			&moveCaretN<
-				ascension::viewers::VisualDestinationProxy(const ascension::viewers::VisualPoint&, ascension::Direction, ascension::Index),
+				ascension::viewer::VisualDestinationProxy(const ascension::viewer::VisualPoint&, ascension::Direction, ascension::Index),
 				&ascension::kernel::locations::nextPage,
 				&ascension::Direction::BACKWARD
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 
 		boost::python::def("backward_visual_line",
 			&moveCaretN<
-				ascension::viewers::VisualDestinationProxy(const ascension::viewers::VisualPoint&, ascension::Direction, ascension::Index),
+				ascension::viewer::VisualDestinationProxy(const ascension::viewer::VisualPoint&, ascension::Direction, ascension::Index),
 				&ascension::kernel::locations::nextVisualLine,
 				&ascension::Direction::BACKWARD
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
@@ -178,7 +178,7 @@ namespace alpha {
 
 		boost::python::def("beginning_of_visual_line",
 			&moveCaret<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&),
 				&ascension::kernel::locations::beginningOfVisualLine
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 
@@ -201,25 +201,25 @@ namespace alpha {
 
 		boost::python::def("contextual_beginning_of_line",
 			&moveCaret<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&),
 				&ascension::kernel::locations::contextualBeginningOfLine
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 
 		boost::python::def("contextual_beginning_of_visual_line",
 			&moveCaret<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&),
 				&ascension::kernel::locations::contextualBeginningOfVisualLine
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 
 		boost::python::def("contextual_end_of_line",
 			&moveCaret<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&),
 				&ascension::kernel::locations::contextualEndOfLine
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 
 		boost::python::def("contextual_end_of_visual_line",
 			&moveCaret<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&),
 				&ascension::kernel::locations::contextualEndOfVisualLine
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 
@@ -238,8 +238,8 @@ namespace alpha {
 		boost::python::def("copy_selection",
 			ambient::makeFunctionPointer([](boost::python::object ed, bool useKillRing) -> bool {
 				try {
-					ascension::viewers::copySelection(extractEditor(ed).caret(), useKillRing);
-				} catch(const ascension::viewers::ClipboardException&) {
+					ascension::viewer::copySelection(extractEditor(ed).caret(), useKillRing);
+				} catch(const ascension::viewer::ClipboardException&) {
 					return false;	// TODO: Report the error to user.
 				}
 				return true;
@@ -249,8 +249,8 @@ namespace alpha {
 		boost::python::def("cut_selection",
 			ambient::makeFunctionPointer([](boost::python::object ed, bool useKillRing) -> bool {
 				try {
-					ascension::viewers::cutSelection(extractEditor(ed).caret(), useKillRing);
-				} catch(const ascension::viewers::ClipboardException&) {
+					ascension::viewer::cutSelection(extractEditor(ed).caret(), useKillRing);
+				} catch(const ascension::viewer::ClipboardException&) {
 					return false;	// TODO: Report the error to user.
 				}
 				return true;
@@ -289,7 +289,7 @@ namespace alpha {
 
 		boost::python::def("end_of_visual_line",
 			&moveCaret<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&),
 				&ascension::kernel::locations::endOfVisualLine
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 
@@ -303,13 +303,13 @@ namespace alpha {
 
 		boost::python::def("first_printable_character_of_line",
 			&moveCaret<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&),
 				&ascension::kernel::locations::firstPrintableCharacterOfLine
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 
 		boost::python::def("first_printable_character_of_visual_line",
 			&moveCaret<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&),
 				&ascension::kernel::locations::firstPrintableCharacterOfVisualLine
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 
@@ -336,14 +336,14 @@ namespace alpha {
 
 		boost::python::def("forward_page",
 			&moveCaretN<
-				ascension::viewers::VisualDestinationProxy(const ascension::viewers::VisualPoint&, ascension::Direction, ascension::Index),
+				ascension::viewer::VisualDestinationProxy(const ascension::viewer::VisualPoint&, ascension::Direction, ascension::Index),
 				&ascension::kernel::locations::nextPage,
 				&ascension::Direction::FORWARD
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 
 		boost::python::def("forward_visual_line",
 			&moveCaretN<
-				ascension::viewers::VisualDestinationProxy(const ascension::viewers::VisualPoint&, ascension::Direction, ascension::Index),
+				ascension::viewer::VisualDestinationProxy(const ascension::viewer::VisualPoint&, ascension::Direction, ascension::Index),
 				&ascension::kernel::locations::nextVisualLine,
 				&ascension::Direction::FORWARD
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
@@ -388,31 +388,31 @@ namespace alpha {
 
 		boost::python::def("last_printable_character_of_line",
 			&moveCaret<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&),
 				&ascension::kernel::locations::lastPrintableCharacterOfLine
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 
 		boost::python::def("last_printable_character_of_visual_line",
 			&moveCaret<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&),
 				&ascension::kernel::locations::lastPrintableCharacterOfVisualLine
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 /*
 		boost::python::def("left_character",
 			&moveCaretN<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::kernel::locations::CharacterUnit, ascension::Index),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&, ascension::kernel::locations::CharacterUnit, ascension::Index),
 				&ascension::kernel::locations::leftCharacter
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 
 		boost::python::def("left_word",
 			&moveCaretN<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::Index),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&, ascension::Index),
 				&ascension::kernel::locations::leftWord
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 
 		boost::python::def("left_word_end",
 			&moveCaretN<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::Index),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&, ascension::Index),
 				&ascension::kernel::locations::leftWordEnd
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 */
@@ -443,19 +443,19 @@ namespace alpha {
 /*
 		boost::python::def("right_character",
 			&moveCaretN<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::kernel::locations::CharacterUnit, ascension::Index),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&, ascension::kernel::locations::CharacterUnit, ascension::Index),
 				&ascension::kernel::locations::rightCharacter
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 
 		boost::python::def("right_word",
 			&moveCaretN<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::Index),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&, ascension::Index),
 				&ascension::kernel::locations::rightWord
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 
 		boost::python::def("right_word_end",
 			&moveCaretN<
-				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::Index),
+				ascension::kernel::Position(const ascension::viewer::VisualPoint&, ascension::Index),
 				&ascension::kernel::locations::rightWordEnd
 			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 */
@@ -498,15 +498,15 @@ namespace alpha {
 			boost::python::arg("ed") = boost::python::object());
 
 		boost::python::def("transpose_characters",
-			&transpose<&ascension::viewers::transposeCharacters>/*,
+			&transpose<&ascension::viewer::transposeCharacters>/*,
 			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1)*/);
 
 		boost::python::def("transpose_lines",
-			&transpose<&ascension::viewers::transposeLines>/*,
+			&transpose<&ascension::viewer::transposeLines>/*,
 			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1)*/);
 
 		boost::python::def("transpose_words",
-			&transpose<&ascension::viewers::transposeWords>/*,
+			&transpose<&ascension::viewer::transposeWords>/*,
 			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1)*/);
 
 		boost::python::def("try_to_begin_rectangle_selection",

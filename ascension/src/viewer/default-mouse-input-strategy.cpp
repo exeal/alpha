@@ -4,7 +4,7 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-10-04 separated from viewer.cpp
- * @date 2011-2014
+ * @date 2011-2015
  */
 
 // TODO: This code does not support platforms other than Win32.
@@ -28,9 +28,9 @@
 #include "auto-scroll-origin-mark.cpp"
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		/**
-		 * @class ascension#viewers#DefaultMouseInputStrategy
+		 * @class ascension#viewer#DefaultMouseInputStrategy
 		 * Standard implementation of @c MouseOperationStrategy interface.
 		 *
 		 * This class implements the standard behavior for the user's mouse input.

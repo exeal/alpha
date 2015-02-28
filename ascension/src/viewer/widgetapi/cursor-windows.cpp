@@ -1,6 +1,6 @@
 /**
  * @file cursor-windows.cpp
- * Implements @c ascension#viewers#widgetapi#Cursor class on Win32 window system.
+ * Implements @c ascension#viewer#widgetapi#Cursor class on Win32 window system.
  * @date 2014-02-01 Created.
  */
 
@@ -8,7 +8,7 @@
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			Cursor::Cursor(Cursor::BuiltinShape shape) {
 				if(!IS_INTRESOURCE(shape))

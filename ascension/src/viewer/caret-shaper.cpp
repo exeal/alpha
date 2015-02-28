@@ -4,7 +4,7 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-09-25 separated from viewer.cpp
- * @date 2011-2014
+ * @date 2011-2015
  */
 
 #include <ascension/graphics/font/font-metrics.hpp>
@@ -15,7 +15,7 @@
 #include <ascension/viewer/viewer.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		/**
 		 * Returns logical bounds of the character the given caret addresses.
 		 * @param caret The caret

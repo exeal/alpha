@@ -11,7 +11,7 @@
 #endif
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace {
 			inline boost::optional<unsigned int> systemBlinkTimeInMilliseconds(TextViewer& viewer) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)

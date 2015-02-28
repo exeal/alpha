@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2003-2008 was point.cpp
  * @date 2008-2010 separated from point.cpp
- * @date 2010-2014
+ * @date 2010-2015
  */
 
 #include <ascension/corelib/text/break-iterator.hpp>
@@ -23,7 +23,7 @@
 #include <boost/range/algorithm/find.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		// Caret //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		/// @internal Default constructor.
@@ -39,7 +39,7 @@ namespace ascension {
 		// TODO: rewrite this documentation.
 
 		/**
-		 * @class ascension::viewers::Caret
+		 * @class ascension::viewer::Caret
 		 *
 		 * @c Caret is an extension of @c VisualPoint. A caret has a selection on the text viewer. And
 		 * supports line selection, word selection, rectangle (box) selection, tracking match brackets, and
@@ -83,7 +83,7 @@ namespace ascension {
 		 */
 
 		/**
-		 * @typedef ascension::viewers::Caret::CharacterInputSignal
+		 * @typedef ascension::viewer::Caret::CharacterInputSignal
 		 * The signal which gets emitted when a character was input by the caret.
 		 * @param caret The caret
 		 * @param c The code point of the input character
@@ -91,14 +91,14 @@ namespace ascension {
 		 */
 
 		/**
-		 * @typedef ascension::viewers::Caret::InputModeChangedSignal
+		 * @typedef ascension::viewer::Caret::InputModeChangedSignal
 		 * The signal which gets emitted when any input mode of the caret had been changed.
 		 * @param caret The caret
 		 * @see #inputModeChangedSignal, #isOvertypeMode, #overtypeModeChangedSignal, #setOvertypeMode
 		 */
 
 		/**
-		 * @typedef ascension::viewers::Caret::MatchBracketsChangedSignal
+		 * @typedef ascension::viewer::Caret::MatchBracketsChangedSignal
 		 * The signal which gets emitted when the matched brackets were changed.
 		 * @param caret The caret
 		 * @param previouslyMatchedBrackets The pair of the brackets previously matched. May be @c boost#none
@@ -107,7 +107,7 @@ namespace ascension {
 		 */
 
 		/**
-		 * @typedef ascension::viewers::Caret::MotionSignal
+		 * @typedef ascension::viewer::Caret::MotionSignal
 		 * The signal which gets emitted when the caret was moved.
 		 * @param caret The caret
 		 * @param regionBeforeMotion The region which the caret had before. The @c first member is the anchor and
@@ -116,7 +116,7 @@ namespace ascension {
 		 */
 
 		/**
-		 * @typedef ascension::viewers::Caret::SelectionShapeChangedSignal
+		 * @typedef ascension::viewer::Caret::SelectionShapeChangedSignal
 		 * The signal which gets emitted when the shape (linear or rectangle) of the selection is changed.
 		 * @param caret The caret
 		 * @see #beginRectangleSelection, #endRectangleSelection, #isSelectionRectangle, #selectionShapeChangedSignal
@@ -717,7 +717,7 @@ namespace ascension {
 		}
 
 
-		// viewers free functions /////////////////////////////////////////////////////////////////////////////////////
+		// viewer free functions /////////////////////////////////////////////////////////////////////////////////////
 
 		/**
 		 * Returns @c true if the specified point is over the selection.
@@ -753,7 +753,7 @@ namespace ascension {
 		 * @throw kernel#BadPositionException @a line is outside of the document
 		 * @see #selectedRangeOnVisualLine, VirtualBox#characterRangeInVisualLine
 		 */
-		boost::optional<boost::integer_range<Index>> viewers::selectedRangeOnLine(const Caret& caret, Index line) {
+		boost::optional<boost::integer_range<Index>> viewer::selectedRangeOnLine(const Caret& caret, Index line) {
 			const kernel::Position bos(caret.beginning());
 			if(bos.line > line)
 				return boost::none;
@@ -874,7 +874,7 @@ namespace ascension {
 		}
 
 
-		// viewers free functions /////////////////////////////////////////////////////////////////////////////////////
+		// viewer free functions /////////////////////////////////////////////////////////////////////////////////////
 
 		/**
 		 * Breaks the line at the caret position and moves the caret to the end of the inserted string.
@@ -1197,7 +1197,7 @@ namespace ascension {
 		}
 
 		namespace utils {
-			// viewers.utils free functions ///////////////////////////////////////////////////////////////////////////
+			// viewer.utils free functions ///////////////////////////////////////////////////////////////////////////
 
 			/**
 			 * Creates an MIME data object represents the selected content.

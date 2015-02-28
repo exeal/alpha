@@ -12,7 +12,7 @@
 #include <boost/core/noncopyable.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace source {
 			class RulerDecorator;
 

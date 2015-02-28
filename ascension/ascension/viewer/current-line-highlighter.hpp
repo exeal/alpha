@@ -16,7 +16,7 @@
 #include <boost/optional.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		class Caret;
 
 		/// Highlights the line on which the caret is put.

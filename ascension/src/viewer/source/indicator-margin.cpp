@@ -9,7 +9,7 @@
 #include <ascension/viewer/source/indicator-margin.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace source {
 			/// Destructor does nothing.
 			IndicatorMargin::~IndicatorMargin() BOOST_NOEXCEPT {

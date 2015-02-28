@@ -12,7 +12,7 @@
 #include <ascension/viewer/widgetapi/event/located-user-input.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			namespace event {
 				/// A @c MouseButtonInput represents a mouse button event.

@@ -15,7 +15,7 @@
 #endif
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 
 		class TextViewer;
 #if 0

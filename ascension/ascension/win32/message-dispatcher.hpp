@@ -59,13 +59,13 @@ namespace ascension {
 		ASCENSION_DEFINE_HAS_METHOD(focusGained, bool(T::*)());
 		ASCENSION_DEFINE_HAS_METHOD(aboutToLoseFocus, bool(T::*)());
 //		ASCENSION_DEFINE_HAS_METHOD(paint, bool(T::*)(graphics::PaintContext&));
-		ASCENSION_DEFINE_HAS_METHOD(keyPressed, bool(T::*)(const viewers::base::KeyInput&));
-		ASCENSION_DEFINE_HAS_METHOD(keyReleased, bool(T::*)(const viewers::base::KeyInput&));
-		ASCENSION_DEFINE_HAS_METHOD(mouseMoved, bool(T::*)(const viewers::base::LocatedUserInput&));
-		ASCENSION_DEFINE_HAS_METHOD(mousePressed, bool(T::*)(const viewers::base::MouseButtonInput&));
-		ASCENSION_DEFINE_HAS_METHOD(mouseReleased, bool(T::*)(const viewers::base::MouseButtonInput&));
-		ASCENSION_DEFINE_HAS_METHOD(mouseDoubleClicked, bool(T::*)(const viewers::base::MouseButtonInput&));
-		ASCENSION_DEFINE_HAS_METHOD(mouseWheelChanged, bool(T::*)(const viewers::base::MouseWheelInput&));
+		ASCENSION_DEFINE_HAS_METHOD(keyPressed, bool(T::*)(const viewer::base::KeyInput&));
+		ASCENSION_DEFINE_HAS_METHOD(keyReleased, bool(T::*)(const viewer::base::KeyInput&));
+		ASCENSION_DEFINE_HAS_METHOD(mouseMoved, bool(T::*)(const viewer::base::LocatedUserInput&));
+		ASCENSION_DEFINE_HAS_METHOD(mousePressed, bool(T::*)(const viewer::base::MouseButtonInput&));
+		ASCENSION_DEFINE_HAS_METHOD(mouseReleased, bool(T::*)(const viewer::base::MouseButtonInput&));
+		ASCENSION_DEFINE_HAS_METHOD(mouseDoubleClicked, bool(T::*)(const viewer::base::MouseButtonInput&));
+		ASCENSION_DEFINE_HAS_METHOD(mouseWheelChanged, bool(T::*)(const viewer::base::MouseWheelInput&));
 		
 		ASCENSION_DEFINE_HAS_METHOD(onSetCursor, bool(T::*)(const win32::Handle<HWND>&, UINT, UINT));
 		ASCENSION_DEFINE_HAS_METHOD(onNcCreate, bool(T::*)(CREATESTRUCT&));
@@ -99,19 +99,19 @@ namespace ascension {
 		inline int inputModifiersFromNative(WPARAM wp) {
 			int result = 0;
 			if(boole(wp & MK_LBUTTON))
-				result |= viewers::base::UserInput::BUTTON1_DOWN;
+				result |= viewer::base::UserInput::BUTTON1_DOWN;
 			if(boole(wp & MK_RBUTTON))
-				result |= viewers::base::UserInput::BUTTON3_DOWN;
+				result |= viewer::base::UserInput::BUTTON3_DOWN;
 			if(boole(wp & MK_SHIFT))
-				result |= viewers::base::UserInput::SHIFT_DOWN;
+				result |= viewer::base::UserInput::SHIFT_DOWN;
 			if(boole(wp & MK_CONTROL))
-				result |= viewers::base::UserInput::CONTROL_DOWN;
+				result |= viewer::base::UserInput::CONTROL_DOWN;
 			if(boole(wp & MK_MBUTTON))
-				result |= viewers::base::UserInput::BUTTON2_DOWN;
+				result |= viewer::base::UserInput::BUTTON2_DOWN;
 			if(boole(wp & MK_XBUTTON1))
-				result |= viewers::base::UserInput::BUTTON4_DOWN;
+				result |= viewer::base::UserInput::BUTTON4_DOWN;
 			if(boole(wp & MK_XBUTTON2))
-				result |= viewers::base::UserInput::BUTTON5_DOWN;
+				result |= viewer::base::UserInput::BUTTON5_DOWN;
 			return result;
 		}
 */
@@ -180,42 +180,42 @@ namespace ascension {
 			static int generateKeyModifiers() {
 				int modifiers;
 				if(::GetKeyState(VK_SHIFT) < 0)
-					modifiers |= viewers::base::UserInput::SHIFT_DOWN;
+					modifiers |= viewer::base::UserInput::SHIFT_DOWN;
 				if(::GetKeyState(VK_CONTROL) < 0)
-					modifiers |= viewers::base::UserInput::CONTROL_DOWN;
+					modifiers |= viewer::base::UserInput::CONTROL_DOWN;
 				if(::GetKeyState(VK_MENU) < 0)
-					modifiers |= viewers::base::UserInput::ALT_DOWN;
+					modifiers |= viewer::base::UserInput::ALT_DOWN;
 			}
 			static LRESULT callKeyPressed(Derived& widget, WPARAM wp, LPARAM lp, bool& consumed) {
-				const viewers::base::KeyInput input(viewers::base::keyboardCodeFromWin32(wp),
+				const viewer::base::KeyInput input(viewer::base::keyboardCodeFromWin32(wp),
 					generateKeyModifiers(), static_cast<int>(lp & 0xffffu), HIWORD(lp));
 				return (consumed = widget.keyPressed(input)) ? 0 : 1;
 			}
 			static LRESULT callKeyReleased(Derived& widget, WPARAM wp, LPARAM lp, bool& consumed) {
-				const viewers::base::KeyInput input(viewers::base::keyboardCodeFromWin32(wp),
+				const viewer::base::KeyInput input(viewer::base::keyboardCodeFromWin32(wp),
 					generateKeyModifiers(), static_cast<int>(lp & 0xffffu), HIWORD(lp));
 				return (consumed = widget.keyReleased(input)) ? 0 : 1;
 			}
 			static void processMouseDoubleClicked(Derived& widget,
-					viewers::base::UserInput::MouseButton button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
-				consumed = widget.mouseDoubleClicked(viewers::base::MouseButtonInput(
+					viewer::base::UserInput::MouseButton button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
+				consumed = widget.mouseDoubleClicked(viewer::base::MouseButtonInput(
 					graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)),
 					button, inputModifiersFromNative(wpForModifiers)));
 			}
 			static void processMousePressed(Derived& widget,
-					viewers::base::UserInput::MouseButton button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
-				consumed = widget.mousePressed(viewers::base::MouseButtonInput(
+					viewer::base::UserInput::MouseButton button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
+				consumed = widget.mousePressed(viewer::base::MouseButtonInput(
 					graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)),
 					button, inputModifiersFromNative(wpForModifiers)));
 			}
 			static void processMouseReleased(Derived& widget,
-					viewers::base::UserInput::MouseButton button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
-				consumed = widget.mouseReleased(viewers::base::MouseButtonInput(
+					viewer::base::UserInput::MouseButton button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
+				consumed = widget.mouseReleased(viewer::base::MouseButtonInput(
 					graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)),
 					button, inputModifiersFromNative(wpForModifiers)));
 			}
 			static void processMouseWheelChanged(bool horizontal, WPARAM wp, LPARAM lp, bool& consumed) {
-				consumed = mouseWheelChanged(viewers::base::MouseWheelInput(
+				consumed = mouseWheelChanged(viewer::base::MouseWheelInput(
 					screenToClient(graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp))),
 					static_cast<int>(wp), graphics::Dimension<>(
 						horizontal ? GET_WHEEL_DELTA_WPARAM(wp) : 0,
@@ -241,44 +241,44 @@ namespace ascension {
 				return callKeyReleased(widget, wp, lp, consumed);
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_MOUSEMOVE, mouseMoved) {
-				consumed = widget.mouseMoved(viewers::base::LocatedUserInput(
+				consumed = widget.mouseMoved(viewer::base::LocatedUserInput(
 					graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)), static_cast<int>(wp)));
 				return consumed ? 0 : 1;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_LBUTTONDOWN, mousePressed) {
-				processMousePressed(viewers::base::UserInput::BUTTON1_DOWN, wp, lp, consumed);
+				processMousePressed(viewer::base::UserInput::BUTTON1_DOWN, wp, lp, consumed);
 				return consumed ? 0 : 1;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_LBUTTONUP, mouseReleased) {
-				processMouseReleased(viewers::base::UserInput::BUTTON1_DOWN, wp, lp, consumed);
+				processMouseReleased(viewer::base::UserInput::BUTTON1_DOWN, wp, lp, consumed);
 				return consumed ? 0 : 1;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_LBUTTONDBLCLK, mousePressed) {
-				processMouseDoubleClicked(viewers::base::UserInput::BUTTON1_DOWN, wp, lp, consumed);
+				processMouseDoubleClicked(viewer::base::UserInput::BUTTON1_DOWN, wp, lp, consumed);
 				return consumed ? 0 : 1;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_RBUTTONDOWN, mousePressed) {
-				processMousePressed(viewers::base::UserInput::BUTTON3_DOWN, wp, lp, consumed);
+				processMousePressed(viewer::base::UserInput::BUTTON3_DOWN, wp, lp, consumed);
 				return consumed ? 0 : 1;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_RBUTTONUP, mouseReleased) {
-				processMouseReleased(viewers::base::UserInput::BUTTON3_DOWN, wp, lp, consumed);
+				processMouseReleased(viewer::base::UserInput::BUTTON3_DOWN, wp, lp, consumed);
 				return consumed ? 0 : 1;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_RBUTTONDBLCLK, mouseDoubleClicked) {
-				processMouseDoubleClicked(viewers::base::UserInput::BUTTON3_DOWN, wp, lp, consumed);
+				processMouseDoubleClicked(viewer::base::UserInput::BUTTON3_DOWN, wp, lp, consumed);
 				return consumed ? 0 : 1;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_MBUTTONDOWN, mousePressed) {
-				processMousePressed(viewers::base::UserInput::BUTTON2_DOWN, wp, lp, consumed);
+				processMousePressed(viewer::base::UserInput::BUTTON2_DOWN, wp, lp, consumed);
 				return consumed ? 0 : 1;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_MBUTTONUP, mouseReleased) {
-				processMouseReleased(viewers::base::UserInput::BUTTON2_DOWN, wp, lp, consumed);
+				processMouseReleased(viewer::base::UserInput::BUTTON2_DOWN, wp, lp, consumed);
 				return consumed ? 0 : 1;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_MBUTTONDBLCLK, mouseDoubleClicked) {
-				processMouseDoubleClicked(viewers::base::UserInput::BUTTON2_DOWN, wp, lp, consumed);
+				processMouseDoubleClicked(viewer::base::UserInput::BUTTON2_DOWN, wp, lp, consumed);
 				return consumed ? 0 : 1;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_MOUSEWHEEL, mouseWheelChanged) {
@@ -287,20 +287,20 @@ namespace ascension {
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_XBUTTONDOWN, mousePressed) {
 				processMousePressed((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ?
-						viewers::base::UserInput::BUTTON4_DOWN : viewers::base::UserInput::BUTTON5_DOWN,
+						viewer::base::UserInput::BUTTON4_DOWN : viewer::base::UserInput::BUTTON5_DOWN,
 					GET_KEYSTATE_WPARAM(wp), lp, consumed);
 				return consumed ? TRUE : FALSE;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_XBUTTONUP, mouseReleased) {
 				processMouseReleased(
 					(GET_XBUTTON_WPARAM(wp) == XBUTTON1) ?
-						viewers::base::UserInput::BUTTON4_DOWN : viewers::base::UserInput::BUTTON5_DOWN,
+						viewer::base::UserInput::BUTTON4_DOWN : viewer::base::UserInput::BUTTON5_DOWN,
 					GET_KEYSTATE_WPARAM(wp), lp, consumed);
 				return consumed ? TRUE : FALSE;
 			}
 			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_XBUTTONDBLCLK, mouseDoubleClicked) {
 				processMouseDoubleClicked((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ?
-						viewers::base::UserInput::BUTTON4_DOWN : viewers::base::UserInput::BUTTON5_DOWN,
+						viewer::base::UserInput::BUTTON4_DOWN : viewer::base::UserInput::BUTTON5_DOWN,
 					GET_KEYSTATE_WPARAM(wp), lp, consumed);
 				return consumed ? TRUE : FALSE;
 			}

@@ -12,7 +12,7 @@
 #include <ascension/viewer/widgetapi/event/user-input.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			namespace event {
 				/// An event which indicates that keystroke occurred in a widget.

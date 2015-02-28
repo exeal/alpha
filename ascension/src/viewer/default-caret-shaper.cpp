@@ -17,7 +17,7 @@
 #endif
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		// DefaultCaretShaper /////////////////////////////////////////////////////////////////////////////////////////
 
 		/// @see Caret#MotionSignal

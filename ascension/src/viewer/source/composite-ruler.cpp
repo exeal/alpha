@@ -10,7 +10,7 @@
 #include <boost/range/numeric.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace source {
 			/// Default constructor.
 			CompositeRuler::CompositeRuler() BOOST_NOEXCEPT : textViewer_(nullptr) {

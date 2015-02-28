@@ -36,7 +36,7 @@
 #include <limits>	// std.numeric_limit
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace {
 			/// @internal Maps the given point in viewer-local coordinates into a point in text-area coordinates.
 			inline graphics::Point mapLocalToTextArea(const TextViewer& viewer, const graphics::Point& p) {
@@ -62,7 +62,7 @@ namespace ascension {
 		// TextViewer /////////////////////////////////////////////////////////////////////////////////////////////////
 
 		/**
-		 * @class ascension::viewers::TextViewer
+		 * @class ascension::viewer::TextViewer
 		 *
 		 * The view of Ascension framework. @c TextViewer displays the content of the document, manipulates
 		 * the document with the caret and selection, and provides other visual presentations.
@@ -137,7 +137,7 @@ namespace ascension {
 		 */
 		TextViewer::TextViewer(presentation::Presentation& presentation) :
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Glib::ObjectBase("ascension.viewers.TextViewer"),
+				Glib::ObjectBase("ascension.viewer.TextViewer"),
 #endif
 				presentation_(presentation) {
 			initialize(nullptr);
@@ -151,7 +151,7 @@ namespace ascension {
 		 */
 		TextViewer::TextViewer(const TextViewer& other) :
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Glib::ObjectBase("ascension.viewers.TextViewer"),
+				Glib::ObjectBase("ascension.viewer.TextViewer"),
 #endif
 				presentation_(other.presentation_) {
 			initialize(&other);
@@ -974,7 +974,7 @@ namespace ascension {
 
 			// TODO: This code is temporary. The following code provides a default implementation of
 			// TODO: "key combination to command" map.
-			using namespace ascension::viewers::widgetapi::event;
+			using namespace ascension::viewer::widgetapi::event;
 			using namespace ascension::texteditor::commands;
 			static kernel::Position(*const nextCharacterLocation)(const kernel::Point&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
 //			if(hasModifier<UserInput::ALT_DOWN>(input)) {
@@ -2178,7 +2178,7 @@ namespace ascension {
 		// AutoFreeze /////////////////////////////////////////////////////////////////////////////////////////////////
 
 		/**
-		 * @class ascension::viewers::AutoFreeze
+		 * @class ascension::viewer::AutoFreeze
 		 *
 		 * Calls automatically @c TextViewer#freeze and @c TextViewer#unfreeze.
 		 *
@@ -2347,7 +2347,7 @@ namespace ascension {
 		}
 
 		namespace detail {
-			// viewers.detail.MouseVanish<> ///////////////////////////////////////////////////////////////////////////
+			// viewer.detail.MouseVanish<> ///////////////////////////////////////////////////////////////////////////
 
 			template<typename Derived> MouseVanish<Derived>::MouseVanish() BOOST_NOEXCEPT : hidden_(false) {
 			}
@@ -2388,7 +2388,7 @@ namespace ascension {
 		 * Calls @c IncrementalSearcher#abort from @a viewer.
 		 * @return true if the incremental search was running
 		 */
-		bool abortIncrementalSearch(viewers::TextViewer& viewer) BOOST_NOEXCEPT {
+		bool abortIncrementalSearch(viewer::TextViewer& viewer) BOOST_NOEXCEPT {
 			if(Session* session = viewer.document().session()) {
 				if(session->incrementalSearcher().isRunning())
 					return session->incrementalSearcher().abort(), true;
@@ -2400,7 +2400,7 @@ namespace ascension {
 		 * Calls @c IncrementalSearcher#end from @a viewer.
 		 * @return true if the incremental search was running
 		 */
-		bool endIncrementalSearch(viewers::TextViewer& viewer) BOOST_NOEXCEPT {
+		bool endIncrementalSearch(viewer::TextViewer& viewer) BOOST_NOEXCEPT {
 			if(Session* session = viewer.document().session()) {
 				if(session->incrementalSearcher().isRunning())
 					return session->incrementalSearcher().end(), true;

@@ -36,7 +36,7 @@ namespace ascension {
 		}
 	}
 
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			class Cursor;
 		}
@@ -136,6 +136,6 @@ namespace ascension {
 		};
 	}
 
-} // namespace ascension.viewers
+} // namespace ascension.viewer
 
 #endif // !ASCENSION_DEFAULT_MOUSE_INPUT_STRATEGY_HPP

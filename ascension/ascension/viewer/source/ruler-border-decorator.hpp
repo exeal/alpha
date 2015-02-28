@@ -12,7 +12,7 @@
 #include <memory>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace source {
 			/// Decorator class of @Ruler interface which displays a border-end.
 			class RulerBorderDecorator : public RulerDecorator {

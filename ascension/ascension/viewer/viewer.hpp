@@ -50,7 +50,7 @@
 
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		class Caret;
 		class VirtualBox;
 		class VisualPoint;
@@ -60,7 +60,7 @@ namespace ascension {
 		class ContentAssistant;
 	}
 
-	namespace viewers {
+	namespace viewer {
 		namespace detail {
 			/// @internal Implementes "Mouse Vanish" feature.
 			template<typename Derived>
@@ -643,6 +643,6 @@ namespace ascension {
 			return *renderer_;
 		}
 	}
-} // namespace ascension.viewers
+} // namespace ascension.viewer
 
 #endif // !ASCENSION_VIEWER_HPP

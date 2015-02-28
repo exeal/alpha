@@ -11,7 +11,7 @@
 #include <memory>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace source {
 			/// Base class of @Ruler interface decorator.
 			class RulerDecorator : public AbstractRuler {

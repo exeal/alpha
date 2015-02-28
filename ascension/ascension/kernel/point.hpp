@@ -23,7 +23,7 @@ namespace ascension {
 
 		/**
 		 * A listener for @c Point.
-		 * @see PointLifeCycleListener, viewers#CaretListener, Point#Point
+		 * @see PointLifeCycleListener, viewer#CaretListener, Point#Point
 		 */
 		class PointListener {
 		private:

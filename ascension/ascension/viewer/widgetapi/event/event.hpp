@@ -12,7 +12,7 @@
 #include <boost/config.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			namespace event {
 				/// Base class of all event types.

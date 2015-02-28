@@ -22,7 +22,7 @@ namespace ascension {
 		/**
 		 * @c Position represents a position in the document by a line number and an offset in the line.
 		 * @note This class is not intended to be subclassed.
-		 * @see Region, Point, viewers#VisualPoint, viewers#Caret
+		 * @see Region, Point, viewer#VisualPoint, viewer#Caret
 		 */
 		class Position : public FastArenaObject<Position>, private boost::totally_ordered<Position> {
 		public:

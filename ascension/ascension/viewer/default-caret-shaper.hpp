@@ -15,7 +15,7 @@
 
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		/**
 		 * Default implementation of @c CaretShaper.
 		 * @c DefaultCaretShaper returns system-defined caret shape (color, width) which depends on
@@ -59,6 +59,6 @@ namespace ascension {
 			std::map<const Caret*, boost::signals2::connection> inputModeChangedConnections_;
 		};
 	}
-} // namespace ascension.viewers
+} // namespace ascension.viewer
 
 #endif // !ASCENSION_DEFAULT_CARET_SHAPER_HPP

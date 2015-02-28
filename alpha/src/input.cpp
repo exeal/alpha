@@ -503,10 +503,10 @@ bool InputManager::input(const MSG& message) {
 
 			boost::python::enum_<KeyStroke::ModifierKey>("ModifierKey")
 				.value("none", static_cast<KeyStroke::ModifierKey>(0))
-				.value("shift", static_cast<KeyStroke::ModifierKey>(ascension::viewers::widgetapi::event::UserInput::SHIFT_DOWN))
-				.value("ctrl", static_cast<KeyStroke::ModifierKey>(ascension::viewers::widgetapi::event::UserInput::CONTROL_DOWN))
-				.value("alt", static_cast<KeyStroke::ModifierKey>(ascension::viewers::widgetapi::event::UserInput::ALT_DOWN))
-				.value("meta", static_cast<KeyStroke::ModifierKey>(ascension::viewers::widgetapi::event::UserInput::META_DOWN));
+				.value("shift", static_cast<KeyStroke::ModifierKey>(ascension::viewer::widgetapi::event::UserInput::SHIFT_DOWN))
+				.value("ctrl", static_cast<KeyStroke::ModifierKey>(ascension::viewer::widgetapi::event::UserInput::CONTROL_DOWN))
+				.value("alt", static_cast<KeyStroke::ModifierKey>(ascension::viewer::widgetapi::event::UserInput::ALT_DOWN))
+				.value("meta", static_cast<KeyStroke::ModifierKey>(ascension::viewer::widgetapi::event::UserInput::META_DOWN));
 
 			boost::python::class_<KeyStroke>("KeyStroke", boost::python::no_init)
 				.def(boost::python::init<KeyStroke::NaturalKey, KeyStroke::ModifierKey>((boost::python::arg("natural_key"), boost::python::arg("modifier_keys") = 0)))

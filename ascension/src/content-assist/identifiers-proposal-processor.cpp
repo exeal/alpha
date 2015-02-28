@@ -51,7 +51,7 @@ namespace ascension {
 
 		/// @see ContentAssistProcessor#activeCompletionProposal
 		std::shared_ptr<const CompletionProposal> IdentifiersProposalProcessor::activeCompletionProposal(
-				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
+				const viewer::TextViewer& textViewer, const kernel::Region& replacementRegion,
 				std::shared_ptr<const CompletionProposal> currentProposals[], std::size_t numberOfCurrentProposals) const BOOST_NOEXCEPT {
 			// select the partially matched proposal
 			String precedingIdentifier(textViewer.document().line(replacementRegion.first.line).substr(
@@ -72,7 +72,7 @@ namespace ascension {
 		}
 
 		/// @see ContentAssistProcessor#computCompletionProposals
-		void IdentifiersProposalProcessor::computeCompletionProposals(const viewers::Caret& caret,
+		void IdentifiersProposalProcessor::computeCompletionProposals(const viewer::Caret& caret,
 				bool& incremental, kernel::Region& replacementRegion, std::set<std::shared_ptr<const CompletionProposal>>& proposals) const {
 			replacementRegion.second = caret;
 
@@ -80,7 +80,7 @@ namespace ascension {
 			static const Index MAXIMUM_IDENTIFIER_LENGTH = 100;
 			if(!incremental || kernel::locations::isBeginningOfLine(caret))
 				replacementRegion.first = caret;
-			else if(viewers::source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, nullptr))
+			else if(viewer::source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, nullptr))
 				replacementRegion.first.line = kernel::line(caret);
 			else
 				replacementRegion.first = caret;
@@ -137,7 +137,7 @@ namespace ascension {
 		}
 
 		/// @see ContentAssistProcessor#recomputIncrementalCompletionProposals
-		void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(const viewers::TextViewer&,
+		void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(const viewer::TextViewer&,
 				const kernel::Region&, std::shared_ptr<const CompletionProposal>[], std::size_t, std::set<std::shared_ptr<const CompletionProposal>>&) const {
 			// do nothing
 		}

@@ -27,7 +27,7 @@ namespace ascension {
 		class Image;
 	}
 
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			/// Provides a (mouse) cursor.
 			class Cursor {

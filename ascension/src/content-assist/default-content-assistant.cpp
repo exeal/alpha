@@ -42,8 +42,8 @@ namespace ascension {
 			return autoActivationDelay_;
 		}
 
-		/// @see viewers#CaretListener
-		void DefaultContentAssistant::caretMoved(const viewers::Caret& caret, const kernel::Region&) {
+		/// @see viewer#CaretListener
+		void DefaultContentAssistant::caretMoved(const viewer::Caret& caret, const kernel::Region&) {
 			if(completionSession_.get() != nullptr) {
 				// non-incremental mode: close when the caret moved
 				if(!completionSession_->incremental)
@@ -55,15 +55,15 @@ namespace ascension {
 			}
 		}
 
-		/// @see viewers#CharacterInputListener#characterInput
-		void DefaultContentAssistant::characterInput(const viewers::Caret&, CodePoint c) {
+		/// @see viewer#CharacterInputListener#characterInput
+		void DefaultContentAssistant::characterInput(const viewer::Caret&, CodePoint c) {
 			if(textViewer_ != nullptr) {
 				if(completionSession_.get() != nullptr) {
 					if(!completionSession_->incremental)
 						close();
 					else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c)) {
 						kernel::Document& document = textViewer_->document();
-						viewers::Caret& caret = textViewer_->caret();
+						viewer::Caret& caret = textViewer_->caret();
 						try {
 							document.insertUndoBoundary();
 							erase(document, kernel::locations::nextCharacter(caret, Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT), caret);
@@ -181,7 +181,7 @@ namespace ascension {
 		}
 
 		/// @see ContentAssistant#install
-		void DefaultContentAssistant::install(viewers::TextViewer& viewer) {
+		void DefaultContentAssistant::install(viewer::TextViewer& viewer) {
 			textViewer_ = &viewer;
 			caretCharacterInputConnection_ = textViewer_->caret().characterInputSignal().connect(
 				std::bind(&DefaultContentAssistant::characterInput, this, std::placeholders::_1, std::placeholders::_2));
@@ -213,7 +213,7 @@ namespace ascension {
 		void DefaultContentAssistant::showPossibleCompletions() {
 			if(textViewer_ == nullptr || completionSession_.get() != nullptr || textViewer_->document().isReadOnly())
 				return textViewer_->beep();
-			const viewers::Caret& caret = textViewer_->caret();
+			const viewer::Caret& caret = textViewer_->caret();
 			if(const std::shared_ptr<const ContentAssistProcessor> cap = contentAssistProcessor(contentType(caret))) {
 				std::set<std::shared_ptr<const CompletionProposal>> proposals;
 				completionSession_.reset(new CompletionSession);
@@ -291,9 +291,9 @@ namespace ascension {
 					boost::geometry::make_zero<graphics::Point>(),
 					Dimension(graphics::geometry::_dx = static_cast<Scalar>(screen->get_width()), graphics::geometry::_dy = static_cast<Scalar>(screen->get_height())));
 #else
-				graphics::Rectangle screenBounds(viewers::widgetapi::bounds(viewers::widgetapi::desktop(), false));
+				graphics::Rectangle screenBounds(viewer::widgetapi::bounds(viewer::widgetapi::desktop(), false));
 #endif
-				screenBounds = viewers::widgetapi::mapFromGlobal(*textViewer_, screenBounds);
+				screenBounds = viewer::widgetapi::mapFromGlobal(*textViewer_, screenBounds);
 
 				Dimension size;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -327,7 +327,7 @@ namespace ascension {
 				if(geometry::x(origin) + geometry::dx(size) > graphics::geometry::right(screenBounds)) {
 //					if()
 				}
-				geometry::y(origin) = geometry::y(origin) + viewers::widgetapi::createRenderingContext(*textViewer_)->fontMetrics(textViewer_->textRenderer().defaultFont())->cellHeight();
+				geometry::y(origin) = geometry::y(origin) + viewer::widgetapi::createRenderingContext(*textViewer_)->fontMetrics(textViewer_->textRenderer().defaultFont())->cellHeight();
 				if(geometry::y(origin) + geometry::dy(size) > geometry::bottom(screenBounds)) {
 					if(geometry::y(origin) - 1 - geometry::top(screenBounds) < geometry::bottom(screenBounds) - geometry::y(origin))
 						geometry::dy(size) = geometry::bottom(screenBounds) - geometry::y(origin);
@@ -336,7 +336,7 @@ namespace ascension {
 						geometry::y(origin) = geometry::y(origin) - geometry::dy(size) - 1;
 					}
 				}
-				viewers::widgetapi::setBounds(*proposalsPopup_, graphics::Rectangle(origin, size));
+				viewer::widgetapi::setBounds(*proposalsPopup_, graphics::Rectangle(origin, size));
 			}
 		}
 

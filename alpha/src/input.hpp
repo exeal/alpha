@@ -28,8 +28,8 @@ namespace alpha {
 		/// Represents a key sequence.
 		class KeyStroke : public Input, private boost::equality_comparable<KeyStroke> {
 		public:
-//			typedef ascension::viewers::widgetapi::KeyInput::Code NaturalKey;
-//			typedef ascension::viewers::widgetapi::UserInput::KeyboardModifier ModifierKey;
+//			typedef ascension::viewer::widgetapi::KeyInput::Code NaturalKey;
+//			typedef ascension::viewer::widgetapi::UserInput::KeyboardModifier ModifierKey;
 			enum NaturalKey {};		// for export to Python
 			enum ModifierKey {};	// for export to Python
 

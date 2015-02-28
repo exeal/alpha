@@ -4,7 +4,7 @@
  * @date 2003-2008 was point.cpp
  * @date 2008-2010 separated from point.cpp
  * @date 2011-10-02 separated from caret.cpp
- * @date 2011-2014
+ * @date 2011-2015
  */
 
 #include <ascension/graphics/font/font-metrics.hpp>
@@ -15,14 +15,14 @@
 #include <ascension/corelib/text/identifier-syntax.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace detail {
 			// detail.VisualDestinationProxyMaker /////////////////////////////////////////////////////////////////////////
 
 			class VisualDestinationProxyMaker {
 			public:
-				static viewers::VisualDestinationProxy make(const kernel::Position& p, bool crossVisualLines) {
-					return viewers::VisualDestinationProxy(p, crossVisualLines);
+				static viewer::VisualDestinationProxy make(const kernel::Position& p, bool crossVisualLines) {
+					return viewer::VisualDestinationProxy(p, crossVisualLines);
 				}
 			};
 		}
@@ -337,7 +337,7 @@ namespace ascension {
 			 * @param pages The number of pages to return
 			 * @return The destination
 			 */
-			viewers::VisualDestinationProxy backwardPage(const VisualPoint& p, Index pages /* = 1 */) {
+			viewer::VisualDestinationProxy backwardPage(const VisualPoint& p, Index pages /* = 1 */) {
 				Index lines = 0;
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
 				// TODO: calculate exact number of visual lines.
@@ -352,7 +352,7 @@ namespace ascension {
 			 * @param lines The number of the visual lines to return
 			 * @return The destination
 			 */
-			viewers::VisualDestinationProxy backwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
+			viewer::VisualDestinationProxy backwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 				Position np(p.normalized());
 				const graphics::font::TextRenderer& renderer = p.textViewer().textRenderer();
 				Index subline = renderer.layouts().at(np.line).lineAt(np.offsetInLine);
@@ -381,7 +381,7 @@ namespace ascension {
 			 * @return The destination
 			 * @see beginningOfLine
 			 */
-			Position beginningOfVisualLine(const viewers::VisualPoint& p) {
+			Position beginningOfVisualLine(const viewer::VisualPoint& p) {
 				const Position np(p.normalized());
 				if(const graphics::font::TextLayout* const layout = p.textViewer().textRenderer().layouts().at(np.line))
 					return Position(np.line, layout->lineOffset(layout->lineAt(np.offsetInLine)));
@@ -393,7 +393,7 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			Position contextualBeginningOfLine(const viewers::VisualPoint& p) {
+			Position contextualBeginningOfLine(const viewer::VisualPoint& p) {
 				return isFirstPrintableCharacterOfLine(p) ? beginningOfLine(p) : firstPrintableCharacterOfLine(p);
 			}
 
@@ -403,7 +403,7 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			Position contextualBeginningOfVisualLine(const viewers::VisualPoint& p) {
+			Position contextualBeginningOfVisualLine(const viewer::VisualPoint& p) {
 				return isFirstPrintableCharacterOfLine(p) ?
 					beginningOfVisualLine(p) : firstPrintableCharacterOfVisualLine(p);
 			}
@@ -413,7 +413,7 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			Position contextualEndOfLine(const viewers::VisualPoint& p) {
+			Position contextualEndOfLine(const viewer::VisualPoint& p) {
 				return isLastPrintableCharacterOfLine(p) ? endOfLine(p) : lastPrintableCharacterOfLine(p);
 			}
 
@@ -423,7 +423,7 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			Position contextualEndOfVisualLine(const viewers::VisualPoint& p) {
+			Position contextualEndOfVisualLine(const viewer::VisualPoint& p) {
 				return isLastPrintableCharacterOfLine(p) ?
 					endOfVisualLine(p) : lastPrintableCharacterOfVisualLine(p);
 			}
@@ -435,7 +435,7 @@ namespace ascension {
 			 * @return The destination
 			 * @see endOfLine
 			 */
-			Position locations::endOfVisualLine(const viewers::VisualPoint& p) {
+			Position locations::endOfVisualLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
 				if(const graphics::font::TextLayout* const layout = p.textViewer().textRenderer().layouts().at(np.line)) {
 					const Index subline = layout->lineAt(np.offsetInLine);
@@ -454,7 +454,7 @@ namespace ascension {
 			 * @return The destination
 			 * @see firstPrintableCharacterOfLine
 			 */
-			Position locations::firstPrintableCharacterOfLine(const viewers::VisualPoint& p) {
+			Position locations::firstPrintableCharacterOfLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
 				const Char* const s = p.document().line(np.line).data();
 				np.offsetInLine = detail::identifierSyntax(p).eatWhiteSpaces(s, s + p.document().lineLength(np.line), true) - s;
@@ -468,7 +468,7 @@ namespace ascension {
 			 * @return The destination
 			 * @see firstPrintableCharacterOfLine
 			 */
-			Position firstPrintableCharacterOfVisualLine(const viewers::VisualPoint& p) {
+			Position firstPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
 				const String& s = p.document().line(np.line);
 				if(const graphics::font::TextLayout* const layout = p.textViewer().textRenderer().layouts().at(np.line)) {
@@ -489,7 +489,7 @@ namespace ascension {
 			 * @param pages The number of pages to advance
 			 * @return The destination
 			 */
-			viewers::VisualDestinationProxy forwardPage(const viewers::VisualPoint& p, Index pages /* = 1 */) {
+			viewer::VisualDestinationProxy forwardPage(const viewer::VisualPoint& p, Index pages /* = 1 */) {
 				Index lines = 0;
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
 				// TODO: calculate exact number of visual lines.
@@ -504,7 +504,7 @@ namespace ascension {
 			 * @param lines The number of the visual lines to advance
 			 * @return The destination
 			 */
-			viewers::VisualDestinationProxy forwardVisualLine(const viewers::VisualPoint& p, Index lines /* = 1 */) {
+			viewer::VisualDestinationProxy forwardVisualLine(const viewer::VisualPoint& p, Index lines /* = 1 */) {
 				Position np(p.normalized());
 				const graphics::font::TextRenderer& renderer = p.textViewer().textRenderer();
 				const graphics::font::TextLayout* layout = &renderer.layouts().at(np.line);
@@ -534,7 +534,7 @@ namespace ascension {
 			 * @param p The base position
 			 * @see isBeginningOfLine
 			 */
-			bool isBeginningOfVisualLine(const viewers::VisualPoint& p) {
+			bool isBeginningOfVisualLine(const viewer::VisualPoint& p) {
 				if(isBeginningOfLine(p))	// this considers narrowing
 					return true;
 				const Position np(p.normalized());
@@ -549,7 +549,7 @@ namespace ascension {
 			 * @param p The base position
 			 * @see isEndOfLine
 			 */
-			bool isEndOfVisualLine(const viewers::VisualPoint& p) {
+			bool isEndOfVisualLine(const viewer::VisualPoint& p) {
 				if(isEndOfLine(p))	// this considers narrowing
 					return true;
 				const Position np(p.normalized());
@@ -561,7 +561,7 @@ namespace ascension {
 			}
 
 			/// Returns @c true if the given position is the first printable character in the line.
-			bool isFirstPrintableCharacterOfLine(const viewers::VisualPoint& p) {
+			bool isFirstPrintableCharacterOfLine(const viewer::VisualPoint& p) {
 				const Position np(p.normalized()), bob(p.document().accessibleRegion().first);
 				const Index offset = (bob.line == np.line) ? bob.offsetInLine : 0;
 				const String& line = p.document().line(np.line);
@@ -570,13 +570,13 @@ namespace ascension {
 			}
 
 			/// Returns @c true if the given position is the first printable character in the visual line.
-			bool isFirstPrintableCharacterOfVisualLine(const viewers::VisualPoint& p) {
+			bool isFirstPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
 				// TODO: not implemented.
 				return false;
 			}
 
 			/// Returns @c true if the given position is the last printable character in the line.
-			bool isLastPrintableCharacterOfLine(const viewers::VisualPoint& p) {
+			bool isLastPrintableCharacterOfLine(const viewer::VisualPoint& p) {
 				const Position np(p.normalized()), eob(p.document().accessibleRegion().second);
 				const String& line = p.document().line(np.line);
 				const Index lineLength = (eob.line == np.line) ? eob.offsetInLine : line.length();
@@ -585,7 +585,7 @@ namespace ascension {
 			}
 
 			/// Returns @c true if the given position is the last printable character in the visual line.
-			bool isLastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p) {
+			bool isLastPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
 				// TODO: not implemented.
 				return false;
 			}
@@ -595,7 +595,7 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			Position lastPrintableCharacterOfLine(const viewers::VisualPoint& p) {
+			Position lastPrintableCharacterOfLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
 				const String& s(p.document().line(np.line));
 				const text::IdentifierSyntax& syntax = detail::identifierSyntax(p);
@@ -611,14 +611,14 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			Position lastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p) {
+			Position lastPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
 				// TODO: not implemented.
 				return p.normalized();
 			}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			namespace {
-				inline ReadingDirection defaultUIReadingDirection(const viewers::VisualPoint& p) {
+				inline ReadingDirection defaultUIReadingDirection(const viewer::VisualPoint& p) {
 					return p.textViewer().textRenderer().defaultUIWritingMode().inlineFlowDirection;
 				}
 			}
@@ -629,7 +629,7 @@ namespace ascension {
 			 * @param words The number of words to adavance
 			 * @return The destination, or @c boost#none if the writing mode is vertical
 			 */
-			boost::optional<Position> leftWord(const viewers::VisualPoint& p, Index words /* = 1 */) {
+			boost::optional<Position> leftWord(const viewer::VisualPoint& p, Index words /* = 1 */) {
 				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWord(p, words) : forwardWord(p, words);
 			}
 
@@ -639,7 +639,7 @@ namespace ascension {
 			 * @param words The number of words to adavance
 			 * @return The destination, or @c boost#none if the writing mode is vertical
 			 */
-			boost::optional<Position> leftWordEnd(const viewers::VisualPoint& p, Index words /* = 1 */) {
+			boost::optional<Position> leftWordEnd(const viewer::VisualPoint& p, Index words /* = 1 */) {
 				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
 			}
 
@@ -652,7 +652,7 @@ namespace ascension {
 			 * @see #nextBookmark
 			 */
 			boost::optional<Position> nextBookmarkInPhysicalDirection(
-					const viewers::VisualPoint& p, graphics::PhysicalDirection direction, Index marks /* = 1 */) {
+					const viewer::VisualPoint& p, graphics::PhysicalDirection direction, Index marks /* = 1 */) {
 				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
 					case BEFORE:
 						return nextBookmark(p, Direction::BACKWARD, marks);
@@ -675,7 +675,7 @@ namespace ascension {
 			 * @return The destination
 			 * @see #nextCharacter
 			 */
-			viewers::VisualDestinationProxy nextCharacterInPhysicalDirection(
+			viewer::VisualDestinationProxy nextCharacterInPhysicalDirection(
 					const VisualPoint& p, PhysicalDirection direction, CharacterUnit unit, Index characters /* = 1 */) {
 				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
 					case BEFORE:
@@ -699,7 +699,7 @@ namespace ascension {
 			 * @param pages The number of pages to advance/return
 			 * @return The destination
 			 */
-			viewers::VisualDestinationProxy nextPage(const viewers::VisualPoint& p, Direction direction, Index pages /* = 1 */) {
+			viewer::VisualDestinationProxy nextPage(const viewer::VisualPoint& p, Direction direction, Index pages /* = 1 */) {
 				Index lines = 0;
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
 				// TODO: calculate exact number of visual lines.
@@ -715,7 +715,7 @@ namespace ascension {
 			 * @return The destination
 			 * @see #nextLine
 			 */
-			viewers::VisualDestinationProxy nextVisualLine(const viewers::VisualPoint& p, Direction direction, Index lines /* = 1 */) {
+			viewer::VisualDestinationProxy nextVisualLine(const viewer::VisualPoint& p, Direction direction, Index lines /* = 1 */) {
 				// ISSUE: LineLayoutVector.offsetVisualLine(VisualLine&, SignedIndex) does not use calculated layouts.
 				Position np(p.normalized());
 				const graphics::font::TextRenderer& renderer = p.textViewer().textRenderer();
@@ -723,16 +723,16 @@ namespace ascension {
 				Index subline = (layout != nullptr) ? layout->lineAt(np.offsetInLine) : 0;
 				if(direction == Direction::FORWARD) {
 					if(np.line == p.document().numberOfLines() - 1 && (layout == nullptr || subline == layout->numberOfLines() - 1))
-						return viewers::detail::VisualDestinationProxyMaker::make(np, true);
+						return viewer::detail::VisualDestinationProxyMaker::make(np, true);
 				} else {
 					if(np.line == 0 && subline == 0)
-						return viewers::detail::VisualDestinationProxyMaker::make(np, true);
+						return viewer::detail::VisualDestinationProxyMaker::make(np, true);
 				}
 				graphics::font::VisualLine visualLine(np.line, subline);
 				renderer.layouts().offsetVisualLine(visualLine,
 					(direction == Direction::FORWARD) ? static_cast<SignedIndex>(lines) : -static_cast<SignedIndex>(lines));
 				if(!p.positionInVisualLine_)
-					const_cast<viewers::VisualPoint&>(p).rememberPositionInVisualLine();
+					const_cast<viewer::VisualPoint&>(p).rememberPositionInVisualLine();
 				if(nullptr != (layout = renderer.layouts().at(visualLine.line))) {
 					np.offsetInLine = layout->hitTestCharacter(
 						presentation::FlowRelativeTwoAxes<graphics::Scalar>(
@@ -741,7 +741,7 @@ namespace ascension {
 					if(layout->lineAt(np.offsetInLine) != visualLine.subline)
 						np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 				}
-				return viewers::detail::VisualDestinationProxyMaker::make(np, true);
+				return viewer::detail::VisualDestinationProxyMaker::make(np, true);
 			}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -753,7 +753,7 @@ namespace ascension {
 			 * @see #nextWord, #nextWordEndInPhysicalDirection
 			 */
 			boost::optional<Position> nextWordInPhysicalDirection(
-					const viewers::VisualPoint& p, PhysicalDirection direction, Index words /* = 1 */) {
+					const viewer::VisualPoint& p, PhysicalDirection direction, Index words /* = 1 */) {
 				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
 					case BEFORE:
 					case AFTER:
@@ -775,7 +775,7 @@ namespace ascension {
 			 * @see #nextWordEnd, #nextWordInPhysicalDirection
 			 */
 			boost::optional<Position> nextWordEndInPhysicalDirection(
-					const viewers::VisualPoint& p, PhysicalDirection direction, Index words /* = 1 */) {
+					const viewer::VisualPoint& p, PhysicalDirection direction, Index words /* = 1 */) {
 				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
 					case BEFORE:
 					case AFTER:
@@ -795,7 +795,7 @@ namespace ascension {
 			 * @param words The number of words to adavance
 			 * @return The destination
 			 */
-			boost::optional<Position> rightWord(const viewers::VisualPoint& p, Index words /* = 1 */) {
+			boost::optional<Position> rightWord(const viewer::VisualPoint& p, Index words /* = 1 */) {
 				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWord(p, words) : backwardWord(p, words);
 			}
 
@@ -805,7 +805,7 @@ namespace ascension {
 			 * @param words The number of words to adavance
 			 * @return The destination
 			 */
-			boost::optional<Position> rightWordEnd(const viewers::VisualPoint& p, Index words /* = 1 */) {
+			boost::optional<Position> rightWordEnd(const viewer::VisualPoint& p, Index words /* = 1 */) {
 				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
 			}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08

@@ -27,7 +27,7 @@ namespace ascension {
 		class TextSearcher;
 	}
 
-	namespace viewers {
+	namespace viewer {
 		class TextViewer;
 	}
 
@@ -79,8 +79,8 @@ namespace ascension {
 #endif // !ASCENSION_NO_MIGEMO
 		};
 
-		bool abortIncrementalSearch(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
-		bool endIncrementalSearch(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
+		bool abortIncrementalSearch(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
+		bool endIncrementalSearch(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
 
 
 		/// Returns the input sequence checkers.

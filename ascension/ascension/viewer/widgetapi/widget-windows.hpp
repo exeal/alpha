@@ -9,13 +9,13 @@
 
 namespace ascension {
 	namespace win32 {
-		inline Handle<HIMC>::Type inputMethod(const viewers::widgetapi::NativeWidget& widget) {
+		inline Handle<HIMC>::Type inputMethod(const viewer::widgetapi::NativeWidget& widget) {
 			return Handle<HIMC>::Type(::ImmGetContext(widget.handle().get()),
 				std::bind(&::ImmReleaseContext, widget.handle().get(), std::placeholders::_1));
 		}
 	}
 
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 		}
 	}

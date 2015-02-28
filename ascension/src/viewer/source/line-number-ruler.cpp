@@ -13,7 +13,7 @@
 #include <ascension/viewer/source/line-number-ruler.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace source {
 			/// Creates @c LineNumberRuler object.
 			LineNumberRuler::LineNumberRuler() :
@@ -168,7 +168,7 @@ namespace ascension {
 					const graphics::Scalar interiorWidth = paddingStart_ + paddingEnd_;
 
 					const std::shared_ptr<const graphics::font::Font> font((font_.get() != nullptr) ? font_ : viewer()->textRenderer().defaultFont());
-					std::unique_ptr<graphics::RenderingContext2D> context(viewers::widgetapi::createRenderingContext(*viewer()));
+					std::unique_ptr<graphics::RenderingContext2D> context(widgetapi::createRenderingContext(*viewer()));
 					LineNumberRuler& self = *const_cast<LineNumberRuler*>(this);
 					self.updateNumberOfDigits();
 					graphics::Scalar contentWidth = computeContentWidth(*context, font, boost::get(numberOfDigits_),
