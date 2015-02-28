@@ -236,7 +236,7 @@ namespace ascension {
 			VisualLine locateLine(const TextViewport& viewport,
 				const Point& p, bool* snapped = nullptr) BOOST_NOEXCEPT;
 			Point modelToView(const TextViewport& viewport, const TextHit<kernel::Position>& position/*, bool fullSearchBpd*/);
-			TextHit<kernel::Position>&& viewToModel(
+			TextHit<kernel::Position> viewToModel(
 				const TextViewport& viewport, const Point& pointInView,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			boost::optional<TextHit<kernel::Position>> viewToModelInBounds(
