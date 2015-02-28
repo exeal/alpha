@@ -13,7 +13,7 @@
 #include <ascension/viewer/widgetapi/event/user-input.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			namespace event {
 				/// Abstract class represents a user input located at a specific position.

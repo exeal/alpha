@@ -13,7 +13,7 @@
 
 using namespace ascension;
 using namespace ascension::graphics;
-using namespace ascension::viewers;
+using namespace ascension::viewer;
 using namespace std;
 
 

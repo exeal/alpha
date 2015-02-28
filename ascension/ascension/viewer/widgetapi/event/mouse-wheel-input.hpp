@@ -12,7 +12,7 @@
 #include <ascension/viewer/widgetapi/event/located-user-input.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			namespace event {
 				/// A @c MouseWheelEvent represents a mouse wheel event.

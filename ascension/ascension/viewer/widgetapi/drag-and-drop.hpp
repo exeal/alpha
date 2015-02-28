@@ -31,7 +31,7 @@ namespace ascension {
 		class Image;
 	}
 
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			typedef Gdk::DragAction DropAction;
@@ -252,7 +252,7 @@ namespace ascension {
 		namespace detail {
 			class DragEventAdapter {
 			public:
-				explicit DragEventAdapter(viewers::widgetapi::DropTarget& target) : target_(target) {}
+				explicit DragEventAdapter(viewer::widgetapi::DropTarget& target) : target_(target) {}
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				void adaptDragLeaveEvent(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
 				bool adaptDragMoveEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
@@ -272,7 +272,7 @@ namespace ascension {
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 			private:
-				viewers::widgetapi::DropTarget& target_;
+				viewer::widgetapi::DropTarget& target_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #endif
 			};

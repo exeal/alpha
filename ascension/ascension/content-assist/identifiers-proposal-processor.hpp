@@ -28,13 +28,13 @@ namespace ascension {
 			const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT;
 			// ContentAssistProcessor
 			virtual std::shared_ptr<const CompletionProposal> activeCompletionProposal(
-				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
+				const viewer::TextViewer& textViewer, const kernel::Region& replacementRegion,
 				std::shared_ptr<const CompletionProposal> proposals[], std::size_t numberOfProposals) const BOOST_NOEXCEPT;
 			virtual bool compareDisplayStrings(const String& s1, const String& s2) const BOOST_NOEXCEPT;
-			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
+			virtual void computeCompletionProposals(const viewer::Caret& caret, bool& incremental,
 				kernel::Region& replacementRegion, std::set<std::shared_ptr<const CompletionProposal>>& proposals) const;
 			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const BOOST_NOEXCEPT;
-			virtual void recomputeIncrementalCompletionProposals(const viewers::TextViewer& textViewer,
+			virtual void recomputeIncrementalCompletionProposals(const viewer::TextViewer& textViewer,
 				const kernel::Region& replacementRegion, std::shared_ptr<const CompletionProposal> currentProposals[],
 				std::size_t numberOfCurrentProposals, std::set<std::shared_ptr<const CompletionProposal>>& newProposals) const;
 		private:

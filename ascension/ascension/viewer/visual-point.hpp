@@ -15,7 +15,7 @@
 #include <ascension/graphics/font/line-layout-vector.hpp>	// graphics.font.VisualLinesListener
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace detail {
 			class VisualDestinationProxyMaker;
 		}
@@ -51,50 +51,50 @@ namespace ascension {
 namespace ascension {
 	namespace kernel {
 		namespace locations {
-			bool isEndOfVisualLine(const viewers::VisualPoint& p);
-			bool isFirstPrintableCharacterOfLine(const viewers::VisualPoint& p);
-			bool isFirstPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
-			bool isLastPrintableCharacterOfLine(const viewers::VisualPoint& p);
-			bool isLastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
-			bool isBeginningOfVisualLine(const viewers::VisualPoint& p);
+			bool isEndOfVisualLine(const viewer::VisualPoint& p);
+			bool isFirstPrintableCharacterOfLine(const viewer::VisualPoint& p);
+			bool isFirstPrintableCharacterOfVisualLine(const viewer::VisualPoint& p);
+			bool isLastPrintableCharacterOfLine(const viewer::VisualPoint& p);
+			bool isLastPrintableCharacterOfVisualLine(const viewer::VisualPoint& p);
+			bool isBeginningOfVisualLine(const viewer::VisualPoint& p);
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			viewers::VisualDestinationProxy backwardPage(const viewers::VisualPoint& p, Index pages = 1);
-			viewers::VisualDestinationProxy backwardVisualLine(const viewers::VisualPoint& p, Index lines = 1);
+			viewer::VisualDestinationProxy backwardPage(const viewer::VisualPoint& p, Index pages = 1);
+			viewer::VisualDestinationProxy backwardVisualLine(const viewer::VisualPoint& p, Index lines = 1);
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-			kernel::Position beginningOfVisualLine(const viewers::VisualPoint& p);
-			kernel::Position contextualBeginningOfLine(const viewers::VisualPoint& p);
-			kernel::Position contextualBeginningOfVisualLine(const viewers::VisualPoint& p);
-			kernel::Position contextualEndOfLine(const viewers::VisualPoint& p);
-			kernel::Position contextualEndOfVisualLine(const viewers::VisualPoint& p);
-			kernel::Position endOfVisualLine(const viewers::VisualPoint& p);
-			kernel::Position firstPrintableCharacterOfLine(const viewers::VisualPoint& p);
-			kernel::Position firstPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
+			kernel::Position beginningOfVisualLine(const viewer::VisualPoint& p);
+			kernel::Position contextualBeginningOfLine(const viewer::VisualPoint& p);
+			kernel::Position contextualBeginningOfVisualLine(const viewer::VisualPoint& p);
+			kernel::Position contextualEndOfLine(const viewer::VisualPoint& p);
+			kernel::Position contextualEndOfVisualLine(const viewer::VisualPoint& p);
+			kernel::Position endOfVisualLine(const viewer::VisualPoint& p);
+			kernel::Position firstPrintableCharacterOfLine(const viewer::VisualPoint& p);
+			kernel::Position firstPrintableCharacterOfVisualLine(const viewer::VisualPoint& p);
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			viewers::VisualDestinationProxy forwardPage(const viewers::VisualPoint& p, Index pages = 1);
-			viewers::VisualDestinationProxy forwardVisualLine(const viewers::VisualPoint& p, Index lines = 1);
+			viewer::VisualDestinationProxy forwardPage(const viewer::VisualPoint& p, Index pages = 1);
+			viewer::VisualDestinationProxy forwardVisualLine(const viewer::VisualPoint& p, Index lines = 1);
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-			kernel::Position lastPrintableCharacterOfLine(const viewers::VisualPoint& p);
-			kernel::Position lastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
+			kernel::Position lastPrintableCharacterOfLine(const viewer::VisualPoint& p);
+			kernel::Position lastPrintableCharacterOfVisualLine(const viewer::VisualPoint& p);
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			viewers::VisualDestinationProxy leftCharacter(
-				const viewers::VisualPoint& p, CharacterUnit unit, Index characters = 1);
-			boost::optional<kernel::Position> leftWord(const viewers::VisualPoint& p, Index words = 1);
-			boost::optional<kernel::Position> leftWordEnd(const viewers::VisualPoint& p, Index words = 1);
+			viewer::VisualDestinationProxy leftCharacter(
+				const viewer::VisualPoint& p, CharacterUnit unit, Index characters = 1);
+			boost::optional<kernel::Position> leftWord(const viewer::VisualPoint& p, Index words = 1);
+			boost::optional<kernel::Position> leftWordEnd(const viewer::VisualPoint& p, Index words = 1);
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-			viewers::VisualDestinationProxy nextPage(
-				const viewers::VisualPoint& p, Direction direction, Index pages = 1);
-			viewers::VisualDestinationProxy nextVisualLine(
-				const viewers::VisualPoint& p, Direction direction, Index lines = 1);
+			viewer::VisualDestinationProxy nextPage(
+				const viewer::VisualPoint& p, Direction direction, Index pages = 1);
+			viewer::VisualDestinationProxy nextVisualLine(
+				const viewer::VisualPoint& p, Direction direction, Index lines = 1);
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			viewers::VisualDestinationProxy rightCharacter(
-				const viewers::VisualPoint& p, CharacterUnit unit, Index characters = 1);
-			boost::optional<Position> rightWord(const viewers::VisualPoint& p, Index words = 1);
-			boost::optional<Position> rightWordEnd(const viewers::VisualPoint& p, Index words = 1);
+			viewer::VisualDestinationProxy rightCharacter(
+				const viewer::VisualPoint& p, CharacterUnit unit, Index characters = 1);
+			boost::optional<Position> rightWord(const viewer::VisualPoint& p, Index words = 1);
+			boost::optional<Position> rightWordEnd(const viewer::VisualPoint& p, Index words = 1);
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 		} // namespace locations
 	} // namespace kernel
 
-	namespace viewers {
+	namespace viewer {
 
 		/**
 		 * Extension of @c kernel#Point class for viewer and layout.
@@ -201,7 +201,7 @@ namespace ascension {
 			return lineNumberCaches_->visualSubline;
 		}
 
-	} // namespace viewers
+	} // namespace viewer
 } // namespace ascension
 
 #endif // !ASCENSION_VISUAL_POINT_HPP

@@ -22,7 +22,7 @@
 #endif
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			namespace event {
 				/// Abstract class represents a user input.
@@ -119,29 +119,29 @@ namespace ascension {
 #endif
 			return boost::geometry::make<Point>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
 		}
-		inline viewers::widgetapi::UserInput::ModifierKey makeModifiers() BOOST_NOEXCEPT {
-			viewers::widgetapi::UserInput::ModifierKey modifiers = 0;
+		inline viewer::widgetapi::UserInput::ModifierKey makeModifiers() BOOST_NOEXCEPT {
+			viewer::widgetapi::UserInput::ModifierKey modifiers = 0;
 			if(::GetKeyState(VK_SHIFT) < 0)
-				modifiers |= viewers::widgetapi::UserInput::SHIFT_DOWN;
+				modifiers |= viewer::widgetapi::UserInput::SHIFT_DOWN;
 			if(::GetKeyState(VK_CONTROL) < 0)
-				modifiers |= viewers::widgetapi::UserInput::CONTROL_DOWN;
+				modifiers |= viewer::widgetapi::UserInput::CONTROL_DOWN;
 			if(::GetKeyState(VK_MENU) < 0)
-				modifiers |= viewers::widgetapi::UserInput::ALT_DOWN;
+				modifiers |= viewer::widgetapi::UserInput::ALT_DOWN;
 			return modifiers;
 		}
-		inline viewers::widgetapi::UserInput::ModifierKey makeModifiers(WPARAM wp) BOOST_NOEXCEPT {
-			viewers::widgetapi::UserInput::ModifierKey modifiers = 0;
+		inline viewer::widgetapi::UserInput::ModifierKey makeModifiers(WPARAM wp) BOOST_NOEXCEPT {
+			viewer::widgetapi::UserInput::ModifierKey modifiers = 0;
 			if((wp & MK_CONTROL) != 0)
-				modifiers = viewers::widgetapi::UserInput::CONTROL_DOWN;
+				modifiers = viewer::widgetapi::UserInput::CONTROL_DOWN;
 			if((wp & MK_SHIFT) != 0)
-				modifiers = viewers::widgetapi::UserInput::SHIFT_DOWN;
+				modifiers = viewer::widgetapi::UserInput::SHIFT_DOWN;
 			return modifiers;
 		}
-		inline viewers::widgetapi::KeyInput makeKeyInput(WPARAM wp, LPARAM lp) {
-			return viewers::widgetapi::KeyInput(wp, makeModifiers(), LOWORD(lp), HIWORD(lp));
+		inline viewer::widgetapi::KeyInput makeKeyInput(WPARAM wp, LPARAM lp) {
+			return viewer::widgetapi::KeyInput(wp, makeModifiers(), LOWORD(lp), HIWORD(lp));
 		}
-		inline viewers::widgetapi::MouseButtonInput makeMouseButtonInput(viewers::widgetapi::UserInput::MouseButton button, WPARAM wp, LPARAM lp) {
-			return viewers::widgetapi::MouseButtonInput(makeMouseLocation<graphics::Point>(lp), button, makeModifiers(wp));
+		inline viewer::widgetapi::MouseButtonInput makeMouseButtonInput(viewer::widgetapi::UserInput::MouseButton button, WPARAM wp, LPARAM lp) {
+			return viewer::widgetapi::MouseButtonInput(makeMouseLocation<graphics::Point>(lp), button, makeModifiers(wp));
 		}
 	}
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)

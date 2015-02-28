@@ -21,7 +21,7 @@ namespace ascension {
 		 * Protected constructor.
 		 * @param viewer The target text viewer
 		 */
-		Command::Command(viewers::TextViewer& viewer) BOOST_NOEXCEPT : viewer_(&viewer), numericPrefix_(1) {
+		Command::Command(viewer::TextViewer& viewer) BOOST_NOEXCEPT : viewer_(&viewer), numericPrefix_(1) {
 		}
 
 		/// Destructor.
@@ -30,8 +30,8 @@ namespace ascension {
 
 		namespace commands {
 			namespace {
-				inline bool abortModes(viewers::TextViewer& target) {
-					viewers::utils::closeCompletionProposalsPopup(target);
+				inline bool abortModes(viewer::TextViewer& target) {
+					viewer::utils::closeCompletionProposalsPopup(target);
 					return abortIncrementalSearch(target);
 				}
 			}
@@ -48,7 +48,7 @@ namespace ascension {
 			 * @param region The region to operate on. If empty, the accessible region of the document. This
 			 *               region will be shrunk to the accessible region when the command performed
 			 */
-			BookmarkMatchLinesCommand::BookmarkMatchLinesCommand(viewers::TextViewer& viewer,
+			BookmarkMatchLinesCommand::BookmarkMatchLinesCommand(viewer::TextViewer& viewer,
 					const kernel::Region& region /* = Region() */) BOOST_NOEXCEPT : Command(viewer), region_(region), numberOfMarkedLines_(0) {
 			}
 
@@ -65,7 +65,7 @@ namespace ascension {
 			 */
 			bool BookmarkMatchLinesCommand::perform() {
 				win32::WaitCursor wc;
-				viewers::TextViewer& viewer = target();
+				viewer::TextViewer& viewer = target();
 				kernel::Document& document = viewer.document();
 				const searcher::TextSearcher* s;
 				if(const Session* const session = document.session())
@@ -95,7 +95,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 */
-			CancelCommand::CancelCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
+			CancelCommand::CancelCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 			}
 
 			/**
@@ -119,7 +119,7 @@ namespace ascension {
 			 */
 			template<typename ProcedureSignature>
 			CaretMovementCommand<ProcedureSignature>::CaretMovementCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure,
+					viewer::TextViewer& viewer, ProcedureSignature* procedure,
 					Direction direction, bool extendSelection /* = false */)
 					: Command(viewer), procedure_(procedure), direction_(direction), extends_(extendSelection) {
 				if(procedure == nullptr)
@@ -128,10 +128,10 @@ namespace ascension {
 
 			namespace {
 				template<typename CaretMovementProcedure>
-				inline bool selectCompletionProposal(viewers::TextViewer&, CaretMovementProcedure*, Direction, long) {
+				inline bool selectCompletionProposal(viewer::TextViewer&, CaretMovementProcedure*, Direction, long) {
 					return false;
 				}
-				inline bool selectCompletionProposal(viewers::TextViewer& target, kernel::Position(*procedure)(const kernel::Point&, Direction, Index), Direction direction, long n) {
+				inline bool selectCompletionProposal(viewer::TextViewer& target, kernel::Position(*procedure)(const kernel::Point&, Direction, Index), Direction direction, long n) {
 					if(procedure == &kernel::locations::nextLine) {
 						if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
 							if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI())
@@ -140,7 +140,7 @@ namespace ascension {
 					}
 					return false;
 				}
-				inline bool selectCompletionProposal(viewers::TextViewer& target, viewers::VisualDestinationProxy(*procedure)(const viewers::VisualPoint&, Direction, Index), Direction direction, long n) {
+				inline bool selectCompletionProposal(viewer::TextViewer& target, viewer::VisualDestinationProxy(*procedure)(const viewer::VisualPoint&, Direction, Index), Direction direction, long n) {
 					if(procedure == &kernel::locations::nextVisualLine || procedure == &kernel::locations::nextPage) {
 						if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
 							if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI()) {
@@ -155,19 +155,19 @@ namespace ascension {
 				}
 
 				template<typename ProcedureSignature>
-				inline bool moveToBoundOfSelection(viewers::Caret&, ProcedureSignature*, Direction) {
+				inline bool moveToBoundOfSelection(viewer::Caret&, ProcedureSignature*, Direction) {
 					return false;
 				}
-				inline bool moveToBoundOfSelection(viewers::Caret& caret, kernel::Position(*procedure)(const kernel::Point&, Direction direction, kernel::locations::CharacterUnit, Index), Direction direction) {
+				inline bool moveToBoundOfSelection(viewer::Caret& caret, kernel::Position(*procedure)(const kernel::Point&, Direction direction, kernel::locations::CharacterUnit, Index), Direction direction) {
 					if(procedure == &kernel::locations::nextCharacter)
 						return caret.moveTo((direction == Direction::FORWARD) ? caret.end() : caret.beginning()), true;
 					return false;
 				}
 
 				template<typename ProcedureSignature>
-				inline void scrollTextViewer(viewers::TextViewer&, ProcedureSignature, Direction, long) {
+				inline void scrollTextViewer(viewer::TextViewer&, ProcedureSignature, Direction, long) {
 				}
-				inline void scrollTextViewer(viewers::TextViewer& target, viewers::VisualDestinationProxy(*procedure)(const viewers::VisualPoint&, Direction, Index), Direction direction, long n) {
+				inline void scrollTextViewer(viewer::TextViewer& target, viewer::VisualDestinationProxy(*procedure)(const viewer::VisualPoint&, Direction, Index), Direction direction, long n) {
 					// TODO: consider the numeric prefix.
 					if(procedure == &kernel::locations::nextPage) {
 						graphics::font::TextViewportSignedScrollOffset offset = (direction == Direction::FORWARD) ? n : -n;
@@ -181,20 +181,20 @@ namespace ascension {
 				}
 
 				template<typename PointType>
-				inline void moveCaret(viewers::Caret& caret, kernel::Position(*procedure)(const PointType&), Index, bool extend) {
+				inline void moveCaret(viewer::Caret& caret, kernel::Position(*procedure)(const PointType&), Index, bool extend) {
 					if(!extend)
 						caret.moveTo((*procedure)(caret));
 					else
 						caret.extendSelectionTo((*procedure)(caret));
 				}
 				template<typename PointType>
-				inline void moveCaret(viewers::Caret& caret, kernel::Position(*procedure)(const PointType&, Direction, Index), Direction direction, Index n, bool extend) {
+				inline void moveCaret(viewer::Caret& caret, kernel::Position(*procedure)(const PointType&, Direction, Index), Direction direction, Index n, bool extend) {
 					if(!extend)
 						caret.moveTo((*procedure)(caret, direction, n));
 					else
 						caret.extendSelectionTo((*procedure)(caret, direction, n));
 				}
-				inline void moveCaret(viewers::Caret& caret, boost::optional<kernel::Position>(*procedure)(const kernel::Point&, Direction, Index), Direction direction, Index n, bool extend) {
+				inline void moveCaret(viewer::Caret& caret, boost::optional<kernel::Position>(*procedure)(const kernel::Point&, Direction, Index), Direction direction, Index n, bool extend) {
 					if(const boost::optional<kernel::Position> destination = (*procedure)(caret, direction, n)) {
 						if(!extend)
 							caret.moveTo(*destination);
@@ -203,13 +203,13 @@ namespace ascension {
 					}
 				}
 				template<typename PointType>
-				inline void moveCaret(viewers::Caret& caret, kernel::Position(*procedure)(const PointType&, Direction, kernel::locations::CharacterUnit, Index), Direction direction, Index n, bool extend) {
+				inline void moveCaret(viewer::Caret& caret, kernel::Position(*procedure)(const PointType&, Direction, kernel::locations::CharacterUnit, Index), Direction direction, Index n, bool extend) {
 					if(!extend)
 						caret.moveTo((*procedure)(caret, direction, kernel::locations::GRAPHEME_CLUSTER, n));
 					else
 						caret.extendSelectionTo((*procedure)(caret, direction, kernel::locations::GRAPHEME_CLUSTER, n));
 				}
-				inline void moveCaret(viewers::Caret& caret, viewers::VisualDestinationProxy(*procedure)(const viewers::VisualPoint&, Direction, Index), Direction direction, Index n, bool extend) {
+				inline void moveCaret(viewer::Caret& caret, viewer::VisualDestinationProxy(*procedure)(const viewer::VisualPoint&, Direction, Index), Direction direction, Index n, bool extend) {
 					if(!extend)
 						caret.moveTo((*procedure)(caret, direction, n));
 					else
@@ -221,7 +221,7 @@ namespace ascension {
 			template class CaretMovementCommand<kernel::Position(const kernel::Point&, Direction, Index)>;	// next(Line|Word|WordEnd)
 			template class CaretMovementCommand<boost::optional<kernel::Position>(const kernel::Point&, Direction, Index)>;	// nextBookmark
 			template class CaretMovementCommand<kernel::Position(const kernel::Point&, Direction, kernel::locations::CharacterUnit, Index)>;	// nextCharacter
-			template class CaretMovementCommand<viewers::VisualDestinationProxy(const viewers::VisualPoint&, Direction, Index)>;	// next(Page|VisualLine)
+			template class CaretMovementCommand<viewer::VisualDestinationProxy(const viewer::VisualPoint&, Direction, Index)>;	// next(Page|VisualLine)
 
 			/**
 			 * Moves the caret or extends the selection.
@@ -233,13 +233,13 @@ namespace ascension {
 				endIncrementalSearch(target());
 				if(n == 0)
 					return true;
-				viewers::Caret& caret = target().caret();
+				viewer::Caret& caret = target().caret();
 
 				if(!extends_) {
 					if(selectCompletionProposal(target(), procedure_, direction_, n))
 						return true;
 					caret.endRectangleSelection();
-					if(viewers::isSelectionEmpty(caret)) {	// just clear the selection
+					if(viewer::isSelectionEmpty(caret)) {	// just clear the selection
 						if(moveToBoundOfSelection(caret, procedure_, direction_))
 							return true;
 					}
@@ -259,7 +259,7 @@ namespace ascension {
 			 */
 			template<typename ProcedureSignature>
 			CaretMovementToDefinedPositionCommand<ProcedureSignature>::CaretMovementToDefinedPositionCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure, bool extendSelection /* = false */)
+					viewer::TextViewer& viewer, ProcedureSignature* procedure, bool extendSelection /* = false */)
 					: Command(viewer), procedure_(procedure), extends_(extendSelection) {
 				if(procedure == nullptr)
 					throw NullPointerException("procedure");
@@ -267,7 +267,7 @@ namespace ascension {
 
 			// explicit instantiations
 			template class CaretMovementToDefinedPositionCommand<kernel::Position(const kernel::Point&)>;	// (beginning|end)Of(Document|Line)
-			template class CaretMovementToDefinedPositionCommand<kernel::Position(const viewers::VisualPoint&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
+			template class CaretMovementToDefinedPositionCommand<kernel::Position(const viewer::VisualPoint&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
 
 			/**
 			 * Moves the caret or extends the selection.
@@ -288,7 +288,7 @@ namespace ascension {
 			 * @param viewer The target text viewer
 			 * @param direction The direcion to delete
 			 */
-			CharacterDeletionCommand::CharacterDeletionCommand(viewers::TextViewer& viewer,
+			CharacterDeletionCommand::CharacterDeletionCommand(viewer::TextViewer& viewer,
 					Direction direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
 			}
 
@@ -301,9 +301,9 @@ namespace ascension {
 				NumericPrefix n = numericPrefix();
 				if(n == 0)
 					return true;
-				viewers::TextViewer& viewer = target();
+				viewer::TextViewer& viewer = target();
 				if(/*caret.isAutoCompletionRunning() &&*/ direction_ == Direction::FORWARD)
-					viewers::utils::closeCompletionProposalsPopup(viewer);
+					viewer::utils::closeCompletionProposalsPopup(viewer);
 
 				kernel::Document& document = viewer.document();
 				searcher::IncrementalSearcher* isearch = nullptr;
@@ -324,23 +324,23 @@ namespace ascension {
 				} else {
 					ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 					document.insertUndoBoundary();
-					viewers::Caret& caret = viewer.caret();
-					if(n == 1 && !viewers::isSelectionEmpty(caret)) {	// delete only the selected content
+					viewer::Caret& caret = viewer.caret();
+					if(n == 1 && !viewer::isSelectionEmpty(caret)) {	// delete only the selected content
 						try {
-							viewers::eraseSelection(caret);;
+							viewer::eraseSelection(caret);;
 						} catch(const kernel::DocumentInput::ChangeRejectedException&) {
 							return false;
 						}
 					} else {
-						viewers::AutoFreeze af((!isSelectionEmpty(caret) || n > 1) ? &viewer : nullptr);
+						viewer::AutoFreeze af((!isSelectionEmpty(caret) || n > 1) ? &viewer : nullptr);
 						kernel::Region region(caret.selectedRegion());
 						assert(region.isNormalized());
 						if(direction_ == Direction::FORWARD)
 							region.second = kernel::locations::nextCharacter(document, region.second,
-								Direction::FORWARD, kernel::locations::GRAPHEME_CLUSTER, viewers::isSelectionEmpty(caret) ? n : (n - 1));
+								Direction::FORWARD, kernel::locations::GRAPHEME_CLUSTER, viewer::isSelectionEmpty(caret) ? n : (n - 1));
 						else
 							region.first = kernel::locations::nextCharacter(document, region.first,
-								Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT, viewers::isSelectionEmpty(caret) ? n : (n - 1));
+								Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT, viewer::isSelectionEmpty(caret) ? n : (n - 1));
 						try {
 							kernel::erase(document, region);
 						} catch(const kernel::DocumentInput::ChangeRejectedException&) {
@@ -357,7 +357,7 @@ namespace ascension {
 			 * @param c The code point of the character to input
 			 * @throw text#InvalidScalarValueException @a c is not valid Unicode scalar value
 			 */
-			CharacterInputCommand::CharacterInputCommand(viewers::TextViewer& viewer, CodePoint c) : Command(viewer), c_(c) {
+			CharacterInputCommand::CharacterInputCommand(viewer::TextViewer& viewer, CodePoint c) : Command(viewer), c_(c) {
 				if(!text::isScalarValue(c))
 					throw text::InvalidScalarValueException(c);
 			}
@@ -372,7 +372,7 @@ namespace ascension {
 				if(numericPrefix() == 1) {
 					if(Session* const session = target().document().session()) {
 						if(session->incrementalSearcher().isRunning()) {
-							viewers::utils::closeCompletionProposalsPopup(target());
+							viewer::utils::closeCompletionProposalsPopup(target());
 							if(c_ == 0x0009u || std::iswcntrl(static_cast<std::wint_t>(c_)) == 0)
 								session->incrementalSearcher().addCharacter(c_);
 							return true;
@@ -401,7 +401,7 @@ namespace ascension {
 			 *                         one on the next visual line is used
 			 */
 			CharacterInputFromNextLineCommand::CharacterInputFromNextLineCommand(
-					viewers::TextViewer& viewer, bool fromPreviousLine) BOOST_NOEXCEPT : Command(viewer), fromPreviousLine_(fromPreviousLine) {
+					viewer::TextViewer& viewer, bool fromPreviousLine) BOOST_NOEXCEPT : Command(viewer), fromPreviousLine_(fromPreviousLine) {
 			}
 
 			/**
@@ -417,7 +417,7 @@ namespace ascension {
 				// TODO: recognizes narrowing.
 
 				const kernel::Document& document = target().document();
-				const viewers::VisualPoint& caret = target().caret();
+				const viewer::VisualPoint& caret = target().caret();
 
 				if((fromPreviousLine_ && kernel::line(caret) == 0)
 						|| (!fromPreviousLine_ && kernel::line(caret) >= document.numberOfLines() - 1))
@@ -435,7 +435,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 */
-			CharacterToCodePointConversionCommand::CharacterToCodePointConversionCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
+			CharacterToCodePointConversionCommand::CharacterToCodePointConversionCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 			}
 
 			/**
@@ -445,15 +445,15 @@ namespace ascension {
 			 */
 			bool CharacterToCodePointConversionCommand::perform() {
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
-				viewers::TextViewer& viewer = target();
+				viewer::TextViewer& viewer = target();
 				abortModes(viewer);
 				const kernel::Document& document = viewer.document();
-				const viewers::VisualPoint& eos = viewer.caret().end();
+				const viewer::VisualPoint& eos = viewer.caret().end();
 				if(kernel::locations::isBeginningOfLine(eos)
 						|| (document.isNarrowed() && eos.position() == document.accessibleRegion().first))
 					return false;
 
-				viewers::Caret& caret = viewer.caret();
+				viewer::Caret& caret = viewer.caret();
 				const String& lineString = document.line(line(eos));
 				const CodePoint c = text::utf::decodeLast(std::begin(lineString), std::begin(lineString) + offsetInLine(eos));
 				std::array<Char, 7> buffer;
@@ -462,7 +462,7 @@ namespace ascension {
 #else
 				std::swprintf(buffer.data(), buffer.size(), L"%lX", c);
 #endif // _MSC_VER < 1400
-				viewers::AutoFreeze af(&viewer);
+				viewer::AutoFreeze af(&viewer);
 				caret.select(kernel::Position(line(eos), offsetInLine(eos) - ((c > 0xffff) ? 2 : 1)), eos);
 				try {
 					caret.replaceSelection(buffer.data(), false);
@@ -476,7 +476,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 */
-			CodePointToCharacterConversionCommand::CodePointToCharacterConversionCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
+			CodePointToCharacterConversionCommand::CodePointToCharacterConversionCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 			}
 
 			/**
@@ -486,15 +486,15 @@ namespace ascension {
 			 */
 			bool CodePointToCharacterConversionCommand::perform() {
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
-				viewers::TextViewer& viewer = target();
+				viewer::TextViewer& viewer = target();
 				abortModes(viewer);
 				const kernel::Document& document = viewer.document();
-				const viewers::VisualPoint& eos = viewer.caret().end();
+				const viewer::VisualPoint& eos = viewer.caret().end();
 				if(kernel::locations::isBeginningOfLine(eos)
 						|| (document.isNarrowed() && eos.position() == document.accessibleRegion().first))
 					return false;
 
-				viewers::Caret& caret = viewer.caret();
+				viewer::Caret& caret = viewer.caret();
 				const String& lineString = document.line(kernel::line(eos));
 				const Index offsetInLine = kernel::offsetInLine(eos);
 
@@ -515,7 +515,7 @@ namespace ascension {
 						text::utf::encode(c, back_inserter(s));
 						if(i >= 2 && lineString[i - 1] == L'+' && (lineString[i - 2] == L'U' || lineString[i - 2] == L'u'))
 							i -= 2;
-						viewers::AutoFreeze af(&viewer);
+						viewer::AutoFreeze af(&viewer);
 						caret.select(kernel::Position(kernel::line(eos), i), eos);
 						try {
 							caret.replaceSelection(s, false);
@@ -532,7 +532,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 */
-			CompletionProposalPopupCommand::CompletionProposalPopupCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
+			CompletionProposalPopupCommand::CompletionProposalPopupCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 			}
 
 			/**
@@ -554,7 +554,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 */
-			EntireDocumentSelectionCreationCommand::EntireDocumentSelectionCreationCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
+			EntireDocumentSelectionCreationCommand::EntireDocumentSelectionCreationCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 			}
 
 			/**
@@ -573,7 +573,7 @@ namespace ascension {
 			 * @param viewer The target text viewer
 			 * @param direction The direction to search
 			 */
-			FindNextCommand::FindNextCommand(viewers::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
+			FindNextCommand::FindNextCommand(viewer::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
 			}
 
 			/**
@@ -585,7 +585,7 @@ namespace ascension {
 				if(numericPrefix() == 0)
 					return false;
 				endIncrementalSearch(target());
-				viewers::utils::closeCompletionProposalsPopup(target());
+				viewer::utils::closeCompletionProposalsPopup(target());
 
 				win32::WaitCursor wc;	// TODO: code depends on Win32.
 				kernel::Document& document = target().document();
@@ -595,7 +595,7 @@ namespace ascension {
 				else
 					return false;	// TODO: prepares a default text searcher.
 
-				viewers::Caret& caret = target().caret();
+				viewer::Caret& caret = target().caret();
 				const kernel::Region scope(document.accessibleRegion());
 				kernel::Region matchedRegion(caret.selectedRegion());
 				bool foundOnce = false;
@@ -622,7 +622,7 @@ namespace ascension {
 			 * @param direction The direction to search
 			 * @param callback The callback object for the incremental search. Can be @c null
 			 */
-			IncrementalFindCommand::IncrementalFindCommand(viewers::TextViewer& viewer, searcher::TextSearcher::Type type,
+			IncrementalFindCommand::IncrementalFindCommand(viewer::TextViewer& viewer, searcher::TextSearcher::Type type,
 					Direction direction, searcher::IncrementalSearchCallback* callback /* = nullptr */) BOOST_NOEXCEPT
 					: Command(viewer), type_(type), direction_(direction), callback_(callback) {
 			}
@@ -636,7 +636,7 @@ namespace ascension {
 				NumericPrefix n(numericPrefix());
 				if(n == 0)
 					return false;
-				viewers::utils::closeCompletionProposalsPopup(target());
+				viewer::utils::closeCompletionProposalsPopup(target());
 				if(Session* const session = target().document().session()) {
 					searcher::IncrementalSearcher& isearch = session->incrementalSearcher();
 					if(!isearch.isRunning()) {	// begin the search if not running
@@ -656,7 +656,7 @@ namespace ascension {
 			 * @param viewer The target text viewer
 			 * @param increase Set @c true to increase the indentation
 			 */
-			IndentationCommand::IndentationCommand(viewers::TextViewer& viewer, bool increase) BOOST_NOEXCEPT : Command(viewer), increases_(increase) {
+			IndentationCommand::IndentationCommand(viewer::TextViewer& viewer, bool increase) BOOST_NOEXCEPT : Command(viewer), increases_(increase) {
 			}
 
 			/**
@@ -669,14 +669,14 @@ namespace ascension {
 					return true;
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //				ASCENSION_CHECK_GUI_EDITABILITY();
-				viewers::TextViewer& viewer = target();
+				viewer::TextViewer& viewer = target();
 				endIncrementalSearch(viewer);
-				viewers::utils::closeCompletionProposalsPopup(viewer);
+				viewer::utils::closeCompletionProposalsPopup(viewer);
 
 				try {
-					viewers::Caret& caret = viewer.caret();
+					viewer::Caret& caret = viewer.caret();
 					viewer.document().insertUndoBoundary();
-					viewers::AutoFreeze af(&viewer);
+					viewer::AutoFreeze af(&viewer);
 					const long tabs = n;
 					indentByTabs(caret, caret.isSelectionRectangle(), increases_ ? +tabs : -tabs);
 					viewer.document().insertUndoBoundary();
@@ -691,7 +691,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer the target text viewer
 			 */
-			InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
+			InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 			}
 
 			/**
@@ -712,7 +712,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 */
-			InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
+			InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 			}
 
 			/**
@@ -740,7 +740,7 @@ namespace ascension {
 			 * @param viewer The target text viewer
 			 * @param extendSelection Set @c true to extend the selection
 			 */
-			MatchBracketCommand::MatchBracketCommand(viewers::TextViewer& viewer, bool extendSelection) BOOST_NOEXCEPT : Command(viewer), extends_(extendSelection) {
+			MatchBracketCommand::MatchBracketCommand(viewer::TextViewer& viewer, bool extendSelection) BOOST_NOEXCEPT : Command(viewer), extends_(extendSelection) {
 			}
 
 			/**
@@ -749,7 +749,7 @@ namespace ascension {
 			 */
 			bool MatchBracketCommand::perform() {
 				endIncrementalSearch(target());
-				viewers::Caret& caret = target().caret();
+				viewer::Caret& caret = target().caret();
 				if(const boost::optional<std::pair<kernel::Position, kernel::Position>> matchBrackets = caret.matchBrackets()) {
 					caret.endRectangleSelection();
 					if(!extends_)
@@ -771,7 +771,7 @@ namespace ascension {
 			 *                  (@c Direction#BACKWARD) line. In this case, the command ends the active mode and
 			 *                  inserts newline character(s)
 			 */
-			NewlineCommand::NewlineCommand(viewers::TextViewer& viewer, boost::optional<Direction> direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
+			NewlineCommand::NewlineCommand(viewer::TextViewer& viewer, boost::optional<Direction> direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
 			}
 
 			/**
@@ -781,7 +781,7 @@ namespace ascension {
 			bool NewlineCommand::perform() {
 				if(numericPrefix() <= 0)
 					return true;
-				viewers::TextViewer& viewer = target();
+				viewer::TextViewer& viewer = target();
 
 				if(contentassist::ContentAssistant* const ca = target().contentAssistant()) {
 					if(contentassist::ContentAssistant::CompletionProposalsUI* cpui = ca->completionProposalsUI()) {
@@ -796,10 +796,10 @@ namespace ascension {
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //				ASCENSION_CHECK_GUI_EDITABILITY(1);
 
-				viewers::Caret& caret = viewer.caret();
+				viewer::Caret& caret = viewer.caret();
 				const kernel::Region oldSelection(caret.selectedRegion());
 				kernel::Document& document = viewer.document();
-				viewers::AutoFreeze af(&viewer);
+				viewer::AutoFreeze af(&viewer);
 
 				if(direction_ != boost::none) {
 					kernel::Position p;
@@ -834,7 +834,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 */
-			OvertypeModeToggleCommand::OvertypeModeToggleCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
+			OvertypeModeToggleCommand::OvertypeModeToggleCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 			}
 
 			/**
@@ -842,9 +842,9 @@ namespace ascension {
 			 * @return true
 			 */
 			bool OvertypeModeToggleCommand::perform() {
-				viewers::Caret& caret = target().caret();
+				viewer::Caret& caret = target().caret();
 				caret.setOvertypeMode(!caret.isOvertypeMode());
-				viewers::utils::closeCompletionProposalsPopup(target());
+				viewer::utils::closeCompletionProposalsPopup(target());
 				return true;
 			}
 
@@ -852,7 +852,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 */
-			PasteCommand::PasteCommand(viewers::TextViewer& viewer, bool useKillRing) BOOST_NOEXCEPT : Command(viewer), usesKillRing_(useKillRing) {
+			PasteCommand::PasteCommand(viewer::TextViewer& viewer, bool useKillRing) BOOST_NOEXCEPT : Command(viewer), usesKillRing_(useKillRing) {
 			}
 
 			/**
@@ -862,7 +862,7 @@ namespace ascension {
 			bool PasteCommand::perform() {
 				ASCENSION_ASSERT_IFISWINDOW();
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
-				viewers::utils::closeCompletionProposalsPopup(target());
+				viewer::utils::closeCompletionProposalsPopup(target());
 				try {
 					target().caret().paste(usesKillRing_);
 				} catch(...) {
@@ -875,23 +875,23 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 */
-			ReconversionCommand::ReconversionCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
+			ReconversionCommand::ReconversionCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 			}
 
 			/**
 			 * Implements @c Command#perform.
 			 * @return false The selection was empty or rectangle. Or the system didn't support IME reconversion
 			 * @throw std#bad_alloc Out of memory
-			 * @see viewers#TextViewer#onIMERequest
+			 * @see viewer#TextViewer#onIMERequest
 			 */
 			bool ReconversionCommand::perform() {
-				viewers::TextViewer& viewer = target();
+				viewer::TextViewer& viewer = target();
 				endIncrementalSearch(viewer);
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //	ASCENSION_CHECK_GUI_EDITABILITY();
 
 				bool succeeded = false;
-				viewers::Caret& caret = viewer.caret();
+				viewer::Caret& caret = viewer.caret();
 				if(!caret.isSelectionRectangle()) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					if(win32::Handle<HIMC>::Type imc = win32::inputMethod(viewer)) {
@@ -930,7 +930,7 @@ namespace ascension {
 #endif
 				}
 
-				viewers::utils::closeCompletionProposalsPopup(viewer);
+				viewer::utils::closeCompletionProposalsPopup(viewer);
 				return succeeded;
 			}
 
@@ -940,7 +940,7 @@ namespace ascension {
 			 * @param onlySelection
 			 * @param callback
 			 */
-			ReplaceAllCommand::ReplaceAllCommand(viewers::TextViewer& viewer, bool onlySelection,
+			ReplaceAllCommand::ReplaceAllCommand(viewer::TextViewer& viewer, bool onlySelection,
 					const String& replacement, searcher::InteractiveReplacementCallback* callback) BOOST_NOEXCEPT
 					: Command(viewer), onlySelection_(onlySelection), replacement_(replacement), callback_(callback) {
 			}
@@ -957,7 +957,7 @@ namespace ascension {
 					return false;
 
 				win32::WaitCursor wc;
-				viewers::TextViewer& viewer = target();
+				viewer::TextViewer& viewer = target();
 				kernel::Document& document = viewer.document();
 				searcher::TextSearcher* s;
 				if(Session* const session = document.session())
@@ -975,7 +975,7 @@ namespace ascension {
 				kernel::Point oldAnchor(document, viewer.caret().anchor());
 				kernel::Point oldCaret(document, viewer.caret());
 
-				viewers::AutoFreeze af(&viewer);
+				viewer::AutoFreeze af(&viewer);
 				try {
 					numberOfLastReplacements_ = s->replaceAll(document, scope, replacement_, callback_);
 				} catch(const searcher::ReplacementInterruptedException<kernel::DocumentInput::ChangeRejectedException>& e) {
@@ -999,7 +999,7 @@ namespace ascension {
 			 */
 			template<typename ProcedureSignature>
 			RowSelectionExtensionCommand<ProcedureSignature>::RowSelectionExtensionCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure, Direction direction)
+					viewer::TextViewer& viewer, ProcedureSignature* procedure, Direction direction)
 					: Command(viewer), procedure_(procedure), direction_(direction) {
 				if(procedure == nullptr)
 					throw NullPointerException("procedure");
@@ -1011,11 +1011,11 @@ namespace ascension {
 			 */
 			template<typename ProcedureSignature>
 			bool RowSelectionExtensionCommand<ProcedureSignature>::perform() {
-				viewers::utils::closeCompletionProposalsPopup(target());
+				viewer::utils::closeCompletionProposalsPopup(target());
 				endIncrementalSearch(target());
 			
-				viewers::Caret& caret = target().caret();
-				if(viewers::isSelectionEmpty(caret) && !caret.isSelectionRectangle())
+				viewer::Caret& caret = target().caret();
+				if(viewer::isSelectionEmpty(caret) && !caret.isSelectionRectangle())
 					caret.beginRectangleSelection();
 				return CaretMovementCommand<ProcedureSignature>(target(), procedure_, direction_, true).setNumericPrefix(numericPrefix())();
 			}
@@ -1024,7 +1024,7 @@ namespace ascension {
 			template class RowSelectionExtensionCommand<kernel::Position(const kernel::Point&, Direction, Index)>;	// next(Line|Word|WordEnd)
 			template class RowSelectionExtensionCommand<boost::optional<kernel::Position>(const kernel::Point&, Direction, Index)>;	// nextBookmark
 			template class RowSelectionExtensionCommand<kernel::Position(const kernel::Point&, Direction, kernel::locations::CharacterUnit, Index)>;	// nextCharacter
-			template class RowSelectionExtensionCommand<viewers::VisualDestinationProxy(const viewers::VisualPoint&, Direction, Index)>;	// next(Page|VisualLine)
+			template class RowSelectionExtensionCommand<viewer::VisualDestinationProxy(const viewer::VisualPoint&, Direction, Index)>;	// next(Page|VisualLine)
 
 			/**
 			 * Constructor.
@@ -1035,14 +1035,14 @@ namespace ascension {
 			 */
 			template<typename ProcedureSignature>
 			RowSelectionExtensionToDefinedPositionCommand<ProcedureSignature>::RowSelectionExtensionToDefinedPositionCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure) : Command(viewer), procedure_(procedure) {
+					viewer::TextViewer& viewer, ProcedureSignature* procedure) : Command(viewer), procedure_(procedure) {
 				if(procedure == nullptr)
 					throw NullPointerException("procedure");
 			}
 
 			// explicit instantiations
 			template class RowSelectionExtensionToDefinedPositionCommand<kernel::Position(const kernel::Point&)>;	// (beginning|end)Of(Document|Line)
-			template class RowSelectionExtensionToDefinedPositionCommand<kernel::Position(const viewers::VisualPoint&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
+			template class RowSelectionExtensionToDefinedPositionCommand<kernel::Position(const viewer::VisualPoint&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
 
 			/**
 			 * Moves the caret or extends the selection.
@@ -1050,10 +1050,10 @@ namespace ascension {
 			 */
 			template<typename ProcedureSignature>
 			bool RowSelectionExtensionToDefinedPositionCommand<ProcedureSignature>::perform() {
-				viewers::utils::closeCompletionProposalsPopup(target());
+				viewer::utils::closeCompletionProposalsPopup(target());
 				endIncrementalSearch(target());
 			
-				viewers::Caret& caret = target().caret();
+				viewer::Caret& caret = target().caret();
 				if(isSelectionEmpty(caret) && !caret.isSelectionRectangle())
 					caret.beginRectangleSelection();
 				return CaretMovementToDefinedPositionCommand<ProcedureSignature>(target(), procedure_, true).setNumericPrefix(numericPrefix())();
@@ -1064,7 +1064,7 @@ namespace ascension {
 			 * @param viewer The target text viewer
 			 * @param untabify Set @c true to untabify rather than tabify
 			 */
-			TabifyCommand::TabifyCommand(viewers::TextViewer& viewer, bool untabify) BOOST_NOEXCEPT : Command(viewer), untabify_(untabify) {
+			TabifyCommand::TabifyCommand(viewer::TextViewer& viewer, bool untabify) BOOST_NOEXCEPT : Command(viewer), untabify_(untabify) {
 			}
 
 			/**
@@ -1084,7 +1084,7 @@ namespace ascension {
 			 * @param viewer The target text viewer
 			 * @param text The text to input. This can be empty or ill-formed UTF-16 sequence
 			 */
-			TextInputCommand::TextInputCommand(viewers::TextViewer& viewer, const String& text) BOOST_NOEXCEPT : Command(viewer), text_(text) {
+			TextInputCommand::TextInputCommand(viewer::TextViewer& viewer, const String& text) BOOST_NOEXCEPT : Command(viewer), text_(text) {
 			}
 
 			namespace {
@@ -1101,7 +1101,7 @@ namespace ascension {
 			/**
 			 * Inserts a text. If the incremental search is active, appends a string to the end of the pattern.
 			 * @retval false The change was rejected
-			 * @throw ... Any exceptions @c searcher#IncrementalSearcher#addString and @c viewers#replaceSelection
+			 * @throw ... Any exceptions @c searcher#IncrementalSearcher#addString and @c viewer#replaceSelection
 			 *            throw other than @c kernel#IDocumentInput#ChangeRejectedException
 			 */
 			bool TextInputCommand::perform() {
@@ -1141,15 +1141,15 @@ namespace ascension {
 			 *                  @c EditPoint#transposeWords, @c EditPoint#transposeLines
 			 * @throw std#invalid_argument
 			 */
-			TranspositionCommand::TranspositionCommand(viewers::TextViewer& viewer, bool(*procedure)(viewers::Caret&)) : Command(viewer), procedure_(procedure) {
-				if(procedure_ != &viewers::transposeCharacters
-						&& procedure_ != &viewers::transposeWords
-						&& procedure_ != &viewers::transposeLines)
+			TranspositionCommand::TranspositionCommand(viewer::TextViewer& viewer, bool(*procedure)(viewer::Caret&)) : Command(viewer), procedure_(procedure) {
+				if(procedure_ != &viewer::transposeCharacters
+						&& procedure_ != &viewer::transposeWords
+						&& procedure_ != &viewer::transposeLines)
 					throw std::invalid_argument("procedure");
 			}
 
 			/**
-			 * Implements @c Command#perform by using a transposition method of @c viewers#Caret class. 
+			 * Implements @c Command#perform by using a transposition method of @c viewer#Caret class. 
 			 * @return false The internal transposition method call returned @c false
 			 * @throw ... Any exceptions the transposition method returns other than
 			 *            @c kernel#ReadOnlyDocumentException and @c kernel#DocumentCantChangeException
@@ -1157,13 +1157,13 @@ namespace ascension {
 			bool TranspositionCommand::perform() {
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //				ASCENSION_CHECK_GUI_EDITABILITY();
-				viewers::TextViewer& viewer = target();
+				viewer::TextViewer& viewer = target();
 				endIncrementalSearch(viewer);
-				viewers::utils::closeCompletionProposalsPopup(viewer);
+				viewer::utils::closeCompletionProposalsPopup(viewer);
 
-				viewers::Caret& caret = viewer.caret();
+				viewer::Caret& caret = viewer.caret();
 				try {
-					viewers::AutoFreeze af(&viewer);
+					viewer::AutoFreeze af(&viewer);
 					viewer.document().insertUndoBoundary();
 					const bool succeeded = (*procedure_)(caret);
 					viewer.document().insertUndoBoundary();
@@ -1178,7 +1178,7 @@ namespace ascension {
 			 * @param viewer The target text viewer
 			 * @param redo Set @c true to perform redo, rather than undo
 			 */
-			UndoCommand::UndoCommand(viewers::TextViewer& viewer, bool redo) BOOST_NOEXCEPT : Command(viewer), redo_(redo), lastResult_(INDETERMINATE) {
+			UndoCommand::UndoCommand(viewer::TextViewer& viewer, bool redo) BOOST_NOEXCEPT : Command(viewer), redo_(redo), lastResult_(INDETERMINATE) {
 			}
 
 			/**
@@ -1218,7 +1218,7 @@ namespace ascension {
 			 * @param viewer The target text viewer
 			 * @param direction The direcion to delete
 			 */
-			WordDeletionCommand::WordDeletionCommand(viewers::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
+			WordDeletionCommand::WordDeletionCommand(viewer::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
 			}
 
 			/**
@@ -1230,12 +1230,12 @@ namespace ascension {
 				if(n == 0)
 					return true;
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
-				viewers::TextViewer& viewer = target();
+				viewer::TextViewer& viewer = target();
 				abortIncrementalSearch(viewer);
 
-				viewers::Caret& caret = viewer.caret();
+				viewer::Caret& caret = viewer.caret();
 				if(/*caret.isAutoCompletionRunning() &&*/ direction_ == Direction::FORWARD)
-					viewers::utils::closeCompletionProposalsPopup(viewer);
+					viewer::utils::closeCompletionProposalsPopup(viewer);
 
 				kernel::Document& document = viewer.document();
 				const kernel::Position from((direction_ == Direction::FORWARD) ? caret.beginning() : caret.end());
@@ -1250,7 +1250,7 @@ namespace ascension {
 				}
 				if(to.base().tell() != from) {
 					try {
-						viewers::AutoFreeze af(&viewer);
+						viewer::AutoFreeze af(&viewer);
 						document.insertUndoBoundary();
 						kernel::erase(document, from, to.base().tell());
 						caret.moveTo(std::min(from, to.base().tell()));
@@ -1266,7 +1266,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 */
-			WordSelectionCreationCommand::WordSelectionCreationCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
+			WordSelectionCreationCommand::WordSelectionCreationCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 			}
 
 			/**

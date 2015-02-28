@@ -4,7 +4,7 @@
  * @date 2003-2008 was point.cpp
  * @date 2008-2010 separated from point.cpp
  * @date 2011-10-03 separated from caret.cpp
- * @date 2011-2014
+ * @date 2011-2015
  */
 
 #include <ascension/viewer/caret.hpp>
@@ -19,7 +19,7 @@
 
 using namespace ascension;
 using namespace ascension::graphics;
-using namespace ascension::viewers;
+using namespace ascension::viewer;
 using namespace ascension::presentation;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
@@ -665,9 +665,9 @@ LCID Caret::setClipboardLocale(LCID newLocale) {
 }
 
 
-// viewers free functions /////////////////////////////////////////////////////////////////////////
+// viewer free functions /////////////////////////////////////////////////////////////////////////
 
-void viewers::copySelection(Caret& caret, bool useKillRing) {
+void viewer::copySelection(Caret& caret, bool useKillRing) {
 	if(isSelectionEmpty(caret))
 		return;
 
@@ -683,7 +683,7 @@ void viewers::copySelection(Caret& caret, bool useKillRing) {
 	}
 }
 
-void viewers::cutSelection(Caret& caret, bool useKillRing) {
+void viewer::cutSelection(Caret& caret, bool useKillRing) {
 	if(isSelectionEmpty(caret))
 		return;
 
@@ -695,7 +695,7 @@ void viewers::cutSelection(Caret& caret, bool useKillRing) {
 		throw ClipboardException(hr);
 	copySelection(caret, useKillRing);	// this may throw
 	try {
-		viewers::eraseSelection(caret);
+		viewer::eraseSelection(caret);
 	} catch(...) {
 		hr = tryOleClipboard(::OleSetClipboard, previousContent.get());
 		throw;

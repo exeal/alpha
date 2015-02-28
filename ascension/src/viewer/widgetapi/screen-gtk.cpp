@@ -1,7 +1,7 @@
 /**
  * @file screen-gtk.cpp
  * @author exeal
- * Implements @c ascension#viewers#widgetapi#Screen class on gtkmm.
+ * Implements @c ascension#viewer#widgetapi#Screen class on gtkmm.
  * @date 2014-05-28 Created.
  */
 
@@ -16,7 +16,7 @@
 #	endif
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			/**
 			 * Wraps a native @c Gdk#Screen object.

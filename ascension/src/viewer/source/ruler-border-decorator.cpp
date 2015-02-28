@@ -9,7 +9,7 @@
 #include <ascension/viewer/source/ruler-border-decorator.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace source {
 			/**
 			 * Creates @c RulerBorderDecorator object.

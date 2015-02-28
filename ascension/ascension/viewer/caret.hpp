@@ -23,7 +23,7 @@ namespace ascension {
 		}
 	}
 
-	namespace viewers {
+	namespace viewer {
 		class Caret;
 
 		namespace utils {
@@ -47,7 +47,7 @@ namespace ascension {
 		};
 	}
 
-	namespace viewers {
+	namespace viewer {
 		// documentation is caret.cpp
 		class Caret : public VisualPoint, public detail::InputEventHandler,
 			public kernel::PointListener, public kernel::DocumentListener,
@@ -336,7 +336,7 @@ namespace ascension {
 		}
 
 		/**
-		 * @fn ascension::viewers::Caret::paste
+		 * @fn ascension::viewer::Caret::paste
 		 * Replaces the selected text by the content of the clipboard.
 		 * This method inserts undo boundaries at the beginning and the end.
 		 * @note When using the kill-ring, this method may exit in defective condition.
@@ -391,7 +391,7 @@ namespace ascension {
 			return ss.str();
 		}
 
-	} // namespace viewers
+	} // namespace viewer
 } // namespace ascension
 
 #endif // !ASCENSION_POINT_HPP

@@ -4,7 +4,7 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-05-16 separated from viewer.cpp
- * @date 2011-2014
+ * @date 2011-2015
  */
 
 #include <ascension/viewer/viewer.hpp>
@@ -42,7 +42,7 @@ using namespace ascension;
 using namespace ascension::graphics;
 using namespace ascension::graphics::font;
 using namespace ascension::presentation;
-using namespace ascension::viewers;
+using namespace ascension::viewer;
 using namespace std;
 namespace k = ascension::kernel;
 

@@ -18,7 +18,7 @@ namespace ascension {
 		class PaintContext;
 	}
 
-	namespace viewers {
+	namespace viewer {
 		class TextViewer;
 
 		namespace source {

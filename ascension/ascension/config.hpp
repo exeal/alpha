@@ -199,7 +199,7 @@
 #endif	// !ASCENSION_DEFAULT_MAXIMUM_KILLS
 
 
-// about ascension.viewers //////////////////////////////////////////////////
+// about ascension.viewer ///////////////////////////////////////////////////
 
 /**
  * @def ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
@@ -212,8 +212,8 @@
  * @def ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
  * Define the symbol if you do not use Microsoft Active Input Method Manager (Global IME). You can
  * also disable AIM at runtime. This effects only on Win32 platform.
- * @see ascension#viewers#TextViewer#enableActiveInputMethod,
- * ascension#viewers#TextViewer#isActiveInputMethodEnabled
+ * @see ascension#viewer#TextViewer#enableActiveInputMethod,
+ * ascension#viewer#TextViewer#isActiveInputMethodEnabled
  * @deprecated 0.8
  */
 // #define ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
@@ -244,7 +244,7 @@
 /**
  * @def ASCENSION_RECTANGLE_TEXT_MIME_FORMAT
  * MIME data format for rectangle text.
- * @see ascension#viewers#utils#rectangleTextMimeDataFormat
+ * @see ascension#viewer#utils#rectangleTextMimeDataFormat
  */
 //#define ASCENSION_RECTANGLE_TEXT_MIME_FORMAT "your-own-string"
 

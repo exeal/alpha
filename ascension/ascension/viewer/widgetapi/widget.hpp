@@ -29,7 +29,7 @@ namespace ascension {
 		class PaintContext;
 	}
 
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			/**
 			 * Returns the window of the widget.
@@ -461,7 +461,7 @@ namespace ascension {
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	namespace win32 {
-		inline Handle<HIMC>::Type inputMethod(const viewers::widgetapi::Proxy<Widget> widget) {
+		inline Handle<HIMC>::Type inputMethod(const viewer::widgetapi::Proxy<Widget> widget) {
 			return Handle<HIMC>::Type(::ImmGetContext(widget.handle().get()),
 				std::bind(&::ImmReleaseContext, widget.handle().get(), std::placeholders::_1));
 		}

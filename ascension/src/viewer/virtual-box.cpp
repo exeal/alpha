@@ -4,7 +4,7 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2013 was viewer.cpp
  * @date 2013-04-29 separated from viewer.cpp
- * @date 2013-2014
+ * @date 2013-2015
  */
 
 #include <ascension/graphics/font/text-viewport.hpp>
@@ -12,7 +12,7 @@
 #include <ascension/viewer/virtual-box.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		// VirtualBox /////////////////////////////////////////////////////////////////////////////////////////////////
 
 		/**
@@ -40,7 +40,7 @@ namespace ascension {
 		 * @param line The line
 		 * @return The character range in @a line.line, or @c boost#none if @a line is out side of the box. The range
 		 *         can be empty
-		 * @see #includes, viewers#selectedRangeOnLine, viewers#selectedRangeOnVisualLine
+		 * @see #includes, viewer#selectedRangeOnLine, viewer#selectedRangeOnVisualLine
 		 */
 		boost::optional<boost::integer_range<Index>> VirtualBox::characterRangeInVisualLine(const graphics::font::VisualLine& line) const BOOST_NOEXCEPT {
 			if(line < *lines_.begin() || line > *lines_.end())

@@ -15,7 +15,7 @@
 
 using namespace ascension;
 using namespace ascension::contentassist;
-using namespace ascension::viewers;
+using namespace ascension::viewer;
 using namespace std;
 
 

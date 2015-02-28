@@ -25,7 +25,7 @@ namespace ascension {
 		}
 
 		DefaultContentAssistant::CompletionProposalsPopup::CompletionProposalsPopup(
-				viewers::TextViewer& parent, ContentAssistant::CompletionProposalsUI& ui) BOOST_NOEXCEPT : ui_(ui) {
+				viewer::TextViewer& parent, ContentAssistant::CompletionProposalsUI& ui) BOOST_NOEXCEPT : ui_(ui) {
 			add(view_);
 			set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
 
@@ -38,7 +38,7 @@ namespace ascension {
 		}
 
 		void DefaultContentAssistant::CompletionProposalsPopup::end() {
-			viewers::widgetapi::hide(*this);
+			viewer::widgetapi::hide(*this);
 			model_->clear();
 		}
 

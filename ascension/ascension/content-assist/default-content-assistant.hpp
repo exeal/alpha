@@ -58,16 +58,16 @@ namespace ascension {
 			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const BOOST_NOEXCEPT override;
 			std::shared_ptr<const ContentAssistProcessor>
 				contentAssistProcessor(kernel::ContentType contentType) const BOOST_NOEXCEPT override;
-			void install(viewers::TextViewer& viewer) override;
+			void install(viewer::TextViewer& viewer) override;
 			void uninstall() override;
 			void viewerBoundsChanged() BOOST_NOEXCEPT override;
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
-			// viewers.Caret.MotionSignal
-			void caretMoved(const viewers::Caret& caret, const kernel::Region& regionBeforeMotion);
-			// viewers.Caret.CharacterInputSignal
-			void characterInput(const viewers::Caret& caret, CodePoint c);
+			// viewer.Caret.MotionSignal
+			void caretMoved(const viewer::Caret& caret, const kernel::Region& regionBeforeMotion);
+			// viewer.Caret.CharacterInputSignal
+			void characterInput(const viewer::Caret& caret, CodePoint c);
 			// graphics.font.TextViewportListener
 			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
 			void viewportScrollPositionChanged(
@@ -82,7 +82,7 @@ namespace ascension {
 			void nextPage(int pages) override;
 			void nextProposal(int proposals) override;
 		private:
-			viewers::TextViewer* textViewer_;
+			viewer::TextViewer* textViewer_;
 			std::map<kernel::ContentType, std::shared_ptr<ContentAssistProcessor>> processors_;
 			std::uint32_t autoActivationDelay_;
 			Timer timer_;
@@ -109,7 +109,7 @@ namespace ascension {
 #endif
 			{
 			public:
-				CompletionProposalsPopup(viewers::TextViewer& parent, CompletionProposalsUI& ui);
+				CompletionProposalsPopup(viewer::TextViewer& parent, CompletionProposalsUI& ui);
 				void end();
 				void resetContent(std::shared_ptr<const CompletionProposal> proposals[], size_t numberOfProposals);
 				std::shared_ptr<const CompletionProposal> selectedProposal() const;

@@ -2,7 +2,7 @@
  * @file content-assist.hpp
  * @author exeal
  * @date 2003-2006 was CompletionWindow.h
- * @date 2006-2013
+ * @date 2006-2013, 2015
  */
 
 #ifndef ASCENSION_CONTENT_ASSIST_HPP
@@ -21,13 +21,13 @@
 
 namespace ascension {
 
-	namespace viewers {
+	namespace viewer {
 		class Caret;
 		class TextViewer;
 	}
 
 	/**
-	 * Provides a content assist feature for a @c viewers#TextViewer. Content assist supports the
+	 * Provides a content assist feature for a @c viewer#TextViewer. Content assist supports the
 	 * user in writing by proposing completions at a given document position.
 	 */
 	namespace contentassist {
@@ -99,7 +99,7 @@ namespace ascension {
 			 * @return The proposal or @c null if no proposal should be selected
 			 */
 			virtual std::shared_ptr<const CompletionProposal> activeCompletionProposal(
-				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
+				const viewer::TextViewer& textViewer, const kernel::Region& replacementRegion,
 				std::shared_ptr<const CompletionProposal> proposals[], std::size_t numberOfProposals) const BOOST_NOEXCEPT = 0;
 			/**
 			 * Compares the given two display strings.
@@ -119,7 +119,7 @@ namespace ascension {
 			 * @param[out] proposals The result. If empty, the completion does not activate
 			 * @see #recomputeIncrementalCompletionProposals
 			 */
-			virtual void computeCompletionProposals(const viewers::Caret& caret,
+			virtual void computeCompletionProposals(const viewer::Caret& caret,
 				bool& incremental, kernel::Region& replacementRegion,
 				std::set<std::shared_ptr<const CompletionProposal>>& proposals) const = 0;
 			/**
@@ -148,7 +148,7 @@ namespace ascension {
 			 * @see #computeCompletionProposals
 			 */
 			virtual void recomputeIncrementalCompletionProposals(
-				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
+				const viewer::TextViewer& textViewer, const kernel::Region& replacementRegion,
 				std::shared_ptr<const CompletionProposal> currentProposals[], std::size_t numberOfCurrentProposals,
 				std::set<std::shared_ptr<const CompletionProposal>>& newProposals) const = 0;
 		};
@@ -195,12 +195,12 @@ namespace ascension {
 			virtual void showPossibleCompletions() = 0;
 		protected:
 			/// Installs the content assistant on the specified text viewer.
-			virtual void install(viewers::TextViewer& viewer) = 0;
+			virtual void install(viewer::TextViewer& viewer) = 0;
 			/// Uninstalls the content assistant from the text viewer.
 			virtual void uninstall() = 0;
 			/// The bounds of the text viewer was changed.
 			virtual void viewerBoundsChanged() {}
-			friend class viewers::TextViewer;
+			friend class viewer::TextViewer;
 		};
 /*
 		class ContextInformation {};

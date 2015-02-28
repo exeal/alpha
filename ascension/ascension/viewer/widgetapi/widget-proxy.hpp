@@ -18,7 +18,7 @@
 #endif
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			template<typename Entity, template<class> class SmartPointer>
 			struct WidgetOrWindowBase {

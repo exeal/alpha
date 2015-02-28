@@ -21,7 +21,7 @@ namespace a = ascension;
 namespace k = ascension::kernel;
 namespace re = ascension::regex;
 namespace s = ascension::searcher;
-namespace v = ascension::viewers;
+namespace v = ascension::viewer;
 namespace py = boost::python;
 
 

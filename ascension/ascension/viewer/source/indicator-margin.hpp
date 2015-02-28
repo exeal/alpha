@@ -10,7 +10,7 @@
 #include <ascension/viewer/source/abstract-ruler.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace source {
 			/// An indicator margin.
 			class IndicatorMargin : public AbstractRuler {

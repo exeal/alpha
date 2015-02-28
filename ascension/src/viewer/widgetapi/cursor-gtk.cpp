@@ -1,6 +1,6 @@
 /**
  * @file cursor-gtk.cpp
- * Implements @c ascension#viewers#widgetapi#Cursor class on gtkmm window system.
+ * Implements @c ascension#viewer#widgetapi#Cursor class on gtkmm window system.
  * @date 2014-02-01 Created.
  */
 
@@ -19,7 +19,7 @@
 #endif
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			Cursor::Cursor(Cursor::BuiltinShape shape) : impl_(Gdk::Cursor::create(shape)) {
 			}

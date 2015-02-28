@@ -15,7 +15,7 @@
 
 namespace ascension {
 
-	namespace viewers {
+	namespace viewer {
 		class BlockProgressionDestinationProxy;
 	}
 
@@ -31,17 +31,17 @@ namespace ascension {
 			virtual ~Command() throw();
 			bool operator()();
 			NumericPrefix numericPrefix() const BOOST_NOEXCEPT;
-			Command& retarget(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
+			Command& retarget(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
 			Command& setNumericPrefix(NumericPrefix number) BOOST_NOEXCEPT;
 		protected:
-			explicit Command(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
+			explicit Command(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
 			/// Returns the text viewer which is the target of this command.
-			viewers::TextViewer& target() const BOOST_NOEXCEPT {return *viewer_;}
+			viewer::TextViewer& target() const BOOST_NOEXCEPT {return *viewer_;}
 		private:
 			/// Called by @c #operator(). For semantics, see @c #operator().
 			virtual bool perform() = 0;
 		private:
-			viewers::TextViewer* viewer_;
+			viewer::TextViewer* viewer_;
 			NumericPrefix numericPrefix_;
 		};
 
@@ -55,7 +55,7 @@ namespace ascension {
 			/// Searches and bookmarks all matched lines.
 			class BookmarkMatchLinesCommand : public Command {
 			public:
-				explicit BookmarkMatchLinesCommand(viewers::TextViewer& viewer,
+				explicit BookmarkMatchLinesCommand(viewer::TextViewer& viewer,
 					const kernel::Region& region = kernel::Region()) BOOST_NOEXCEPT;
 				Index numberOfMarkedLines() const BOOST_NOEXCEPT;
 			private:
@@ -66,7 +66,7 @@ namespace ascension {
 			/// Clears the selection, or aborts the active incremental search and exits the content assist.
 			class CancelCommand : public Command {
 			public:
-				explicit CancelCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
+				explicit CancelCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
@@ -74,12 +74,12 @@ namespace ascension {
 			 * Moves the caret or extends the selection.
 			 * @c kernel#locations#CharacterUnit#GRAPHEME_CLUSTER is always used as character unit.
 			 * @tparam ProcedureSignature Type of the function gives a motion
-			 * @see CaretMovementToDefinedPositionCommand, viewers#Caret, kernel#locations
+			 * @see CaretMovementToDefinedPositionCommand, viewer#Caret, kernel#locations
 			 */
 			template<typename ProcedureSignature>
 			class CaretMovementCommand : public Command {
 			public:
-				CaretMovementCommand(viewers::TextViewer& viewer,
+				CaretMovementCommand(viewer::TextViewer& viewer,
 					ProcedureSignature* procedure, Direction direction, bool extendSelection = false);
 			private:
 				bool perform();
@@ -90,12 +90,12 @@ namespace ascension {
 			/**
 			 * Moves the caret or extends the selection to a defined position.
 			 * @tparam ProcedureSignature Type of the function gives a motion
-			 * @see CaretMovementCommand, viewers#Caret, kernel#locations
+			 * @see CaretMovementCommand, viewer#Caret, kernel#locations
 			 */
 			template<typename ProcedureSignature>
 			class CaretMovementToDefinedPositionCommand : public Command {
 			public:
-				CaretMovementToDefinedPositionCommand(viewers::TextViewer& viewer,
+				CaretMovementToDefinedPositionCommand(viewer::TextViewer& viewer,
 					ProcedureSignature* procedure, bool extendSelection = false);
 			private:
 				bool perform();
@@ -110,7 +110,7 @@ namespace ascension {
 			 */
 			class CharacterDeletionCommand : public Command {
 			public:
-				CharacterDeletionCommand(viewers::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT;
+				CharacterDeletionCommand(viewer::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const Direction direction_;
@@ -118,18 +118,18 @@ namespace ascension {
 			/// Converts a character into the text represents the code value of the character.
 			class CharacterToCodePointConversionCommand : public Command {
 			public:
-				CharacterToCodePointConversionCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
+				CharacterToCodePointConversionCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 			/**
 			 * Inputs a character on the caret position, or appends to the end of the active
 			 * incremental search pattern.
-			 * @see viewers#Caret#inputCharacter
+			 * @see viewer#Caret#inputCharacter
 			 */
 			class CharacterInputCommand : public Command {
 			public:
-				CharacterInputCommand(viewers::TextViewer& viewer, CodePoint c);
+				CharacterInputCommand(viewer::TextViewer& viewer, CodePoint c);
 			private:
 				bool perform();
 				const CodePoint c_;
@@ -137,7 +137,7 @@ namespace ascension {
 			/// Inputs a character is at same position in the next/previous visual line.
 			class CharacterInputFromNextLineCommand : public Command {
 			public:
-				CharacterInputFromNextLineCommand(viewers::TextViewer& viewer, bool fromPreviousLine) BOOST_NOEXCEPT;
+				CharacterInputFromNextLineCommand(viewer::TextViewer& viewer, bool fromPreviousLine) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const bool fromPreviousLine_;
@@ -145,7 +145,7 @@ namespace ascension {
 			/// Converts a text represents a code value into the character has the code value.
 			class CodePointToCharacterConversionCommand : public Command {
 			public:
-				CodePointToCharacterConversionCommand(viewers::TextViewer& view) BOOST_NOEXCEPT;
+				CodePointToCharacterConversionCommand(viewer::TextViewer& view) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
@@ -155,14 +155,14 @@ namespace ascension {
 			 */
 			class CompletionProposalPopupCommand : public Command {
 			public:
-				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) BOOST_NOEXCEPT;
+				explicit CompletionProposalPopupCommand(viewer::TextViewer& view) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 			/// Selects the entire document.
 			class EntireDocumentSelectionCreationCommand : public Command {
 			public:
-				explicit EntireDocumentSelectionCreationCommand(viewers::TextViewer& view) BOOST_NOEXCEPT;
+				explicit EntireDocumentSelectionCreationCommand(viewer::TextViewer& view) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
@@ -175,7 +175,7 @@ namespace ascension {
 			 */
 			class FindNextCommand : public Command {
 			public:
-				FindNextCommand(viewers::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT;
+				FindNextCommand(viewer::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const Direction direction_;
@@ -186,7 +186,7 @@ namespace ascension {
 			 */
 			class IncrementalFindCommand : public Command {
 			public:
-				IncrementalFindCommand(viewers::TextViewer& view, searcher::TextSearcher::Type type,
+				IncrementalFindCommand(viewer::TextViewer& view, searcher::TextSearcher::Type type,
 					Direction direction, searcher::IncrementalSearchCallback* callback = nullptr) BOOST_NOEXCEPT;
 			private:
 				bool perform();
@@ -196,11 +196,11 @@ namespace ascension {
 			};
 			/**
 			 * Makes/Deletes indents of the selected non-blank lines.
-			 * @see viewers#Caret#spaceIndent, viewers#Caret#tabIndent
+			 * @see viewer#Caret#spaceIndent, viewer#Caret#tabIndent
 			 */
 			class IndentationCommand : public Command {
 			public:
-				IndentationCommand(viewers::TextViewer& view, bool increase) BOOST_NOEXCEPT;
+				IndentationCommand(viewer::TextViewer& view, bool increase) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				bool increases_;
@@ -208,21 +208,21 @@ namespace ascension {
 			/// Toggles the input method's open status.
 			class InputMethodOpenStatusToggleCommand : public Command {
 			public:
-				explicit InputMethodOpenStatusToggleCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
+				explicit InputMethodOpenStatusToggleCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 			/// Toggles Soft Keyboard mode of the input method.
 			class InputMethodSoftKeyboardModeToggleCommand : public Command {
 			public:
-				explicit InputMethodSoftKeyboardModeToggleCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
+				explicit InputMethodSoftKeyboardModeToggleCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 			/// Moves the caret or extends the selection to the match bracket.
 			class MatchBracketCommand : public Command {
 			public:
-				MatchBracketCommand(viewers::TextViewer& viewer, bool extendSelection = false) BOOST_NOEXCEPT;
+				MatchBracketCommand(viewer::TextViewer& viewer, bool extendSelection = false) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const bool extends_;
@@ -234,7 +234,7 @@ namespace ascension {
 			 */
 			class NewlineCommand : public Command {
 			public:
-				NewlineCommand(viewers::TextViewer& view, boost::optional<Direction> direction = boost::none) BOOST_NOEXCEPT;
+				NewlineCommand(viewer::TextViewer& view, boost::optional<Direction> direction = boost::none) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const boost::optional<Direction> direction_;
@@ -242,14 +242,14 @@ namespace ascension {
 			/// Toggles overtype mode of the caret.
 			class OvertypeModeToggleCommand : public Command {
 			public:
-				explicit OvertypeModeToggleCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
+				explicit OvertypeModeToggleCommand(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 			/// Inserts the content of the kill ring or the clipboard at the caret position.
 			class PasteCommand : public Command {
 			public:
-				PasteCommand(viewers::TextViewer& view, bool useKillRing) BOOST_NOEXCEPT;
+				PasteCommand(viewer::TextViewer& view, bool useKillRing) BOOST_NOEXCEPT;
 				bool perform();
 			private:
 				const bool usesKillRing_;
@@ -257,14 +257,14 @@ namespace ascension {
 			/// Reconverts by using the input method editor.
 			class ReconversionCommand : public Command {
 			public:
-				explicit ReconversionCommand(viewers::TextViewer& view) BOOST_NOEXCEPT;
+				explicit ReconversionCommand(viewer::TextViewer& view) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 			/// Replaces all matched texts.
 			class ReplaceAllCommand : public Command {
 			public:
-				ReplaceAllCommand(viewers::TextViewer& viewer, bool onlySelection,
+				ReplaceAllCommand(viewer::TextViewer& viewer, bool onlySelection,
 					const String& replacement, searcher::InteractiveReplacementCallback* callback) BOOST_NOEXCEPT;
 				std::size_t numberOfLastReplacements() const BOOST_NOEXCEPT;
 			private:
@@ -277,12 +277,12 @@ namespace ascension {
 			/**
 			 * Extends the selection and begins rectangular selection.
 			 * @tparam ProcedureSignature Type of the function gives a motion
-			 * @see RowSelectionExtensionToDefinedPositionCommand, viewers#Caret, kernel#locations
+			 * @see RowSelectionExtensionToDefinedPositionCommand, viewer#Caret, kernel#locations
 			 */
 			template<typename ProcedureSignature>
 			class RowSelectionExtensionCommand : public Command {
 			public:
-				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
+				RowSelectionExtensionCommand(viewer::TextViewer& viewer,
 					ProcedureSignature* procedure, Direction direction);
 			private:
 				bool perform();
@@ -292,13 +292,13 @@ namespace ascension {
 			/**
 			 * Extends the selection to a defined position and begins rectangular selection.
 			 * @tparam ProcedureSignature Type of the function gives a motion
-			 * @see RowSelectionExtensionCommand, viewers#Caret, kernel#locations
+			 * @see RowSelectionExtensionCommand, viewer#Caret, kernel#locations
 			 */
 			template<typename ProcedureSignature>
 			class RowSelectionExtensionToDefinedPositionCommand : public Command {
 			public:
 				RowSelectionExtensionToDefinedPositionCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure);
+					viewer::TextViewer& viewer, ProcedureSignature* procedure);
 			private:
 				bool perform();
 				ProcedureSignature* const procedure_;
@@ -306,7 +306,7 @@ namespace ascension {
 			/// Tabifies (exchanges tabs and spaces).
 			class TabifyCommand : public Command {
 			public:
-				TabifyCommand(viewers::TextViewer& view, bool untabify) BOOST_NOEXCEPT;
+				TabifyCommand(viewer::TextViewer& view, bool untabify) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				bool untabify_;
@@ -314,7 +314,7 @@ namespace ascension {
 			/// Inputs a text.
 			class TextInputCommand : public Command {
 			public:
-				TextInputCommand(viewers::TextViewer& view, const String& text) BOOST_NOEXCEPT;
+				TextInputCommand(viewer::TextViewer& view, const String& text) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				String text_;
@@ -322,15 +322,15 @@ namespace ascension {
 			/// Transposes (swaps) the two text elements.
 			class TranspositionCommand : public Command {
 			public:
-				TranspositionCommand(viewers::TextViewer& view, bool(*procedure)(viewers::Caret&));
+				TranspositionCommand(viewer::TextViewer& view, bool(*procedure)(viewer::Caret&));
 			private:
 				bool perform();
-				bool(*procedure_)(viewers::Caret&);
+				bool(*procedure_)(viewer::Caret&);
 			};
 			/// Performs undo or redo.
 			class UndoCommand : public Command {
 			public:
-				UndoCommand(viewers::TextViewer& view, bool redo) BOOST_NOEXCEPT;
+				UndoCommand(viewer::TextViewer& view, bool redo) BOOST_NOEXCEPT;
 				bool isLastActionIncompleted() const;
 			private:
 				bool perform();
@@ -340,7 +340,7 @@ namespace ascension {
 			/// Deletes the forward/backward N word(s).
 			class WordDeletionCommand : public Command {
 			public:
-				WordDeletionCommand(viewers::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT;
+				WordDeletionCommand(viewer::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const Direction direction_;
@@ -348,33 +348,33 @@ namespace ascension {
 			/// Selects the current word.
 			class WordSelectionCreationCommand : public Command {
 			public:
-				explicit WordSelectionCreationCommand(viewers::TextViewer& view) BOOST_NOEXCEPT;
+				explicit WordSelectionCreationCommand(viewer::TextViewer& view) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 
 			template<typename ProcedureSignature>
 			inline CaretMovementCommand<ProcedureSignature> makeCaretMovementCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure,
+					viewer::TextViewer& viewer, ProcedureSignature* procedure,
 					Direction direction, bool extendSelection = false) {
 				return CaretMovementCommand<ProcedureSignature>(
 					viewer, procedure, direction, extendSelection);
 			}
 			template<typename ProcedureSignature>
 			inline CaretMovementToDefinedPositionCommand<ProcedureSignature> makeCaretMovementCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure,
+					viewer::TextViewer& viewer, ProcedureSignature* procedure,
 					bool extendSelection = false) {
 				return CaretMovementToDefinedPositionCommand<ProcedureSignature>(
 					viewer, procedure, extendSelection);
 			}
 			template<typename ProcedureSignature>
 			inline RowSelectionExtensionCommand<ProcedureSignature> makeRowSelectionExtensionCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure, Direction direction) {
+					viewer::TextViewer& viewer, ProcedureSignature* procedure, Direction direction) {
 				return RowSelectionExtensionCommand<ProcedureSignature>(viewer, procedure, direction);
 			}
 			template<typename ProcedureSignature>
 			inline RowSelectionExtensionToDefinedPositionCommand<ProcedureSignature> makeRowSelectionExtensionCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure) {
+					viewer::TextViewer& viewer, ProcedureSignature* procedure) {
 				return RowSelectionExtensionToDefinedPositionCommand<ProcedureSignature>(viewer, procedure);
 			}
 		} // namespace commands
@@ -406,7 +406,7 @@ namespace ascension {
 		 * @param viewer The text viewer as the new target to set
 		 * @return This command
 		 */
-		inline Command& Command::retarget(viewers::TextViewer& viewer) BOOST_NOEXCEPT {
+		inline Command& Command::retarget(viewer::TextViewer& viewer) BOOST_NOEXCEPT {
 			viewer_ = &viewer;
 			return *this;
 		}

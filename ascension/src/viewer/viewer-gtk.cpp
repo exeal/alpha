@@ -2,7 +2,7 @@
  * @file viewer-gtk.cpp
  * @author exeal
  * @date 2013-11-10 Created.
- * @date 2013-2014
+ * @date 2013-2015
  */
 
 #include <ascension/viewer/viewer.hpp>
@@ -13,7 +13,7 @@
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		void TextViewer::doBeep() BOOST_NOEXCEPT {
 #if 1
 			::gdk_beep();

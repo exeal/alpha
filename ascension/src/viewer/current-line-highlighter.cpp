@@ -13,10 +13,10 @@
 #include <ascension/viewer/widgetapi/widget.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 
 		/**
-		 * @class ascension::viewers::CurrentLineHighlighter
+		 * @class ascension::viewer::CurrentLineHighlighter
 		 * Highlights a line the caret is on with the specified background color.
 		 *
 		 * Because an instance automatically registers itself as a line color director, you should

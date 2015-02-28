@@ -14,7 +14,7 @@
 #include <boost/range/algorithm/find.hpp>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 			// MimeDataFormats ////////////////////////////////////////////////////////////////////////////////////////
 

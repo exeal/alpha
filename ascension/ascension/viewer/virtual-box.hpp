@@ -16,7 +16,7 @@
 
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		class TextViewer;
 
 		/**
@@ -37,6 +37,6 @@ namespace ascension {
 			boost::integer_range<graphics::Scalar> ipds_;	// inline-progression-dimension in TextRenderer coordinates
 		};
 	}
-} // namespace ascension.viewers
+} // namespace ascension.viewer
 
 #endif // !ASCENSION_VIRTUAL_BOX_HPP

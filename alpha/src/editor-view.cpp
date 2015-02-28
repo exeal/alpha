@@ -19,13 +19,13 @@
 namespace alpha {
 	/// Constructor.
 	EditorView::EditorView(ascension::presentation::Presentation& presentation) :
-			Glib::ObjectBase("alpha.EditorView"), ascension::viewers::TextViewer(presentation), visualColumnStartValue_(1) {
+			Glib::ObjectBase("alpha.EditorView"), ascension::viewer::TextViewer(presentation), visualColumnStartValue_(1) {
 		document().bookmarker().addListener(*this);
 //		caretObject_.reset(new CaretProxy(caret()));
 	}
 
 	/// Copy-constructor.
-	EditorView::EditorView(const EditorView& other) : ascension::viewers::TextViewer(other), visualColumnStartValue_(other.visualColumnStartValue_) {
+	EditorView::EditorView(const EditorView& other) : ascension::viewer::TextViewer(other), visualColumnStartValue_(other.visualColumnStartValue_) {
 		document().bookmarker().addListener(*this);
 //		caretObject_.reset(new CaretProxy(caret()));
 	}
@@ -74,14 +74,14 @@ namespace alpha {
 	}
 
 	/// @see TextViewer#focusAboutToBeLost
-	void EditorView::focusAboutToBeLost(ascension::viewers::widgetapi::event::Event& event) {
-		ascension::viewers::TextViewer::focusAboutToBeLost(event);
+	void EditorView::focusAboutToBeLost(ascension::viewer::widgetapi::event::Event& event) {
+		ascension::viewer::TextViewer::focusAboutToBeLost(event);
 		BufferList::instance().editorSession().incrementalSearcher().end();
 	}
 
 	/// @see TextViewer#focusGained
-	void EditorView::focusGained(ascension::viewers::widgetapi::event::Event& event) {
-		ascension::viewers::TextViewer::focusGained(event);
+	void EditorView::focusGained(ascension::viewer::widgetapi::event::Event& event) {
+		ascension::viewer::TextViewer::focusGained(event);
 		BufferList::instance().select(document());
 	}
 
@@ -137,23 +137,23 @@ namespace alpha {
 	}
 
 	/// @see TextViewer#keyPressed
-	void EditorView::keyPressed(ascension::viewers::widgetapi::event::KeyInput& input) {
+	void EditorView::keyPressed(ascension::viewer::widgetapi::event::KeyInput& input) {
 		// disable default keyboard bindings
-//		return ascension::viewers::TextViewer::keyPressed(input);
+//		return ascension::viewer::TextViewer::keyPressed(input);
 	}
 #if 0
 	/// @see Caret#MatchBracketsChangedSignal
-	void EditorView::matchBracketsChanged(const ascension::viewers::Caret& self, const boost::optional<std::pair<ascension::kernel::Position, ascension::kernel::Position>>& previouslyMatchedBrackets, bool outsideOfView) {
+	void EditorView::matchBracketsChanged(const ascension::viewer::Caret& self, const boost::optional<std::pair<ascension::kernel::Position, ascension::kernel::Position>>& previouslyMatchedBrackets, bool outsideOfView) {
 		// TODO: indicate if the pair is outside of the viewer.
 	}
 #endif
 
 	namespace {
-		void extendSelection(ascension::viewers::Caret& caret, boost::python::object to) {
+		void extendSelection(ascension::viewer::Caret& caret, boost::python::object to) {
 			if(boost::python::extract<const ascension::kernel::Position&>(to).check())
 				caret.extendSelectionTo(static_cast<ascension::kernel::Position>(boost::python::extract<ascension::kernel::Position>(to)));
-			else if(boost::python::extract<const ascension::viewers::VisualDestinationProxy&>(to).check())
-				caret.extendSelectionTo(static_cast<ascension::viewers::VisualDestinationProxy>(boost::python::extract<ascension::viewers::VisualDestinationProxy>(to)));
+			else if(boost::python::extract<const ascension::viewer::VisualDestinationProxy&>(to).check())
+				caret.extendSelectionTo(static_cast<ascension::viewer::VisualDestinationProxy>(boost::python::extract<ascension::viewer::VisualDestinationProxy>(to)));
 			else if(boost::python::extract<const ascension::kernel::Point&>(to).check())
 				caret.extendSelectionTo(static_cast<const ascension::kernel::Point&>(boost::python::extract<const ascension::kernel::Point&>(to)).position());
 			else {
@@ -182,8 +182,8 @@ namespace alpha {
 			return rangeClass(*boost::begin(range), *boost::end(range));
 		}
 
-		template<const ascension::viewers::VisualPoint& (ascension::viewers::Caret::*procedure)() const>
-		ascension::kernel::Position positionOfCaret(const ascension::viewers::Caret& c) {
+		template<const ascension::viewer::VisualPoint& (ascension::viewer::Caret::*procedure)() const>
+		ascension::kernel::Position positionOfCaret(const ascension::viewer::Caret& c) {
 			return (c.*procedure)().position();
 		}
 //		boost::python::object selectedTextEditor(const EditorWindow& window) {
@@ -238,7 +238,7 @@ namespace alpha {
 			.def(boost::python::self -= boost::python::self)
 			.def(boost::python::self - boost::python::self);
 
-		boost::python::class_<ascension::viewers::VisualDestinationProxy>("_VisualDestinationProxy", boost::python::no_init);
+		boost::python::class_<ascension::viewer::VisualDestinationProxy>("_VisualDestinationProxy", boost::python::no_init);
 
 		boost::python::class_<ascension::kernel::Point>("Point", boost::python::init<Buffer&, const ascension::kernel::Position&>())
 			.add_property("adapts_to_buffer", &ascension::kernel::Point::adaptsToDocument,
@@ -257,30 +257,30 @@ namespace alpha {
 			.def<ascension::kernel::Point& (ascension::kernel::Point::*)(const ascension::kernel::Position&)>(
 				"move_to", &ascension::kernel::Point::moveTo, boost::python::return_value_policy<boost::python::reference_existing_object>());
 
-		boost::python::class_<ascension::viewers::Caret, boost::python::bases<ascension::kernel::Point>, boost::noncopyable>("_Caret", boost::python::no_init)
-			.add_property("anchor", &positionOfCaret<&ascension::viewers::Caret::anchor>)
-			.add_property("beginning", &positionOfCaret<&ascension::viewers::Caret::beginning>)
-			.add_property("end", &positionOfCaret<&ascension::viewers::Caret::end>)
-			.add_property("selected_region", &ascension::viewers::Caret::selectedRegion)
-			.def("begin_rectangle_selection", &ascension::viewers::Caret::beginRectangleSelection)
-			.def("can_paste", &ascension::viewers::Caret::canPaste, boost::python::arg("use_killring") = false)
-			.def("clear_selection", &ascension::viewers::Caret::clearSelection)
-			.def("copy_selection", &ascension::viewers::copySelection)
-			.def("cut_selection", &ascension::viewers::cutSelection)
-			.def("delete_selection", &ascension::viewers::eraseSelection)
-			.def("end_rectangle_selection", &ascension::viewers::Caret::endRectangleSelection)
+		boost::python::class_<ascension::viewer::Caret, boost::python::bases<ascension::kernel::Point>, boost::noncopyable>("_Caret", boost::python::no_init)
+			.add_property("anchor", &positionOfCaret<&ascension::viewer::Caret::anchor>)
+			.add_property("beginning", &positionOfCaret<&ascension::viewer::Caret::beginning>)
+			.add_property("end", &positionOfCaret<&ascension::viewer::Caret::end>)
+			.add_property("selected_region", &ascension::viewer::Caret::selectedRegion)
+			.def("begin_rectangle_selection", &ascension::viewer::Caret::beginRectangleSelection)
+			.def("can_paste", &ascension::viewer::Caret::canPaste, boost::python::arg("use_killring") = false)
+			.def("clear_selection", &ascension::viewer::Caret::clearSelection)
+			.def("copy_selection", &ascension::viewer::copySelection)
+			.def("cut_selection", &ascension::viewer::cutSelection)
+			.def("delete_selection", &ascension::viewer::eraseSelection)
+			.def("end_rectangle_selection", &ascension::viewer::Caret::endRectangleSelection)
 			.def("extend_selection", &extendSelection)
-			.def("input_character", &ascension::viewers::Caret::inputCharacter,
+			.def("input_character", &ascension::viewer::Caret::inputCharacter,
 				(boost::python::arg("character"), boost::python::arg("validate_sequence") = true, boost::python::arg("block_controls") = true))
-			.def("is_overtype_mode", &ascension::viewers::Caret::isOvertypeMode)
-			.def("is_selection_empty", &ascension::viewers::isSelectionEmpty)
-			.def("is_selection_rectangle", &ascension::viewers::Caret::isSelectionRectangle)
-			.def("paste", &ascension::viewers::Caret::paste, boost::python::arg("use_killring") = false)
-			.def("replace_selection", &ascension::viewers::Caret::replaceSelection, (boost::python::arg("text"), boost::python::arg("rectangle_insertion") = false))
-			.def<void (ascension::viewers::Caret::*)(const ascension::kernel::Region&)>("select", &ascension::viewers::Caret::select)
-			.def("select_word", &ascension::viewers::selectWord)
-			.def<ascension::String (*)(const ascension::viewers::Caret&, const ascension::text::Newline&)>("selected_string", &ascension::viewers::selectedString, boost::python::arg("newline") = ascension::text::Newline::USE_INTRINSIC_VALUE)
-			.def("set_overtype_mode", &ascension::viewers::Caret::setOvertypeMode, boost::python::arg("set") = true, boost::python::return_value_policy<boost::python::reference_existing_object>())
+			.def("is_overtype_mode", &ascension::viewer::Caret::isOvertypeMode)
+			.def("is_selection_empty", &ascension::viewer::isSelectionEmpty)
+			.def("is_selection_rectangle", &ascension::viewer::Caret::isSelectionRectangle)
+			.def("paste", &ascension::viewer::Caret::paste, boost::python::arg("use_killring") = false)
+			.def("replace_selection", &ascension::viewer::Caret::replaceSelection, (boost::python::arg("text"), boost::python::arg("rectangle_insertion") = false))
+			.def<void (ascension::viewer::Caret::*)(const ascension::kernel::Region&)>("select", &ascension::viewer::Caret::select)
+			.def("select_word", &ascension::viewer::selectWord)
+			.def<ascension::String (*)(const ascension::viewer::Caret&, const ascension::text::Newline&)>("selected_string", &ascension::viewer::selectedString, boost::python::arg("newline") = ascension::text::Newline::USE_INTRINSIC_VALUE)
+			.def("set_overtype_mode", &ascension::viewer::Caret::setOvertypeMode, boost::python::arg("set") = true, boost::python::return_value_policy<boost::python::reference_existing_object>())
 /*			.def("show_automatically", &Caret::showAutomatically)
 			.def("shows_automatically", &Caret::showsAutomatically)*/;
 

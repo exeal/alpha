@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace source {
 			/**
 			 * This ruler does not have a visual representation of its own. The representation comes from the

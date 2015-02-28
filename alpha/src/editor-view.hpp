@@ -16,7 +16,7 @@ namespace alpha {
 	class Buffer;
 
 	/// A view of a text editor.
-	class EditorView : public ascension::viewers::TextViewer,
+	class EditorView : public ascension::viewer::TextViewer,
 		public ascension::kernel::BookmarkListener, public ascension::searcher::IncrementalSearchCallback {
 	public:
 		// constructors
@@ -37,18 +37,18 @@ namespace alpha {
 		void updateStatusBar();
 
 	private:
-		// ascension.viewers.TextViewer (overrides)
+		// ascension.viewer.TextViewer (overrides)
 		void drawIndicatorMargin(ascension::Index line, ascension::graphics::PaintContext& context, const ascension::graphics::Rectangle& rect) override;
-		void keyPressed(ascension::viewers::widgetapi::event::KeyInput& input) override;
-		void focusAboutToBeLost(ascension::viewers::widgetapi::event::Event& event) override;
-		void focusGained(ascension::viewers::widgetapi::event::Event& event) override;
+		void keyPressed(ascension::viewer::widgetapi::event::KeyInput& input) override;
+		void focusAboutToBeLost(ascension::viewer::widgetapi::event::Event& event) override;
+		void focusGained(ascension::viewer::widgetapi::event::Event& event) override;
 #if 0
-		// ascension.viewers.Caret signals
-		void characterInputted(const ascension::viewers::Caret& self, ascension::CodePoint c);
-		void matchBracketsChanged(const ascension::viewers::Caret& self,
+		// ascension.viewer.Caret signals
+		void characterInputted(const ascension::viewer::Caret& self, ascension::CodePoint c);
+		void matchBracketsChanged(const ascension::viewer::Caret& self,
 			const boost::optional<std::pair<ascension::kernel::Position, ascension::kernel::Position>>& previouslyMatchedBrackets, bool outsideOfView);
-		void overtypeModeChanged(const ascension::viewers::Caret& self);
-		void selectionShapeChanged(const ascension::viewers::Caret& self);
+		void overtypeModeChanged(const ascension::viewer::Caret& self);
+		void selectionShapeChanged(const ascension::viewer::Caret& self);
 #endif
 		// ascension.searcher.IncrementalSearchCallback
 		void incrementalSearchAborted(const ascension::kernel::Position& initialPosition);
@@ -78,14 +78,14 @@ namespace alpha {
 		return asTextEditor_;
 	}
 
-	/// @see ascension#viewers#TextViewer#document
+	/// @see ascension#viewer#TextViewer#document
 	inline Buffer& EditorView::document() BOOST_NOEXCEPT {
-		return reinterpret_cast<Buffer&>(ascension::viewers::TextViewer::document());
+		return reinterpret_cast<Buffer&>(ascension::viewer::TextViewer::document());
 	}
 
-	/// @see ascension#viewers#TextViewer#document
+	/// @see ascension#viewer#TextViewer#document
 	inline const Buffer& EditorView::document() const BOOST_NOEXCEPT {
-		return reinterpret_cast<const Buffer&>(ascension::viewers::TextViewer::document());
+		return reinterpret_cast<const Buffer&>(ascension::viewer::TextViewer::document());
 	}
 }
 

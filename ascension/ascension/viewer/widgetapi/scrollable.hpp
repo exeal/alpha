@@ -13,7 +13,7 @@
 #endif
 
 namespace ascension {
-	namespace viewers {
+	namespace viewer {
 		namespace widgetapi {
 
 			struct ScrollCommands {
@@ -57,7 +57,7 @@ namespace ascension {
 			typedef int NativeScrollPosition;
 #endif
 			static_assert(std::is_signed<NativeScrollPosition>::value,
-				"ascension.viewers.widgetapi.NativeScrollPosition should be signed.");
+				"ascension.viewer.widgetapi.NativeScrollPosition should be signed.");
 #if 0
 			class ScrollableWidget : public ScrollProperties<int>, public Widget {
 			public:

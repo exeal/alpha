@@ -42,7 +42,7 @@ namespace ascension {
 		 *
 		 * @c Point is unaffected by narrowing and can moves outside of the accessible region.
 		 *
-		 * @see Position, Document, locations, viewers#VisualPoint, viewers#Caret
+		 * @see Position, Document, locations, viewer#VisualPoint, viewer#Caret
 		 */
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
