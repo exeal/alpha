@@ -87,8 +87,9 @@ namespace ascension {
 				 * @param bitmap The byte array which defines bitmap of the cursor
 				 * @param mask The byte array which defines mask data
 				 * @param hotspot The hotspot of the cursor in pixels. If @c boost#none, the center of bitmap is used
+				 * @return The created cursor
 				 */
-				static Cursor&& createMonochrome(
+				static std::unique_ptr<Cursor> createMonochrome(
 					const graphics::geometry::BasicDimension<Coordinate>& size,
 					const std::uint8_t* bitmap, const std::uint8_t* mask,
 					const boost::optional<graphics::geometry::BasicPoint<Coordinate>>& hotspot = boost::none);
