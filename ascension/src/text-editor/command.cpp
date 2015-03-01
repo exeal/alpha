@@ -1241,7 +1241,7 @@ namespace ascension {
 				const kernel::Position from((direction_ == Direction::FORWARD) ? caret.beginning() : caret.end());
 				text::WordBreakIterator<kernel::DocumentCharacterIterator> to(
 					kernel::DocumentCharacterIterator(document, (direction_ == Direction::FORWARD) ? caret.end() : caret.beginning()),
-					text::AbstractWordBreakIterator::START_OF_SEGMENT,
+					text::WordBreakIteratorBase::START_OF_SEGMENT,
 						viewer.document().contentTypeInformation().getIdentifierSyntax(contentType(caret)));
 				for(kernel::Position p(to.base().tell()); n > 0; --n) {
 					if(p == ((direction_ == Direction::FORWARD) ? ++to : --to).base().tell())

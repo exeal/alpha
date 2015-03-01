@@ -2,7 +2,7 @@
  * @file editor-view.cpp
  * @author exeal
  * @date 2008 Separated from buffer.cpp)
- * @date 2008-2009, 2014
+ * @date 2008-2009, 2014-2015
  */
 
 #include "application.hpp"
@@ -10,6 +10,7 @@
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/text-editor/command.hpp>	// ascension.texteditor.commands.IncrementalSearchCommand
 #include <ascension/viewer/caret.hpp>
@@ -216,21 +217,21 @@ namespace alpha {
 			.def(boost::python::self -= boost::python::self)
 			.def(boost::python::self - boost::python::self);
 
-		typedef ascension::presentation::AbstractTwoAxes<boost::python::object/*ssize_t*/> /*Integral*/AbstractTwoAxes;
-		boost::python::class_<AbstractTwoAxes>("AbstractTwoAxes", boost::python::init<>())
-			.def(boost::python::init<AbstractTwoAxes::value_type, AbstractTwoAxes::value_type>(boost::python::args("bpd", "ipd")))
+		typedef ascension::presentation::FlowRelativeTwoAxes<boost::python::object/*ssize_t*/> /*Integral*/FlowRelativeTwoAxes;
+		boost::python::class_<FlowRelativeTwoAxes>("FlowRelativeTwoAxes", boost::python::init<>())
+			.def(boost::python::init<FlowRelativeTwoAxes::value_type, FlowRelativeTwoAxes::value_type>(boost::python::args("bpd", "ipd")))
 			.add_property("bpd",
-				ambient::makeFunctionPointer([](AbstractTwoAxes& self) -> AbstractTwoAxes::value_type {
+				ambient::makeFunctionPointer([](FlowRelativeTwoAxes& self) -> FlowRelativeTwoAxes::value_type {
 					return self.bpd();
 				}),
-				ambient::makeFunctionPointer([](AbstractTwoAxes& self, AbstractTwoAxes::const_reference v) {
+				ambient::makeFunctionPointer([](FlowRelativeTwoAxes& self, FlowRelativeTwoAxes::const_reference v) {
 					self.bpd() = v;
 				}))
 			.add_property("ipd",
-				ambient::makeFunctionPointer([](AbstractTwoAxes& self) -> AbstractTwoAxes::value_type {
+				ambient::makeFunctionPointer([](FlowRelativeTwoAxes& self) -> FlowRelativeTwoAxes::value_type {
 					return self.ipd();
 				}),
-				ambient::makeFunctionPointer([](AbstractTwoAxes& self, AbstractTwoAxes::const_reference v) {
+				ambient::makeFunctionPointer([](FlowRelativeTwoAxes& self, FlowRelativeTwoAxes::const_reference v) {
 					self.ipd() = v;
 				}))
 			.def(boost::python::self += boost::python::self)
@@ -310,17 +311,17 @@ namespace alpha {
 				editor.textRenderer().viewport()->lockScroll();
 			}))
 			.def("scroll", ambient::makeFunctionPointer([](EditorView& editor, boost::python::object offsets) {
-				const boost::python::extract<AbstractTwoAxes> abstractOffsets(offsets);
+				const boost::python::extract<FlowRelativeTwoAxes> abstractOffsets(offsets);
 				if(abstractOffsets.check()) {
-					const AbstractTwoAxes ao(static_cast<AbstractTwoAxes>(abstractOffsets));
+					const FlowRelativeTwoAxes ao(static_cast<FlowRelativeTwoAxes>(abstractOffsets));
 					const boost::python::extract<ascension::graphics::font::TextViewportSignedScrollOffset> ebpd(ao.bpd()), eipd(ao.ipd());
 					if(ebpd.check() && eipd.check()) {
 						const ascension::graphics::font::TextViewportSignedScrollOffset bpd(ebpd), ipd(eipd);
 						return editor.textRenderer().viewport()->scroll(
 #if 0
-							ascension::presentation::makeAbstractTwoAxes((ascension::presentation::_bpd = bpd, ascension::presentation::_ipd = ipd)));
+							ascension::presentation::makeFlowRelativeTwoAxes((ascension::presentation::_bpd = bpd, ascension::presentation::_ipd = ipd)));
 #else
-							ascension::presentation::AbstractTwoAxes<ascension::graphics::font::TextViewportSignedScrollOffset>(ascension::presentation::_bpd = ebpd, ascension::presentation::_ipd = eipd));
+							ascension::presentation::FlowRelativeTwoAxes<ascension::graphics::font::TextViewportSignedScrollOffset>(ascension::presentation::_bpd = ebpd, ascension::presentation::_ipd = eipd));
 #endif
 					}
 				}

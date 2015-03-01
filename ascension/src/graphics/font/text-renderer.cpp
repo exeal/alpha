@@ -16,6 +16,7 @@
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
+#include <ascension/presentation/text-toplevel-style.hpp>
 #include <boost/foreach.hpp>
 
 namespace ascension {

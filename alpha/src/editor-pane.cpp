@@ -37,7 +37,7 @@ namespace alpha {
 //			const bool succeeded = newViewer->create(p->getParent().use(), win32::ui::DefaultWindowRect(),
 //				WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 //			assert(succeeded);
-			newView->setConfiguration(&src.configuration(), 0, true);
+			newView->setConfiguration(src.configuration(), true);
 			newView->textRenderer().viewport()->scrollTo(src.textRenderer().viewport()->scrollPositions());
 			add(std::move(newView));
 		}

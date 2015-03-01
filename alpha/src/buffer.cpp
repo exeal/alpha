@@ -2,7 +2,7 @@
  * @file buffer.cpp
  * @author exeal
  * @date 2003-2006 was AlphaDoc.cpp and BufferList.cpp
- * @date 2006-2014
+ * @date 2006-2015
  */
 
 #include "buffer.hpp"
@@ -12,7 +12,8 @@
 //#include "command.hpp"
 #include "../resource/messages.h"
 #include <ascension/kernel/point.hpp>
-#include <ascension/rules.hpp>
+#include <ascension/rules/lexical-partitioner.hpp>
+#include <ascension/rules/transition-rules.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/python/stl_iterator.hpp>
 #include <shlwapi.h>				// PathXxxx, StrXxxx, ...

@@ -2,13 +2,12 @@
  * @file buffer-list.cpp
  * @author exeal
  * @date 2003-2006 (was AlphaDoc.cpp and BufferList.cpp)
- * @date 2006-2014
+ * @date 2006-2015
  */
 
 #include "application.hpp"
 #include "buffer-list.hpp"
 #include "function-pointer.hpp"
-#include <ascension/rules.hpp>
 #include <ascension/kernel/searcher.hpp>
 #include <boost/foreach.hpp>
 #include <boost/python/stl_iterator.hpp>

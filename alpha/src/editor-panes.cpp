@@ -63,7 +63,7 @@ namespace alpha {
 			if(originalView == nullptr)
 				originalView = newView.get();
 			if(originalView != newView.get())
-				newView->setConfiguration(&originalView->configuration(), 0, true);
+				newView->setConfiguration(originalView->configuration(), true);
 			pane.add(std::move(newView));
 		}
 	}
@@ -174,7 +174,7 @@ namespace alpha {
 	// EditorPanes.InternalIterator ///////////////////////////////////////////////////////////////////////////////////
 
 	template<typename Derived, typename Reference>
-	EditorPanes::InternalIterator<Derived, Reference>::InternalIterator(pointer pane) : current_(pane), end_(pane == nullptr) {
+	EditorPanes::InternalIterator<Derived, Reference>::InternalIterator(typename iterator_facade_::pointer pane) : current_(pane), end_(pane == nullptr) {
 	}
 
 	template<typename Derived, typename Reference>
@@ -183,7 +183,7 @@ namespace alpha {
 	}
 
 	template<typename Derived, typename Reference>
-	typename EditorPanes::InternalIterator<Derived, Reference>::reference EditorPanes::InternalIterator<Derived, Reference>::dereference() const {
+	typename EditorPanes::InternalIterator<Derived, Reference>::iterator_facade_::reference EditorPanes::InternalIterator<Derived, Reference>::dereference() const {
 		if(end_ /* || current_ == nullptr*/)
 			throw ascension::NoSuchElementException();
 		return *current_;
