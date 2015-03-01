@@ -109,7 +109,12 @@ namespace ascension {
 			 * Result of hit test.
 			 * @see #hitTest
 			 */
-			struct HitTestResult {};
+			struct HitTestResult : private boost::equality_comparable<HitTestResult>, private boost::noncopyable {
+				/// Equality operator.
+				bool operator==(const HitTestResult& other) const BOOST_NOEXCEPT {
+					return this == &other;
+				}
+			};
 			/// The point is the indicator margin in the ruler.
 			BOOST_STATIC_CONSTEXPR HitTestResult INDICATOR_MARGIN;
 			/// The point is the line numbers area in the ruler.
