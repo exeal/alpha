@@ -1,7 +1,7 @@
 /**
  * @file application.hpp
  * @author exeal
- * @date 2003-2009, 2014
+ * @date 2003-2009, 2014-2015
  */
 
 #include "application.hpp"
@@ -15,6 +15,7 @@
 //#include "search.hpp"
 //#include <ascension/text-editor.hpp>
 #include <ascension/corelib/regex.hpp>
+#include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <gtkmm/fontchooserdialog.h>
 #include <gtkmm/messagedialog.h>

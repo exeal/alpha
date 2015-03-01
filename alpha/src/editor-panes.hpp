@@ -23,15 +23,15 @@ namespace alpha {
 		template<typename Derived, typename Value>
 		class InternalIterator : public boost::iterators::iterator_facade<Derived, Value, boost::iterators::bidirectional_traversal_tag> {
 		public:
-			InternalIterator(pointer pane);
+			InternalIterator(typename iterator_facade_::pointer pane);
 		private:
 			friend class boost::iterators::iterator_core_access;
 			void decrement();
-			reference dereference() const;
+			typename iterator_facade_::reference dereference() const;
 			bool equal(const InternalIterator& other) const;
 			void increment();
 		private:
-			pointer current_;
+			typename iterator_facade_::pointer current_;
 			bool end_;
 		};
 

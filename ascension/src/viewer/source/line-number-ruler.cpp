@@ -9,6 +9,7 @@
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/glyph-metrics.hpp>
+#include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/viewer/viewer.hpp>
 #include <ascension/viewer/source/line-number-ruler.hpp>
 
