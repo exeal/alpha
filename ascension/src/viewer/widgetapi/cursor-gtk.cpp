@@ -63,7 +63,7 @@ namespace ascension {
 				}
 			}
 
-			Cursor&& Cursor::createMonochrome(
+			std::unique_ptr<Cursor> Cursor::createMonochrome(
 					const graphics::geometry::BasicDimension<Cursor::Coordinate>& size,
 					const std::uint8_t* bitmap, const std::uint8_t* mask,
 					const boost::optional<graphics::geometry::BasicPoint<Cursor::Coordinate>>& hotspot /* = boost::none */) {
@@ -89,7 +89,12 @@ namespace ascension {
 						}
 					}
 				}
-				return Cursor(graphics::Image(std::move(bits), size, graphics::Image::ARGB32), hotspot);
+				return std::unique_ptr<Cursor>(
+					new Cursor(
+						graphics::Image(
+							std::move(bits),
+							static_cast<graphics::geometry::BasicDimension<std::uint32_t>>(size),
+							graphics::Image::ARGB32), hotspot));
 			}
 
 			void Cursor::hide() {

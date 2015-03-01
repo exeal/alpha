@@ -173,7 +173,7 @@ namespace ascension {
 				}
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				namespace geometry = graphics::geometry;
-				widgetapi::Cursor::createMonochrome(
+				instances[type] = widgetapi::Cursor::createMonochrome(
 					geometry::BasicDimension<std::uint16_t>(geometry::_dx = 32, geometry::_dy = 32),
 					andBits, xorBits,
 					geometry::BasicPoint<std::uint16_t>(geometry::_x = 16, geometry::_y = 16));
