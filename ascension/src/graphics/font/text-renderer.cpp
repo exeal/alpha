@@ -212,7 +212,7 @@ namespace ascension {
 					Scalar bpd = *layout->extent().end() - TextLayout::LineMetricsIterator(*layout, lines.begin()->subline).baselineOffset();
 					for(Index line = lines.begin()->line + 1; line < lines.end()->line; ++line) {
 //						bpd += layouts().at(line).height();
-						const boost::integer_range<Scalar> lineExtent(ordered(self.layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT).extent()));
+						const NumericRange<Scalar> lineExtent(ordered(self.layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT).extent()));
 						bpd += *lineExtent.end() - *lineExtent.begin();
 					}
 					layout = &self.layouts().at(lines.end()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);

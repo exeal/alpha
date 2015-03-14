@@ -9,6 +9,7 @@
 #ifndef ASCENSION_GEOMETRY_RECTANGLE_HPP
 #define ASCENSION_GEOMETRY_RECTANGLE_HPP
 
+#include <ascension/corelib/numeric-range.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <boost/geometry/core/access.hpp>
@@ -91,7 +92,7 @@ namespace ascension {
 						_right = boost::geometry::get<0>(origin) + dx(size), _bottom = boost::geometry::get<1>(origin) + dy(size))) {}
 				/// Constructor creates a rectangle described by the two ranges in x and y-coordinates.
 				template<typename ScalarType>
-				BasicRectangle(const boost::integer_range<ScalarType>& xrange, const boost::integer_range<ScalarType>& yrange)
+				BasicRectangle(const NumericRange<ScalarType>& xrange, const NumericRange<ScalarType>& yrange)
 					: BasicRectangleBase<Coordinate>((
 						_left = *xrange.begin(), _top = *yrange.begin(),
 						_right = *xrange.end(), _bottom = *yrange.end())) {}

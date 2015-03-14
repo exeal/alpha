@@ -10,6 +10,7 @@
 #define ASCENSION_GEOMETRY_ALGORITHM_HPP
 
 #include <ascension/corelib/future.hpp>
+#include <ascension/corelib/numeric-range.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/platforms.hpp>
 #include <boost/geometry/algorithms/assign.hpp>
@@ -74,13 +75,13 @@ namespace ascension {
 					explicit RectangleRangeProxy(Geometry& rectangle) BOOST_NOEXCEPT :
 						/*Range<CoordinateType>(range<dimension>(const_cast<const Geometry&>(rectangle))),*/ rectangle_(rectangle) {}
 					template<typename T>
-					RectangleRangeProxy<Geometry, dimension>& operator=(const boost::integer_range<T>& range) {
+					RectangleRangeProxy<Geometry, dimension>& operator=(const NumericRange<T>& range) {
 						boost::geometry::set<boost::geometry::min_corner, dimension>(rectangle_, *range.begin());
 						boost::geometry::set<boost::geometry::max_corner, dimension>(rectangle_, *range.end());
 //						Range<Scalar>::operator=(range);
 						return *this;
 					}
-					operator boost::integer_range<CoordinateType>() const {
+					operator NumericRange<CoordinateType>() const {
 						return range<dimension>(const_cast<const Geometry&>(rectangle_));
 					}
 				private:
@@ -112,8 +113,8 @@ namespace ascension {
 			}
 
 			template<std::size_t dimension, typename Geometry>
-			inline boost::integer_range<typename boost::geometry::coordinate_type<Geometry>::type> range(const Geometry& rectangle) {
-				return boost::irange(boost::geometry::get<boost::geometry::min_corner, dimension>(rectangle), boost::geometry::get<boost::geometry::max_corner, dimension>(rectangle));
+			inline NumericRange<typename boost::geometry::coordinate_type<Geometry>::type> range(const Geometry& rectangle) {
+				return nrange(boost::geometry::get<boost::geometry::min_corner, dimension>(rectangle), boost::geometry::get<boost::geometry::max_corner, dimension>(rectangle));
 			}
 
 			template<std::size_t dimension, typename Geometry>

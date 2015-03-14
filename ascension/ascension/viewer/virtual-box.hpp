@@ -34,7 +34,7 @@ namespace ascension {
 		private:
 			const TextViewer& viewer_;
 			boost::integer_range<graphics::font::VisualLine> lines_;
-			boost::integer_range<graphics::Scalar> ipds_;	// inline-progression-dimension in TextRenderer coordinates
+			NumericRange<graphics::Scalar> ipds_;	// inline-progression-dimension in TextRenderer coordinates
 		};
 	}
 } // namespace ascension.viewer

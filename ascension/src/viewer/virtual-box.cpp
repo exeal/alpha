@@ -151,7 +151,7 @@ namespace ascension {
 
 			// commit
 			lines_ = ordered(boost::irange(lines.first, lines.second));
-			ipds_ = ordered(boost::irange(ipds.first, ipds.second));
+			ipds_ = ordered(nrange(ipds.first, ipds.second));
 		}
 	}
 }

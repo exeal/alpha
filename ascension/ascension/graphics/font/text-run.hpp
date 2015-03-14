@@ -83,7 +83,7 @@ namespace ascension {
 				 * @see TextLayout#hitTestCharacter
 				 */
 				virtual TextHit<>&& hitTestCharacter(Scalar position,
-					const boost::optional<boost::integer_range<Scalar>>& bounds,
+					const boost::optional<NumericRange<Scalar>>& bounds,
 					bool* outOfBounds = nullptr) const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns the logical position of the specified character in this text run. This is the distance from

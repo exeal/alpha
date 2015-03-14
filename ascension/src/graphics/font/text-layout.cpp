@@ -343,10 +343,10 @@ namespace ascension {
 			 * @throw IndexOutOfBoundsException
 			 * @see LineMetricsIterator#extent
 			 */
-			boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
+			NumericRange<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
 				if(lines.empty()) {
 					const Scalar baseline = LineMetricsIterator(*this, *lines.begin()).baselineOffset();
-					return boost::irange(baseline, baseline);
+					return nrange(baseline, baseline);
 				} else if(lines.size() == 1)
 					return LineMetricsIterator(*this, lines.front()).extent();
 
@@ -355,9 +355,9 @@ namespace ascension {
 					throw IndexOutOfBoundsException("lines");
 
 				LineMetricsIterator i(*this, lines.front());
-				const boost::integer_range<Scalar> firstExtent(i.extent());
+				const NumericRange<Scalar> firstExtent(i.extent());
 				std::advance(i, lines.size() - 1);
-				return boost::irange(*ordered(firstExtent).begin(), *ordered(i.extent()).end());	// TODO: i want suitable boost.set_union for boost.integer_range<T>.
+				return nrange(*ordered(firstExtent).begin(), *ordered(i.extent()).end());	// TODO: i want suitable boost.set_union for boost.integer_range<T>.
 			}
 
 			/**
@@ -610,9 +610,9 @@ namespace ascension {
 			 *         before-edge), or @c boost#none otherwise
 			 * @see #baseline, #lineAt, #offset
 			 */
-			std::tuple<Index, boost::optional<Direction>> TextLayout::locateLine(Scalar bpd, const boost::optional<boost::integer_range<Scalar>>& bounds) const BOOST_NOEXCEPT {
+			std::tuple<Index, boost::optional<Direction>> TextLayout::locateLine(Scalar bpd, const boost::optional<NumericRange<Scalar>>& bounds) const BOOST_NOEXCEPT {
 				if(bounds != boost::none) {
-					const boost::integer_range<Scalar> orderedBounds(ordered(*bounds));
+					const NumericRange<Scalar> orderedBounds(ordered(*bounds));
 					if(bpd < *orderedBounds.begin())
 						return std::make_tuple(0, Direction::BACKWARD);
 					if(bpd >= *orderedBounds.end())
@@ -692,7 +692,7 @@ namespace ascension {
 					const boost::optional<graphics::Rectangle>& bounds, boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& shape) const {
 				const presentation::WritingMode wm(writingMode(*this));
 				const bool horizontal = isHorizontal(wm.blockFlowDirection);
-				boost::optional<boost::integer_range<Scalar>> linearBounds;
+				boost::optional<NumericRange<Scalar>> linearBounds;
 				if(bounds)
 					linearBounds = horizontal ? geometry::range<0>(*bounds) : geometry::range<1>(*bounds);
 				std::remove_reference<decltype(shape)>::type result;
