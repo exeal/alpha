@@ -203,6 +203,9 @@ namespace ascension {
 			void redrawScheduledRegion(Proxy<Widget> widget);
 			void scheduleRedraw(Proxy<Widget> widget, bool eraseBackground);
 			void scheduleRedraw(Proxy<Widget> widget, const graphics::Rectangle& rect, bool eraseBackground);
+			void scrollPixels(Proxy<Window> window, const graphics::geometry::BasicDimension<int>& delta);
+			void scrollPixels(Proxy<Window> window,
+				const graphics::Rectangle& rect, const graphics::geometry::BasicDimension<int>& delta);
 
 			// rendering context
 			std::unique_ptr<graphics::RenderingContext2D> createRenderingContext(Proxy<const Widget> widget);

@@ -113,6 +113,14 @@ namespace ascension {
 					static_cast<int>(graphics::geometry::dx(rect)), static_cast<int>(graphics::geometry::dy(rect)));
 			}
 
+			void scrollPixels(Proxy<Window> window, const graphics::geometry::BasicDimension<int>& delta) {
+				window->scroll(graphics::geometry::dx(delta), graphics::geometry::dy(delta));
+			}
+
+			void scrollPixels(Proxy<Window> window, const graphics::Rectangle& rect, const graphics::geometry::BasicDimension<int>& delta) {
+				window->move_region(Cairo::Region::create(graphics::toNative<Cairo::RectangleInt>(rect)), graphics::geometry::dx(delta), graphics::geometry::dy(delta));
+			}
+
 			void setBounds(Proxy<Widget> widget, const graphics::Rectangle& bounds) {
 				widget->set_allocation(graphics::toNative<Gtk::Allocation>(bounds));
 			}
