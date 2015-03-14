@@ -25,6 +25,8 @@ namespace ascension {
 				// Ruler
 				void paint(graphics::PaintContext& context);
 				graphics::Scalar width() const BOOST_NOEXCEPT;
+				// RulerLocator
+				graphics::Rectangle locateRuler(const Ruler& ruler) const override;
 			private:
 				graphics::font::ActualBorderSide borderEnd_;
 			};

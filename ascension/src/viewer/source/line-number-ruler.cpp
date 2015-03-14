@@ -9,9 +9,11 @@
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/glyph-metrics.hpp>
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
-#include <ascension/viewer/viewer.hpp>
 #include <ascension/viewer/source/line-number-ruler.hpp>
+#include <ascension/viewer/source/ruler-allocation-width-sink.hpp>
+#include <ascension/viewer/source/source-viewer.hpp>
 
 namespace ascension {
 	namespace viewer {
@@ -35,6 +37,11 @@ namespace ascension {
 				return n;
 			}
 
+			inline void LineNumberRuler::invalidate() {
+				if(const RulerLocator* const rulerLocator = locator())
+					widgetapi::scheduleRedraw(*viewer(), rulerLocator->locateRuler(*this), false);
+			}
+
 			/// @see Ruler#paint
 			void LineNumberRuler::paint(graphics::PaintContext& context) {
 				// TODO: Not implemented.
@@ -54,6 +61,7 @@ namespace ascension {
 					throw UnknownValueException("justification");
 				alignment_ = alignment;
 				justification_ = justification;
+//				updateWidth();
 			}
 
 			/**
@@ -74,6 +82,7 @@ namespace ascension {
 				if(direction < presentation::LEFT_TO_RIGHT || direction > presentation::RIGHT_TO_LEFT)
 					throw UnknownValueException("direction");
 				direction_ = direction;
+//				updateWidth();
 			}
 
 			/**
@@ -88,6 +97,7 @@ namespace ascension {
 					throw std::underflow_error("paddingEnd");
 				paddingStart_ = paddingStart;
 				paddingEnd_ = paddingEnd;
+				updateWidth();
 			}
 
 			/**
@@ -97,6 +107,7 @@ namespace ascension {
 			void LineNumberRuler::setStartValue(Index startValue) {
 				startValue_ = startValue;
 				numberOfDigits_ = boost::none;
+				updateWidth();
 			}
 
 			/// @internal
@@ -109,6 +120,13 @@ namespace ascension {
 					}
 				}
 				return false;
+			}
+
+			/// @internal
+			inline void LineNumberRuler::updateWidth() {
+				width_ = boost::none;
+				if(RulerAllocationWidthSink* const sink = allocationWidthSink())
+					sink->updateRulerAllocationWidth(*this);
 			}
 
 			namespace {
@@ -158,6 +176,44 @@ namespace ascension {
 
 					context.setFont(oldFont);
 					return presentation::isHorizontal(writingMode) ? graphics::geometry::dx(stringExtent) : graphics::geometry::dy(stringExtent);
+				}
+			}
+
+			/// @see graphics#font#TextViewportListener#viewportScrollPositionChanged
+			void LineNumberRuler::viewportScrollPositionChanged(
+					const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
+					const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
+				if(SourceViewer* const sourceViewer = viewer()) { 
+//					widgetapi::scrollPixels(*sourceViewer);
+					widgetapi::redrawScheduledRegion(*sourceViewer);
+				}
+			}
+
+			/// @see graphics#font#VisualLinesListener#visualLinesDeleted
+			void LineNumberRuler::visualLinesDeleted(const boost::integer_range<Index>& lines,
+					Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
+				if(const SourceViewer* const sourceViewer = viewer()) {
+					if(*lines.end() < sourceViewer->textRenderer().viewport()->firstVisibleLine().line)	// deleted before visible area
+						invalidate();
+				}
+			}
+
+			/// @see graphics#font#VisualLinesListener#visualLinesInserted
+			void LineNumberRuler::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
+				if(const SourceViewer* const sourceViewer = viewer()) {
+					if(*lines.end() < sourceViewer->textRenderer().viewport()->firstVisibleLine().line)	// inserted before visible area
+						invalidate();
+				}
+			}
+
+			/// @see graphics#font#VisualLinesListener#visualLinesModified
+			void LineNumberRuler::visualLinesModified(const boost::integer_range<Index>& lines,
+					SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT {
+				if(const SourceViewer* const sourceViewer = viewer()) {
+					if(sublinesDifference != 0) {	// number of visual lines was changed
+						if(*lines.end() < sourceViewer->textRenderer().viewport()->firstVisibleLine().line)	// changed before visible area
+							invalidate();
+					}
 				}
 			}
 

@@ -19,12 +19,11 @@ namespace ascension {
 	}
 
 	namespace viewer {
-		class TextViewer;
-
 		namespace source {
 			class CompositeRuler;
-
-			// TODO: Ruler is considered to be used with source.SourceViewer, not TextViewer. Fix later.
+			struct RulerAllocationWidthSink;
+			struct RulerLocator;
+			class SourceViewer;
 
 			/**
 			 * This interface defines a visual representation of a ruler in @c SourceViewer. A ruler is placed on one
@@ -42,16 +41,19 @@ namespace ascension {
 			private:
 				/**
 				 * Installs this ruler to the specified text viewer.
-				 * @param viewer The text viewer
+				 * @param viewer The source viewer
+				 * @param allocationWidthSink The event sink which receives the change of the allocation width
+				 * @param locator The @c Ruler locator which locates where this ruler is
 				 */
-				virtual void install(const TextViewer& viewer) = 0;
+				virtual void install(SourceViewer& viewer,
+					RulerAllocationWidthSink& allocationWidthSink, const RulerLocator& locator) = 0;
 				/**
 				 * Uninstalls this ruler from the specified text viewer.
-				 * @param viewer The text viewer
+				 * @param viewer The source viewer
 				 */
-				virtual void uninstall(const TextViewer& viewer) = 0;
+				virtual void uninstall(SourceViewer& viewer) = 0;
 				friend class CompositeRuler;
-				friend class TextViewer;
+				friend class SourceViewer;
 			};
 		}
 	}

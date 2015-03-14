@@ -44,24 +44,45 @@ namespace ascension {
 					backgroundColor_ = backgroundColor;
 				}
 				/// Returns the installed viewer, or @c null if not installed.
-				const TextViewer* viewer() const {
+				SourceViewer* viewer() {
+					return viewer_;
+				}
+				/// Returns the installed viewer, or @c null if not installed.
+				const SourceViewer* viewer() const {
 					return viewer_;
 				}
 
 			protected:
+				/// Returns the installed @c RulerAllocationWidthSink object, or @c null if not installed.
+				BOOST_CONSTEXPR RulerAllocationWidthSink* allocationWidthSink() BOOST_NOEXCEPT {
+					return allocationWidthSink_;
+				}
 				/// Implements @c Ruler#install method.
-				virtual void install(const TextViewer& viewer) {
-					if(viewer_ == nullptr)
+				virtual void install(SourceViewer& viewer,
+						RulerAllocationWidthSink& allocationWidthSink, const RulerLocator& locator) override {
+					if(viewer_ == nullptr) {
 						viewer_ = &viewer;
+						allocationWidthSink_ = &allocationWidthSink;
+						locator_ = &locator;
+					}
+				}
+				/// Returns the installed @c RulerLocator, or @c null if not installed.
+				const RulerLocator* locator() const BOOST_NOEXCEPT {
+					return locator_;
 				}
 				/// Implements @c Ruler#uninstall method.
-				virtual void uninstall(const TextViewer& viewer) {
-					if(&viewer == viewer_)
+				virtual void uninstall(SourceViewer& viewer) override {
+					if(&viewer == viewer_) {
 						viewer_ = nullptr;
+						allocationWidthSink_ = nullptr;
+						locator_ = nullptr;
+					}
 				}
 
 			private:
-				const TextViewer* viewer_;
+				SourceViewer* viewer_;
+				RulerAllocationWidthSink* allocationWidthSink_;
+				const RulerLocator* locator_;
 				graphics::Color backgroundColor_;
 				friend class RulerDecorator;
 			};

@@ -471,8 +471,10 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\source\composite-ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\indicator-margin.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\line-number-ruler.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-allocation-width-sink.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-border-decorator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-decorator.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-locator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\source-viewer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\utility.hpp" />

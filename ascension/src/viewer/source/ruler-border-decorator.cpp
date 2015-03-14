@@ -6,6 +6,7 @@
  */
 
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/viewer/source/ruler-allocation-width-sink.hpp>
 #include <ascension/viewer/source/ruler-border-decorator.hpp>
 
 namespace ascension {
@@ -20,6 +21,20 @@ namespace ascension {
 			RulerBorderDecorator::RulerBorderDecorator(std::unique_ptr<AbstractRuler> decoratee,
 					const graphics::font::ActualBorderSide& borderEnd /* = graphics::font::ActualBorderSide() */) : RulerDecorator(std::move(decoratee)) {
 				setBorderEnd(borderEnd);
+			}
+
+			/// @see RulerLocator#locateRuler
+			graphics::Rectangle RulerBorderDecorator::locateRuler(const Ruler& ruler) const {
+				if(&ruler != &decoratee())
+					throw std::invalid_argument("ruler");
+				if(const SourceViewer* sourceViewer = viewer()) {
+					const graphics::Rectangle composite(locator_->locateRuler(*this));
+					switch(boost::native_value(sourceViewer->rulerPhysicalAlignment)) {
+						case graphics::PhysicalDirection::TOP:
+							return graphics::Rectangle(graphics::geometry::range<0>(composite), boost::irange(
+					}
+				}
+				return boost::geometry::make_zero<graphics::Rectangle>();
 			}
 
 			/// @see Ruler#paint
@@ -38,6 +53,8 @@ namespace ascension {
 				if(borderStyle < presentation::styles::BorderStyleEnums::NONE || borderStyle > presentation::styles::BorderStyleEnums::OUTSET)
 					throw UnknownValueException("borderEnd");
 				borderEnd_ = borderEnd;
+				if(RulerAllocationWidthSink* sink = allocationWidthSink())
+					sink->updateRulerAllocationWidth(*this);
 			}
 
 			/// @see Ruler#width
