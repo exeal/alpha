@@ -32,16 +32,20 @@ namespace ascension {
 					return *decoratee_;
 				}
 				/// @see Ruler#install
-				virtual void install(const TextViewer& viewer) {
-					return decoratee_->install(viewer);
+				virtual void install(SourceViewer& viewer, RulerAllocationWidthSink& allocationWidthSink, const RulerLocator& locator) override {
+					locator_ = &locator;
+					return decoratee_->install(viewer, allocationWidthSink);
 				}
 				/// @see Ruler#uninstall
-				virtual void uninstall(const TextViewer& viewer) {
+				virtual void uninstall(SourceViewer& viewer) override {
+					locator_ = nullptr;
 					return decoratee_->uninstall(viewer);
 				}
 
 			private:
+				virtual graphics::Rectangle locateRuler(const Ruler& ruler) const override;
 				std::unique_ptr<AbstractRuler> decoratee_;
+				const RulerLocator* locator_;
 			};
 		}
 	}

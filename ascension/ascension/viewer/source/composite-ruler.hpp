@@ -8,6 +8,7 @@
 #ifndef ASCENSION_COMPOSITE_RULER_HPP
 #define ASCENSION_COMPOSITE_RULER_HPP
 #include <ascension/viewer/source/ruler.hpp>
+#include <ascension/viewer/source/ruler-locator.hpp>
 #include <boost/core/noncopyable.hpp>
 #include <memory>
 #include <vector>
@@ -20,7 +21,7 @@ namespace ascension {
 			 * configurable list of ruler columns. Such columns must implement the @c Ruler interface, too.
 			 * @see Ruler, TextViewer
 			 */
-			class CompositeRuler : public Ruler, private boost::noncopyable {
+			class CompositeRuler : public Ruler, private RulerLocator, private boost::noncopyable {
 			public:
 				CompositeRuler() BOOST_NOEXCEPT;
 				void addDecorator(std::size_t position, std::unique_ptr<Ruler> rulerColumn);
@@ -30,10 +31,15 @@ namespace ascension {
 				// Ruler interface
 				void paint(graphics::PaintContext& context) override;
 				graphics::Scalar width() const BOOST_NOEXCEPT override;
-				void install(const TextViewer& viewer) override;
-				void uninstall(const TextViewer& viewer) override;
+				void install(const SourceViewer& viewer,
+					RulerAllocationWidthSink& allocationWidthSink, const RulerLocator&) override;
+				void uninstall(const SourceViewer& viewer) override;
+				// RulerLocator
+				graphics::Rectangle locateRuler(const Ruler& ruler) const override;
 			private:
-				const TextViewer* textViewer_;
+				const SourceViewer* viewer_;
+				RulerAllocationWidthSink* allocationWidthSink_;
+				const RulerLocator* locator_;
 				std::vector<std::unique_ptr<Ruler>> columns_;
 			};
 		}
