@@ -656,7 +656,7 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 					std::uint8_t characterLevel() const BOOST_NOEXCEPT override;
 					StringPiece characterRange() const BOOST_NOEXCEPT override;
-					TextHit<>&& hitTestCharacter(Scalar ipd, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const override;
+					TextHit<>&& hitTestCharacter(Scalar ipd, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const override;
 					Scalar hitToLogicalPosition(const TextHit<>& hit) const override;
 					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT override {return nullptr;}
 					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT override {return nullptr;}
@@ -747,7 +747,7 @@ namespace ascension {
 							return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
 						return boost::make_iterator_range<const int*>(nullptr, nullptr);
 					}
-					boost::integer_range<Scalar> logicalExtents() const {
+					NumericRange<Scalar> logicalExtents() const {
 						RenderingContext2D context(win32::detail::screenDC());
 						std::unique_ptr<const FontMetrics<Scalar>> fm(context.fontMetrics(font()));
 						const double sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
@@ -1312,7 +1312,7 @@ namespace ascension {
 #endif
 
 				/// @see TextRun#hitTestCharacter
-				TextHit<>&& GlyphVectorImpl::hitTestCharacter(Scalar position, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const {
+				TextHit<>&& GlyphVectorImpl::hitTestCharacter(Scalar position, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const {
 					bool beyondLineLeft = false, beyondLineRight = false;
 					if(bounds) {
 						if(position < std::min(*bounds->begin(), *bounds->end()))
@@ -2475,7 +2475,7 @@ namespace ascension {
 			namespace {
 				class InlineProgressionDimensionRangeIterator :
 					public boost::iterators::iterator_facade<InlineProgressionDimensionRangeIterator,
-						boost::integer_range<Scalar>, boost::iterators::forward_traversal_tag, boost::integer_range<Scalar>, ptrdiff_t
+						NumericRange<Scalar>, boost::iterators::forward_traversal_tag, boost::integer_range<Scalar>, ptrdiff_t
 					> {
 				public:
 					InlineProgressionDimensionRangeIterator() BOOST_NOEXCEPT

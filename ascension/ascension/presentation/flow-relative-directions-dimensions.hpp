@@ -12,6 +12,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <ascension/corelib/detail/decay-or-refer.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
+#include <ascension/corelib/numeric-range.hpp>
 #include <array>
 #include <functional>	// std.hash
 #ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
@@ -21,7 +22,6 @@
 #include <boost/functional/hash.hpp>
 #include <boost/operators.hpp>
 #include <boost/parameter.hpp>
-#include <boost/range/irange.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -298,9 +298,9 @@ namespace ascension {
 		 * @see inlineRange, horizontalRange, verticalRange
 		 */
 		template<typename T>
-		inline boost::integer_range<T> blockRange(const FlowRelativeFourSides<T>& sides) {
+		inline NumericRange<T> blockRange(const FlowRelativeFourSides<T>& sides) {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
-			return boost::irange(sides.blockStart(), sides.blockEnd());
+			return nrange(sides.blockStart(), sides.blockEnd());
 		}
 
 		/**
@@ -311,9 +311,9 @@ namespace ascension {
 		 * @see blockRange, horizontalRange, verticalRange
 		 */
 		template<typename T>
-		inline boost::integer_range<T> inlineRange(const FlowRelativeFourSides<T>& sides) {
+		inline NumericRange<T> inlineRange(const FlowRelativeFourSides<T>& sides) {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
-			return boost::irange(sides.inlineStart(), sides.inlineEnd());
+			return nrange(sides.inlineStart(), sides.inlineEnd());
 		}
 
 		/**

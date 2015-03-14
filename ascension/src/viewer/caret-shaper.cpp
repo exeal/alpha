@@ -26,10 +26,11 @@ namespace ascension {
 			const graphics::font::TextRenderer& textRenderer = caret.textViewer().textRenderer();
 			if(const graphics::font::TextLayout* const layout = textRenderer.layouts().at(kernel::line(caret))) {
 				const Index subline = layout->lineAt(kernel::offsetInLine(caret));
-				boost::integer_range<graphics::Scalar> extent(layout->extent(boost::irange(subline, subline + 1)));
+				NumericRange<graphics::Scalar> extent(layout->extent(boost::irange(subline, subline + 1)));
 
 				const presentation::FlowRelativeTwoAxes<graphics::Scalar> leading(layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret))));
-				extent = boost::irange(*extent.begin() - leading.bpd(), *extent.end() - leading.bpd());
+				extent.advance_begin(-leading.bpd());
+				extent.advance_end(-leading.bpd());
 
 				graphics::Scalar trailing;
 				if(kernel::locations::isEndOfLine(caret))	// EOL

@@ -121,7 +121,7 @@ namespace ascension {
 					Scalar baselineOffset() const;
 					Point baselineOffsetInPhysicalCoordinates() const;
 					Scalar descent() const;
-					boost::integer_range<Scalar> extent() const;
+					NumericRange<Scalar> extent() const;
 					Scalar height() const;
 					Scalar leading() const;
 					Index line() const BOOST_NOEXCEPT;
@@ -181,8 +181,8 @@ namespace ascension {
 				/// @name Metrics
 				/// @{
 				const LineMetrics& lineMetrics(Index line) const;
-				boost::integer_range<Scalar> extent() const;
-				boost::integer_range<Scalar> extent(const boost::integer_range<Index>& lines) const;
+				NumericRange<Scalar> extent() const;
+				NumericRange<Scalar> extent(const boost::integer_range<Index>& lines) const;
 				Scalar measure() const BOOST_NOEXCEPT;
 				Scalar measure(Index line) const;
 				/// @}
@@ -228,7 +228,7 @@ namespace ascension {
 				/// @{
 				Scalar lineStartEdge(Index line) const;
 				std::tuple<Index, boost::optional<Direction>> locateLine(Scalar bpd,
-					const boost::optional<boost::integer_range<Scalar>>& bounds) const BOOST_NOEXCEPT;
+					const boost::optional<NumericRange<Scalar>>& bounds) const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Painting
@@ -292,7 +292,7 @@ namespace ascension {
 			 * Returns extent (block-progression-dimension) of the line.
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 */
-			inline boost::integer_range<Scalar> TextLayout::extent() const {
+			inline NumericRange<Scalar> TextLayout::extent() const {
 				return extent(boost::irange(static_cast<Index>(0), numberOfLines()));
 			}
 
@@ -437,11 +437,11 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 * @see TextLayout#extent
 			 */
-			inline boost::integer_range<Scalar> TextLayout::LineMetricsIterator::extent() const {
+			inline NumericRange<Scalar> TextLayout::LineMetricsIterator::extent() const {
 				const Scalar bsln = baselineOffset();	// may throw NoSuchElementException
 				return !isNegativeVertical() ?
-					boost::irange(bsln - ascent(), bsln + descent() + leading())
-			    	: boost::irange(bsln - descent(), bsln + ascent() + leading());	// TODO: leading is there?
+					nrange(bsln - ascent(), bsln + descent() + leading())
+			    	: nrange(bsln - descent(), bsln + ascent() + leading());	// TODO: leading is there?
 			}
 
 			/**
@@ -451,8 +451,8 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::height() const {
-//				const boost::integer_range<Scalar> e(ordered(extent()));
-				const boost::integer_range<Scalar> e(extent());	// may throw NoSuchElementException
+//				const NumericRange<Scalar> e(ordered(extent()));
+				const NumericRange<Scalar> e(extent());	// may throw NoSuchElementException
 				return *e.end() - *e.begin();
 			}
 

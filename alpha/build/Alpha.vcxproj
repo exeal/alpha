@@ -365,6 +365,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\future\type-traits.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\listeners.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\native-object.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\range.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\scope-guard.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\shared-library.hpp" />

@@ -208,7 +208,7 @@ namespace ascension {
 					return false;
 				}
 
-				boost::integer_range<Scalar> viewportContentExtent(const TextViewport& viewport) BOOST_NOEXCEPT {
+				NumericRange<Scalar> viewportContentExtent(const TextViewport& viewport) BOOST_NOEXCEPT {
 					const presentation::BlockFlowDirection blockFlowDirection = viewport.textRenderer().computedBlockFlowDirection();
 					const PhysicalFourSides<Scalar>& physicalSpaces = viewport.textRenderer().spaceWidths();
 					Scalar spaceBefore, spaceAfter;
@@ -232,7 +232,7 @@ namespace ascension {
 					const Scalar before = spaceBefore + borderBefore + paddingBefore;
 					const Scalar after = (presentation::isHorizontal(blockFlowDirection) ?
 						geometry::dy(viewport.boundsInView()) : geometry::dx(viewport.boundsInView())) - spaceAfter - borderAfter - paddingBefore;
-					return boost::irange(before, after);
+					return nrange(before, after);
 				}
 			}
 
@@ -282,7 +282,7 @@ namespace ascension {
 						negativeVertical = isNegativeVertical(*layout);
 					}
 					const TextLayout::LineMetrics& lineMetrics = layout->lineMetrics(line.subline);
-					const boost::integer_range<Scalar> lineExtent(
+					const NumericRange<Scalar> lineExtent(
 						*baseline - (!negativeVertical ? lineMetrics.ascent : lineMetrics.descent),
 						*baseline + (!negativeVertical ? lineMetrics.descent : lineMetrics.ascent) + lineMetrics.leading);
 					if(includes(lineExtent, bpd)) {
@@ -685,7 +685,7 @@ namespace ascension {
 				// calculate extent of the viewport (if needed)
 				const TextRenderer& renderer = viewport().textRenderer();
 				const presentation::BlockFlowDirection blockFlowDirection(renderer.computedBlockFlowDirection());
-				const boost::integer_range<Scalar> viewportExtent(viewportContentExtent(viewport()));
+				const NumericRange<Scalar> viewportExtent(viewportContentExtent(viewport()));
 
 				auto newLine(boost::get(line()));
 				auto newBaseline = **this;

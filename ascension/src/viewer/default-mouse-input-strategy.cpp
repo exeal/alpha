@@ -75,7 +75,7 @@ namespace ascension {
 					graphics::Point(geometry::_x = std::numeric_limits<Scalar>::max(), geometry::_y = 0.0f),
 					graphics::Dimension(geometry::_dx = std::numeric_limits<Scalar>::min(), geometry::_dy = 0.0f));
 				for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
-					boost::integer_range<Scalar> yrange(geometry::range<1>(selectionBounds));
+					NumericRange<Scalar> yrange(geometry::range<1>(selectionBounds));
 					yrange = ordered(yrange);
 //					yrange.advance_end(widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
 					yrange = boost::irange(*yrange.begin(), *yrange.end() + widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());

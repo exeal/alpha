@@ -251,9 +251,9 @@ namespace ascension {
 		 * @see verticalRange, blockRange, inlineRange
 		 */
 		template<typename T>
-		inline boost::integer_range<T> horizontalRange(const PhysicalFourSides<T>& sides) {
+		inline NumericRange<T> horizontalRange(const PhysicalFourSides<T>& sides) {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
-			return boost::irange(sides.left(), sides.right());
+			return nrange(sides.left(), sides.right());
 		}
 
 		/**
@@ -264,9 +264,9 @@ namespace ascension {
 		 * @see horizontalRange, blockRange, inlineRange
 		 */
 		template<typename T>
-		inline boost::integer_range<T> verticalRange(const PhysicalFourSides<T>& sides) {
+		inline NumericRange<T> verticalRange(const PhysicalFourSides<T>& sides) {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
-			return boost::irange(sides.top(), sides.bottom());
+			return nrange(sides.top(), sides.bottom());
 		}
 
 		/**
