@@ -548,7 +548,7 @@ namespace ascension {
 				Caret& caret = viewer_->caret();
 				if(state_ != EXTENDING_CHARACTER_SELECTION) {
 					const TextViewer::HitTestResult htr = viewer_->hitTest(p);
-					if(state_ == EXTENDING_LINE_SELECTION && (htr & TextViewer::RULER_MASK) == 0)
+					if(state_ == EXTENDING_LINE_SELECTION && htr == source::SourceViewer::RULER)
 						// end line selection
 						state_ = EXTENDING_CHARACTER_SELECTION;
 				}
@@ -635,7 +635,7 @@ namespace ascension {
 			texteditor::endIncrementalSearch(*viewer_);
 
 			// select line(s)
-			if((htr & TextViewer::RULER_MASK) != 0) {
+			if(htr == source::SourceViewer::RULER) {
 				const kernel::Position to(viewToModel(*viewer_->textRenderer().viewport(), input.location()).insertionIndex());
 				const bool extend = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN) && to.line != line(caret.anchor());
 				state_ = EXTENDING_LINE_SELECTION;
@@ -795,7 +795,7 @@ namespace ascension {
 						handleLeftButtonDoubleClick(input);
 						if(!input.isConsumed()) {
 							const TextViewer::HitTestResult htr = viewer_->hitTest(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
-							if((htr & TextViewer::TEXT_AREA_MASK) != 0) {
+							if(htr == TextViewer::TEXT_AREA_CONTENT_RECTANGLE || htr == TextViewer::TEXT_AREA_PADDING_START) {
 								// begin word selection
 								Caret& caret = viewer_->caret();
 								selectWord(caret);
@@ -939,8 +939,8 @@ namespace ascension {
 			boost::optional<widgetapi::Cursor::BuiltinShape> builtinShape;
 			const presentation::hyperlink::Hyperlink* newlyHoveredHyperlink = nullptr;
 
-			const TextViewer::HitTestResult htr = viewer_->hitTest(position);
-			if((htr & TextViewer::RULER_MASK) != 0	// on the ruler?
+			const TextViewer::HitTestResult& htr = viewer_->hitTest(position);
+			if((htr == source::SourceViewer::RULER)	// on the ruler?
 					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(viewer_->caret()) && isPointOverSelection(viewer_->caret(), position)))	// on a draggable text selection?
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				builtinShape = Gdk::ARROW;
