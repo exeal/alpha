@@ -4,7 +4,7 @@
  * @date 2003-2006 was CompletionWindow.cpp
  * @date 2006-2012 was content-assist.cpp
  * @date 2012-03-12 renamed from content-assist.cpp
- * @date 2014
+ * @date 2014-2015
  */
 
 #include <ascension/content-assist/default-content-assistant.hpp>
@@ -12,7 +12,7 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/viewer.hpp>	// TextViewer
+#include <ascension/viewer/text-viewer.hpp>	// TextViewer
 #include <boost/range/algorithm/copy.hpp>
 
 

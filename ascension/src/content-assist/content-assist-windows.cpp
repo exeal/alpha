@@ -11,7 +11,7 @@
 
 #include <ascension/content-assist/default-content-assistant.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 
 using namespace ascension;
 using namespace ascension::contentassist;

@@ -9,7 +9,7 @@
 
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/current-line-highlighter.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
 
 namespace ascension {

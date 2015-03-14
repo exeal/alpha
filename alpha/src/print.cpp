@@ -2,7 +2,7 @@
  * @file print.cpp
  * Exposes @c printing module into Python.
  * @author exeal
- * @date 2007, 2009
+ * @date 2007, 2009, 2015
  */
 
 #include "application.hpp"
@@ -11,7 +11,7 @@
 #include <manah/win32/dc.hpp>
 #include <manah/win32/ui/dialog.hpp>
 #include <ascension/layout.hpp>
-#include <ascension/viewer.hpp>
+#include <ascension/text-viewer.hpp>
 #include <commdlg.h>	// PrintDlgExW, SetupPageDlgW, ...
 #include <shlwapi.h>	// PathCompactPathW
 using namespace alpha;

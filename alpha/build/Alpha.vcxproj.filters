@@ -239,9 +239,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\viewer.cpp">
-      <Filter>ascension\Source Files\viewer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\kernel\document.cpp">
       <Filter>ascension\Source Files\kernel</Filter>
     </ClCompile>
@@ -295,9 +292,6 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp">
-      <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\text\character-iterator.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
@@ -385,9 +379,6 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\drag-and-drop-gtk.cpp">
       <Filter>ascension\Source Files\viewer\widgetapi</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\viewer-gtk.cpp">
-      <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\current-line-highlighter.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
@@ -508,6 +499,18 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\source\utility.cpp">
       <Filter>ascension\Source Files\viewer\source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\source\source-viewer.cpp">
+      <Filter>ascension\Source Files\viewer\source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer-gtk.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer-windows.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -641,9 +644,6 @@
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\caret.hpp">
-      <Filter>ascension\Header Files\viewer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\viewer.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp">
@@ -1122,6 +1122,21 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\source\utility.hpp">
       <Filter>ascension\Header Files\viewer\source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\source-viewer.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-allocation-width-sink.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-locator.hpp">
+      <Filter>ascension\Header Files\viewer\source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

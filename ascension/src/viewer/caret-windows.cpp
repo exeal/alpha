@@ -10,7 +10,7 @@
 #include <ascension/viewer/caret.hpp>
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/text-editor/command.hpp>	// command.TextInputCommand

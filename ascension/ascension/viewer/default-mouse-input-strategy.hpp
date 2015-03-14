@@ -1,11 +1,11 @@
 /**
- * @file viewer.hpp
+ * @file default-mouse-input-strategy.hpp
  * This header defines several visual presentation classes.
  * @author exeal
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-10-04 separated from viewer.hpp
- * @date 2012, 2014
+ * @date 2012, 2014-2015
  */
 
 #ifndef ASCENSION_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
