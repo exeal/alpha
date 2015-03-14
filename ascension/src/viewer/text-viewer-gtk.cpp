@@ -1,11 +1,11 @@
 /**
- * @file viewer-gtk.cpp
+ * @file text-viewer-gtk.cpp
  * @author exeal
  * @date 2013-11-10 Created.
  * @date 2013-2015
  */
 
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 
 #include <ascension/graphics/font/text-viewport.hpp>

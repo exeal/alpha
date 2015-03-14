@@ -1,5 +1,5 @@
 /**
- * @file viewer-windows.cpp
+ * @file text-viewer-windows.cpp
  * @author exeal
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
@@ -7,7 +7,7 @@
  * @date 2011-2015
  */
 
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #define ASCENSION_TEST_TEXT_STYLES

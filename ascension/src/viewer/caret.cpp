@@ -17,7 +17,7 @@
 #include <ascension/text-editor/input-sequence-checker.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/virtual-box.hpp>
 #include <boost/range/algorithm/binary_search.hpp>
 #include <boost/range/algorithm/find.hpp>

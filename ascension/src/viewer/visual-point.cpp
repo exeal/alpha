@@ -10,7 +10,7 @@
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #include <ascension/corelib/text/identifier-syntax.hpp>
 

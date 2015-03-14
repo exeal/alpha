@@ -21,7 +21,7 @@
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-mouse-input-strategy.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <boost/foreach.hpp>
 #include <limits>	// std.numeric_limit
 

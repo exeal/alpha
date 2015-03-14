@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2006-2011 was text-editor.hpp
  * @date 2011-05-06
- * @date 2011-2013
+ * @date 2011-2013, 2015
  */
 
 #ifndef ASCENSION_COMMAND_HPP
@@ -11,7 +11,7 @@
 
 #include <ascension/text-editor/session.hpp>
 #include <ascension/kernel/searcher.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 
 namespace ascension {
 

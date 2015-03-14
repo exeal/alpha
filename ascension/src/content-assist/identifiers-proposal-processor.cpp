@@ -12,7 +12,7 @@
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/source/utility.hpp>
 #include <boost/foreach.hpp>
 

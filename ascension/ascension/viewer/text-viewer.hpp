@@ -1,13 +1,13 @@
 /**
- * @file viewer.hpp
+ * @file text-viewer.hpp
  * This header defines several visual presentation classes.
  * @author exeal
  * @date 2003-2006 was EditView.h
  * @date 2006-2015
  */
 
-#ifndef ASCENSION_VIEWER_HPP
-#define ASCENSION_VIEWER_HPP
+#ifndef ASCENSION_TEXT_VIEWER_HPP
+#define ASCENSION_TEXT_VIEWER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/graphics/font/text-renderer.hpp>
@@ -263,6 +263,7 @@ namespace ascension {
 			virtual graphics::Rectangle doTextAreaAllocationRectangle() const BOOST_NOEXCEPT;
 			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::Rectangle& rect);
 			virtual void unfrozen(const boost::integer_range<Index>& linesToRedraw);
+			void updateTextAreaAllocationRectangle();
 
 			// helpers
 		private:
@@ -518,7 +519,7 @@ namespace ascension {
 			friend class Renderer;
 		};
 
-		// the documentation is viewer.cpp
+		// the documentation is text-viewer.cpp
 		class AutoFreeze : private boost::noncopyable {
 		public:
 			explicit AutoFreeze(TextViewer* textViewer);

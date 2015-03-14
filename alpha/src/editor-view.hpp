@@ -9,7 +9,7 @@
 #define ALPHA_EDITOR_VIEW_HPP
 #include "ambient.hpp"
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <ascension/kernel/searcher.hpp>	// ascension.searcher.IncrementalSearchCallback
 
 namespace alpha {

@@ -1,5 +1,5 @@
 /**
- * @file viewer.cpp
+ * @file text-viewer.cpp
  * @author exeal
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2015
@@ -22,7 +22,7 @@
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-caret-shaper.hpp>
 #include <ascension/viewer/default-mouse-input-strategy.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>

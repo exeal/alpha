@@ -9,7 +9,7 @@
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/partition.hpp>
 #include <ascension/presentation/hyperlink/hyperlink.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/source/utility.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 

@@ -256,9 +256,11 @@
     <ClCompile Include="..\..\ascension\src\viewer\source\indicator-margin.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\line-number-ruler.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\ruler-border-decorator.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\source\source-viewer.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\utility.cpp" />
-    <ClCompile Include="..\..\ascension\src\viewer\viewer-gtk.cpp" />
-    <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer-gtk.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer-windows.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\virtual-box.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\visual-point.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\cursor-gtk.cpp" />
@@ -342,7 +344,6 @@
     <ClCompile Include="..\..\ascension\src\encodings\unicode.cpp" />
     <ClCompile Include="..\..\ascension\src\encodings\vietnamese.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp" />
-    <ClCompile Include="..\..\ascension\src\viewer\viewer.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\document.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\fileio.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\point.cpp" />
@@ -472,7 +473,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-border-decorator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-decorator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\source\source-viewer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\utility.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\virtual-box.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp" />
@@ -546,7 +549,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\type-list.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\ustring.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\caret.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\viewer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-stream.hpp" />

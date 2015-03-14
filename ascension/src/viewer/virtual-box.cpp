@@ -8,7 +8,7 @@
  */
 
 #include <ascension/graphics/font/text-viewport.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/virtual-box.hpp>
 
 namespace ascension {

@@ -12,7 +12,7 @@
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
-#include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 
 namespace ascension {
 	namespace viewer {
