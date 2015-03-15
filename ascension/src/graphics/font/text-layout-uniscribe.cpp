@@ -638,9 +638,9 @@ namespace ascension {
 					Index glyphCharacterIndex(std::size_t index) const override;
 					GlyphCode glyphCode(std::size_t index) const override;
 					graphics::Rectangle glyphLogicalBounds(std::size_t index) const override;
-					GlyphMetrics&& glyphMetrics(std::size_t index) const override;
+					GlyphMetrics glyphMetrics(std::size_t index) const override;
 					Point glyphPosition(std::size_t index) const override;
-					std::vector<Point>&& glyphPositions(const boost::integer_range<std::size_t>& range) const override;
+					void glyphPositions(const boost::integer_range<std::size_t>& range, std::vector<Point>& out) const override;
 					graphics::Rectangle glyphVisualBounds(std::size_t index) const override;
 					graphics::Rectangle logicalBounds() const override;
 					std::size_t numberOfGlyphs() const BOOST_NOEXCEPT override;
@@ -1073,7 +1073,7 @@ namespace ascension {
 					std::shared_ptr<const Font> selectFont(const StringPiece& textString, const FontCollection& fontCollection, const ActualFontSpecification& specification) {
 						const auto family(findMatchingFontFamily(
 							fontCollection, boost::fusion::at_key<presentation::styles::FontFamily>(specification)));
-						const FontDescription description(*family,
+						const FontDescription description(FontFamily(*family),
 							boost::fusion::at_key<presentation::styles::FontSize>(specification), boost::fusion::at_key<void>(specification));
 						return fontCollection.get(description, geometry::makeIdentityTransform(),
 							boost::fusion::at_key<presentation::styles::FontSizeAdjust>(specification));
@@ -1215,7 +1215,7 @@ namespace ascension {
 				}
 
 				/// @see GlyphVector#glyphMetrics
-				GlyphMetrics&& GlyphVectorImpl::glyphMetrics(std::size_t index) const {
+				GlyphMetrics GlyphVectorImpl::glyphMetrics(std::size_t index) const {
 					if(index >= numberOfGlyphs())
 						throw IndexOutOfBoundsException("index");
 	
@@ -1249,7 +1249,7 @@ namespace ascension {
 				}
 
 				/// @see GlyphVector#glyphPositions
-				std::vector<Point>&& GlyphVectorImpl::glyphPositions(const boost::integer_range<std::size_t>& range) const {
+				void GlyphVectorImpl::glyphPositions(const boost::integer_range<std::size_t>& range, std::vector<Point>& out) const {
 					const auto orderedRange = ordered(range);
 					if(*orderedRange.end() > numberOfGlyphs())
 						throw IndexOutOfBoundsException("range");
@@ -1262,7 +1262,7 @@ namespace ascension {
 						geometry::x(positions[i]) = static_cast<Scalar>(logicalPosition + glyphOffset.du);
 						geometry::y(positions[i]) = static_cast<Scalar>(glyphOffset.dv);
 					}
-					return std::move(positions);
+					std::swap(positions, out);
 				}
 
 				inline boost::integer_range<std::size_t> GlyphVectorImpl::glyphRange(const StringPiece& range /* = StringPiece() */) const {
