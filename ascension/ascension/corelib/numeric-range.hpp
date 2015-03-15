@@ -61,6 +61,7 @@ namespace ascension {
 	public:
 		typedef difference_type size_type;	// override to handle floating-point numbers
 	public:
+		NumericRange() {}
 		NumericRange(Value first, Value last) : Super(Iterator(first), Iterator(last)) {}
 		template<typename RandomAccessTraversalRange>
 		NumericRange(const RandomAccessTraversalRange& otherRange) :
