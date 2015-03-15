@@ -8,6 +8,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/source/ruler-allocation-width-sink.hpp>
 #include <ascension/viewer/source/ruler-border-decorator.hpp>
+#include <ascension/viewer/source/source-viewer.hpp>
 
 namespace ascension {
 	namespace viewer {
@@ -23,13 +24,13 @@ namespace ascension {
 				setBorderEnd(borderEnd);
 			}
 
-			/// @see RulerLocator#locateRuler
-			graphics::Rectangle RulerBorderDecorator::locateRuler(const Ruler& ruler) const {
-				if(&ruler != &decoratee())
-					throw std::invalid_argument("ruler");
+			/// @see RulerDecorator#locate
+			graphics::Rectangle RulerBorderDecorator::locate(const RulerLocator& parentLocator) const {
 				if(const SourceViewer* sourceViewer = viewer()) {
-					const graphics::Rectangle composite(locator_->locateRuler(*this));
-					switch(boost::native_value(sourceViewer->rulerPhysicalAlignment)) {
+					const graphics::Rectangle composite(parentLocator.locateRuler(*this));
+					assert(graphics::geometry::isNormalized(composite));
+					auto xrange(graphics::geometry::crange<0>(composite)), yrange(graphics::geometry::crange<1>(composite));
+					switch(boost::native_value(sourceViewer->rulerPhysicalAlignment())) {
 						case graphics::PhysicalDirection::TOP:
 							yrange.advance_end(-borderEnd_.actualWidth());
 							break;
