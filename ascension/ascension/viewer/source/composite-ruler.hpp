@@ -31,13 +31,13 @@ namespace ascension {
 				// Ruler interface
 				void paint(graphics::PaintContext& context) override;
 				graphics::Scalar width() const BOOST_NOEXCEPT override;
-				void install(const SourceViewer& viewer,
+				void install(SourceViewer& viewer,
 					RulerAllocationWidthSink& allocationWidthSink, const RulerLocator&) override;
-				void uninstall(const SourceViewer& viewer) override;
+				void uninstall(SourceViewer& viewer) override;
 				// RulerLocator
 				graphics::Rectangle locateRuler(const Ruler& ruler) const override;
 			private:
-				const SourceViewer* viewer_;
+				SourceViewer* viewer_;
 				RulerAllocationWidthSink* allocationWidthSink_;
 				const RulerLocator* locator_;
 				std::vector<std::unique_ptr<Ruler>> columns_;
