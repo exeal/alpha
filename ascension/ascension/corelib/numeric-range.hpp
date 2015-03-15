@@ -65,7 +65,7 @@ namespace ascension {
 		NumericRange(Value first, Value last) : Super(Iterator(first), Iterator(last)) {}
 		template<typename RandomAccessTraversalRange>
 		NumericRange(const RandomAccessTraversalRange& otherRange) :
-			Super(Iterator(boost::const_begin(otherRange)), Iterator(boost::const_end(otherRange))) {}
+			Super(Iterator(*boost::const_begin(otherRange)), Iterator(*boost::const_end(otherRange))) {}
 		bool operator==(const NumericRange& other) const {
 			return boost::equal(*this, other);
 		}
@@ -124,7 +124,8 @@ namespace ascension {
 	 */
 	template<typename Value>
 	inline NumericRange<Value> ordered(const NumericRange<Value>& range) {
-		return NumericRange<Value>(std::minmax(*boost::const_begin(range), *boost::const_end(range)));
+		const auto temp(std::minmax(*boost::const_begin(range), *boost::const_end(range)));
+		return nrange(std::get<0>(temp), std::get<1>(temp));
 	}
 }
 
