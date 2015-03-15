@@ -61,32 +61,6 @@ namespace ascension {
 				private:
 					Geometry& geometry_;
 				};
-
-				template<typename Geometry, std::size_t dimension>
-				class RectangleRangeProxy /*: public Range<
-					typename Coordinate<
-						typename Coordinate<Rectangle>::Type
-					>::Type
-				>*/ {
-				private:
-					typedef typename boost::geometry::point_type<Geometry>::type PointType;
-					typedef typename boost::geometry::coordinate_type<PointType>::type CoordinateType;
-				public:
-					explicit RectangleRangeProxy(Geometry& rectangle) BOOST_NOEXCEPT :
-						/*Range<CoordinateType>(range<dimension>(const_cast<const Geometry&>(rectangle))),*/ rectangle_(rectangle) {}
-					template<typename T>
-					RectangleRangeProxy<Geometry, dimension>& operator=(const NumericRange<T>& range) {
-						boost::geometry::set<boost::geometry::min_corner, dimension>(rectangle_, *range.begin());
-						boost::geometry::set<boost::geometry::max_corner, dimension>(rectangle_, *range.end());
-//						Range<Scalar>::operator=(range);
-						return *this;
-					}
-					operator NumericRange<CoordinateType>() const {
-						return range<dimension>(const_cast<const Geometry&>(rectangle_));
-					}
-				private:
-					Geometry& rectangle_;
-				};
 			}	// namespace detail
 
 			/// @defgroup geometry_additional_aceessors Additional Access Functions
@@ -110,16 +84,6 @@ namespace ascension {
 				typename boost::geometry::point_type<Geometry>::type temp;
 				boost::geometry::assign_values(temp, boost::geometry::get<boost::geometry::min_corner, 0>(rectangle), boost::geometry::get<boost::geometry::min_corner, 1>(rectangle));
 				return temp;
-			}
-
-			template<std::size_t dimension, typename Geometry>
-			inline NumericRange<typename boost::geometry::coordinate_type<Geometry>::type> range(const Geometry& rectangle) {
-				return nrange(boost::geometry::get<boost::geometry::min_corner, dimension>(rectangle), boost::geometry::get<boost::geometry::max_corner, dimension>(rectangle));
-			}
-
-			template<std::size_t dimension, typename Geometry>
-			inline detail::RectangleRangeProxy<Geometry, dimension> range(Geometry& rectangle) {
-				return detail::RectangleRangeProxy<Geometry, dimension>(rectangle);
 			}
 
 			/// Returns the size of the @a rectangle.
@@ -176,7 +140,7 @@ namespace ascension {
 
 			template<typename Geometry>
 			inline bool isNormalized(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
-				return isNormalized(size(rectangle));
+				return isNormalized(::ascension::graphics::geometry::size(rectangle));
 			}
 
 			template<typename Rectangle>

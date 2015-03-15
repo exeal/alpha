@@ -1387,7 +1387,7 @@ namespace ascension {
 						left = std::min(x, left);
 						right = std::max(x + xs[i], right);
 					}
-					return graphics::Rectangle(boost::irange(left, right), logicalExtents());
+					return graphics::Rectangle(std::make_pair(nrange(left, right), logicalExtents()));
 				}
 
 				inline HRESULT GlyphVectorImpl::logicalWidths(int widths[]) const {
