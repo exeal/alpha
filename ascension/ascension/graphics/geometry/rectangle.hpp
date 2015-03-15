@@ -16,7 +16,7 @@
 #include <boost/geometry/core/tags.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/parameter.hpp>
-#include <boost/range/irange.hpp>
+#include <utility>	// std.pair
 
 namespace ascension {
 	namespace graphics {
@@ -31,22 +31,60 @@ namespace ascension {
 			BOOST_PARAMETER_NAME(right)
 			BOOST_PARAMETER_NAME(bottom)
 #endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+			
+			template<typename Coordinate> class BasicRectangleBase;
+			template<std::size_t dimension, typename Coordinate>
+			NumericRange<Coordinate>& range(BasicRectangleBase<Coordinate>& rectangle);
+			template<std::size_t dimension, typename Coordinate>
+			const NumericRange<Coordinate>& range(const BasicRectangleBase<Coordinate>& rectangle);
+			template<std::size_t dimension, typename Coordinate>
+			const NumericRange<Coordinate>& crange(const BasicRectangleBase<Coordinate>& rectangle);
 
 			template<typename Coordinate>
 			class BasicRectangleBase : private boost::equality_comparable<BasicRectangleBase<Coordinate>> {
 			public:
 				bool operator==(const BasicRectangleBase& other) const {
 //					return boost::geometry::equals(*this, other);
-					return minimumCorner_ == other.minimumCorner_ && maximumCorner_ == other.maximumCorner_;
+					return ranges_ == other.ranges_;
 				}
 			protected:
 				BasicRectangleBase() {}
-				BasicRectangleBase(const BasicPoint<Coordinate>& minimumCorner, const BasicPoint<Coordinate>& maximumCorner) : minimumCorner_(minimumCorner), maximumCorner_(maximumCorner) {}
+				BasicRectangleBase(const BasicRectangleBase& other) : ranges_(other.ranges_) {}
+				template<typename OtherCoordinate>
+				BasicRectangleBase(const BasicRectangleBase<OtherCoordinate>& other) : ranges_(other.ranges_) {}
+				BasicRectangleBase(BasicRectangleBase&& other) : ranges_(std::move(other.ranges_)) {}
+				template<typename OtherCoordinate>
+				BasicRectangleBase(BasicRectangleBase<OtherCoordinate>&& other) : ranges_(std::move(other.ranges_)) {}
+				BasicRectangleBase(const std::pair<NumericRange<Coordinate>, NumericRange<Coordinate>>& ranges) : ranges_(ranges) {}
+				template<typename OtherCoordinate>
+				BasicRectangleBase(const std::pair<NumericRange<OtherCoordinate>, NumericRange<OtherCoordinate>>& ranges) : ranges_(ranges) {}
 				template<typename Arguments>
-				BasicRectangleBase(const Arguments& arguments) : minimumCorner_(_x = arguments[_left], _y = arguments[_top]), maximumCorner_(_x = arguments[_right], _y = arguments[_bottom]) {}
-			protected:
-				BasicPoint<Coordinate> minimumCorner_, maximumCorner_;
+				BasicRectangleBase(const Arguments& arguments) :
+					ranges_(nrange(arguments[_left], arguments[_right]), nrange(arguments[_top], arguments[_bottom])) {}
+			private:
+				template<std::size_t dimension, typename Coordinate>
+				friend NumericRange<Coordinate>& range(BasicRectangleBase<Coordinate>& rectangle);
+				template<std::size_t dimension, typename Coordinate>
+				friend const NumericRange<Coordinate>& range(const BasicRectangleBase<Coordinate>& rectangle);
+				template<std::size_t dimension, typename Coordinate>
+				friend const NumericRange<Coordinate>& crange(const BasicRectangleBase<Coordinate>& rectangle);
+				std::pair<NumericRange<Coordinate>, NumericRange<Coordinate>> ranges_;
 			};
+
+			template<std::size_t dimension, typename Coordinate>
+			inline NumericRange<Coordinate>& range(BasicRectangleBase<Coordinate>& rectangle) {
+				return std::get<dimension>(rectangle.ranges_);
+			}
+
+			template<std::size_t dimension, typename Coordinate>
+			inline const NumericRange<Coordinate>& range(const BasicRectangleBase<Coordinate>& rectangle) {
+				return std::get<dimension>(rectangle.ranges_);
+			}
+
+			template<std::size_t dimension, typename Coordinate>
+			inline const NumericRange<Coordinate>& crange(const BasicRectangleBase<Coordinate>& rectangle) {
+				return std::get<dimension>(rectangle.ranges_);
+			}
 
 			/**
 			 * Describes a rectangle defined by two @c BasicPoint instances.
@@ -59,23 +97,50 @@ namespace ascension {
 			public:
 				/// Default constructor does not initialize anything.
 				BasicRectangle() {}
-				/// Copy-constructor.
-				BasicRectangle(const BasicRectangle& other) : BasicRectangleBase<Coordinate>((
-					_left = boost::geometry::get<boost::geometry::min_corner, 0>(other), _top = boost::geometry::get<boost::geometry::min_corner, 1>(other),
-					_right = boost::geometry::get<boost::geometry::max_corner, 0>(other), _bottom = boost::geometry::get<boost::geometry::max_corner, 1>(other))) {}
-				/// Copy-constructor for different coordinate type.
+				/**
+				 * Copy-constructor.
+				 * @param other The source object
+				 */
+				BasicRectangle(const BasicRectangle& other) : BasicRectangleBase(static_cast<const BasicRectangleBase&>(other)) {}
+				/**
+				 * Copy-constructor for different coordinate type.
+				 * @tparam OtherCoordinate The coordinate type of @a other
+				 * @param other The source object
+				 */
 				template<typename OtherCoordinate>
-				BasicRectangle(const BasicRectangle<OtherCoordinate>& other) : BasicRectangleBase<Coordinate>((
-					_left = static_cast<Coordinate>(boost::geometry::get<boost::geometry::min_corner, 0>(other)),
-					_top = static_cast<Coordinate>(boost::geometry::get<boost::geometry::min_corner, 1>(other)),
-					_right = static_cast<Coordinate>(boost::geometry::get<boost::geometry::max_corner, 0>(other)),
-					_bottom = static_cast<Coordinate>(boost::geometry::get<boost::geometry::max_corner, 1>(other)))) {}
-				/// Copy-constructor for different rectangle type.
-				template<typename Other>
-				BasicRectangle(const Other& other) : BasicRectangleBase<Coordinate>((
-					_left = boost::geometry::get<boost::geometry::min_corner, 0>(other), _top = boost::geometry::get<boost::geometry::min_corner, 1>(other),
-					_right = boost::geometry::get<boost::geometry::max_corner, 0>(other), _bottom = boost::geometry::get<boost::geometry::max_corner, 1>(other))) {}
-				/// Constructor creates a rectangle described by the given two points.
+				BasicRectangle(const BasicRectangle<OtherCoordinate>& other) : BasicRectangleBase<Coordinate>(other) {}
+				/**
+				 * Copy-constructor for different rectangle type.
+				 * @tparam Geometry The type of @a other
+				 * @param other The source rectangular geometry
+				 */
+				template<typename Geometry>
+				BasicRectangle(const Geometry& other, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) :
+					BasicRectangleBase<Coordinate>((
+						_left = boost::geometry::get<boost::geometry::min_corner, 0>(other),
+						_top = boost::geometry::get<boost::geometry::min_corner, 1>(other),
+						_right = boost::geometry::get<boost::geometry::max_corner, 0>(other),
+						_bottom = boost::geometry::get<boost::geometry::max_corner, 1>(other))) {}
+				/**
+				 * Constructs a @c BasicRectangle with two numeric ranges.
+				 * @param ranges The pair gives the two ranges. The @c first element is the range in x-coordinate. The
+				 *               @c second element is the range in y-coordinate
+				 */
+				BasicRectangle(const std::pair<NumericRange<Coordinate>, NumericRange<Coordinate>>& ranges) : BasicRectangleBase(ranges) {}
+				/**
+				 * Constructs a @c BasicRectangle with two numeric ranges.
+				 * @tparam OtherCoordinate The coordinate type of @a ranges
+				 * @param ranges The pair gives the two ranges. The @c first element is the range in x-coordinate. The
+				 *               @c second element is the range in y-coordinate
+				 */
+				template<typename OtherCoordinate>
+				BasicRectangle(const std::pair<NumericRange<OtherCoordinate>, NumericRange<OtherCoordinate>>& ranges) : BasicRectangleBase(ranges) {}
+				/**
+				 * Constructor creates a rectangle described by the given two points.
+				 * @tparam Point1 The type of the @c first element of @a points
+				 * @tparam Point2 The type of the @c second element of @a points
+				 * @param points The pair gives the two corners of the new rectangle
+				 */
 				template<typename Point1, typename Point2>
 				explicit BasicRectangle(const std::pair<Point1, Point2>& points,
 					typename detail::EnableIfTagIs<Point1, boost::geometry::point_tag>::type* = nullptr,
@@ -83,19 +148,20 @@ namespace ascension {
 					: BasicRectangleBase<Coordinate>((
 						_left = boost::geometry::get<0>(points.first), _top = boost::geometry::get<1>(points.first),
 						_right = boost::geometry::get<0>(points.second), _bottom = boost::geometry::get<1>(points.second))) {}
-				/// Constructor creates a rectangle described by the given origin and size.
+				/**
+				 * Constructor creates a rectangle described by the given origin and size.
+				 * @tparam Origin The type of @a origin
+				 * @tparam SizeCoordinate The type of @a size
+				 * @param origin The origin point of the new rectangle
+				 * @param size The size dimension of the new rectangle
+				 */
 				template<typename Origin, typename SizeCoordinate>
 				BasicRectangle(const Origin& origin, const BasicDimension<SizeCoordinate>& size,
 						typename detail::EnableIfTagIs<Origin, boost::geometry::point_tag>::type* = nullptr)
 					: BasicRectangleBase<Coordinate>((
 						_left = boost::geometry::get<0>(origin), _top = boost::geometry::get<1>(origin),
 						_right = boost::geometry::get<0>(origin) + dx(size), _bottom = boost::geometry::get<1>(origin) + dy(size))) {}
-				/// Constructor creates a rectangle described by the two ranges in x and y-coordinates.
-				template<typename ScalarType>
-				BasicRectangle(const NumericRange<ScalarType>& xrange, const NumericRange<ScalarType>& yrange)
-					: BasicRectangleBase<Coordinate>((
-						_left = *xrange.begin(), _top = *yrange.begin(),
-						_right = *xrange.end(), _bottom = *yrange.end())) {}
+				/// Constructor takes named parameters.
 				BOOST_PARAMETER_CONSTRUCTOR(
 					BasicRectangle, (BasicRectangleBase<Coordinate>), tag,
 					(required
@@ -115,14 +181,6 @@ namespace ascension {
 					std::swap(*this, BasicRectangle(other));
 					return *this;
 				}
-
-			private:
-				using BasicRectangleBase<Coordinate>::minimumCorner_;
-				using BasicRectangleBase<Coordinate>::maximumCorner_;
-				friend struct boost::geometry::traits::indexed_access<BasicRectangle<Coordinate>, boost::geometry::min_corner, 0>;
-				friend struct boost::geometry::traits::indexed_access<BasicRectangle<Coordinate>, boost::geometry::min_corner, 1>;
-				friend struct boost::geometry::traits::indexed_access<BasicRectangle<Coordinate>, boost::geometry::max_corner, 0>;
-				friend struct boost::geometry::traits::indexed_access<BasicRectangle<Coordinate>, boost::geometry::max_corner, 1>;
 			};
 			/// @}
 		}
@@ -136,32 +194,36 @@ namespace boost {
 			struct tag<ascension::graphics::geometry::BasicRectangle<Coordinate>> {
 				typedef box_tag type;
 			};
+
 			template<typename Coordinate>
 			struct point_type<ascension::graphics::geometry::BasicRectangle<Coordinate>> {
 				typedef ascension::graphics::geometry::BasicPoint<Coordinate> type;
 			};
+
 			template <typename Coordinate, std::size_t dimension>
 			struct indexed_access<ascension::graphics::geometry::BasicRectangle<Coordinate>, min_corner, dimension> {
 			private:
 				typedef typename coordinate_type<ascension::graphics::geometry::BasicPoint<Coordinate>>::type CoordinateType;
 			public:
-				static CoordinateType get(const ascension::graphics::geometry::BasicRectangle<Coordinate>& b) {
-					return geometry::get<dimension>(b.minimumCorner_);
+				static CoordinateType get(const ascension::graphics::geometry::BasicRectangle<Coordinate>& box) {
+					return *boost::const_begin(ascension::graphics::geometry::crange<dimension>(box));
 				}
-				static void set(ascension::graphics::geometry::BasicRectangle<Coordinate>& b, const CoordinateType& value) {
-					geometry::set<dimension>(b.minimumCorner_, value);
+				static void set(ascension::graphics::geometry::BasicRectangle<Coordinate>& box, const CoordinateType& value) {
+//					*boost::begin(ascension::graphics::geometry::range<dimension>(box)) = value;
+					ascension::graphics::geometry::range<dimension>(box).front() = value;
 				}
 			};
+
 			template <typename Coordinate, std::size_t dimension>
 			struct indexed_access<ascension::graphics::geometry::BasicRectangle<Coordinate>, max_corner, dimension> {
 			private:
 				typedef typename coordinate_type<ascension::graphics::geometry::BasicPoint<Coordinate>>::type CoordinateType;
 			public:
-				static CoordinateType get(const ascension::graphics::geometry::BasicRectangle<Coordinate>& b) {
-					return geometry::get<dimension>(b.maximumCorner_);
+				static CoordinateType get(const ascension::graphics::geometry::BasicRectangle<Coordinate>& box) {
+					return *boost::const_end(ascension::graphics::geometry::crange<dimension>(box));
 				}
-				static void set(ascension::graphics::geometry::BasicRectangle<Coordinate>& b, const CoordinateType& value) {
-					geometry::set<dimension>(b.maximumCorner_, value);
+				static void set(ascension::graphics::geometry::BasicRectangle<Coordinate>& box, const CoordinateType& value) {
+					*boost::end(ascension::graphics::geometry::range<dimension>(box)) = value;
 				}
 			};
 		}

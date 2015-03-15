@@ -60,7 +60,7 @@ namespace alpha {
 			xrange.advance_begin(+2);
 			xrange.advance_end(-2);
 			auto yrange(boost::irange((gfx::geometry::top(rect) * 2 + gfx::geometry::bottom(rect)) / 3, (gfx::geometry::top(rect) + gfx::geometry::bottom(rect) * 2) / 3));
-			const gfx::Rectangle r(xrange, yrange);
+			const gfx::Rectangle r(std::make_pair(xrange, yrange));
 			auto gradient(std::make_shared<gfx::LinearGradient>(boost::geometry::make_zero<gfx::Point>(), gfx::Point(gfx::geometry::_x = gfx::geometry::dx(r), gfx::geometry::_y = static_cast<gfx::Scalar>(0))));
 
 			// get themed colors

@@ -31,8 +31,19 @@ namespace ascension {
 					const graphics::Rectangle composite(locator_->locateRuler(*this));
 					switch(boost::native_value(sourceViewer->rulerPhysicalAlignment)) {
 						case graphics::PhysicalDirection::TOP:
-							return graphics::Rectangle(graphics::geometry::range<0>(composite), boost::irange(
+							yrange.advance_end(-borderEnd_.actualWidth());
+							break;
+						case graphics::PhysicalDirection::RIGHT:
+							xrange.advance_begin(+borderEnd_.actualWidth());
+							break;
+						case graphics::PhysicalDirection::BOTTOM:
+							yrange.advance_begin(+borderEnd_.actualWidth());
+							break;
+						case graphics::PhysicalDirection::LEFT:
+							xrange.advance_end(-borderEnd_.actualWidth());
+							break;
 					}
+					return graphics::Rectangle(std::make_pair(xrange, yrange));
 				}
 				return boost::geometry::make_zero<graphics::Rectangle>();
 			}
