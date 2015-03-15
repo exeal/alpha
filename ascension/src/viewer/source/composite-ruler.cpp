@@ -37,7 +37,7 @@ namespace ascension {
 			}
 
 			/// @see Ruler#install
-			void CompositeRuler::install(const SourceViewer& viewer, RulerAllocationWidthSink& allocationWidthSink, const RulerLocator& locator) {
+			void CompositeRuler::install(SourceViewer& viewer, RulerAllocationWidthSink& allocationWidthSink, const RulerLocator& locator) {
 				if(viewer_ == nullptr) {
 					// install ruler columns
 					for(auto i(std::begin(columns_)), e(std::end(columns_)); i != e; ++i) {
@@ -120,7 +120,7 @@ namespace ascension {
 			}
 
 			/// @see Ruler#uninstall
-			void CompositeRuler::uninstall(const SourceViewer& viewer) {
+			void CompositeRuler::uninstall(SourceViewer& viewer) {
 				if(viewer_ == &viewer) {
 					// uninstall ruler columns
 					BOOST_FOREACH(auto& column, columns_) {
