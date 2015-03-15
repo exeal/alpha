@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <memory>
 #include <boost/flyweight.hpp>
+#include <boost/range/irange.hpp>
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -32,8 +33,8 @@ namespace ascension {
 			class GlyphMetrics;
 
 			/**
-			 * Abstract class represents a vector of glyph codes with geometric information. All
-			 * geometric coordinates are in user space units. 
+			 * Abstract class represents a vector of glyph codes with geometric information. All geometric coordinates
+			 * are in user space units. 
 			 * @see Font#createGlyphVector, TextRun, TextLayout
 			 */
 			class GlyphVector {
@@ -52,7 +53,7 @@ namespace ascension {
 				 * @see #glyphCodes
 				 */
 				virtual GlyphCode glyphCode(std::size_t index) const = 0;
-//				virtual std::vector<GlyphCode>&& glyphCodes(const Range<std::size_t>& range) const = 0;
+//				virtual void glyphCodes(const boost::integer_range<std::size_t>& range, std::vector<GlyphCode>& out) const = 0;
 				/// Returns the number of glyphs in this vector.
 				virtual std::size_t numberOfGlyphs() const BOOST_NOEXCEPT = 0;
 				/// @}
@@ -64,15 +65,15 @@ namespace ascension {
 				/// Returns the @c FontRenderContext with this vector.
 				virtual const FontRenderContext& fontRenderContext() const = 0;
 				/**
-				 * Returns the character index of the specified glyph, which is the index of the
-				 * first logical character represented by the glyph.
+				 * Returns the character index of the specified glyph, which is the index of the first logical
+				 * character represented by the glyph.
 				 * @param index The index in this vector
 				 * @return The character index
 				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
 				 * @see #glyphCharacterIndices
 				 */
 				virtual Index glyphCharacterIndex(std::size_t index) const = 0;
-//				virtual std::vector<Index>&& glyphCharacterIndices(const Range<std::size_t>& range) const = 0;
+//				virtual void glyphCharacterIndices(const boost::integer_range<std::size_t>& range, std::vector<Index>& out) const = 0;
 				/// @}
 
 				/// @name Glyph Position
@@ -80,9 +81,9 @@ namespace ascension {
 				/**
 				 * Returns the position of the specified glyph.
 				 * @param index The glyph index in this vector
-				 * @return The position of the specified glyph relative to the origin of this
-				 *         vector, in user units. If @a index equals @c #numberOfGlyphs(), this
-				 *         method returns the position of the end of the last glyph
+				 * @return The position of the specified glyph relative to the origin of this vector, in user units. If
+				 *         @a index equals @c #numberOfGlyphs(), this method returns the position of the end of the
+				 *         last glyph
 				 * @throw IndexOutOfBoundsException @a index &gt; @c #numberOfGlyphs()
 				 * @see #setGlyphPosition
 				 */
@@ -93,7 +94,7 @@ namespace ascension {
 				 * @return A vector of glyph positions specified by @a range
 				 * @throw IndexOutOfBoundsException @a range.beginning() &gt; @c #numberOfGlyphs()
 				 */
-				virtual std::vector<Point>&& glyphPositions(const boost::integer_range<std::size_t>& range) const = 0;
+				virtual void glyphPositions(const boost::integer_range<std::size_t>& range, std::vector<Point>& out) const = 0;
 				/**
 				 * Sets the position of the specified glyph within this vector.
 				 * @param index The glyph index in this vector
@@ -150,7 +151,7 @@ namespace ascension {
 				 * @return A @c GlyphMetrics object
 				 * @throw IndexOutOfBoundsException @a index &gt;= @c #numberOfGlyphs()
 				 */
-				virtual GlyphMetrics&& glyphMetrics(std::size_t index) const = 0;
+				virtual GlyphMetrics glyphMetrics(std::size_t index) const = 0;
 				/// @}
 
 				/// @name Glyph Transform
