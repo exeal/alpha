@@ -19,10 +19,10 @@ namespace ascension {
 	namespace detail {
 		template<typename Value, typename DifferenceType = Value>
 		class NumericIterator : public boost::iterator_facade<
-			NumericIterator<Value>, Value, boost::random_access_traversal_tag, Value, DifferenceType
+			NumericIterator<Value>, Value, boost::random_access_traversal_tag, Value&, DifferenceType
 		> {
 			typedef boost::iterator_facade<
-				NumericIterator<Value>, Value, boost::random_access_traversal_tag, Value, DifferenceType
+				NumericIterator<Value>, Value, boost::random_access_traversal_tag, Value&, DifferenceType
 			> Super;
 
 		public:
@@ -37,7 +37,7 @@ namespace ascension {
 		private:
 			void advance(difference_type delta) {value_ += delta;}
 			void decrement() {--value_;}
-			reference dereference() const {return value_;}
+			reference dereference() const {return const_cast<NumericIterator*>(this)->value_;}
 			difference_type distance_to(const NumericIterator& other) const {
 				if(std::is_signed<value_type>::value)
 					return other.value_ - value_;
