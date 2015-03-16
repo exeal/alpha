@@ -1138,6 +1138,9 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\mouse-input-strategy.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

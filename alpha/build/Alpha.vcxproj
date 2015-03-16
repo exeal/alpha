@@ -467,6 +467,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\current-line-highlighter.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\default-caret-shaper.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\default-mouse-input-strategy.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\abstract-ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\composite-ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\indicator-margin.hpp" />
