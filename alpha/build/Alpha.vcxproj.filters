@@ -308,9 +308,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\caret-windows.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\default-mouse-input-strategy.cpp">
-      <Filter>ascension\Source Files\viewer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\content-assist\content-assist-windows.cpp">
       <Filter>ascension\Source Files\content-assist</Filter>
     </ClCompile>
@@ -512,6 +509,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-windows.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\default-text-viewer-mouse-input-strategy.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -682,9 +682,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\range.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp">
-      <Filter>ascension\Header Files\viewer</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp">
       <Filter>ascension\Header Files\kernel</Filter>
     </ClInclude>
@@ -770,9 +767,6 @@
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp">
-      <Filter>ascension\Header Files\viewer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\default-mouse-input-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp">
@@ -1139,6 +1133,12 @@
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\mouse-input-strategy.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\default-text-viewer-mouse-input-strategy.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-mouse-input-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>
