@@ -32,17 +32,17 @@ namespace ascension {
 				if(position > columns_.size())
 					throw IndexOutOfBoundsException("position");
 				if(viewer_ != nullptr)
-					rulerColumn->install(*viewer_, *allocationWidthSink_, *this);
+					rulerColumn->install(*viewer_, *this, *allocationWidthSink_);
 				columns_.insert(std::begin(columns_) + position, std::move(rulerColumn));
 			}
 
 			/// @see Ruler#install
-			void CompositeRuler::install(SourceViewer& viewer, RulerAllocationWidthSink& allocationWidthSink, const RulerLocator& locator) {
+			void CompositeRuler::install(SourceViewer& viewer, const Locator& locator, RulerAllocationWidthSink& allocationWidthSink) {
 				if(viewer_ == nullptr) {
 					// install ruler columns
 					for(auto i(std::begin(columns_)), e(std::end(columns_)); i != e; ++i) {
 						try {
-							(*i)->install(viewer, allocationWidthSink, *this);
+							(*i)->install(viewer, *this, allocationWidthSink);
 						} catch(...) {
 							// rollback installation
 							for(auto j(std::begin(columns_)); j != i; ++j) {
@@ -59,14 +59,14 @@ namespace ascension {
 				}
 			}
 
-			/// @see RulerLocator#locateRuler
-			graphics::Rectangle CompositeRuler::locateRuler(const Ruler& ruler) const {
+			/// @see TextViewerComponent#Locator#locateComponent
+			graphics::Rectangle CompositeRuler::locateComponent(const TextViewerComponent& component) const {
 				if(viewer_ != nullptr) {
 					graphics::Scalar start = 0;
 					boost::optional<NumericRange<graphics::Scalar>> range;
 					BOOST_FOREACH(const std::unique_ptr<Ruler>& column, columns_) {
-						if(column.get() == &ruler) {
-							range = boost::irange(start, start + column->width());
+						if(column.get() == &component) {
+							range = nrange(start, start + column->width());
 							break;
 						}
 						start += column->width();
@@ -74,7 +74,7 @@ namespace ascension {
 					if(range == boost::none)
 						throw std::invalid_argument("ruler");
 				
-					const graphics::Rectangle composite(locator_->locateRuler(*this));
+					const graphics::Rectangle composite(locator_->locateComponent(*this));
 					const graphics::PhysicalDirection physicalAlignment = viewer_->rulerPhysicalAlignment();
 					graphics::Scalar offset = 0;
 					switch(boost::native_value(physicalAlignment)) {

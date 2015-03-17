@@ -15,7 +15,6 @@
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
-#include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/widgetapi/event/key-input.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-button-input.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-wheel-input.hpp>

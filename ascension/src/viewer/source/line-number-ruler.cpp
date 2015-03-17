@@ -38,8 +38,8 @@ namespace ascension {
 			}
 
 			inline void LineNumberRuler::invalidate() {
-				if(const RulerLocator* const rulerLocator = locator())
-					widgetapi::scheduleRedraw(*viewer(), rulerLocator->locateRuler(*this), false);
+				if(const TextViewerComponent::Locator* const componentLocator = locator())
+					widgetapi::scheduleRedraw(*viewer(), componentLocator->locateComponent(*this), false);
 			}
 
 			/// @see Ruler#paint

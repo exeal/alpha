@@ -21,7 +21,7 @@ namespace ascension {
 			 * configurable list of ruler columns. Such columns must implement the @c Ruler interface, too.
 			 * @see Ruler, TextViewer
 			 */
-			class CompositeRuler : public Ruler, private RulerLocator, private boost::noncopyable {
+			class CompositeRuler : public Ruler, private TextViewerComponent::Locator, private boost::noncopyable {
 			public:
 				CompositeRuler() BOOST_NOEXCEPT;
 				void addDecorator(std::size_t position, std::unique_ptr<Ruler> rulerColumn);
@@ -32,14 +32,14 @@ namespace ascension {
 				void paint(graphics::PaintContext& context) override;
 				graphics::Scalar width() const BOOST_NOEXCEPT override;
 				void install(SourceViewer& viewer,
-					RulerAllocationWidthSink& allocationWidthSink, const RulerLocator&) override;
+					const Locator& locator, RulerAllocationWidthSink& allocationWidthSink) override;
 				void uninstall(SourceViewer& viewer) override;
-				// RulerLocator
-				graphics::Rectangle locateRuler(const Ruler& ruler) const override;
+				// TextViewerComponent.Locator
+				graphics::Rectangle locateComponent(const TextViewerComponent& component) const override;
 			private:
 				SourceViewer* viewer_;
 				RulerAllocationWidthSink* allocationWidthSink_;
-				const RulerLocator* locator_;
+				const Locator* locator_;
 				std::vector<std::unique_ptr<Ruler>> columns_;
 			};
 		}

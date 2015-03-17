@@ -475,10 +475,10 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-allocation-width-sink.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-border-decorator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-decorator.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-locator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\source-viewer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\utility.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-component.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\virtual-box.hpp" />

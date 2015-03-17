@@ -12,17 +12,13 @@
 #ifndef ASCENSION_RULER_HPP
 #define ASCENSION_RULER_HPP
 #include <ascension/graphics/geometry/common.hpp>
+#include <ascension/viewer/text-viewer-component.hpp>
 
 namespace ascension {
-	namespace graphics {
-		class PaintContext;
-	}
-
 	namespace viewer {
 		namespace source {
 			class CompositeRuler;
 			struct RulerAllocationWidthSink;
-			struct RulerLocator;
 			class SourceViewer;
 
 			/**
@@ -30,28 +26,30 @@ namespace ascension {
 			 * side of the @c SourceViewer.
 			 * @see SourceViewer#ruler, SourceViewer#setRuler
 			 */
-			class Ruler {
+			class Ruler : public TextViewerComponent {
 			public:
 				/// Destructor.
 				virtual ~Ruler() BOOST_NOEXCEPT {}
-				/// Paints the content of this ruler.
-				virtual void paint(graphics::PaintContext& context) = 0;
 				/// Returns the width of this ruler in user units.
 				virtual graphics::Scalar width() const BOOST_NOEXCEPT = 0;
+
 			private:
 				/**
-				 * Installs this ruler to the specified text viewer.
+				 * Installs this ruler to the specified source viewer.
 				 * @param viewer The source viewer
-				 * @param allocationWidthSink The event sink which receives the change of the allocation width
 				 * @param locator The @c Ruler locator which locates where this ruler is
+				 * @param allocationWidthSink The event sink which receives the change of the allocation width
 				 */
 				virtual void install(SourceViewer& viewer,
-					RulerAllocationWidthSink& allocationWidthSink, const RulerLocator& locator) = 0;
+					const Locator& locator, RulerAllocationWidthSink& allocationWidthSink) = 0;
 				/**
-				 * Uninstalls this ruler from the specified text viewer.
+				 * Uninstalls this ruler from the specified source viewer.
 				 * @param viewer The source viewer
 				 */
 				virtual void uninstall(SourceViewer& viewer) = 0;
+
+				using TextViewerComponent::install;
+				using TextViewerComponent::uninstall;
 				friend class CompositeRuler;
 				friend class SourceViewer;
 			};
