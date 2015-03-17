@@ -25,9 +25,9 @@ namespace ascension {
 			}
 
 			/// @see RulerDecorator#locate
-			graphics::Rectangle RulerBorderDecorator::locate(const RulerLocator& parentLocator) const {
+			graphics::Rectangle RulerBorderDecorator::locate(const Locator& parentLocator) const {
 				if(const SourceViewer* sourceViewer = viewer()) {
-					const graphics::Rectangle composite(parentLocator.locateRuler(*this));
+					const graphics::Rectangle composite(parentLocator.locateComponent(*this));
 					assert(graphics::geometry::isNormalized(composite));
 					auto xrange(graphics::geometry::crange<0>(composite)), yrange(graphics::geometry::crange<1>(composite));
 					switch(boost::native_value(sourceViewer->rulerPhysicalAlignment())) {

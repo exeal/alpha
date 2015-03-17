@@ -9,7 +9,6 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/source/indicator-margin.hpp>
 #include <ascension/viewer/source/ruler-allocation-width-sink.hpp>
-#include <ascension/viewer/source/ruler-locator.hpp>
 
 namespace ascension {
 	namespace viewer {
@@ -20,9 +19,9 @@ namespace ascension {
 
 			/// @see Ruler#paint
 			void IndicatorMargin::paint(graphics::PaintContext& context) {
-				if(const RulerLocator* const rulerLocator = locator()) {
+				if(const Locator* const componentLocator = locator()) {
 					context.setFillStyle(std::make_shared<graphics::SolidColor>(backgroundColor()));
-					context.fillRectangle(rulerLocator->locateRuler(*this));
+					context.fillRectangle(componentLocator->locateComponent(*this));
 				}
 			}
 

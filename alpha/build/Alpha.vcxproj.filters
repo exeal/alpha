@@ -1126,9 +1126,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-locator.hpp">
-      <Filter>ascension\Header Files\viewer\source</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
@@ -1139,6 +1136,9 @@
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-mouse-input-strategy.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-component.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>

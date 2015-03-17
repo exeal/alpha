@@ -15,7 +15,7 @@ namespace ascension {
 	namespace viewer {
 		namespace source {
 			/// Base class of @Ruler interface decorator.
-			class RulerDecorator : public AbstractRuler, public RulerLocator {
+			class RulerDecorator : public AbstractRuler, public TextViewerComponent::Locator {
 			protected:
 				/**
 				 * Creates @c RulerDecorator object with the specified decoratee.
@@ -33,11 +33,11 @@ namespace ascension {
 					return *decoratee_;
 				}
 				/// @see Ruler#install
-				virtual void install(SourceViewer& viewer, RulerAllocationWidthSink& allocationWidthSink, const RulerLocator& locator) override {
-					return decoratee_->install(viewer, allocationWidthSink, *(locator_ = &locator));
+				virtual void install(SourceViewer& viewer, const Locator& locator, RulerAllocationWidthSink& allocationWidthSink) override {
+					return decoratee_->install(viewer, *(locator_ = &locator), allocationWidthSink);
 				}
 				/***/
-				virtual graphics::Rectangle locate(const RulerLocator& parentLocator) const = 0;
+				virtual graphics::Rectangle locate(const Locator& parentLocator) const = 0;
 				/// @see Ruler#uninstall
 				virtual void uninstall(SourceViewer& viewer) override {
 					locator_ = nullptr;
@@ -45,15 +45,15 @@ namespace ascension {
 				}
 
 			private:
-				graphics::Rectangle locateRuler(const Ruler& ruler) const {
-					if(&ruler != &decoratee())
+				graphics::Rectangle locateComponent(const TextViewerComponent& component) const override {
+					if(&component != &decoratee())
 						throw std::invalid_argument("ruler");
 					if(locator_ != nullptr)
 						return locate(*locator_);
 					return boost::geometry::make_zero<graphics::Rectangle>();
 				}
 				std::unique_ptr<AbstractRuler> decoratee_;
-				const RulerLocator* locator_;
+				const Locator* locator_;
 			};
 		}
 	}

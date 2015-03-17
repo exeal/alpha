@@ -59,15 +59,15 @@ namespace ascension {
 				}
 				/// Implements @c Ruler#install method.
 				virtual void install(SourceViewer& viewer,
-						RulerAllocationWidthSink& allocationWidthSink, const RulerLocator& locator) override {
+						const Locator& locator, RulerAllocationWidthSink& allocationWidthSink) override {
 					if(viewer_ == nullptr) {
 						viewer_ = &viewer;
 						allocationWidthSink_ = &allocationWidthSink;
 						locator_ = &locator;
 					}
 				}
-				/// Returns the installed @c RulerLocator, or @c null if not installed.
-				const RulerLocator* locator() const BOOST_NOEXCEPT {
+				/// Returns the installed @c TextViewerComponent#Locator, or @c null if not installed.
+				const Locator* locator() const BOOST_NOEXCEPT {
 					return locator_;
 				}
 				/// Implements @c Ruler#uninstall method.
@@ -82,7 +82,7 @@ namespace ascension {
 			private:
 				SourceViewer* viewer_;
 				RulerAllocationWidthSink* allocationWidthSink_;
-				const RulerLocator* locator_;
+				const Locator* locator_;
 				graphics::Color backgroundColor_;
 				friend class RulerDecorator;
 			};
