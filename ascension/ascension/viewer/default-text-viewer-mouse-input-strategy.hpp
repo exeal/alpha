@@ -1,15 +1,15 @@
 /**
- * @file default-mouse-input-strategy.hpp
- * This header defines several visual presentation classes.
+ * @file default-text-viewer-mouse-input-strategy.hpp
+ * Defines @c DefaultTextViewerMouseInputStrategy class.
  * @author exeal
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-10-04 separated from viewer.hpp
- * @date 2012, 2014-2015
+ * @date 2015-03-16 Renamed from default-mouse-input-strategy.hpp
  */
 
-#ifndef ASCENSION_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
-#define ASCENSION_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
+#ifndef ASCENSION_TEXT_VIEWER_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
+#define ASCENSION_TEXT_VIEWER_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/platforms.hpp>
@@ -42,7 +42,7 @@ namespace ascension {
 		}
 
 		// the documentation is user-input.cpp
-		class DefaultMouseInputStrategy : public MouseInputStrategy,
+		class DefaultMouseInputStrategy : public TextViewerMouseInputStrategy,
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::com::IUnknownImpl<ASCENSION_WIN32_COM_INTERFACE(IDropSource), win32::com::NoReferenceCounting>,
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -65,7 +65,7 @@ namespace ascension {
 			};
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 		public:
-			DefaultMouseInputStrategy();
+			DefaultTextViewerMouseInputStrategy();
 
 		protected:
 			/// @name Overridable @c widgetapi#DropTarget Implementation
@@ -91,12 +91,13 @@ namespace ascension {
 			// MouseInputStrategy
 			void captureChanged() override;
 			std::shared_ptr<widgetapi::DropTarget> handleDropTarget() const override;
-			void install(TextViewer& viewer) override;
 			void interruptMouseReaction(bool forKeyboardInput) override;
 			void mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input) override;
 			void mouseMoved(widgetapi::event::LocatedUserInput& input) override;
 			void mouseWheelRotated(widgetapi::event::MouseWheelInput& input) override;
 			bool showCursor(const graphics::Point& position) override;
+			// TextViewerMouseInputStrategy
+			void install(TextViewer& viewer) override;
 			void uninstall() override;
 			// HasTimer
 			void timeElapsed(Timer& timer) override;
@@ -138,4 +139,4 @@ namespace ascension {
 
 } // namespace ascension.viewer
 
-#endif // !ASCENSION_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
+#endif // !ASCENSION_DEFAULT_TEXT_VIEWER_MOUSE_INPUT_STRATEGY_HPP

@@ -1,12 +1,12 @@
 /**
- * @file viewer-observers.hpp
+ * @file text-viewer-mouse-input-strategy.hpp
  * @author exeal
  * @date 2011-03-30 separated from viewer.hpp
- * @date 2014
+ * @date 2015-03-16 Renamed from viewer-observers.hpp
  */
 
-#ifndef VIEWER_OBSERVERS_HPP
-#define VIEWER_OBSERVERS_HPP
+#ifndef ASCENSION_TEXT_VIEWER_MOUSE_INPUT_STRATEGY_HPP
+#define ASCENSION_TEXT_VIEWER_MOUSE_INPUT_STRATEGY_HPP
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/windows.hpp>
@@ -58,4 +58,4 @@ namespace ascension {
 	}
 }
 
-#endif // !VIEWER_OBSERVERS_HPP
+#endif // !ASCENSION_TEXT_VIEWER_MOUSE_INPUT_STRATEGY_HPP

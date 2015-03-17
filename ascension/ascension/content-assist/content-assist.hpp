@@ -12,7 +12,6 @@
 #include <ascension/corelib/timer.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/partition.hpp>	// kernel.ContentType
-#include <ascension/viewer/viewer-observers.hpp>
 #include <memory>	// std.shared_ptr
 #include <set>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
