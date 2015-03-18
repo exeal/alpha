@@ -251,7 +251,7 @@
     <ClCompile Include="..\..\ascension\src\viewer\caret-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\current-line-highlighter.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\default-caret-shaper.cpp" />
-    <ClCompile Include="..\..\ascension\src\viewer\default-text-viewer-mouse-input-strategy.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\default-text-area-mouse-input-strategy.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\composite-ruler.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\indicator-margin.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\line-number-ruler.cpp" />
@@ -466,7 +466,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-shaper.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\current-line-highlighter.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\default-caret-shaper.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\default-text-viewer-mouse-input-strategy.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\default-text-area-mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\abstract-ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\composite-ruler.hpp" />
