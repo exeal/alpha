@@ -1,20 +1,22 @@
 /**
- * @file default-text-viewer-mouse-input-strategy.hpp
- * Defines @c DefaultTextViewerMouseInputStrategy class.
+ * @file default-text-area-mouse-input-strategy.hpp
+ * Defines @c DefaultTextAreaMouseInputStrategy class.
  * @author exeal
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-10-04 separated from viewer.hpp
  * @date 2015-03-16 Renamed from default-mouse-input-strategy.hpp
+ * @date 2015-03-19 Renamed from default-text-viewer-mouse-input-strategy.hpp
  */
 
-#ifndef ASCENSION_TEXT_VIEWER_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
-#define ASCENSION_TEXT_VIEWER_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
+#ifndef ASCENSION_TEXT_AREA_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
+#define ASCENSION_TEXT_AREA_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/timer.hpp>	// Timer
 #include <ascension/kernel/position.hpp>	// kernel.Position
+#include <ascension/viewer/text-viewer-mouse-input-strategy.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
 #include <memory>	// std.unique_ptr
 #include <utility>	// std.pair
@@ -42,7 +44,7 @@ namespace ascension {
 		}
 
 		// the documentation is user-input.cpp
-		class DefaultMouseInputStrategy : public TextViewerMouseInputStrategy,
+		class DefaultTextAreaMouseInputStrategy : public TextViewerMouseInputStrategy,
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::com::IUnknownImpl<ASCENSION_WIN32_COM_INTERFACE(IDropSource), win32::com::NoReferenceCounting>,
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -51,7 +53,7 @@ namespace ascension {
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
 			 * Defines drag-and-drop support levels.
-			 * @see DefaultMouseInputStrategy#DefaultMouseInputStrategy
+			 * @see DefaultTextAreaMouseInputStrategy#DefaultTextAreaMouseInputStrategy
 			 */
 			enum DragAndDropSupport {
 				/// Disables drag-and-drop.
@@ -65,7 +67,7 @@ namespace ascension {
 			};
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 		public:
-			DefaultTextViewerMouseInputStrategy();
+			DefaultTextAreaMouseInputStrategy();
 
 		protected:
 			/// @name Overridable @c widgetapi#DropTarget Implementation
@@ -139,4 +141,4 @@ namespace ascension {
 
 } // namespace ascension.viewer
 
-#endif // !ASCENSION_DEFAULT_TEXT_VIEWER_MOUSE_INPUT_STRATEGY_HPP
+#endif // !ASCENSION_DEFAULT_TEXT_AREA_MOUSE_INPUT_STRATEGY_HPP

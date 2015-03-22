@@ -1175,22 +1175,22 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 		case WM_KILLFOCUS:
 			return (consumed = true), aboutToLoseFocus(), 0;
 		case WM_LBUTTONDBLCLK:
-			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(widgetapi::UserInput::BUTTON1_DOWN, wp, lp)), 0;
+			return (consumed = true), fireMouseDoubleClicked(makeMouseButtonInput(widgetapi::UserInput::BUTTON1_DOWN, wp, lp)), 0;
 		case WM_LBUTTONDOWN:
-			return (consumed = true), mousePressed(makeMouseButtonInput(widgetapi::UserInput::BUTTON1_DOWN, wp, lp)), 0;
+			return (consumed = true), fireMousePressed(makeMouseButtonInput(widgetapi::UserInput::BUTTON1_DOWN, wp, lp)), 0;
 		case WM_LBUTTONUP:
-			return (consumed = true), mouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON1_DOWN, wp, lp)), 0;
+			return (consumed = true), fireMouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON1_DOWN, wp, lp)), 0;
 		case WM_MBUTTONDBLCLK:
-			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(widgetapi::UserInput::BUTTON2_DOWN, wp, lp)), 0;
+			return (consumed = true), fireMouseDoubleClicked(makeMouseButtonInput(widgetapi::UserInput::BUTTON2_DOWN, wp, lp)), 0;
 		case WM_MBUTTONDOWN:
-			return (consumed = true), mousePressed(makeMouseButtonInput(widgetapi::UserInput::BUTTON2_DOWN, wp, lp)), 0;
+			return (consumed = true), fireMousePressed(makeMouseButtonInput(widgetapi::UserInput::BUTTON2_DOWN, wp, lp)), 0;
 		case WM_MBUTTONUP:
-			return (consumed = true), mouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON2_DOWN, wp, lp)), 0;
+			return (consumed = true), fireMouseouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON2_DOWN, wp, lp)), 0;
 		case WM_MOUSEMOVE:
-			return (consumed = true), mouseMoved(widgetapi::LocatedUserInput(makeMouseLocation<graphics::Point>(lp), makeModifiers(wp))), 0;
+			return (consumed = true), fireMouseMoved(widgetapi::LocatedUserInput(makeMouseLocation<graphics::Point>(lp), makeModifiers(wp))), 0;
 		case WM_MOUSEWHEEL:
 		case WM_MOUSEHWHEEL:
-			return (consumed = true), mouseWheelChanged(widgetapi::MouseWheelInput(
+			return (consumed = true), fireMouseWheelChanged(widgetapi::MouseWheelInput(
 				widgetapi::mapFromGlobal(*this, makeMouseLocation<graphics::Point>(lp)),
 				makeModifiers(GET_KEYSTATE_WPARAM(wp)),
 				Dimension(
@@ -1211,11 +1211,11 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			return 0;
 		}
 		case WM_RBUTTONDBLCLK:
-			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
+			return (consumed = true), fireMouseDoubleClicked(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
 		case WM_RBUTTONDOWN:
-			return (consumed = true), mousePressed(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
+			return (consumed = true), fireMousePressed(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
 		case WM_RBUTTONUP:
-			return (consumed = true), mouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
+			return (consumed = true), fireMouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
 		case WM_SETCURSOR:
 			onSetCursor(win32::Handle<HWND>::Type(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
 			return consumed ? TRUE : FALSE;
@@ -1236,11 +1236,11 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 		case WM_VSCROLL:
 			return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>::Type(reinterpret_cast<HWND>(lp))), 0;
 		case WM_XBUTTONDBLCLK:
-			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+			return (consumed = true), fireMouseDoubleClicked(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
 		case WM_XBUTTONDOWN:
-			return (consumed = true), mousePressed(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+			return (consumed = true), fireMousePressed(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
 		case WM_XBUTTONUP:
-			return (consumed = true), mouseReleased(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+			return (consumed = true), fireMouseReleased(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
 	}
 
 	return win32::CustomControl::processMessage(message, wp, lp, consumed);

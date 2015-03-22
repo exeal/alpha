@@ -1,10 +1,11 @@
 /**
- * @file default-text-viewer-mouse-input-strategy.cpp
+ * @file default-text-area-mouse-input-strategy.cpp
  * @author exeal
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-10-04 separated from viewer.cpp
  * @date 2015-03-16 Renamed from default-mouse-input-strategy.cpp
+ * @date 2015-03-19 Renamed from default-text-viewer-mouse-input-strategy.cpp
  */
 
 // TODO: This code does not support platforms other than Win32.
@@ -20,7 +21,7 @@
 #include <ascension/text-editor/session.hpp>	// texteditor.xxxIncrementalSearch
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/default-mouse-input-strategy.hpp>
+#include <ascension/viewer/default-text-area-mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <boost/foreach.hpp>
 #include <limits>	// std.numeric_limit
@@ -30,7 +31,7 @@
 namespace ascension {
 	namespace viewer {
 		/**
-		 * @class ascension#viewer#DefaultTextViewerMouseInputStrategy
+		 * @class ascension#viewer#DefaultTextAreaMouseInputStrategy
 		 * Standard implementation of @c MouseOperationStrategy interface.
 		 *
 		 * This class implements the standard behavior for the user's mouse input.
@@ -48,11 +49,11 @@ namespace ascension {
 		 * - Changes the mouse cursor according to the position of the cursor (Arrow, I-beam and hand).
 		 */
 
-		const unsigned int DefaultTextViewerMouseInputStrategy::SELECTION_EXPANSION_INTERVAL = 100;
-		const unsigned int DefaultTextViewerMouseInputStrategy::DRAGGING_TRACK_INTERVAL = 100;
+		const unsigned int DefaultTextAreaMouseInputStrategy::SELECTION_EXPANSION_INTERVAL = 100;
+		const unsigned int DefaultTextAreaMouseInputStrategy::DRAGGING_TRACK_INTERVAL = 100;
 
 		/// Default constructor.
-		DefaultTextViewerMouseInputStrategy::DefaultTextViewerMouseInputStrategy() : viewer_(nullptr), state_(NONE), lastHoveredHyperlink_(nullptr) {
+		DefaultTextAreaMouseInputStrategy::DefaultTextAreaMouseInputStrategy() : viewer_(nullptr), state_(NONE), lastHoveredHyperlink_(nullptr) {
 		}
 
 		namespace {
@@ -205,7 +206,7 @@ namespace ascension {
 			}
 		}
 
-		void DefaultTextViewerMouseInputStrategy::beginDragAndDrop(const widgetapi::event::LocatedUserInput& input) {
+		void DefaultTextAreaMouseInputStrategy::beginDragAndDrop(const widgetapi::event::LocatedUserInput& input) {
 			const Caret& caret = viewer_->caret();
 			if(!caret.isSelectionRectangle())
 				dnd_.numberOfRectangleLines = 0;
@@ -260,7 +261,7 @@ namespace ascension {
 		}
 
 		/// @see MouseInputStrategy#captureChanged
-		void DefaultTextViewerMouseInputStrategy::captureChanged() {
+		void DefaultTextAreaMouseInputStrategy::captureChanged() {
 			timer_.stop();
 			state_ = NONE;
 		}
@@ -295,7 +296,7 @@ namespace ascension {
 		}
 
 		/// @see DropTarget#dragEntered
-		void DefaultTextViewerMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
+		void DefaultTextAreaMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
 			input.setDropAction(widgetapi::DROP_ACTION_IGNORE);
 			if(/*dnd_.supportLevel == DONT_SUPPORT_DND ||*/ viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
 				return input.ignore(boost::none);
@@ -333,7 +334,7 @@ namespace ascension {
 		}
 
 		/// @see DropTarget#dragLeft
-		void DefaultTextViewerMouseInputStrategy::dragLeft(widgetapi::DragLeaveInput& input) {
+		void DefaultTextAreaMouseInputStrategy::dragLeft(widgetapi::DragLeaveInput& input) {
 			widgetapi::unsetFocus(*viewer_);
 			timer_.stop();
 //			if(dnd_.supportLevel >= SUPPORT_DND) {
@@ -372,7 +373,7 @@ namespace ascension {
 		}
 
 		/// @see DropTarget#dragMoved
-		void DefaultTextViewerMouseInputStrategy::dragMoved(widgetapi::DragMoveInput& input) {
+		void DefaultTextAreaMouseInputStrategy::dragMoved(widgetapi::DragMoveInput& input) {
 			widgetapi::DropAction dropAction = widgetapi::DROP_ACTION_IGNORE;
 			bool acceptable = false;
 			const graphics::font::TextViewportNotificationLocker lock(viewer_->textRenderer().viewport().get());
@@ -418,7 +419,7 @@ namespace ascension {
 		}
 
 		/// @see DropTarget#drop
-		void DefaultTextViewerMouseInputStrategy::dropped(widgetapi::DropInput& input) {
+		void DefaultTextAreaMouseInputStrategy::dropped(widgetapi::DropInput& input) {
 			kernel::Document& document = viewer_->document();
 			input.setDropAction(widgetapi::DROP_ACTION_IGNORE);
 			if(/*dnd_.supportLevel == DONT_SUPPORT_DND ||*/ document.isReadOnly() || !viewer_->allowsMouseInput())
@@ -527,7 +528,7 @@ namespace ascension {
 		 * Ends the auto scroll.
 		 * @return true if the auto scroll was active
 		 */
-		bool DefaultTextViewerMouseInputStrategy::endAutoScroll() {
+		bool DefaultTextAreaMouseInputStrategy::endAutoScroll() {
 			if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
 				timer_.stop();
 				state_ = NONE;
@@ -539,7 +540,7 @@ namespace ascension {
 		}
 
 		/// Extends the selection to the current cursor position.
-		void DefaultTextViewerMouseInputStrategy::extendSelectionTo(const kernel::Position* to /* = nullptr */) {
+		void DefaultTextAreaMouseInputStrategy::extendSelectionTo(const kernel::Position* to /* = nullptr */) {
 			if((state_ & SELECTION_EXTENDING_MASK) != SELECTION_EXTENDING_MASK)
 				throw IllegalStateException("not extending the selection.");
 			kernel::Position destination;
@@ -605,13 +606,13 @@ namespace ascension {
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		/// @see IDropSource#GiveFeedback
-		STDMETHODIMP DefaultTextViewerMouseInputStrategy::GiveFeedback(DWORD) {
+		STDMETHODIMP DefaultTextAreaMouseInputStrategy::GiveFeedback(DWORD) {
 			return DRAGDROP_S_USEDEFAULTCURSORS;	// use the system default cursor
 		}
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 		/// @see MouseInputStrategy#handleDropTarget
-		std::shared_ptr<widgetapi::DropTarget> DefaultTextViewerMouseInputStrategy::handleDropTarget() const {
+		std::shared_ptr<widgetapi::DropTarget> DefaultTextAreaMouseInputStrategy::handleDropTarget() const {
 			const widgetapi::DropTarget* const self = this;
 			return std::shared_ptr<widgetapi::DropTarget>(const_cast<widgetapi::DropTarget*>(self), boost::null_deleter());
 		}
@@ -619,14 +620,14 @@ namespace ascension {
 		/**
 		 * Handles double click action of the left button.
 		 * @param input The input event. Call @c Event#consume() if processed the input; In this case, the original
-		 *              behavior of @c DefaultTextViewerMouseInputStrategy is suppressed. The default implementation ignores this
+		 *              behavior of @c DefaultTextAreaMouseInputStrategy is suppressed. The default implementation ignores this
 		 */
-		void DefaultTextViewerMouseInputStrategy::handleLeftButtonDoubleClick(widgetapi::event::MouseButtonInput& input) {
+		void DefaultTextAreaMouseInputStrategy::handleLeftButtonDoubleClick(widgetapi::event::MouseButtonInput& input) {
 			return input.ignore();
 		}
 
 		/// @internal
-		void DefaultTextViewerMouseInputStrategy::handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input) {
+		void DefaultTextAreaMouseInputStrategy::handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input) {
 			bool boxDragging = false;
 			Caret& caret = viewer_->caret();
 			const TextViewer::HitTestResult htr = viewer_->hitTest(input.location());
@@ -707,7 +708,7 @@ namespace ascension {
 		}
 
 		/// @internal
-		void DefaultTextViewerMouseInputStrategy::handleLeftButtonReleased(widgetapi::event::MouseButtonInput& input) {
+		void DefaultTextAreaMouseInputStrategy::handleLeftButtonReleased(widgetapi::event::MouseButtonInput& input) {
 			// cancel if drag-and-drop approaching
 			if(/*dnd_.supportLevel >= SUPPORT_DND
 					&&*/ (state_ == APPROACHING_DND
@@ -732,10 +733,10 @@ namespace ascension {
 		 * Handles mouse right button input.
 		 * @param action Same as @c MouseInputStrategy#mouseButtonInput
 		 * @param input The input event. Call @c Event#consume() if processed the input; In this case, the original
-		 *              behavior of @c DefaultTextViewerMouseInputStrategy is suppressed. The default implementation
+		 *              behavior of @c DefaultTextAreaMouseInputStrategy is suppressed. The default implementation
 		 *              ignores this
 		 */
-		void DefaultTextViewerMouseInputStrategy::handleRightButton(Action action, widgetapi::event::MouseButtonInput& input) {
+		void DefaultTextAreaMouseInputStrategy::handleRightButton(Action action, widgetapi::event::MouseButtonInput& input) {
 			return input.ignore();
 		}
 
@@ -743,10 +744,10 @@ namespace ascension {
 		 * Handles mouse first X1 button input.
 		 * @param action Same as @c MouseInputStrategy#mouseButtonInput
 		 * @param input The input event. Call @c Event#consume() if processed the input; In this case, the original
-		 *              behavior of @c DefaultTextViewerMouseInputStrategy is suppressed. The default implementation
+		 *              behavior of @c DefaultTextAreaMouseInputStrategy is suppressed. The default implementation
 		 *              ignores this
 		 */
-		void DefaultTextViewerMouseInputStrategy::handleX1Button(Action action, widgetapi::event::MouseButtonInput& input) {
+		void DefaultTextAreaMouseInputStrategy::handleX1Button(Action action, widgetapi::event::MouseButtonInput& input) {
 			return input.ignore();
 		}
 
@@ -754,15 +755,15 @@ namespace ascension {
 		 * Handles mouse first X2 button input.
 		 * @param action Same as @c MouseInputStrategy#mouseButtonInput
 		 * @param input The input event. Call @c Event#consume() if processed the input; In this case, the original
-		 *              behavior of @c DefaultTextViewerMouseInputStrategy is suppressed. The default implementation
+		 *              behavior of @c DefaultTextAreaMouseInputStrategy is suppressed. The default implementation
 		 *              ignores this
 		 */
-		void DefaultTextViewerMouseInputStrategy::handleX2Button(Action action, widgetapi::event::MouseButtonInput& input) {
+		void DefaultTextAreaMouseInputStrategy::handleX2Button(Action action, widgetapi::event::MouseButtonInput& input) {
 			return input.ignore();
 		}
 
 		/// @see TextViewerMouseInputStrategy#install
-		void DefaultTextViewerMouseInputStrategy::install(TextViewer& viewer) {
+		void DefaultTextAreaMouseInputStrategy::install(TextViewer& viewer) {
 			if(viewer_ != nullptr)
 				uninstall();
 			viewer_ = &viewer;
@@ -777,13 +778,13 @@ namespace ascension {
 		}
 
 		/// @see MouseInputStrategy#interruptMouseReaction
-		void DefaultTextViewerMouseInputStrategy::interruptMouseReaction(bool forKeyboardInput) {
+		void DefaultTextAreaMouseInputStrategy::interruptMouseReaction(bool forKeyboardInput) {
 			if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL)
 				endAutoScroll();
 		}
 
 		/// @see MouseInputStrategy#mouseButtonInput
-		void DefaultTextViewerMouseInputStrategy::mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input) {
+		void DefaultTextAreaMouseInputStrategy::mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input) {
 			if(action != RELEASED && endAutoScroll())
 				return input.consume();
 
@@ -853,7 +854,7 @@ namespace ascension {
 		}
 
 		/// @see MouseInputStrategy#mouseMoved
-		void DefaultTextViewerMouseInputStrategy::mouseMoved(widgetapi::event::LocatedUserInput& input) {
+		void DefaultTextAreaMouseInputStrategy::mouseMoved(widgetapi::event::LocatedUserInput& input) {
 			if(state_ == APPROACHING_AUTO_SCROLL
 					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ state_ == APPROACHING_DND)) {	// dragging starts?
 				if(state_ == APPROACHING_DND && isSelectionEmpty(viewer_->caret())) {
@@ -886,7 +887,7 @@ namespace ascension {
 		}
 
 		/// @see MouseInputStrategy#mouseWheelRotated
-		void DefaultTextViewerMouseInputStrategy::mouseWheelRotated(widgetapi::event::MouseWheelInput& input) {
+		void DefaultTextAreaMouseInputStrategy::mouseWheelRotated(widgetapi::event::MouseWheelInput& input) {
 			if(!endAutoScroll()) {
 				const std::shared_ptr<graphics::font::TextViewport> viewport(viewer_->textRenderer().viewport());
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
@@ -928,7 +929,7 @@ namespace ascension {
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		/// Implements @c IDropSource#QueryContinueDrag method.
-		STDMETHODIMP DefaultTextViewerMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DWORD keyState) {
+		STDMETHODIMP DefaultTextAreaMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DWORD keyState) {
 			if(win32::boole(escapePressed) || win32::boole(keyState & MK_RBUTTON))	// cancel
 				return DRAGDROP_S_CANCEL;
 			if(!win32::boole(keyState & MK_LBUTTON))	// drop
@@ -938,7 +939,7 @@ namespace ascension {
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 		/// @see MouseInputStrategy#showCursor
-		bool DefaultTextViewerMouseInputStrategy::showCursor(const graphics::Point& position) {
+		bool DefaultTextAreaMouseInputStrategy::showCursor(const graphics::Point& position) {
 			boost::optional<widgetapi::Cursor::BuiltinShape> builtinShape;
 			const presentation::hyperlink::Hyperlink* newlyHoveredHyperlink = nullptr;
 
@@ -989,7 +990,7 @@ namespace ascension {
 			return false;
 		}
 
-		inline void DefaultTextViewerMouseInputStrategy::showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor) {
+		inline void DefaultTextAreaMouseInputStrategy::showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			viewer.get_window()->set_cursor(const_cast<widgetapi::Cursor&>(cursor).asNativeObject());
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
@@ -1004,7 +1005,7 @@ namespace ascension {
 		}
 
 		///
-		void DefaultTextViewerMouseInputStrategy::timeElapsed(Timer& timer) {
+		void DefaultTextAreaMouseInputStrategy::timeElapsed(Timer& timer) {
 			namespace geometry = graphics::geometry;
 			using graphics::font::TextViewport;
 			using graphics::font::TextViewportSignedScrollOffset;
@@ -1073,7 +1074,7 @@ namespace ascension {
 		}
 
 		/// @see TextViewerMouseInputStrategy#uninstall
-		void DefaultTextViewerMouseInputStrategy::uninstall() {
+		void DefaultTextAreaMouseInputStrategy::uninstall() {
 			timer_.stop();
 			if(autoScrollOriginMark_.get() != nullptr)
 				autoScrollOriginMark_.reset();
