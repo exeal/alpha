@@ -10,6 +10,8 @@
 
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/viewer/mouse-input-strategy.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 
 namespace ascension {
@@ -120,13 +122,13 @@ namespace ascension {
 			if(input.button() != widgetapi::event::LocatedUserInput::NO_BUTTON) {
 				switch(event->type) {
 					case Gdk::BUTTON_PRESS:
-						mousePressed(input);
+						fireMousePressed(input);
 						break;
 					case Gdk::DOUBLE_BUTTON_PRESS:
-						mouseDoubleClicked(input);
+						fireMouseDoubleClicked(input);
 						break;
 					case Gdk::TRIPLE_BUTTON_PRESS:
-						mouseTripleClicked(input);
+						fireMouseTripleClicked(input);
 						break;
 				}
 			}
@@ -140,7 +142,7 @@ namespace ascension {
 		bool TextViewer::on_button_release_event(GdkEventButton* event) {
 			widgetapi::event::MouseButtonInput input(makeMouseButtonInput(*event));
 			if(input.button() != widgetapi::event::LocatedUserInput::NO_BUTTON && event->type == GDK_BUTTON_RELEASE)
-				mouseReleased(input);
+				fireMouseReleased(input);
 			return input.isConsumed() || Gtk::Widget::on_button_release_event(event);
 		}
 
@@ -157,8 +159,8 @@ namespace ascension {
 
 		/// @see Gtk#Widget#on_drag_drop
 		bool TextViewer::on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) {
-			if(mouseInputStrategy_.get() != nullptr) {
-				if(const std::shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
+			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock()) {
+				if(const std::shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy->handleDropTarget()) {
 					detail::DragEventAdapter adapter(*dropTarget);
 					return adapter.adaptDropEvent(context, x, y, time);
 				}
@@ -168,8 +170,8 @@ namespace ascension {
 
 		/// @see Gtk#Widget#on_drag_leave
 		void TextViewer::on_drag_leave(const Glib::RefPtr<Gdk::DragContext>& context, guint time) {
-			if(mouseInputStrategy_.get() != nullptr) {
-				if(const std::shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
+			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock()) {
+				if(const std::shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy->handleDropTarget()) {
 					detail::DragEventAdapter adapter(*dropTarget);
 					return adapter.adaptDragLeaveEvent(context, time);
 				}
@@ -178,8 +180,8 @@ namespace ascension {
 
 		/// @see Gtk#Widget#on_drag_motion
 		bool TextViewer::on_drag_motion(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) {
-			if(mouseInputStrategy_.get() != nullptr) {
-				if(const std::shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
+			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock()) {
+				if(const std::shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy->handleDropTarget()) {
 					detail::DragEventAdapter adapter(*dropTarget);
 					return adapter.adaptDragMoveEvent(context, x, y, time);
 				}
@@ -259,7 +261,7 @@ namespace ascension {
 		bool TextViewer::on_motion_notify_event(GdkEventMotion* event) {
 			const auto a(makeLocatedUserInput(*event));
 			widgetapi::event::LocatedUserInput input(std::get<0>(a), std::get<1>(a), std::get<2>(a));
-			mouseMoved(input);
+			fireMouseMoved(input);
 			return input.isConsumed();
 		}
 
@@ -324,7 +326,7 @@ namespace ascension {
 			widgetapi::event::MouseWheelInput input(
 				graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event->x, graphics::geometry::_y = event->y)),
 				event->state & NATIVE_BUTTON_MASK, event->state & NATIVE_KEYBOARD_MASK, scrollAmount, wheelRotation);
-			mouseWheelChanged(input);
+			fireMouseWheelChanged(input);
 			return input.isConsumed();
 		}
 
