@@ -4,68 +4,46 @@
  * @date 2006-2010 was rendering.hpp
  * @date 2010-11-20 separated from ascension/layout.hpp
  * @date 2011-05-21 separated from rendering.hpp
- * @date 2011-2014
  */
 
 #ifndef ASCENSION_LINE_LAYOUT_VECTOR_HPP
 #define ASCENSION_LINE_LAYOUT_VECTOR_HPP
 #include <ascension/corelib/range.hpp>
 #include <ascension/kernel/document.hpp>
-#include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/graphics/font/visual-lines-listener.hpp>
+#include <ascension/graphics/geometry/common.hpp>
 #include <algorithm>	// std.sort
 #include <list>
 #include <memory>		// std.unique_ptr
+#include <utility>		// std.move
 #include <vector>
 #include <boost/range/algorithm/find_if.hpp>
 
 namespace ascension {
 	namespace graphics {
 		namespace font {
-			/**
-			 * Interface for objects which are interested in getting informed about change of
-			 * visual lines of @c LineLayoutVector.
-			 */
-			class VisualLinesModificationListener {
-			private:
+			struct VisualLine : private boost::totally_ordered<VisualLine> {
+				/// Default constructor.
+				VisualLine() BOOST_NOEXCEPT {}
 				/**
-				 * Several visual lines were modified.
-				 * @param lines The range of modified lines. @a lines.end() is exclusive
-				 * @param sublinesDifference The difference of the number of sublines between
-				 *        before and after the modification
-				 * @param documentChanged Set @c true if the layouts were modified for the document
-				 *                        change
-				 * @param longestLineChanged Set @c true if the longest line is changed
+				 * Constructor takes initial values.
+				 * @param line The logical line number
+				 * @param subline The visual offset in the logical line
 				 */
-				virtual void visualLinesModified(
-					const boost::integer_range<Index>& lines, SignedIndex sublinesDifference,
-					bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT = 0;
-				friend class LineLayoutVector;
+				VisualLine(Index line, Index subline) BOOST_NOEXCEPT : line(line), subline(subline) {}
+				Index line;		///< The logical line number.
+				Index subline;	///< The visual offset in the logical line.
 			};
+			/// The equality operator.
+			inline bool operator==(const VisualLine& lhs, const VisualLine& rhs) BOOST_NOEXCEPT {
+				return lhs.line == rhs.line && lhs.subline == rhs.subline;
+			}
+			/// The less-than operator.
+			inline bool operator<(const VisualLine& lhs, const VisualLine& rhs) BOOST_NOEXCEPT {
+				return lhs.line < rhs.line || (lhs.line == rhs.line && lhs.subline < rhs.subline);
+			}
 
-			/**
-			 * Interface for objects which are interested in getting informed about change of
-			 * visual lines of @c LineLayoutVector.
-			 * @see LineLayoutVector#addVisualLinesListener,
-			 *      LineLayoutVector#removeVisualLinesListener,
-			 *      TextViewport#addVisualLinesListener, TextViewport#removeVisualLinesListener
-			 */
-			class VisualLinesListener : public VisualLinesModificationListener {
-			private:
-				/**
-				 * Several visual lines were deleted.
-				 * @param lines The range of created lines. @a lines.end() is exclusive
-				 * @param sublines The total number of sublines of created lines
-				 * @param longestLineChanged Set @c true if the longest line is changed
-				 */
-				virtual void visualLinesDeleted(const boost::integer_range<Index>& lines,
-					Index sublines, bool longestLineChanged) BOOST_NOEXCEPT = 0;
-				/**
-				 * Several visual lines were inserted.
-				 * @param lines The range of inserted lines. @a lines.end() is exclusive
-				 */
-				virtual void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT = 0;
-				friend class LineLayoutVector;
-			};
+			class TextLayout;
 
 			/**
 			 * Manages a vector of layout (@c TextLayout) and holds the longest line and the number
@@ -276,34 +254,6 @@ namespace ascension {
 				return maximumMeasure_;
 			}
 
-			/**
-			 * Returns the number of sublines of the specified line.
-			 * If the layout of the line is not calculated, this method returns 1.
-			 * @param line The line
-			 * @return The number of the sublines
-			 * @throw IndexOutOfBoundsException @a line is outside of the document
-			 * @see #at(Index), TextLayout#numberOfLines
-			 */
-			inline Index LineLayoutVector::numberOfSublinesOfLine(Index line) const {
-				if(line >= document().numberOfLines())
-					throw IndexOutOfBoundsException("line");
-				const TextLayout* const layout = at(line);
-				return (layout != nullptr) ? layout->numberOfLines() : 1;
-			}
-
-			/**
-			 * Returns the number of sublines of the specified line.
-			 * @param line The line
-			 * @return The number of the sublines
-			 * @throw IndexOutOfBoundsException @a line is outside of the document
-			 * @see #at(Index, const UseCalculatedLayoutTag&), TextLayout#numberOfLines
-			 */
-			inline Index LineLayoutVector::numberOfSublinesOfLine(Index line, const UseCalculatedLayoutTag&) {
-				if(line >= document().numberOfLines())
-					throw IndexOutOfBoundsException("line");
-				return at(line, USE_CALCULATED_LAYOUT).numberOfLines();
-			}
-
 			/// Returns the number of the visual lines.
 			/// @note This method treats an uncalculated line as single visual line.
 			inline Index LineLayoutVector::numberOfVisualLines() const BOOST_NOEXCEPT {
@@ -340,7 +290,6 @@ namespace ascension {
 			inline void LineLayoutVector::removeVisualLinesListener(VisualLinesListener& listener) {
 				listeners_.remove(listener);
 			}
-
 		}
 	}
 } // namespace ascension.graphics.font
