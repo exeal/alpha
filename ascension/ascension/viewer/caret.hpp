@@ -11,7 +11,6 @@
 #define ASCENSION_CARET_HPP
 #include <ascension/corelib/text/identifier-syntax.hpp>	// text.IdentifierSyntax
 #include <ascension/graphics/font/text-viewport-listener.hpp>
-#include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 
@@ -48,6 +47,17 @@ namespace ascension {
 	}
 
 	namespace viewer {
+		namespace detail {
+			class InputEventHandler {	// this is not an observer of caret...
+			private:
+				virtual void abortInput() = 0;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				virtual LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) = 0;
+#endif
+				friend class TextViewer;
+			};
+		}
+
 		// documentation is caret.cpp
 		class Caret : public VisualPoint, public detail::InputEventHandler,
 			public kernel::PointListener, public kernel::DocumentListener,

@@ -44,17 +44,6 @@ namespace ascension {
 			/// Uninstalls the strategy. The window is not destroyed yet at this time.
 			virtual void uninstall() = 0;
 		};
-
-		namespace detail {
-			class InputEventHandler {	// this is not an observer of caret...
-			private:
-				virtual void abortInput() = 0;
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				virtual LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) = 0;
-#endif
-				friend class TextViewer;
-			};
-		}
 	}
 }
 
