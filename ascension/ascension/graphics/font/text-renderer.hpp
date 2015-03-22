@@ -20,8 +20,10 @@
 
 namespace ascension {
 	namespace graphics {
-		namespace font {
+		class PaintContext;
+		class RenderingContext2D;
 
+		namespace font {
 			class Font;
 			class FontCollection;
 			class TextViewport;
