@@ -34,6 +34,8 @@ namespace ascension {
 
 				/// @name Overridable Widget Events
 				/// @{
+				virtual void keyPressed(widgetapi::event::KeyInput& input) override;
+				virtual void keyReleased(widgetapi::event::KeyInput& input) override;
 				virtual void paint(graphics::PaintContext& context) override;
 				virtual void resized(const graphics::Dimension& newSize) override;
 				/// @}

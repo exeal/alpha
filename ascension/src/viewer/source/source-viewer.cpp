@@ -38,6 +38,24 @@ namespace ascension {
 				return graphics::geometry::make<graphics::Rectangle>(result);
 			}
 
+			/// @see TextViewer#keyPressed
+			void SourceViewer::keyPressed(widgetapi::event::KeyInput& input) {
+				if(ruler_.get() != nullptr) {
+					if(const auto mouseInputStrategy = ruler_->mouseInputStrategy().lock())
+						mouseInputStrategy->interruptMouseReaction();
+				}
+				return TextViewer::keyPressed(input);
+			}
+
+			/// @see TextViewer#keyReleased
+			void SourceViewer::keyReleased(widgetapi::event::KeyInput& input) {
+				if(input.hasModifier(widgetapi::event::UserInput::ALT_DOWN) && ruler_.get() != nullptr) {
+					if(const auto mouseInputStrategy = ruler_->mouseInputStrategy().lock())
+						mouseInputStrategy_->interruptMouseReaction(true);
+				}
+				return TextViewer::keyReleased(input);
+			}
+
 			/// @see TextViewer#paint
 			void SourceViewer::paint(graphics::PaintContext& context) {
 				TextViewer::paint(context);
