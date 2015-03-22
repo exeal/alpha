@@ -22,6 +22,8 @@ namespace ascension {
 	namespace graphics {
 		namespace font {
 
+			class Font;
+			class FontCollection;
 			class TextViewport;
 
 			// documentation is text-renderer.cpp

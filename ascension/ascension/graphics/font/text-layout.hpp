@@ -45,27 +45,6 @@ namespace ascension {
 
 			presentation::WritingMode writingMode(const TextLayout& textLayout) BOOST_NOEXCEPT;
 
-			struct VisualLine : private boost::totally_ordered<VisualLine> {
-				/// Default constructor.
-				VisualLine() BOOST_NOEXCEPT {}
-				/**
-				 * Constructor takes initial values.
-				 * @param line The logical line number
-				 * @param subline The visual offset in the logical line
-				 */
-				VisualLine(Index line, Index subline) BOOST_NOEXCEPT : line(line), subline(subline) {}
-				Index line;		///< The logical line number.
-				Index subline;	///< The visual offset in the logical line.
-			};
-			/// The equality operator.
-			inline bool operator==(const VisualLine& lhs, const VisualLine& rhs) BOOST_NOEXCEPT {
-				return lhs.line == rhs.line && lhs.subline == rhs.subline;
-			}
-			/// The less-than operator.
-			inline bool operator<(const VisualLine& lhs, const VisualLine& rhs) BOOST_NOEXCEPT {
-				return lhs.line < rhs.line || (lhs.line == rhs.line && lhs.subline < rhs.subline);
-			}
-
 			/**
 			 * The @c InlineObject represents an inline object in @c TextLayout.
 			 */
