@@ -12,6 +12,9 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
+#	include <ascension/graphics/physical-directions-dimensions.hpp>
+#endif
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
@@ -49,18 +52,21 @@
 
 
 namespace ascension {
+	namespace contentassist {
+		class ContentAssistant;
+	}
+
+	namespace presentation {
+		struct ComputedTextToplevelStyle;
+		class DeclaredTextToplevelStyle;
+	}
+
 	namespace viewer {
 		class Caret;
 		class TextArea;
 		class VirtualBox;
 		class VisualPoint;
-	}
 
-	namespace contentassist {
-		class ContentAssistant;
-	}
-
-	namespace viewer {
 		namespace detail {
 			/// @internal Implementes "Mouse Vanish" feature.
 			template<typename Derived>

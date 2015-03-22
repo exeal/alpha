@@ -10,6 +10,7 @@
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/glyph-metrics.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/viewer/source/line-number-ruler.hpp>
 #include <ascension/viewer/source/ruler-allocation-width-sink.hpp>
@@ -193,7 +194,7 @@ namespace ascension {
 			void LineNumberRuler::visualLinesDeleted(const boost::integer_range<Index>& lines,
 					Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
 				if(const SourceViewer* const sourceViewer = viewer()) {
-					if(*lines.end() < sourceViewer->textRenderer().viewport()->firstVisibleLine().line)	// deleted before visible area
+					if(*lines.end() < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// deleted before visible area
 						invalidate();
 				}
 			}
@@ -201,7 +202,7 @@ namespace ascension {
 			/// @see graphics#font#VisualLinesListener#visualLinesInserted
 			void LineNumberRuler::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
 				if(const SourceViewer* const sourceViewer = viewer()) {
-					if(*lines.end() < sourceViewer->textRenderer().viewport()->firstVisibleLine().line)	// inserted before visible area
+					if(*lines.end() < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// inserted before visible area
 						invalidate();
 				}
 			}
@@ -211,7 +212,7 @@ namespace ascension {
 					SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT {
 				if(const SourceViewer* const sourceViewer = viewer()) {
 					if(sublinesDifference != 0) {	// number of visual lines was changed
-						if(*lines.end() < sourceViewer->textRenderer().viewport()->firstVisibleLine().line)	// changed before visible area
+						if(*lines.end() < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// changed before visible area
 							invalidate();
 					}
 				}
@@ -224,7 +225,7 @@ namespace ascension {
 				if(width_ == boost::none) {
 					const graphics::Scalar interiorWidth = paddingStart_ + paddingEnd_;
 
-					const std::shared_ptr<const graphics::font::Font> font((font_.get() != nullptr) ? font_ : viewer()->textRenderer().defaultFont());
+					const std::shared_ptr<const graphics::font::Font> font((font_.get() != nullptr) ? font_ : viewer()->textArea().textRenderer().defaultFont());
 					std::unique_ptr<graphics::RenderingContext2D> context(widgetapi::createRenderingContext(*viewer()));
 					LineNumberRuler& self = *const_cast<LineNumberRuler*>(this);
 					self.updateNumberOfDigits();
