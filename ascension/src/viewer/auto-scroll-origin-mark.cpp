@@ -13,7 +13,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/default-mouse-input-strategy.hpp>
+//#include <ascension/viewer/default-mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 
 namespace ascension {

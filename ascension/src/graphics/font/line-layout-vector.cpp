@@ -10,6 +10,7 @@
 
 #include <ascension/corelib/range.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/sort.hpp>
 #ifdef _DEBUG
@@ -388,6 +389,33 @@ namespace ascension {
 				return result;
 			}
 #endif // 0
+			/**
+			 * Returns the number of sublines of the specified line.
+			 * If the layout of the line is not calculated, this method returns 1.
+			 * @param line The line
+			 * @return The number of the sublines
+			 * @throw IndexOutOfBoundsException @a line is outside of the document
+			 * @see #at(Index), TextLayout#numberOfLines
+			 */
+			Index LineLayoutVector::numberOfSublinesOfLine(Index line) const {
+				if(line >= document().numberOfLines())
+					throw IndexOutOfBoundsException("line");
+				const TextLayout* const layout = at(line);
+				return (layout != nullptr) ? layout->numberOfLines() : 1;
+			}
+
+			/**
+			 * Returns the number of sublines of the specified line.
+			 * @param line The line
+			 * @return The number of the sublines
+			 * @throw IndexOutOfBoundsException @a line is outside of the document
+			 * @see #at(Index, const UseCalculatedLayoutTag&), TextLayout#numberOfLines
+			 */
+			Index LineLayoutVector::numberOfSublinesOfLine(Index line, const UseCalculatedLayoutTag&) {
+				if(line >= document().numberOfLines())
+					throw IndexOutOfBoundsException("line");
+				return at(line, USE_CALCULATED_LAYOUT).numberOfLines();
+			}
 
 			/// @internal
 			SignedIndex LineLayoutVector::offsetVisualLine(VisualLine& line, SignedIndex offset, bool useCalculatedLayout) const {

@@ -14,6 +14,7 @@
 #include <ascension/corelib/scope-guard.hpp>
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
+#include <ascension/graphics/font/text-hit.hpp>
 #include <ascension/graphics/font/text-renderer-observers.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/kernel/point.hpp>	// kernel.locations
@@ -27,6 +28,7 @@
 
 namespace ascension {
 	namespace presentation {
+		struct ComputedTextToplevelStyle;
 		class DeclaredTextToplevelStyle;
 	}
 
