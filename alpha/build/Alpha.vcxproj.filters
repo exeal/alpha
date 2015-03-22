@@ -1147,6 +1147,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\default-text-area-mouse-input-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\visual-lines-listener.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
