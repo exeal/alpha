@@ -82,7 +82,7 @@ namespace ascension {
 				 * @return A hit describing the character and edge (leading or trailing) under the specified position
 				 * @see TextLayout#hitTestCharacter
 				 */
-				virtual TextHit<>&& hitTestCharacter(Scalar position,
+				virtual TextHit<> hitTestCharacter(Scalar position,
 					const boost::optional<NumericRange<Scalar>>& bounds,
 					bool* outOfBounds = nullptr) const BOOST_NOEXCEPT = 0;
 				/**

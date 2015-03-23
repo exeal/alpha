@@ -656,7 +656,7 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 					std::uint8_t characterLevel() const BOOST_NOEXCEPT override;
 					StringPiece characterRange() const BOOST_NOEXCEPT override;
-					TextHit<>&& hitTestCharacter(Scalar ipd, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const override;
+					TextHit<> hitTestCharacter(Scalar ipd, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const override;
 					Scalar hitToLogicalPosition(const TextHit<>& hit) const override;
 					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT override {return nullptr;}
 					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT override {return nullptr;}
@@ -1312,7 +1312,7 @@ namespace ascension {
 #endif
 
 				/// @see TextRun#hitTestCharacter
-				TextHit<>&& GlyphVectorImpl::hitTestCharacter(Scalar position, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const {
+				TextHit<> GlyphVectorImpl::hitTestCharacter(Scalar position, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const {
 					bool beyondLineLeft = false, beyondLineRight = false;
 					if(bounds) {
 						if(position < std::min(*bounds->begin(), *bounds->end()))
