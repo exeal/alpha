@@ -25,8 +25,9 @@ namespace ascension {
 			MimeDataFormats::MimeDataFormats(std::vector<std::string>&& targets) : targets_(targets) {
 			}
 
-			std::list<MimeDataFormats::Format>&& MimeDataFormats::formats() const {
-				return std::list<MimeDataFormats::Format>(std::begin(targets_), std::end(targets_));
+			void MimeDataFormats::formats(std::vector<Format>& out) const {
+				std::vector<Format> temp(targets_);
+				std::swap(out, temp);
 			}
 
 			bool MimeDataFormats::hasFormat(Format format) const BOOST_NOEXCEPT {
@@ -50,16 +51,17 @@ namespace ascension {
 			MimeData::MimeData(Gtk::SelectionData& impl) : impl_(&impl, boost::null_deleter()) {
 			}
 
-			std::vector<std::uint8_t>&& MimeData::data(Format format) const {
+			void MimeData::data(Format format, std::vector<std::uint8_t>& out) const {
 				if(format != impl_->get_target())
 					throw 0;
 				const guchar* const p = impl_->get_data();
-				return std::vector<std::uint8_t>(p, p + impl_->get_length());
+				std::vector<std::uint8_t> temp(p, p + impl_->get_length());
+				std::swap(out, temp);
 			}
 
-			std::list<MimeDataFormats::Format>&& MimeData::formats() const {
-				const std::vector<std::string> targets(impl_->get_targets());
-				return std::list<MimeDataFormats::Format>(std::begin(targets), std::end(targets));
+			void MimeData::formats(std::vector<MimeDataFormats::Format>& out) const {
+				std::vector<std::string> temp(impl_->get_targets());
+				std::swap(out, temp);
 			}
 
 			bool MimeData::hasFormat(Format format) const BOOST_NOEXCEPT {
@@ -104,7 +106,8 @@ namespace ascension {
 			DropAction DragContext::execute(DropAction supportedActions, int mouseButton, GdkEvent* event) {
 				if(mimeData_.get() == nullptr)
 					throw IllegalStateException("DragContext.setMimeData is not called.");
-				const std::list<MimeData::Format> formats(mimeData_->formats());
+				std::vector<MimeData::Format> formats;
+				mimeData_->formats(formats);
 				std::vector<Gtk::TargetEntry> targetEntries;
 				BOOST_FOREACH(auto format, formats)
 					targetEntries.push_back(Gtk::TargetEntry(format));

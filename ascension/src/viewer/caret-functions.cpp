@@ -524,7 +524,8 @@ namespace ascension {
 			std::pair<String, bool> getTextFromMimeData(const widgetapi::MimeData& data) {
 				if(!data.hasText())
 					throw std::invalid_argument("'data' does not have text data.");
-				const auto availableFormats(data.formats());
+				std::vector<widgetapi::MimeDataFormats::Format> availableFormats;
+				data.formats(availableFormats);
 				return std::make_pair(data.text(), boost::range::find(availableFormats, rectangleTextMimeDataFormat()) != boost::end(availableFormats));
 			}
 

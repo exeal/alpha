@@ -102,7 +102,7 @@ namespace ascension {
 #endif
 					Format;
 				/// Returns a list of formats supported by the object.
-				virtual std::list<Format>&& formats() const;
+				virtual void formats(std::vector<Format>& out) const;
 				/// Returns @c true if this object can return data for the MIME type specified by @a format.
 				virtual bool hasFormat(Format format) const BOOST_NOEXCEPT;
 //				/// Returns @c true if this object can return an image.
@@ -127,7 +127,7 @@ namespace ascension {
 				/// Default constructor creates an empty MIME data.
 				MimeData();
 
-				std::vector<std::uint8_t>&& data(Format format) const;
+				void data(Format format, std::vector<std::uint8_t>& out) const;
 //				graphics::Image image() const;
 				String text() const;
 				template<typename OutputIterator> void uris(OutputIterator out) const;
@@ -138,7 +138,7 @@ namespace ascension {
 				template<typename SinglePassReadableRange> void setURIs(const SinglePassReadableRange& uris);
 
 				// MimeDataFormats
-				std::list<Format>&& formats() const override;
+				void formats(std::vector<Format>& out) const override;
 				virtual bool hasFormat(Format format) const BOOST_NOEXCEPT override;
 //				bool hasImage() const BOOST_NOEXCEPT override;
 				bool hasText() const BOOST_NOEXCEPT override;
