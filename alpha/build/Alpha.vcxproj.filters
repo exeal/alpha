@@ -1150,6 +1150,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\visual-lines-listener.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\is-close.hpp">
+      <Filter>ascension\Header Files\corelib\detail</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
