@@ -11,6 +11,7 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/viewer/caret.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <ascension/win32/ui/wait-cursor.hpp>
 
 namespace ascension {
@@ -175,7 +176,7 @@ namespace ascension {
 							presentation::FlowRelativeTwoAxes<graphics::font::TextViewportSignedScrollOffset> delta;
 							delta.bpd() = offset;
 							delta.ipd() = 0;
-							target.textRenderer().viewport()->scroll(delta);
+							target.textArea().textRenderer().viewport()->scroll(delta);
 						}
 					}
 				}
