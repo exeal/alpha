@@ -26,7 +26,7 @@ namespace ascension {
 		class Caret;
 
 		namespace utils {
-			widgetapi::MimeData&& createMimeDataForSelectedString(const Caret& caret, bool rtf);
+			std::unique_ptr<widgetapi::MimeData> createMimeDataForSelectedString(const Caret& caret, bool rtf);
 			std::pair<String, bool> getTextFromMimeData(const widgetapi::MimeData& data);
 			widgetapi::MimeDataFormats::Format rectangleTextMimeDataFormat();
 		}

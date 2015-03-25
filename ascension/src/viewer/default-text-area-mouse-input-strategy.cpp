@@ -12,6 +12,8 @@
 
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/image.hpp>
 #include <ascension/graphics/rendering-context.hpp>
@@ -19,10 +21,11 @@
 #include <ascension/presentation/hyperlink/hyperlink.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/text-editor/session.hpp>	// texteditor.xxxIncrementalSearch
-#include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-text-area-mouse-input-strategy.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
 #include <limits>	// std.numeric_limit
 
@@ -69,7 +72,7 @@ namespace ascension {
 				namespace geometry = graphics::geometry;
 				using graphics::Scalar;
 				const graphics::Rectangle clientBounds(widgetapi::bounds(viewer, false));
-				graphics::font::TextRenderer& renderer = viewer.textRenderer();
+				graphics::font::TextRenderer& renderer = viewer.textArea().textRenderer();
 				std::shared_ptr<const graphics::font::TextViewport> viewport(renderer.viewport());
 //				const graphics::font::TextViewportNotificationLocker lock(viewport.get());
 				graphics::Rectangle selectionBounds(
@@ -218,8 +221,8 @@ namespace ascension {
 			// setup drag-image and begin operation
 			widgetapi::DragContext d(*viewer_);
 
-			const widgetapi::MimeData draggingContent(utils::createMimeDataForSelectedString(viewer_->caret(), true));
-			d.setMimeData(std::shared_ptr<const widgetapi::MimeData>(&draggingContent, boost::null_deleter()));
+			const std::shared_ptr<const widgetapi::MimeData> draggingContent(utils::createMimeDataForSelectedString(viewer_->caret(), true));
+			d.setMimeData(draggingContent);
 
 			graphics::geometry::BasicRectangle<std::int32_t> imageDimensions;
 			std::unique_ptr<graphics::Image> image(createSelectionImage(*viewer_, dragApproachedPosition_, true, imageDimensions));
@@ -349,7 +352,8 @@ namespace ascension {
 				const graphics::Point p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
 				const graphics::Rectangle localBounds(widgetapi::bounds(viewer, false));
 				graphics::Rectangle inset(viewer.textAreaContentRectangle());
-				std::unique_ptr<const graphics::font::FontMetrics<graphics::Scalar>> fontMetrics(widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textRenderer().defaultFont()));
+				std::unique_ptr<const graphics::font::FontMetrics<graphics::Scalar>> fontMetrics(
+					widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textArea().textRenderer().defaultFont()));
 
 				namespace geometry = graphics::geometry;
 				geometry::range<0>(inset) = boost::irange(
@@ -376,12 +380,12 @@ namespace ascension {
 		void DefaultTextAreaMouseInputStrategy::dragMoved(widgetapi::DragMoveInput& input) {
 			widgetapi::DropAction dropAction = widgetapi::DROP_ACTION_IGNORE;
 			bool acceptable = false;
-			const graphics::font::TextViewportNotificationLocker lock(viewer_->textRenderer().viewport().get());
+			const graphics::font::TextViewportNotificationLocker lock(viewer_->textArea().textRenderer().viewport().get());
 
 			if((state_ == DND_SOURCE || state_ == DND_TARGET)
 					&& !viewer_->document().isReadOnly() && viewer_->allowsMouseInput()) {
 				const graphics::Point caretPoint(widgetapi::mapFromGlobal(*viewer_, input.location()));
-				const kernel::Position p(viewToModel(*viewer_->textRenderer().viewport(), caretPoint).characterIndex());
+				const kernel::Position p(viewToModel(*viewer_->textArea().textRenderer().viewport(), caretPoint).characterIndex());
 //				viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
 
 				// drop rectangle text into bidirectional line is not supported...
@@ -391,7 +395,7 @@ namespace ascension {
 					const Index lines = std::min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
 					bool bidirectional = false;
 					for(Index line = p.line; line < lines; ++line) {
-						if(viewer_->textRenderer().layouts()[line].isBidirectional()) {
+						if(viewer_->textArea().textRenderer().layouts()[line].isBidirectional()) {
 							bidirectional = true;
 							break;
 						}
@@ -409,9 +413,11 @@ namespace ascension {
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					// only one direction to scroll
 					if(scrollOffset.x() != 0)
-						viewer_->textRenderer().viewport()->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(0, scrollOffset.y()));
+						viewer_->textArea().textRenderer().viewport()->scroll(
+							graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(0, scrollOffset.y()));
 					else
-						viewer_->textRenderer().viewport()->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(scrollOffset.x(), 0));
+						viewer_->textArea().textRenderer().viewport()->scroll(
+							graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(scrollOffset.x(), 0));
 				}
 			}
 			input.setDropAction(dropAction);
@@ -426,7 +432,7 @@ namespace ascension {
 				return input.ignore();
 
 			Caret& caret = viewer_->caret();
-			const std::shared_ptr<graphics::font::TextViewport> viewport(viewer_->textRenderer().viewport());
+			const std::shared_ptr<graphics::font::TextViewport> viewport(viewer_->textArea().textRenderer().viewport());
 			const graphics::font::TextViewportNotificationLocker lock(viewport.get());
 			const graphics::Point caretPoint(input.location());
 			const kernel::Position destination(graphics::font::viewToModel(*viewport, caretPoint).characterIndex());
@@ -562,7 +568,7 @@ namespace ascension {
 				geometry::y(p) = std::min<graphics::Scalar>(
 					std::max<graphics::Scalar>(geometry::y(p), geometry::top(contentRectangle)),
 					geometry::bottom(contentRectangle));
-				destination = viewToModel(*viewer_->textRenderer().viewport(), p).characterIndex();
+				destination = viewToModel(*viewer_->textArea().textRenderer().viewport(), p).characterIndex();
 			} else
 				destination = *to;
 
@@ -637,7 +643,7 @@ namespace ascension {
 
 			// select line(s)
 			if(htr == source::SourceViewer::RULER) {
-				const kernel::Position to(viewToModel(*viewer_->textRenderer().viewport(), input.location()).insertionIndex());
+				const kernel::Position to(viewToModel(*viewer_->textArea().textRenderer().viewport(), input.location()).insertionIndex());
 				const bool extend = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN) && to.line != line(caret.anchor());
 				state_ = EXTENDING_LINE_SELECTION;
 				selection_.initialLine = extend ? line(caret.anchor()) : to.line;
@@ -660,7 +666,8 @@ namespace ascension {
 				bool hyperlinkInvoked = false;
 				if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN)) {
 					if(!isPointOverSelection(caret, input.location())) {
-						if(const boost::optional<graphics::font::TextHit<kernel::Position>> p = viewToModelInBounds(*viewer_->textRenderer().viewport(), input.location())) {
+						if(const boost::optional<graphics::font::TextHit<kernel::Position>> p =
+								viewToModelInBounds(*viewer_->textArea().textRenderer().viewport(), input.location())) {
 							if(const presentation::hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, p->characterIndex())) {
 								link->invoke();
 								hyperlinkInvoked = true;
@@ -675,7 +682,8 @@ namespace ascension {
 					// shift => keep the anchor and move the caret to the cursor position
 					// ctrl  => begin word selection
 					// alt   => begin rectangle selection
-					if(const boost::optional<graphics::font::TextHit<kernel::Position>> to = viewToModelInBounds(*viewer_->textRenderer().viewport(), input.location())) {
+					if(const boost::optional<graphics::font::TextHit<kernel::Position>> to =
+							viewToModelInBounds(*viewer_->textArea().textRenderer().viewport(), input.location())) {
 						state_ = EXTENDING_CHARACTER_SELECTION;
 						if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN | widgetapi::event::UserInput::SHIFT_DOWN)) {
 							if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN)) {
@@ -714,7 +722,7 @@ namespace ascension {
 					&&*/ (state_ == APPROACHING_DND
 					|| state_ == DND_SOURCE)) {	// TODO: this should handle only case APPROACHING_DND?
 				state_ = NONE;
-				viewer_->caret().moveTo(viewToModel(*viewer_->textRenderer().viewport(), input.location()).characterIndex());
+				viewer_->caret().moveTo(viewToModel(*viewer_->textArea().textRenderer().viewport(), input.location()).characterIndex());
 				::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
 			}
 
@@ -815,7 +823,7 @@ namespace ascension {
 					break;
 				case widgetapi::event::LocatedUserInput::BUTTON2_DOWN:
 					if(action == PRESSED) {
-						if(viewer_->document().numberOfLines() > viewer_->textRenderer().viewport()->numberOfVisibleLines()) {
+						if(viewer_->document().numberOfLines() > viewer_->textArea().textRenderer().viewport()->numberOfVisibleLines()) {
 							state_ = APPROACHING_AUTO_SCROLL;
 							dragApproachedPosition_ = input.location();
 							const graphics::Point p(widgetapi::mapToGlobal(*viewer_, input.location()));
@@ -889,7 +897,7 @@ namespace ascension {
 		/// @see MouseInputStrategy#mouseWheelRotated
 		void DefaultTextAreaMouseInputStrategy::mouseWheelRotated(widgetapi::event::MouseWheelInput& input) {
 			if(!endAutoScroll()) {
-				const std::shared_ptr<graphics::font::TextViewport> viewport(viewer_->textRenderer().viewport());
+				const std::shared_ptr<graphics::font::TextViewport> viewport(viewer_->textArea().textRenderer().viewport());
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
 				// use system settings
 				UINT lines;	// the number of lines to scroll
@@ -915,7 +923,7 @@ namespace ascension {
 						graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(graphics::geometry::dx(input.wheelRotation())),
 						graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(graphics::geometry::dy(input.wheelRotation())));
 					presentation::FlowRelativeTwoAxes<graphics::font::TextViewportSignedScrollOffset> flowRelativePages(
-						presentation::mapPhysicalToFlowRelative(viewer_->textRenderer().presentation().computeWritingMode(), physicalPages));
+						presentation::mapPhysicalToFlowRelative(viewer_->textArea().textRenderer().presentation().computeWritingMode(), physicalPages));
 					if(flowRelativePages.bpd() != 0) {
 						viewport->scrollBlockFlowPage(flowRelativePages.bpd());
 						flowRelativePages.bpd() = 0;
@@ -960,7 +968,7 @@ namespace ascension {
 			else if(htr == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {
 				// on a hyperlink?
 				if(const boost::optional<graphics::font::TextHit<kernel::Position>> p =
-						viewToModelInBounds(*viewer_->textRenderer().viewport(), position, kernel::locations::UTF16_CODE_UNIT))
+						viewToModelInBounds(*viewer_->textArea().textRenderer().viewport(), position, kernel::locations::UTF16_CODE_UNIT))
 					newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, p->characterIndex());
 				if(newlyHoveredHyperlink != nullptr && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -1011,13 +1019,13 @@ namespace ascension {
 			using graphics::font::TextViewportSignedScrollOffset;
 
 			if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {	// scroll automatically during extending the selection
-				const std::shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
+				const std::shared_ptr<TextViewport> viewport(viewer_->textArea().textRenderer().viewport());
 				const graphics::Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
 				const graphics::Rectangle contentRectangle(viewer_->textAreaContentRectangle());
 				graphics::Dimension scrollUnits(
 					geometry::_dx = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
-					geometry::_dy = widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textRenderer().defaultFont())->linePitch());
-				if(isVertical(viewer_->textRenderer().computedBlockFlowDirection()))
+					geometry::_dy = widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textArea().textRenderer().defaultFont())->linePitch());
+				if(isVertical(viewer_->textArea().textRenderer().computedBlockFlowDirection()))
 					geometry::transpose(scrollUnits);
 
 				graphics::PhysicalTwoAxes<TextViewportSignedScrollOffset> scrollOffsets(0, 0);
@@ -1034,13 +1042,13 @@ namespace ascension {
 					viewport->scroll(scrollOffsets);
 				extendSelectionTo();
 			} else if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
-				const std::shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
+				const std::shared_ptr<TextViewport> viewport(viewer_->textArea().textRenderer().viewport());
 				timer.stop();
 				const graphics::Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
 				graphics::Dimension scrollUnits(
 					geometry::_dx = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
-					geometry::_dy = widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textRenderer().defaultFont())->linePitch());
-				if(isVertical(viewer_->textRenderer().computedBlockFlowDirection()))
+					geometry::_dy = widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textArea().textRenderer().defaultFont())->linePitch());
+				if(isVertical(viewer_->textArea().textRenderer().computedBlockFlowDirection()))
 					geometry::transpose(scrollUnits);
 				const graphics::Dimension scrollOffsets(
 					geometry::_dx = (geometry::x(p) - geometry::x(dragApproachedPosition_)) / geometry::dx(scrollUnits),
