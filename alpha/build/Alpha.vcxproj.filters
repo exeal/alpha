@@ -518,6 +518,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\caret-functions.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer-utility.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1120,9 +1123,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-properties.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\source\utility.hpp">
-      <Filter>ascension\Header Files\viewer\source</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\source\source-viewer.hpp">
       <Filter>ascension\Header Files\viewer\source</Filter>
     </ClInclude>
@@ -1155,6 +1155,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\is-close.hpp">
       <Filter>ascension\Header Files\corelib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-utility.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -487,13 +487,6 @@ namespace ascension {
 			TextViewer* const textViewer_;
 		};
 
-		/// Provides the utility stuffs for viewers.
-		namespace utils {
-			void closeCompletionProposalsPopup(TextViewer& viewer) BOOST_NOEXCEPT;
-			const presentation::hyperlink::Hyperlink* getPointedHyperlink(const TextViewer& viewer, const kernel::Position& at);
-			void toggleOrientation(TextViewer& viewer) BOOST_NOEXCEPT;
-		} // namespace utils
-
 
 		// inline implementation //////////////////////////////////////////////////////////////////
 

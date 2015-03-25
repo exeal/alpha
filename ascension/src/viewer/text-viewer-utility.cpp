@@ -1,7 +1,9 @@
 /**
- * @file utility.cpp
+ * @file text-viewer-utility.cpp
+ * Implements free functions in text-viewer-utility.hpp.
  * @author exeal
- * @date 2015-02-28 Created.
+ * @date 2015-02-28 Separated from text-viewer.cpp.
+ * @date 2015-03-26 Renamed from source/utility.cpp.
  */
 
 #include <ascension/corelib/text/identifier-syntax.hpp>
@@ -18,7 +20,7 @@
 
 namespace ascension {
 	namespace viewer {
-		namespace source {
+		namespace utils {
 			/**
 			 * Returns the identifier near the specified position in the document.
 			 * @param document The document
@@ -94,6 +96,17 @@ namespace ascension {
 					return boost::none;
 			}
 
+			const presentation::hyperlink::Hyperlink* getPointedHyperlink(const TextViewer& viewer, const kernel::Position& at) {
+				std::size_t numberOfHyperlinks;
+				if(const presentation::hyperlink::Hyperlink* const* hyperlinks = viewer.presentation().getHyperlinks(at.line, numberOfHyperlinks)) {
+					for(std::size_t i = 0; i < numberOfHyperlinks; ++i) {
+						if(at.offsetInLine >= *hyperlinks[i]->region().begin() && at.offsetInLine <= *hyperlinks[i]->region().end())
+							return hyperlinks[i];
+					}
+				}
+				return nullptr;
+			}
+
 			/**
 			 * Returns the identifier near the cursor.
 			 * @param viewer The text viewer
@@ -107,19 +120,6 @@ namespace ascension {
 						widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position())).characterIndex());
 //				}
 				return boost::none;
-			}
-		}
-
-		namespace utils {
-			const presentation::hyperlink::Hyperlink* getPointedHyperlink(const TextViewer& viewer, const kernel::Position& at) {
-				std::size_t numberOfHyperlinks;
-				if(const presentation::hyperlink::Hyperlink* const* hyperlinks = viewer.presentation().getHyperlinks(at.line, numberOfHyperlinks)) {
-					for(std::size_t i = 0; i < numberOfHyperlinks; ++i) {
-						if(at.offsetInLine >= *hyperlinks[i]->region().begin() && at.offsetInLine <= *hyperlinks[i]->region().end())
-							return hyperlinks[i];
-					}
-				}
-				return nullptr;
 			}
 
 			/**
