@@ -4,40 +4,18 @@
  * @date 2004-2010
  * @date 2010-10-21 separated from common.hpp
  * @date 2010-11-07 joined with common.hpp
- * @date 2011-2014
+ * @date 2011-2015
  */
 
 #ifndef ASCENSION_BASIC_TYPES_HPP
 #define ASCENSION_BASIC_TYPES_HPP
-
-#include <ascension/config.hpp>	// ASCENSION_FILE_NAME_CHARACTER_TYPE
-#include <ascension/platforms.hpp>
-#include <ascension/corelib/future.hpp>
-#ifndef ASCENSION_ABANDONED_AT_VERSION_08
-#	include <cstdint>
-#else
-#	ifdef ASCENSION_HAS_CSTDINT
-#		if defined(BOOST_OS_AIX) || defined(BOOST_OS_BSD) || defined(BOOST_OS_HPUX)
-#			include <inttypes.h>
-#		else
-#			include <stdint.h>
-#		endif
-#	endif
-#endif
-#ifdef ASCENSION_CUSTOM_SHARED_PTR_HPP
-#	include ASCENSION_CUSTOM_SHARED_PTR_HPP
-#elif defined(BOOST_COMP_MSVC) && BOOST_COMP_MSVC >= BOOST_VERSION_NUMBER(9, 0, 0)
-#	include <memory>
-#elif defined(BOOST_COMP_GNUC) && BOOST_COMP_GNUC >= BOOST_VERSION_NUMBER(4, 0, 0)
-#	include <tr1/memory>
-#else
-#	include <boost/tr1/memory.hpp>
-#endif
-#include <cmath>	// std.abs(double)
-#include <iterator>	// std.back_insert_iterator, std.front_insert_iterator, std.ostream_iterator
-#include <string>
+#include <ascension/platforms.hpp>	// ASCENSION_USE_INTRINSIC_WCHAR_T
 #include <boost/config.hpp>	// BOOST_NOEXCEPT
-#include <boost/noncopyable.hpp>
+#include <cstdint>
+#include <string>
+#ifdef ASCENSION_TEST
+#	include <iomanip>
+#endif // !ASCENSION_TEST
 
 /// Version of Ascension library
 #define ASCENSION_LIBRARY_VERSION 0x0080	// 0.8.0
@@ -53,32 +31,6 @@
 #endif
 
 namespace ascension {
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-	// sized integer types
-#	if defined(ASCENSION_HAS_CSTDINT)
-	using ::int8_t;
-	using ::int16_t;
-	using ::int32_t;
-	using ::int64_t;
-	using ::uint8_t;
-	using ::uint16_t;
-	using ::uint32_t;
-	using ::uint64_t;
-#	elif defined(BOOST_COMP_MSVC)
-	typedef signed char int8_t;
-	typedef short int16_t;
-	typedef long int32_t;
-	typedef __int64 int64_t;
-	typedef unsigned char uint8_t;
-	typedef unsigned short uint16_t;
-	typedef unsigned int uint32_t;
-	typedef unsigned __int64 uint64_t;
-#	else
-#		error "Could not define sized integer types."
-#	endif
-#endif
-
 	// shorten type names
 	typedef unsigned char Byte;		///< Another short synonym for @c unsigned @c char.
 //	typedef unsigned char uchar;	///< A short synonym for @c unsigned @c char.
@@ -94,8 +46,8 @@ namespace ascension {
 #endif
 	typedef std::uint32_t CodePoint;		///< Unicode code point.
 	typedef std::basic_string<Char> String;	///< Type for strings as UTF-16.
-	ASCENSION_STATIC_ASSERT(sizeof(Char) == 2);
-	ASCENSION_STATIC_ASSERT(sizeof(CodePoint) == 4);
+	static_assert(sizeof(Char) == 2, "");
+	static_assert(sizeof(CodePoint) == 4, "");
 
 	typedef std::size_t Index;			///< Length of string or index.
 	typedef std::ptrdiff_t SignedIndex;	///< Signed @c Index.
@@ -103,12 +55,9 @@ namespace ascension {
 	// use boost::optional<Index>, instead
 	const Index INVALID_INDEX = 0xfffffffful;	///< Invalid value of @c Index.
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-	ASCENSION_STATIC_ASSERT(sizeof(Index) == sizeof(SignedIndex));
-//	ASCENSION_STATIC_ASSERT(std::is_unsigned<Index>::value);
-//	ASCENSION_STATIC_ASSERT(std::is_signed<SignedIndex>::value);
-
-	/// Returns @c true if the given floating-point numbers are (approximately) equal.
-	inline bool equals(double n1, double n2, double epsilon = 1.0e-5) {return std::abs(n1 - n2) <= epsilon;}
+	static_assert(sizeof(Index) == sizeof(SignedIndex), "");
+//	static_assert(std::is_unsigned<Index>::value, "");
+//	static_assert(std::is_signed<SignedIndex>::value, "");
 
 	/**
 	 * Notifies about the system parameter changes.
@@ -134,13 +83,14 @@ namespace ascension {
 
 #ifdef ASCENSION_TEST
 namespace std {
-	inline ostream& operator<<(ostream& out, const ascension::String& value) {
-		const char prefix[2] = {'\\', 'u'};
-		char digits[5];
-		for(ascension::String::const_iterator i(value.begin()), e(value.end()); i != e; ++i) {
-			sprintf(digits, "%04x", *i);
-			out.write(prefix, std::extent<decltype(prefix)>::value);
-			out.write(digits, 4);
+	template<typename CharType, typename CharTraits>
+	inline basic_ostream<CharType, CharTraits>& operator<<(basic_ostream<CharType, CharTraits>& out, const ascension::String& value) {
+		out << std::setfill(out.widen('0'));
+		for(ascension::String::const_iterator i(begin(value)), e(end(value)); i != e; ++i) {
+			if(*i < 0x80)
+				out << *i;
+			else
+				out << std::setw(4) << static_cast<std::uint16_t>(*i);
 		}
 		return out;
 	}

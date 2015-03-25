@@ -360,6 +360,7 @@
     <ClInclude Include="..\..\ascension\ascension\content-assist\default-content-assistant.hpp" />
     <ClInclude Include="..\..\ascension\ascension\content-assist\identifiers-proposal-processor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\decay-or-refer.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\is-close.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\scoped-enum-emulation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\static-assert.hpp" />
