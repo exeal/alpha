@@ -14,6 +14,7 @@
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-renderer-observers.hpp>
+#include <ascension/graphics/geometry/point.hpp>
 #include <ascension/presentation/presentation.hpp>
 //#include <ascension/presentation/text-style.hpp>
 #include <memory>	// std.shared_ptr, std.unique_ptr
