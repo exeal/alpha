@@ -494,8 +494,6 @@ namespace ascension {
 		}
 
 		namespace utils {
-			// viewer.utils free functions ///////////////////////////////////////////////////////////////////////////
-
 			/**
 			 * Creates an MIME data object represents the selected content.
 			 * @param caret The caret gives the selection
@@ -503,13 +501,13 @@ namespace ascension {
 			 * implemented yet and the parameter is ignored
 			 * @return The MIME data object
 			 */
-			widgetapi::MimeData&& createMimeDataForSelectedString(const Caret& caret, bool rtf) {
-				widgetapi::MimeData mimeData;
+			std::unique_ptr<widgetapi::MimeData> createMimeDataForSelectedString(const Caret& caret, bool rtf) {
+				std::unique_ptr<widgetapi::MimeData> mimeData(new widgetapi::MimeData);
 				const String text(selectedString(caret, text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED));
 
-				mimeData.setText(text);
+				mimeData->setText(text);
 				if(caret.isSelectionRectangle())
-					mimeData.setData(rectangleTextMimeDataFormat(), boost::make_iterator_range<const unsigned char*>(nullptr, nullptr));
+					mimeData->setData(rectangleTextMimeDataFormat(), boost::make_iterator_range<const unsigned char*>(nullptr, nullptr));
 
 				return std::move(mimeData);
 			}
