@@ -39,6 +39,8 @@ namespace ascension {
 				 * @param viewer The source viewer
 				 * @param locator The @c Ruler locator which locates where this ruler is
 				 * @param allocationWidthSink The event sink which receives the change of the allocation width
+				 * @note References to @a viewer, @a locator and @a allocationWidthSink are no longer accessible after
+				 *       @c #uninstall was called.
 				 */
 				virtual void install(SourceViewer& viewer,
 					const Locator& locator, RulerAllocationWidthSink& allocationWidthSink) = 0;
