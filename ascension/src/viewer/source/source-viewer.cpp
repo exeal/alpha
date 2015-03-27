@@ -5,44 +5,21 @@
  * @date 2015-03-01 Created.
  */
 
+#include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/presentation/writing-mode-mappings.hpp>
+#include <ascension/viewer/mouse-input-strategy.hpp>
+#include <ascension/viewer/source/ruler.hpp>
 #include <ascension/viewer/source/source-viewer.hpp>
+#include <ascension/viewer/text-area.hpp>
 
 namespace ascension {
 	namespace viewer {
 		namespace source {
-			/// @see TextViewer#doTextAreaAllocationRectangle
-			graphics::Rectangle SourceViewer::doTextAreaAllocationRectangle() const BOOST_NOEXCEPT {
-				if(ruler_.get() == nullptr)
-					return TextViewer::doTextAreaAllocationRectangle();
-				using graphics::PhysicalDirection;
-				const graphics::Rectangle window(widgetapi::bounds(*this, false));
-				graphics::PhysicalFourSides<graphics::Scalar> result(window);
-				if(rulerPainter_.get() != nullptr) {
-					switch(boost::native_value(rulerPainter_->alignment())) {
-						case PhysicalDirection::LEFT:
-							result.left() += rulerPainter_->allocationWidth();
-							break;
-						case PhysicalDirection::TOP:
-							result.top() += rulerPainter_->allocationWidth();
-							break;
-						case PhysicalDirection::RIGHT:
-							result.right() -= rulerPainter_->allocationWidth();
-							break;
-						case PhysicalDirection::BOTTOM:
-							result.bottom() -= rulerPainter_->allocationWidth();
-							break;
-						default:
-							ASCENSION_ASSERT_NOT_REACHED();
-					}
-				}
-				return graphics::geometry::make<graphics::Rectangle>(result);
-			}
-
 			/// @see TextViewer#keyPressed
 			void SourceViewer::keyPressed(widgetapi::event::KeyInput& input) {
 				if(ruler_.get() != nullptr) {
 					if(const auto mouseInputStrategy = ruler_->mouseInputStrategy().lock())
-						mouseInputStrategy->interruptMouseReaction();
+						mouseInputStrategy->interruptMouseReaction(true);
 				}
 				return TextViewer::keyPressed(input);
 			}
@@ -51,9 +28,54 @@ namespace ascension {
 			void SourceViewer::keyReleased(widgetapi::event::KeyInput& input) {
 				if(input.hasModifier(widgetapi::event::UserInput::ALT_DOWN) && ruler_.get() != nullptr) {
 					if(const auto mouseInputStrategy = ruler_->mouseInputStrategy().lock())
-						mouseInputStrategy_->interruptMouseReaction(true);
+						mouseInputStrategy->interruptMouseReaction(true);
 				}
 				return TextViewer::keyReleased(input);
+			}
+
+			/// @see TextViewerComponent#Locator#locateComponent
+			graphics::Rectangle SourceViewer::locateComponent(const TextViewerComponent& component) const {
+				if(ruler_.get() == nullptr)
+					return TextViewer::locateComponent(component);
+
+				const bool locateRuler = &component == ruler_.get();
+				if(!locateRuler && &component != &textArea())
+					throw std::invalid_argument("component");
+
+				const graphics::Scalar rulerWidth = std::max<graphics::Scalar>(ruler_->width(), 0);
+				const graphics::Rectangle window(widgetapi::bounds(*this, false));
+				auto xrange(graphics::geometry::range<0>(window) | adaptors::ordered);
+				auto yrange(graphics::geometry::range<1>(window) | adaptors::ordered);
+				switch(boost::native_value(rulerPhysicalAlignment())) {
+					case graphics::PhysicalDirection::TOP:
+						if(locateRuler)
+							*boost::end(yrange) = clamp(*boost::const_begin(yrange) + rulerWidth, yrange);
+						else
+							yrange.advance_begin(+std::min(rulerWidth, boost::size(yrange)));
+						break;
+					case graphics::PhysicalDirection::RIGHT:
+						if(locateRuler)
+							*boost::begin(xrange) = clamp(*boost::const_end(xrange) - rulerWidth, xrange);
+						else
+							xrange.advance_end(-std::min(rulerWidth, boost::size(xrange)));
+						break;
+					case graphics::PhysicalDirection::BOTTOM:
+						if(locateRuler)
+							*boost::begin(yrange) = clamp(*boost::const_end(yrange) - rulerWidth, yrange);
+						else
+							yrange.advance_end(-std::min(rulerWidth, boost::size(yrange)));
+						break;
+					case graphics::PhysicalDirection::LEFT:
+						if(locateRuler)
+							*boost::end(xrange) = clamp(*boost::const_begin(xrange) + rulerWidth, xrange);
+						else
+							xrange.advance_begin(+std::min(rulerWidth, boost::size(xrange)));
+						break;
+					default:
+						ASCENSION_ASSERT_NOT_REACHED();
+				}
+
+				return graphics::Rectangle(std::make_pair(xrange, yrange));
 			}
 
 			/// @see TextViewer#paint
@@ -65,17 +87,9 @@ namespace ascension {
 
 			/// @see TextViewer#resized
 			void SourceViewer::resized(const graphics::Dimension& newSize) {
-				rulerPainter_->update();
-				if(rulerPainter_->alignment() != graphics::PhysicalDirection::LEFT && rulerPainter_->alignment() != graphics::PhysicalDirection::TOP) {
-//					recreateCaret();
-//					redrawVerticalRuler();
-					widgetapi::scheduleRedraw(*this, false);	// hmm...
-				}
-			}
-
-			/// @see RulerAllocationWidthSink#rulerAllocationWidthChanged
-			void SourceViewer::rulerAllocationWidthChanged(const Ruler&) {
-				updateTextAreaAllocationRectangle();
+				if(ruler_.get() != nullptr)
+					ruler_->relocated();
+				return TextViewer::resized(newSize);
 			}
 
 			namespace {
@@ -122,14 +136,14 @@ namespace ascension {
 			 * @c graphics#font#TextAlignment#RIGHT are treated as top and bottom respectively.
 			 */
 			void SourceViewer::setRulerAlignment(graphics::font::TextAlignment alignment) {
-				const graphics::PhysicalDirection newPhysicalAlignment =
-					calculateRulerPhysicalAlignment(alignment, presentation().computeWritingMode());
+				rulerPhysicalAlignment_ = calculateRulerPhysicalAlignment(alignment, presentation().computeWritingMode());
+				rulerAbstractAlignment_ = alignment;
 				updateTextAreaAllocationRectangle();
 			}
 
-			/// @see TextViewer#unfrozen
-			void SourceViewer::unfrozen(const boost::integer_range<Index>& linesToRedraw) {
-				rulerPainter_->update();
+			/// @see RulerAllocationWidthSink#updateRulerAllocationWidth
+			void SourceViewer::updateRulerAllocationWidth(const Ruler&) {
+				updateTextAreaAllocationRectangle();
 			}
 		}
 	}
