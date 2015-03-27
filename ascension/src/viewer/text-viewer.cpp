@@ -10,11 +10,11 @@
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
-//#include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/text-editor/command.hpp>
@@ -24,6 +24,7 @@
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/text-viewer-mouse-input-strategy.hpp>
+#include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
@@ -117,10 +118,11 @@ namespace ascension {
 		 * XSL 1.1/2.0.
 		 *
 		 * The "allocation-rectangle" is defined by @c #textAreaAllocationRectangle method. This is overridable by
-		 * @c #doTextAreaAllocationRectangle virtual method. A @c TextViewer paints only inside of the
-		 * "allocation-rectangle". As default, @c #textAreaAllocationRectangle returns "local-bounds" and all portion
-		 * is painted. But if the derived class specified the smaller rectangle for "allocation-rectangle", the outside
-		 * should be painted by the derived class (also should override @c #paint method).
+		 * @c #locateComponent virtual method (of @c TextViewerComponent interface) with @c TextArea instance. A
+		 * @c TextViewer paints only inside of the "allocation-rectangle". As default, @c #textAreaAllocationRectangle
+		 * returns "local-bounds" and all portion is painted. But if the derived class specified the smaller rectangle
+		 * for "allocation-rectangle", the outside should be painted by the derived class (also should override
+		 * @c #paint method).
 		 *
 		 * <h3>Windows specific features</h3>
 		 *
@@ -299,15 +301,6 @@ namespace ascension {
 				return;
 
 			return showContextMenu(widgetapi::event::LocatedUserInput(location, buttons, modifiers), nativeEvent);
-		}
-
-		/**
-		 * Returns the "allocation-rectangle" of the text area.
-		 * @return The "allocation-rectangle" in local-coordinates.
-		 * @see #textAreaAllocationRectangle
-		 */
-		graphics::Rectangle TextViewer::doTextAreaAllocationRectangle() const BOOST_NOEXCEPT {
-			return widgetapi::bounds(*this, false);
 		}
 
 		/**
@@ -1309,6 +1302,13 @@ namespace ascension {
 			return input.ignore();
 		}
 
+		/// @see TextViewerComponent#Locator#locateComponent
+		graphics::Rectangle TextViewer::locateComponent(const TextViewerComponent& component) const {
+			if(&component != &textArea())
+				throw std::invalid_argument("component");
+			return widgetapi::bounds(*this, false);
+		}
+
 #if 0
 		/**
 		 * @internal
@@ -1430,6 +1430,7 @@ namespace ascension {
 			}
 			if(textArea_.get() == nullptr)
 				return;
+			static_cast<TextViewerComponent*>(textArea_.get())->relocated();
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// notify the tooltip
 			win32::AutoZeroSize<TOOLINFOW> ti;
@@ -1565,10 +1566,10 @@ namespace ascension {
 
 		/**
 		 * Returns the 'allocation-rectangle' of the text area, in local-coordinates.
-		 * @see #doTextAreaAllocationRectangle, textAreaContentRectangle
+		 * @see #locateComponent, #textAreaContentRectangle
 		 */
 		graphics::Rectangle TextViewer::textAreaAllocationRectangle() const BOOST_NOEXCEPT {
-			graphics::Rectangle requested(doTextAreaAllocationRectangle()), temp;
+			graphics::Rectangle requested(locateComponent(textArea())), temp;
 			const bool b = boost::geometry::intersection(graphics::geometry::normalize(requested), widgetapi::bounds(*this, false), temp);
 			return temp;
 		}

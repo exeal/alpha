@@ -19,7 +19,7 @@ namespace ascension {
 		namespace source {
 			class Ruler;
 
-			class SourceViewer : public TextViewer, private RulerAllocationWidthSink, private RulerLocator {
+			class SourceViewer : public TextViewer, private RulerAllocationWidthSink {
 			public:
 				/// @name Ruler
 				/// @{
@@ -31,8 +31,8 @@ namespace ascension {
 				/// @}
 
 			protected:
-				virtual graphics::Rectangle doTextAreaAllocationRectangle() const BOOST_NOEXCEPT override;
-				virtual void unfrozen() override;
+				// TextViewerComponent.Locator
+				virtual graphics::Rectangle locateComponent(const TextViewerComponent& ruler) const override;
 
 				/// @name Overridable Widget Events
 				/// @{
@@ -45,10 +45,8 @@ namespace ascension {
 			private:
 				// RulerAllocationWidthSink
 				void updateRulerAllocationWidth(const Ruler& ruler) override;
-				// RulerLocator
-				graphics::Rectangle locateRuler(const Ruler& ruler) const override;
 			private:
-				std::unique_ptr<const Ruler> ruler_;
+				std::unique_ptr<Ruler> ruler_;
 				graphics::font::TextAlignment rulerAbstractAlignment_;
 				graphics::PhysicalDirection rulerPhysicalAlignment_;
 			};

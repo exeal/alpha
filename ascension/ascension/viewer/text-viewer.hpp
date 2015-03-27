@@ -18,6 +18,7 @@
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
+#include <ascension/viewer/text-viewer-component.hpp>
 #include <ascension/viewer/widgetapi/event/key-input.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-button-input.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-wheel-input.hpp>
@@ -108,7 +109,7 @@ namespace ascension {
 				>,
 #endif
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
-				public graphics::font::TextViewportListener,
+				public graphics::font::TextViewportListener, protected TextViewerComponent::Locator,
 				private detail::MouseVanish<TextViewer>, public kernel::detail::PointCollection<VisualPoint> {
 		public:
 			/**
@@ -243,10 +244,11 @@ namespace ascension {
 
 		protected:
 			virtual void doBeep() BOOST_NOEXCEPT;
-			virtual graphics::Rectangle doTextAreaAllocationRectangle() const BOOST_NOEXCEPT;
 			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::Rectangle& rect);
 			virtual void unfrozen();
 			void updateTextAreaAllocationRectangle();
+			// TextViewerComponent.Locator
+			virtual graphics::Rectangle locateComponent(const TextViewerComponent& component) const override;
 
 			// helpers
 		private:
