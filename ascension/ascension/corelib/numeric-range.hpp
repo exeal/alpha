@@ -8,6 +8,7 @@
 
 #ifndef ASCENSION_NUMERIC_RANGE_HPP
 #define ASCENSION_NUMERIC_RANGE_HPP
+#include <boost/algorithm/clamp.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/operators.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -92,13 +93,50 @@ namespace ascension {
 		return out << s.str().c_str();
 	}
 
+	/**
+	 * Clamps the given value into the numeric range.
+	 * @tparam Value The numeric type
+	 * @param value The value to clamp
+	 * @param bounds The bounds range to clamp to
+	 * @return A clamped value
+	 * @note This function assumes that @a bounds is ordered.
+	 * @note This function uses @c boost#algorithm#clamp.
+	 */
 	template<typename Value>
-	inline bool includes(const NumericRange<Value>& range, typename NumericRange<Value>::value_type value) {
+	inline Value clamp(Value value, const NumericRange<Value>& bounds) {
+		return boost::algorithm::clamp(value, *boost::const_begin(bounds), *boost::const_end(bounds));
+	}
+
+//	template<typename Value>
+//	inline NumericRange<Value> clamp(const NumericRange<Value>& range, const NumericRange<Value>& bounds) {
+//		return nrange(clamp(*boost::const_begin(range), bounds), clamp(*boost::const_end(range), bounds));
+//	}
+
+	/**
+	 * Returns @c true if the numeric range includes the given value.
+	 * @tparam Value The numeric type
+	 * @param range The numeric range to test
+	 * @param value The numeric value to test
+	 * @return @c true if @a value in [lo, hi)
+	 * @note This function assumes that @a range is ordered.
+	 */
+	template<typename Value>
+	inline bool includes(const NumericRange<Value>& range, Value value) {
 		return value >= *boost::const_begin(range) && value < *boost::const_end(range);
 	}
 
+	/**
+	 * Returns @c true if the numeric range includes the given value.
+	 * @tparam Value The numeric type
+	 * @tparam BinaryPredicate The type of @a pred
+	 * @param range The numeric range to test
+	 * @param value The numeric value to test
+	 * @param pred The binary predicate to compare the values
+	 * @return @c true if !pred(value, lo) &amp;&amp; pred(hi)
+	 * @note This function assumes that @a range is ordered.
+	 */
 	template<typename Value, typename BinaryPredicate>
-	inline bool includes(const NumericRange<Value>& range, typename NumericRange<Value>::value_type value, BinaryPredicate pred) {
+	inline bool includes(const NumericRange<Value>& range, Value value, BinaryPredicate pred) {
 		return !pred(value, *boost::const_begin(range)) && pred(value, *boost::const_end(range));
 	}
 
@@ -123,9 +161,35 @@ namespace ascension {
 	 * @return The ordered range
 	 */
 	template<typename Value>
-	inline NumericRange<Value> ordered(const NumericRange<Value>& range) {
+	inline NumericRange<Value> order(const NumericRange<Value>& range) {
 		const auto temp(std::minmax(*boost::const_begin(range), *boost::const_end(range)));
 		return nrange(std::get<0>(temp), std::get<1>(temp));
+	}
+
+	namespace detail {
+		template<typename Value>
+		struct ClampForwarder {
+			explicit ClampForwarder(const NumericRange<Value>& bounds) : bounds(bounds) {}
+			const NumericRange<Value> bounds;
+		};
+		struct OrderForwarder {};
+
+		template<typename Value>
+		inline NumericRange<Value> operator|(const NumericRange<Value>& range, ClampForwarder<Value>) {
+			return clamp(range);
+		}
+		template<typename Value>
+		inline NumericRange<Value> operator|(const NumericRange<Value>& range, OrderForwarder) {
+			return order(range);
+		}
+	}
+
+	namespace adaptors {
+		template<typename Value>
+		inline detail::ClampForwarder<Value> clamped(const NumericRange<Value>& bounds) {
+			return detail::ClampForwarder<Value>(bounds);
+		}
+		const detail::OrderForwarder ordered = detail::OrderForwarder();
 	}
 }
 
