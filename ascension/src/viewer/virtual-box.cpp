@@ -59,11 +59,13 @@ namespace ascension {
 			second -= lineStartOffset;
 			second = mapTextRendererInlineProgressionDimensionToLineLayout(writingMode, second);
 
-			const boost::integer_range<Index> result(ordered(boost::irange(
-				layout->hitTestCharacter(presentation::FlowRelativeTwoAxes<graphics::Scalar>(
-					presentation::_ipd = std::min(first, second), presentation::_bpd = baseline)).insertionIndex(),		
-				layout->hitTestCharacter(presentation::FlowRelativeTwoAxes<graphics::Scalar>(
-					presentation::_ipd = std::max(first, second), presentation::_bpd = baseline)).insertionIndex())));
+			const boost::integer_range<Index> result(
+				boost::irange(
+					layout->hitTestCharacter(presentation::FlowRelativeTwoAxes<graphics::Scalar>(
+						presentation::_ipd = std::min(first, second), presentation::_bpd = baseline)).insertionIndex(),		
+					layout->hitTestCharacter(presentation::FlowRelativeTwoAxes<graphics::Scalar>(
+						presentation::_ipd = std::max(first, second), presentation::_bpd = baseline)).insertionIndex())
+				| adaptors::ordered()));
 			assert(layout->lineAt(*result.begin()) == line.subline);
 			assert(result.empty() || layout->lineAt(*result.end()) == line.subline);
 			return result;
@@ -150,8 +152,8 @@ namespace ascension {
 			lines.second.subline = layout->lineAt(region.second.offsetInLine);
 
 			// commit
-			lines_ = ordered(boost::irange(lines.first, lines.second));
-			ipds_ = ordered(nrange(ipds.first, ipds.second));
+			lines_ = boost::irange(lines.first, lines.second) | adaptors::ordered();
+			ipds_ = nrange(ipds.first, ipds.second) | adaptors::ordered();
 		}
 	}
 }

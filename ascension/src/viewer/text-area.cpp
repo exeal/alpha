@@ -256,7 +256,7 @@ namespace ascension {
 			if(viewer_ != nullptr || lines.empty())
 				return;
 
-			const boost::integer_range<Index> orderedLines(ordered(lines));
+			const boost::integer_range<Index> orderedLines(lines | adaptors::ordered());
 			if(*orderedLines.end() != std::numeric_limits<Index>::max() && *orderedLines.end() >= viewer_->document().numberOfLines())
 				throw IndexOutOfBoundsException("lines");
 

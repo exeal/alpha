@@ -5,7 +5,7 @@
  * @date 2007-2015
  */
 
-#include <ascension/corelib/range.hpp>
+#include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/presentation/hyperlink/hyperlink.hpp>
 #include <ascension/presentation/hyperlink/hyperlink-detector.hpp>
 #include <ascension/presentation/presentation.hpp>
