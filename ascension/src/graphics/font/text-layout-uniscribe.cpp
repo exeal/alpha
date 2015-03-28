@@ -2839,7 +2839,7 @@ namespace ascension {
 			 * @see #blackBoxBounds, #bounds(void), #lineBounds
 			 */
 			presentation::FlowRelativeFourSides<Scalar> TextLayout::bounds(const boost::integer_range<Index>& characterRange) const {
-				const auto orderedCharacterRange(ordered(characterRange));
+				const auto orderedCharacterRange(characterRange | adaptors::ordered());
 				if(*orderedCharacterRange.end() > numberOfCharacters())
 					throw IndexOutOfBoundsException("characterRange");
 

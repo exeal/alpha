@@ -430,7 +430,7 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::height() const {
-//				const NumericRange<Scalar> e(ordered(extent()));
+//				const NumericRange<Scalar> e(extent() | adaptors::ordered());
 				const NumericRange<Scalar> e(extent());	// may throw NoSuchElementException
 				return *e.end() - *e.begin();
 			}
