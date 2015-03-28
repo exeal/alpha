@@ -8,7 +8,7 @@
  * @date 2011-2014
  */
 
-#include <ascension/corelib/range.hpp>
+#include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <boost/foreach.hpp>
@@ -101,7 +101,7 @@ namespace ascension {
 			 *               @c #layoutModified. Otherwise calls @c #layoutDeleted
 			 */
 			void LineLayoutVector::clearCaches(const boost::integer_range<Index>& lines, bool repair) {
-				const boost::integer_range<Index> orderedLines(ordered(lines));
+				const boost::integer_range<Index> orderedLines(lines | adaptors::ordered());
 				if(false /*|| *orderedLines.end() > document().numberOfLines()*/)
 					throw IndexOutOfBoundsException("lines");
 				if(documentChangePhase_ == ABOUT_TO_CHANGE) {

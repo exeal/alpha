@@ -138,6 +138,9 @@
     <Filter Include="ascension\Source Files\viewer\source">
       <UniqueIdentifier>{334ea55f-4ba3-4c91-a98f-d72d938da8fe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\corelib\numeric-range-algorithm">
+      <UniqueIdentifier>{c4f3e2b6-83a2-43da-b6d3-ce55ced9987c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -688,9 +691,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\paint.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\range.hpp">
-      <Filter>ascension\Header Files\corelib</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp">
       <Filter>ascension\Header Files\kernel</Filter>
     </ClInclude>
@@ -1158,6 +1158,21 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-utility.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\includes.hpp">
+      <Filter>ascension\Header Files\corelib\numeric-range-algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\clamp.hpp">
+      <Filter>ascension\Header Files\corelib\numeric-range-algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\order.hpp">
+      <Filter>ascension\Header Files\corelib\numeric-range-algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\intersection.hpp">
+      <Filter>ascension\Header Files\corelib\numeric-range-algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\hull.hpp">
+      <Filter>ascension\Header Files\corelib\numeric-range-algorithm</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

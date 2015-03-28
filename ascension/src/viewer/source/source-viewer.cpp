@@ -5,6 +5,8 @@
  * @date 2015-03-01 Created.
  */
 
+#include <ascension/corelib/numeric-range-algorithm/clamp.hpp>
+#include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
@@ -44,8 +46,8 @@ namespace ascension {
 
 				const graphics::Scalar rulerWidth = std::max<graphics::Scalar>(ruler_->width(), 0);
 				const graphics::Rectangle window(widgetapi::bounds(*this, false));
-				auto xrange(graphics::geometry::range<0>(window) | adaptors::ordered);
-				auto yrange(graphics::geometry::range<1>(window) | adaptors::ordered);
+				auto xrange(graphics::geometry::range<0>(window) | adaptors::ordered());
+				auto yrange(graphics::geometry::range<1>(window) | adaptors::ordered());
 				switch(boost::native_value(rulerPhysicalAlignment())) {
 					case graphics::PhysicalDirection::TOP:
 						if(locateRuler)

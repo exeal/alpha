@@ -8,13 +8,15 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/corelib/numeric-range-algorithm/hull.hpp>
+#include <ascension/corelib/numeric-range-algorithm/includes.hpp>
+#include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-run.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
-#include <ascension/corelib/range.hpp>
 #include <ascension/corelib/shared-library.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
@@ -350,14 +352,14 @@ namespace ascension {
 				} else if(lines.size() == 1)
 					return LineMetricsIterator(*this, lines.front()).extent();
 
-				const auto orderedLines(ordered(lines));
+				const auto orderedLines(lines | adaptors::ordered());
 				if(*orderedLines.end() > numberOfLines())
 					throw IndexOutOfBoundsException("lines");
 
 				LineMetricsIterator i(*this, lines.front());
 				const NumericRange<Scalar> firstExtent(i.extent());
 				std::advance(i, lines.size() - 1);
-				return nrange(*ordered(firstExtent).begin(), *ordered(i.extent()).end());	// TODO: i want suitable boost.set_union for boost.integer_range<T>.
+				return hull(firstExtent | adaptors::ordered(), i.extent() | adaptors::ordered());
 			}
 
 			/**
@@ -426,7 +428,7 @@ namespace ascension {
 				const StringPiece::const_iterator at = textString_.data() + hit.characterIndex();
 				Scalar x = 0;	// line-relative position
 				BOOST_FOREACH(const std::unique_ptr<const TextRun>& run, runsForLine(line)) {
-					if(includes(boost::make_iterator_range(run->characterRange()), at)) {
+					if(at >= run->characterRange().cbegin() && at < run->characterRange().cend()) {
 						x += lineRelativeGlyphContentOffset(*run, wm.inlineFlowDirection);
 						x += run->hitToLogicalPosition(TextHit<>::leading(at - run->characterRange().begin()));
 						break;
@@ -612,7 +614,7 @@ namespace ascension {
 			 */
 			std::tuple<Index, boost::optional<Direction>> TextLayout::locateLine(Scalar bpd, const boost::optional<NumericRange<Scalar>>& bounds) const BOOST_NOEXCEPT {
 				if(bounds != boost::none) {
-					const NumericRange<Scalar> orderedBounds(ordered(*bounds));
+					const NumericRange<Scalar> orderedBounds(*bounds | adaptors::ordered());
 					if(bpd < *orderedBounds.begin())
 						return std::make_tuple(0, Direction::BACKWARD);
 					if(bpd >= *orderedBounds.end())
@@ -622,12 +624,12 @@ namespace ascension {
 				LineMetricsIterator line(*this, 0);
 
 				// beyond the before-edge ?
-				if(bpd < *ordered(line.extent()).begin())
+				if(bpd < *boost::const_begin(line.extent() | adaptors::ordered()))
 					return std::make_tuple(line.line(), Direction::BACKWARD);
 
 				// locate the line includes 'bpd'
 				for(; line.line() < numberOfLines(); ++line) {
-					if(bpd < *ordered(line.extent()).end())
+					if(bpd < *boost::const_end(line.extent() | adaptors::ordered()))
 						return std::make_tuple(line.line(), boost::none);
 				}
 
@@ -697,10 +699,10 @@ namespace ascension {
 					linearBounds = horizontal ? geometry::range<0>(*bounds) : geometry::range<1>(*bounds);
 				std::remove_reference<decltype(shape)>::type result;
 
-				const boost::integer_range<Index> orderedRange(ordered(range));
-				const boost::integer_range<Index> lines(boost::irange(lineAt(*orderedRange.begin()), lineAt(*orderedRange.end())));
+				const boost::integer_range<Index> orderedRange(range | adaptors::ordered());
+				const boost::integer_range<Index> lines(boost::irange(lineAt(*boost::const_begin(orderedRange)), lineAt(*boost::const_end(orderedRange))));
 				const bool ltr = wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT;
-				for(LineMetricsIterator line(*this, *lines.begin()); line.line() != *lines.end(); ++line) {
+				for(LineMetricsIterator line(*this, *boost::const_begin(lines)); line.line() != *boost::const_end(lines); ++line) {
 					const Point baseline(line.baselineOffsetInPhysicalCoordinates());
 					Scalar lineOver, lineUnder;
 					if(horizontal) {
@@ -743,22 +745,24 @@ namespace ascension {
 						if(linearBounds == boost::none || x + runAllocationMeasure > *linearBounds->begin()) {
 							auto selectionInRun(intersection(
 								boost::irange<Index>(run->characterRange().begin() - textString_.data(), run->characterRange().end() - textString_.data()), orderedRange));
-							if(!boost::empty(selectionInRun)) {
-								selectionInRun.advance_begin(textString_.data() - run->characterRange().begin());
-								selectionInRun.advance_end(textString_.data() - run->characterRange().begin());
+							if(selectionInRun != boost::none) {
+								selectionInRun->advance_begin(textString_.data() - run->characterRange().begin());
+								selectionInRun->advance_end(textString_.data() - run->characterRange().begin());
 
 								Scalar glyphsLeft = x;	// line-left edge of glyphs content of the run
 								x += lineRelativeGlyphContentOffset(*run, wm.inlineFlowDirection);
 
 								// compute leading and trailing edges highlight shape in the run
-								Scalar leading = run->hitToLogicalPosition(TextHit<>::leading(*selectionInRun.begin()));
-								Scalar trailing = run->hitToLogicalPosition(TextHit<>::leading(*selectionInRun.end()));
+								Scalar leading = run->hitToLogicalPosition(TextHit<>::leading(*boost::const_begin(boost::get(selectionInRun))));
+								Scalar trailing = run->hitToLogicalPosition(TextHit<>::leading(*boost::const_end(boost::get(selectionInRun))));
 								leading = glyphsLeft + ltr ? leading : (font::measure(*run) - leading);
 								trailing = glyphsLeft + ltr ? trailing : (font::measure(*run) - trailing);
 								Rectangle rectangle(
 									geometry::make<Rectangle>(
 										mapLineRelativeToPhysical(wm,
-											LineRelativeFourSides<Scalar>(_over = lineOver, _under = lineUnder, _lineLeft = std::min(leading, trailing), _lineRight = std::max(leading, trailing)))));
+											LineRelativeFourSides<Scalar>(
+												_over = lineOver, _under = lineUnder,
+												_lineLeft = std::min(leading, trailing), _lineRight = std::max(leading, trailing)))));
 
 								if(bounds)
 									boost::geometry::intersection(rectangle, *bounds, rectangle);	// clip by 'bounds'
@@ -829,7 +833,7 @@ namespace ascension {
 								else
 									hashedResult.push_back(boost::irange(*runRange.begin(), hits.front().insertionIndex()));
 							} else if(foundHits == 2) {	// selection is only in this run
-								hashedResult.push_back(ordered(boost::irange(hits.front().insertionIndex(), hits.back().insertionIndex())));
+								hashedResult.push_back(boost::irange(hits.front().insertionIndex(), hits.back().insertionIndex()) | adaptors::ordered());
 								hits.clear();
 							}
 						} else {
@@ -988,7 +992,7 @@ namespace ascension {
 				const String::const_pointer p(textString_.data() + offset);
 				const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(lineAt(offset)));
 				for(RunVector::const_iterator run(runs.begin()); run != runs.end(); ++run) {
-					if(includes((*run)->characterRange(), p))
+					if(p >= (*run)->characterRange().cbegin() && p < (*run)->characterRange().cend())
 						return run;
 				}
 				ASCENSION_ASSERT_NOT_REACHED();
