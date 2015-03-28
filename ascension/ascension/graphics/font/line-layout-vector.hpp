@@ -8,7 +8,7 @@
 
 #ifndef ASCENSION_LINE_LAYOUT_VECTOR_HPP
 #define ASCENSION_LINE_LAYOUT_VECTOR_HPP
-#include <ascension/corelib/range.hpp>
+#include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/graphics/geometry/common.hpp>

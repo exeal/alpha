@@ -6,7 +6,6 @@
 
 #ifndef ASCENSION_SCROLLABLE_HPP
 #define ASCENSION_SCROLLABLE_HPP
-#include <ascension/corelib/range.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/scrollable.h>

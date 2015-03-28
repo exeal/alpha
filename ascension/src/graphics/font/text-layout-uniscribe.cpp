@@ -9,6 +9,12 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/corelib/numeric-range-algorithm/includes.hpp>
+#include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
+#include <ascension/corelib/numeric-range-algorithm/order.hpp>
+#include <ascension/corelib/shared-library.hpp>
+#include <ascension/corelib/text/character-property.hpp>
+#include <ascension/corelib/text/string-character-iterator.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
@@ -21,10 +27,6 @@
 #include <ascension/graphics/font/text-paint-override.hpp>
 #include <ascension/graphics/font/text-run.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
-#include <ascension/corelib/range.hpp>	// ascension.includes
-#include <ascension/corelib/shared-library.hpp>
-#include <ascension/corelib/text/character-property.hpp>
-#include <ascension/corelib/text/string-character-iterator.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
@@ -1250,8 +1252,8 @@ namespace ascension {
 
 				/// @see GlyphVector#glyphPositions
 				void GlyphVectorImpl::glyphPositions(const boost::integer_range<std::size_t>& range, std::vector<Point>& out) const {
-					const auto orderedRange = ordered(range);
-					if(*orderedRange.end() > numberOfGlyphs())
+					const auto orderedRange = range | adaptors::ordered();
+					if(*boost::const_end(orderedRange) > numberOfGlyphs())
 						throw IndexOutOfBoundsException("range");
 
 					std::vector<Point> positions;

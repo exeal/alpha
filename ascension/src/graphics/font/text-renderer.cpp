@@ -8,6 +8,7 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
@@ -213,7 +214,7 @@ namespace ascension {
 					Scalar bpd = *layout->extent().end() - TextLayout::LineMetricsIterator(*layout, lines.begin()->subline).baselineOffset();
 					for(Index line = lines.begin()->line + 1; line < lines.end()->line; ++line) {
 //						bpd += layouts().at(line).height();
-						const NumericRange<Scalar> lineExtent(ordered(self.layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT).extent()));
+						const NumericRange<Scalar> lineExtent(self.layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT).extent() | adaptors::ordered());
 						bpd += *lineExtent.end() - *lineExtent.begin();
 					}
 					layout = &self.layouts().at(lines.end()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
