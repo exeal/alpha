@@ -15,6 +15,7 @@
 #include <ascension/viewer/source/line-number-ruler.hpp>
 #include <ascension/viewer/source/ruler-allocation-width-sink.hpp>
 #include <ascension/viewer/source/source-viewer.hpp>
+#include <ascension/viewer/text-area.hpp>
 
 namespace ascension {
 	namespace viewer {

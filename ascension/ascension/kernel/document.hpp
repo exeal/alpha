@@ -11,10 +11,10 @@
 #include <ascension/config.hpp>				// ASCENSION_DEFAULT_NEWLINE
 #include <ascension/direction.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
-#include <ascension/corelib/gap-vector.hpp>	// detail.GapVector
-#include <ascension/corelib/listeners.hpp>
+#include <ascension/corelib/detail/gap-vector.hpp>	// detail.GapVector
+#include <ascension/corelib/detail/scope-guard.hpp>
+#include <ascension/corelib/detail/listeners.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
-#include <ascension/corelib/scope-guard.hpp>
 #include <ascension/corelib/signals.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/newline.hpp>

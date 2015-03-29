@@ -11,6 +11,7 @@
 // TODO: This code does not support platforms other than Win32.
 
 #include <ascension/corelib/text/break-iterator.hpp>
+#include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
@@ -25,6 +26,7 @@
 #include <ascension/viewer/default-text-area-mouse-input-strategy.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
 #include <limits>	// std.numeric_limit

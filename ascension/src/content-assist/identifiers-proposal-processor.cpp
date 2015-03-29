@@ -13,7 +13,7 @@
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-viewer.hpp>
-#include <ascension/viewer/source/utility.hpp>
+#include <ascension/viewer/text-viewer-utility.hpp>
 #include <boost/foreach.hpp>
 
 
@@ -81,7 +81,7 @@ namespace ascension {
 			static const Index MAXIMUM_IDENTIFIER_LENGTH = 100;
 			if(!incremental || kernel::locations::isBeginningOfLine(caret))
 				replacementRegion.first = caret;
-			else if(viewer::source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, nullptr))
+			else if(viewer::utils::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, nullptr))
 				replacementRegion.first.line = kernel::line(caret);
 			else
 				replacementRegion.first = caret;

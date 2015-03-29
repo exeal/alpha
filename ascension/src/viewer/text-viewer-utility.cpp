@@ -15,7 +15,7 @@
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
-#include <ascension/viewer/source/utility.hpp>
+#include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 
 namespace ascension {

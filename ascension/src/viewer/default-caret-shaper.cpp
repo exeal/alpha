@@ -7,10 +7,13 @@
  * @date 2013-04-21 separated from caret-shaper.cpp
  */
 
+#include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/image.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-caret-shaper.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/settings.h>
@@ -91,10 +94,10 @@ namespace ascension {
 		 * @param color The color of the image
 		 * @param measure The measure of image in pixels
 		 */
-		CaretShaper::Shape&& DefaultCaretShaper::createSolidShape(const Caret& caret,
+		CaretShaper::Shape DefaultCaretShaper::createSolidShape(const Caret& caret,
 				const boost::optional<graphics::Color>& color, const boost::optional<std::uint32_t>& measure) const {
 			const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
-			const graphics::font::TextRenderer& renderer = caret.textViewer().textRenderer();
+			const graphics::font::TextRenderer& renderer = caret.textViewer().textArea().textRenderer();
 			graphics::geometry::BasicRectangle<std::int32_t> bounds;
 
 			if(const graphics::font::TextLayout* const layout = renderer.layouts().at(kernel::line(caret))) {
@@ -203,7 +206,7 @@ namespace ascension {
 		}
 
 		/// @see CaretShaper#shape
-		CaretShaper::Shape&& DefaultCaretShaper::shape(const Caret& caret, const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT {
+		CaretShaper::Shape DefaultCaretShaper::shape(const Caret& caret, const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT {
 			return createSolidShape(caret, boost::none, boost::none);
 		}
 
@@ -242,7 +245,7 @@ namespace ascension {
 		}
 
 		/// @see CaretShaper#shape
-		CaretShaper::Shape&& LocaleSensitiveCaretShaper::shape(const Caret& caret, const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT {
+		CaretShaper::Shape LocaleSensitiveCaretShaper::shape(const Caret& caret, const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			const bool inputMethodIsOpen = static_cast<Glib::ustring>(
 				const_cast<TextViewer&>(caret.textViewer()).get_settings()->property_gtk_im_module()) != nullptr;

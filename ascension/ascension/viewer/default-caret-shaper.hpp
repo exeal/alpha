@@ -10,6 +10,7 @@
 
 #ifndef ASCENSION_DEFAULT_CARET_SHAPER_HPP
 #define ASCENSION_DEFAULT_CARET_SHAPER_HPP
+#include <ascension/graphics/color.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
 #include <map>
 
@@ -23,13 +24,13 @@ namespace ascension {
 		 */
 		class DefaultCaretShaper : public CaretShaper, private boost::noncopyable {
 		protected:
-			Shape&& createSolidShape(const Caret& caret,
+			Shape createSolidShape(const Caret& caret,
 				const boost::optional<graphics::Color>& color, const boost::optional<std::uint32_t>& measure) const;
 			// CaretShaper
-			virtual void install(Caret& caret) BOOST_NOEXCEPT;
-			virtual Shape&& shape(const Caret& caret,
-				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT;
-			virtual void uninstall(Caret& caret) BOOST_NOEXCEPT;
+			virtual void install(Caret& caret) BOOST_NOEXCEPT override;
+			virtual Shape shape(const Caret& caret,
+				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT override;
+			virtual void uninstall(Caret& caret) BOOST_NOEXCEPT override;
 			// Caret.MotionSignal
 			virtual void caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion);
 
@@ -47,11 +48,11 @@ namespace ascension {
 
 		private:
 			// DefaultCaretShaper overrides
-			void caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion);
-			void install(Caret& caret) BOOST_NOEXCEPT;
-			Shape&& shape(const Caret& caret,
-				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT;
-			void uninstall(Caret& caret) BOOST_NOEXCEPT;
+			void caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion) override;
+			void install(Caret& caret) BOOST_NOEXCEPT override;
+			Shape shape(const Caret& caret,
+				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT override;
+			void uninstall(Caret& caret) BOOST_NOEXCEPT override;
 			// Caret.InputModeChangedSignal
 			void inputModeChanged(const Caret& caret, Caret::InputModeChangedSignalType type) BOOST_NOEXCEPT;
 

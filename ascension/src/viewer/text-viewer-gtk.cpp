@@ -59,7 +59,7 @@ namespace ascension {
 //			drag_dest_set_target_list();
 
 			get_hadjustment()->signal_value_changed().connect([this]() {
-				if(const std::shared_ptr<graphics::font::TextViewport> viewport = this->textRenderer().viewport())
+				if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
 					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
 						graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(
 							this->property_hadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.x()),
@@ -68,7 +68,7 @@ namespace ascension {
 //				this->scrollPositionsBeforeChanged_.y() = this->get_vadjustment()->get_value();
 			});
 			get_vadjustment()->signal_value_changed().connect([this]() {
-				if(const std::shared_ptr<graphics::font::TextViewport> viewport = this->textRenderer().viewport())
+				if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
 					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
 						graphics::_x = 0,
 						graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(

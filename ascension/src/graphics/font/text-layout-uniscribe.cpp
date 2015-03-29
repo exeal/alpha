@@ -9,10 +9,10 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/corelib/detail/shared-library.hpp>
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
-#include <ascension/corelib/shared-library.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
 #include <ascension/graphics/native-conversion.hpp>

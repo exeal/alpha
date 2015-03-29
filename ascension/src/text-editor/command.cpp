@@ -12,6 +12,7 @@
 #include <ascension/text-editor/command.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>
+#include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/win32/ui/wait-cursor.hpp>
 
 namespace ascension {

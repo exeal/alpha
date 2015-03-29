@@ -5,8 +5,8 @@
  */
 
 #ifndef ASCENSION_NO_REGEX
+#include <ascension/corelib/detail/shared-library.hpp>	// detail.SharedLibrary
 #include <ascension/corelib/regex.hpp>
-#include <ascension/corelib/shared-library.hpp>	// detail.SharedLibrary
 #ifndef ASCENSION_NO_MIGEMO
 #	include <ascension/corelib/encoder.hpp>
 #	include "../third-party/migemo.h"

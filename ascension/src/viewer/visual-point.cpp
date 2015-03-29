@@ -8,8 +8,10 @@
  */
 
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #include <ascension/corelib/text/identifier-syntax.hpp>
@@ -47,9 +49,10 @@ namespace ascension {
 			 */
 			void show(VisualPoint& p) {
 				TextViewer& viewer = p.textViewer();
-				const std::shared_ptr<graphics::font::TextViewport> viewport(viewer.textRenderer().viewport());
+				graphics::font::TextRenderer& renderer = viewer.textArea().textRenderer();
+				const std::shared_ptr<graphics::font::TextViewport> viewport(renderer.viewport());
 				const kernel::Position np(p.normalized());
-				const graphics::font::TextLayout& layout = viewer.textRenderer().layouts().at(
+				const graphics::font::TextLayout& layout = renderer.layouts().at(
 					np.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);	// this call may change the layouts
 				const float visibleLines = viewport->numberOfVisibleLines();
 				presentation::FlowRelativeTwoAxes<boost::optional<graphics::font::TextViewportScrollOffset>> to;	// scroll destination
@@ -84,7 +87,7 @@ namespace ascension {
 #	else
 				const Index pointIpd = static_cast<Index>(
 					(graphics::font::lineIndent(layout, viewport->contentMeasure()) + layout.hitToPoint(graphics::font::TextHit<>::leading(np.offsetInLine)).ipd())
-					/ widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textRenderer().defaultFont())->averageCharacterWidth());
+					/ widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->averageCharacterWidth());
 				to.ipd() = std::min(pointIpd, viewport->scrollPositions().ipd());
 				to.ipd() = std::max(pointIpd - static_cast<Index>(viewport->numberOfVisibleCharactersInLine()) + 1, *to.ipd());
 #	endif
@@ -127,7 +130,7 @@ namespace ascension {
 		VisualPoint::VisualPoint(TextViewer& viewer, const kernel::Position& position, kernel::PointListener* listener /* = nullptr */) :
 				Point(viewer.document(), position, listener), viewer_(&viewer), crossingLines_(false) {
 			static_cast<kernel::detail::PointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
-			viewer_->textRenderer().layouts().addVisualLinesListener(*this);
+			viewer_->textArea().textRenderer().layouts().addVisualLinesListener(*this);
 		}
 
 			/**
@@ -141,14 +144,14 @@ namespace ascension {
 				if(viewer_ == nullptr)
 					throw TextViewerDisposedException();
 				static_cast<kernel::detail::PointCollection<VisualPoint>*>(viewer_)->addNewPoint(*this);
-				viewer_->textRenderer().layouts().addVisualLinesListener(*this);
+				viewer_->textArea().textRenderer().layouts().addVisualLinesListener(*this);
 			}
 
 			/// Destructor.
 			VisualPoint::~VisualPoint() BOOST_NOEXCEPT {
 				if(viewer_ != nullptr) {
 					static_cast<kernel::detail::PointCollection<VisualPoint>*>(viewer_)->removePoint(*this);
-					viewer_->textRenderer().layouts().removeVisualLinesListener(*this);
+					viewer_->textArea().textRenderer().layouts().removeVisualLinesListener(*this);
 				}
 			}
 
@@ -164,7 +167,7 @@ namespace ascension {
 				if(isTextViewerDisposed())
 					return;
 				if(from.line == kernel::line(*this) && lineNumberCaches_) {
-					const graphics::font::TextLayout* const layout = viewer_->textRenderer().layouts().at(kernel::line(*this));
+					const graphics::font::TextLayout* const layout = viewer_->textArea().textRenderer().layouts().at(kernel::line(*this));
 					lineNumberCaches_->visualLine -= lineNumberCaches_->visualSubline;
 					lineNumberCaches_->visualSubline = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(*this)) : 0;
 					lineNumberCaches_->visualLine += lineNumberCaches_->visualSubline;
@@ -256,7 +259,7 @@ namespace ascension {
 			if(!positionInVisualLine_)
 				const_cast<VisualPoint*>(this)->rememberPositionInVisualLine();
 			const TextViewer::Configuration& c = textViewer().configuration();
-			const graphics::font::TextRenderer& renderer = textViewer().textRenderer();
+			const graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
 //	if(resolveTextAlignment(c.alignment, c.readingDirection) != ALIGN_RIGHT)
 				return static_cast<Index>(*positionInVisualLine_
 					/ widgetapi::createRenderingContext(textViewer())->fontMetrics(renderer.defaultFont())->averageCharacterWidth());
@@ -271,10 +274,11 @@ namespace ascension {
 			if(isTextViewerDisposed())
 				throw TextViewerDisposedException();
 			if(!isDocumentDisposed()) {
+				graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
 				const graphics::font::TextLayout& layout =
-					textViewer().textRenderer().layouts().at(kernel::line(*this), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);
+					renderer.layouts().at(kernel::line(*this), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);
 				positionInVisualLine_ =
-					graphics::font::lineStartEdge(layout, textViewer().textRenderer().viewport()->contentMeasure())
+					graphics::font::lineStartEdge(layout, renderer.viewport()->contentMeasure())
 					+ layout.hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(*this))).ipd();
 			}
 		}
@@ -284,8 +288,9 @@ namespace ascension {
 			if(lineNumberCaches_) {
 				VisualPoint& self = const_cast<VisualPoint&>(*this);
 				const kernel::Position p(normalized());
-				self.lineNumberCaches_->visualLine = textViewer().textRenderer().layouts().mapLogicalLineToVisualLine(p.line);
-				if(const graphics::font::TextLayout* const layout = textViewer().textRenderer().layouts().at(p.line))
+				const graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
+				self.lineNumberCaches_->visualLine = renderer.layouts().mapLogicalLineToVisualLine(p.line);
+				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(p.line))
 					self.lineNumberCaches_->visualSubline = layout->lineAt(p.offsetInLine);
 				else
 					self.lineNumberCaches_->visualSubline = 0;
@@ -313,7 +318,7 @@ namespace ascension {
 				if(*lines.end() <= kernel::line(*this))
 					lineNumberCaches_->visualLine += sublineDifference;
 				else if(*lines.begin() == kernel::line(*this)) {
-					if(const graphics::font::TextLayout* const layout = textViewer().textRenderer().layouts().at(kernel::line(*this))) {
+					if(const graphics::font::TextLayout* const layout = textViewer().textArea().textRenderer().layouts().at(kernel::line(*this))) {
 						lineNumberCaches_->visualLine -= lineNumberCaches_->visualSubline;
 						lineNumberCaches_->visualSubline =
 							layout->lineAt(std::min(kernel::offsetInLine(*this), document().lineLength(kernel::line(*this))));
@@ -383,7 +388,7 @@ namespace ascension {
 			 */
 			Position beginningOfVisualLine(const viewer::VisualPoint& p) {
 				const Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textViewer().textRenderer().layouts().at(np.line))
+				if(const graphics::font::TextLayout* const layout = p.textViewer().textArea().textRenderer().layouts().at(np.line))
 					return Position(np.line, layout->lineOffset(layout->lineAt(np.offsetInLine)));
 				return beginningOfLine(p);
 			}
@@ -437,7 +442,7 @@ namespace ascension {
 			 */
 			Position locations::endOfVisualLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textViewer().textRenderer().layouts().at(np.line)) {
+				if(const graphics::font::TextLayout* const layout = p.textViewer().textArea().textRenderer().layouts().at(np.line)) {
 					const Index subline = layout->lineAt(np.offsetInLine);
 					np.offsetInLine = (subline < layout->numberOfLines() - 1) ?
 						layout->lineOffset(subline + 1) : p.document().lineLength(np.line);
@@ -471,7 +476,7 @@ namespace ascension {
 			Position firstPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
 				const String& s = p.document().line(np.line);
-				if(const graphics::font::TextLayout* const layout = p.textViewer().textRenderer().layouts().at(np.line)) {
+				if(const graphics::font::TextLayout* const layout = p.textViewer().textArea().textRenderer().layouts().at(np.line)) {
 					const Index subline = layout->lineAt(np.offsetInLine);
 					np.offsetInLine = detail::identifierSyntax(p).eatWhiteSpaces(
 						s.begin() + layout->lineOffset(subline),
@@ -538,7 +543,7 @@ namespace ascension {
 				if(isBeginningOfLine(p))	// this considers narrowing
 					return true;
 				const Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textViewer().textRenderer().layouts().at(np.line))
+				if(const graphics::font::TextLayout* const layout = p.textViewer().textArea().textRenderer().layouts().at(np.line))
 					return np.offsetInLine == layout->lineOffset(layout->lineAt(np.offsetInLine));
 				return isBeginningOfLine(p);
 			}
@@ -553,7 +558,7 @@ namespace ascension {
 				if(isEndOfLine(p))	// this considers narrowing
 					return true;
 				const Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textViewer().textRenderer().layouts().at(np.line)) {
+				if(const graphics::font::TextLayout* const layout = p.textViewer().textArea().textRenderer().layouts().at(np.line)) {
 					const Index subline = layout->lineAt(np.offsetInLine);
 					return np.offsetInLine == layout->lineOffset(subline) + layout->lineLength(subline);
 				}
@@ -701,7 +706,7 @@ namespace ascension {
 			 */
 			viewer::VisualDestinationProxy nextPage(const viewer::VisualPoint& p, Direction direction, Index pages /* = 1 */) {
 				Index lines = 0;
-				const std::shared_ptr<const graphics::font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
+				const std::shared_ptr<const graphics::font::TextViewport> viewport(p.textViewer().textArea().textRenderer().viewport());
 				// TODO: calculate exact number of visual lines.
 				lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
 
@@ -718,7 +723,7 @@ namespace ascension {
 			viewer::VisualDestinationProxy nextVisualLine(const viewer::VisualPoint& p, Direction direction, Index lines /* = 1 */) {
 				// ISSUE: LineLayoutVector.offsetVisualLine(VisualLine&, SignedIndex) does not use calculated layouts.
 				Position np(p.normalized());
-				const graphics::font::TextRenderer& renderer = p.textViewer().textRenderer();
+				const graphics::font::TextRenderer& renderer = p.textViewer().textArea().textRenderer();
 				const graphics::font::TextLayout* layout = renderer.layouts().at(np.line);
 				Index subline = (layout != nullptr) ? layout->lineAt(np.offsetInLine) : 0;
 				if(direction == Direction::FORWARD) {

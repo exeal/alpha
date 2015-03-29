@@ -10,6 +10,7 @@
 #include "function-pointer.hpp"
 #include <ascension/text-editor/command.hpp>
 #include <ascension/viewer/caret.hpp>
+#include <ascension/viewer/text-viewer-utility.hpp>
 
 namespace alpha {
 	namespace {	// helpers
