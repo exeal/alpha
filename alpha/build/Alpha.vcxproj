@@ -374,6 +374,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\includes.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\intersection.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\order.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\overlaps.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\scope-guard.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\shared-library.hpp" />
