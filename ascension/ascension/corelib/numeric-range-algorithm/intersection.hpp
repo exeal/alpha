@@ -24,6 +24,7 @@ namespace ascension {
 		 * @param range2 The second numeric range
 		 * @return The intersection, or @c boost#none if the two ranges does not intersect
 		 * @note This function assumes that both @a range1 and @a range2 are ordered.
+		 * @note This function may return an empty range.
 		 */
 		template<typename NumericRange>
 		inline boost::optional<NumericRange> intersection(const NumericRange& range1, const NumericRange& range2) {
@@ -38,8 +39,9 @@ namespace ascension {
 		 * @param range1 The first numeric range
 		 * @param range2 The second numeric range
 		 * @param pred The binary predicate to compare the values
-		 * @return The intersection
+		 * @return The intersection, or @c boost#none if the two ranges does not intersect
 		 * @note This function assumes that both @a range1 and @a range2 are ordered.
+		 * @note This function may return an empty range.
 		 */
 		template<typename NumericRange, typename BinaryPredicate>
 		inline boost::optional<NumericRange> intersection(const NumericRange& range1, const NumericRange& range2, BinaryPredicate pred) {

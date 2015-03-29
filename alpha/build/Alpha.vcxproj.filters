@@ -1174,6 +1174,9 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\hull.hpp">
       <Filter>ascension\Header Files\corelib\numeric-range-algorithm</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\overlaps.hpp">
+      <Filter>ascension\Header Files\corelib\numeric-range-algorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
