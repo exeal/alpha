@@ -135,24 +135,7 @@ namespace ascension {
 
 			/// @name Free Functions to Compute Box of Text Run
 			/// @{
-			/**
-			 * Returns the 'content-box' of the specified text run in user units.
-			 * @see #borderBox, #marginBox, #paddingBox
-			 */
-			inline presentation::FlowRelativeFourSides<Scalar> contentBox(const TextRun& textRun) BOOST_NOEXCEPT {
-				const Point lastGlyphPosition(textRun.glyphPosition(textRun.numberOfGlyphs()));
-				Scalar measure;
-		     	if(geometry::y(lastGlyphPosition) == 0)
-					measure = geometry::x(lastGlyphPosition);
-		     	else if(geometry::x(lastGlyphPosition) == 0)
-					measure = geometry::y(lastGlyphPosition);
-				else
-					measure = static_cast<Scalar>(boost::geometry::distance(boost::geometry::make_zero<Point>(), lastGlyphPosition));
-				std::unique_ptr<const LineMetrics> lm(textRun.font()->lineMetrics(String(), textRun.fontRenderContext()));
-				return presentation::FlowRelativeFourSides<Scalar>(
-					presentation::_inlineStart = 0.0f, presentation::_inlineEnd = measure,
-					presentation::_blockStart = -lm->ascent(), presentation::_blockEnd = lm->descent() + lm->leading());
-			}
+			presentation::FlowRelativeFourSides<Scalar> contentBox(const TextRun& textRun) BOOST_NOEXCEPT;
 			/**
 			 * Returns the 'padding-box' of the specified text run in user units.
 			 * @see #borderBox, #contentBox, #marginBox, TextRun#padding

@@ -11,23 +11,22 @@
 #include <ascension/corelib/numeric-range-algorithm/hull.hpp>
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
-#include <ascension/graphics/rendering-context.hpp>
-#include <ascension/graphics/rendering-device.hpp>
+#include <ascension/corelib/text/character-iterator.hpp>
+#include <ascension/corelib/text/character-property.hpp>
+#include <ascension/graphics/font/detail/inline-progression-dimension-range-iterator.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-run.hpp>
-//#include <ascension/graphics/special-character-renderer.hpp>
-#include <ascension/corelib/shared-library.hpp>
-#include <ascension/corelib/text/character-iterator.hpp>
-#include <ascension/corelib/text/character-property.hpp>
+#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/rendering-device.hpp>
 #include <ascension/presentation/text-line-style.hpp>	// presentation.ComputedTextLineStyle
 #include <ascension/presentation/text-toplevel-style.hpp>	// presentation.ComputedTextToplevelStyle
 #include <ascension/presentation/writing-mode-mappings.hpp>
-#include <limits>	// std.numeric_limits
-#include <numeric>	// std.accumulate
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/sort.hpp>
 #include <boost/range/numeric.hpp>	// boost.accumulate
+#include <limits>	// std.numeric_limits
+#include <numeric>	// std.accumulate
 //#define ASCENSION_TRACE_LAYOUT_CACHES
 //#define ASCENSION_DIAGNOSE_INHERENT_DRAWING;
 
@@ -299,6 +298,86 @@ namespace ascension {
 					sides.after() = lm.baselineOffset() + over;
 				}
 				return sides;
+			}
+
+			/**
+			 * Returns the smallest rectangle emcompasses all characters in the range. It might not coincide
+			 * exactly the ascent, descent or overhangs of the specified region of the text.
+			 * @param characterRange The character range
+			 * @return The bounds
+			 * @throw IndexOutOfBoundsException @a characterRange intersects with the outside of the line
+			 * @see #blackBoxBounds, #bounds(void), #lineBounds
+			 */
+			presentation::FlowRelativeFourSides<Scalar> TextLayout::bounds(const boost::integer_range<Index>& characterRange) const {
+				const auto orderedCharacterRange(characterRange | adaptors::ordered());
+				if(*orderedCharacterRange.end() > numberOfCharacters())
+					throw IndexOutOfBoundsException("characterRange");
+
+				Scalar before, after, start, end;	// results
+
+				if(isEmpty()) {	// empty line
+					start = end = 0;
+					const LineMetrics& lm(lineMetrics(0));
+					before = -lm.ascent;
+					after = lm.descent + lm.leading;
+				} else if(orderedCharacterRange.empty()) {	// an empty rectangle for an empty range
+					const LineMetrics& lm(lineMetrics(lineAt(orderedCharacterRange.front())));
+					const presentation::FlowRelativeTwoAxes<Scalar> leading(hitToPoint(TextHit<>::leading(orderedCharacterRange.front())));
+					before = leading.bpd() - lm.ascent;
+					after = leading.bpd() + lm.descent + lm.leading;
+					start = end = leading.ipd();
+				} else {
+					const Index firstLine = lineAt(*orderedCharacterRange.begin()), lastLine = lineAt(*orderedCharacterRange.end());
+					const LineMetricsIterator firstLineMetrics(*this, firstLine), lastLineMetrics(*this, lastLine);
+
+					// calculate the block-progression-edges ('before' and 'after'; it's so easy)
+					before = firstLineMetrics.baselineOffset() - firstLineMetrics.ascent();
+					after = lastLineMetrics.baselineOffset() + lastLineMetrics.descent() + lastLineMetrics.leading();
+
+					// calculate start-edge and end-edge of fully covered lines
+					const bool firstLineIsFullyCovered = includes(orderedCharacterRange,
+						boost::irange(lineOffset(firstLine), lineOffset(firstLine) + lineLength(firstLine)));
+					const bool lastLineIsFullyCovered = includes(orderedCharacterRange,
+						boost::irange(lineOffset(lastLine), lineOffset(lastLine) + lineLength(lastLine)));
+					start = std::numeric_limits<Scalar>::max();
+					end = std::numeric_limits<Scalar>::min();
+					for(Index line = firstLine + firstLineIsFullyCovered ? 0 : 1;
+							line < lastLine + lastLineIsFullyCovered ? 1 : 0; ++line) {
+						const Scalar lineStart = lineStartEdge(line);
+						start = std::min(lineStart, start);
+						end = std::max(lineStart + measure(line), end);
+					}
+
+					// calculate start and end-edge of partially covered lines
+					std::vector<Index> partiallyCoveredLines;
+					if(!firstLineIsFullyCovered)
+						partiallyCoveredLines.push_back(firstLine);
+					if(!lastLineIsFullyCovered && (partiallyCoveredLines.empty() || partiallyCoveredLines[0] != lastLine))
+						partiallyCoveredLines.push_back(lastLine);
+					if(!partiallyCoveredLines.empty()) {
+						const StringPiece effectiveCharacterRange(textString_.data() + orderedCharacterRange.front(), orderedCharacterRange.size());
+						BOOST_FOREACH(Index line, partiallyCoveredLines) {
+							const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line));
+							const auto direction(boost::fusion::at_key<presentation::styles::Direction>(style()));
+
+							// find 'start-edge'
+							detail::InlineProgressionDimensionRangeIterator i(
+								runs, direction, effectiveCharacterRange, Direction::FORWARD, lineStartEdge(line));
+							assert(i != detail::InlineProgressionDimensionRangeIterator());
+							start = std::min(*i->begin(), start);
+
+							// find 'end-edge'
+							i = detail::InlineProgressionDimensionRangeIterator(
+								runs, direction, effectiveCharacterRange, Direction::BACKWARD, lineStartEdge(line) + measure(line));
+							assert(i != detail::InlineProgressionDimensionRangeIterator());
+							end = std::max(*i->end(), end);
+						}
+					}
+				}
+
+				return presentation::FlowRelativeFourSides<Scalar>(
+					presentation::_blockStart = before, presentation::_blockEnd = after,
+					presentation::_inlineStart = start, presentation::_inlineEnd = end);
 			}
 
 			/// Returns the base bidirectional embedding level of this @c TextLayout.
