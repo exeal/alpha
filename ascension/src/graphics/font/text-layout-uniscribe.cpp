@@ -26,8 +26,8 @@
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-paint-override.hpp>
 #include <ascension/graphics/font/text-run.hpp>
-//#include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
+#include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <limits>	// std.numeric_limits
@@ -2472,129 +2472,6 @@ namespace ascension {
 			}
 
 
-			// InlineProgressionDimensionRangeIterator file-local class ///////////////////////////////////////////////
-
-			namespace {
-				class InlineProgressionDimensionRangeIterator :
-					public boost::iterators::iterator_facade<InlineProgressionDimensionRangeIterator,
-						NumericRange<Scalar>, boost::iterators::forward_traversal_tag, boost::integer_range<Scalar>, ptrdiff_t
-					> {
-				public:
-					InlineProgressionDimensionRangeIterator() BOOST_NOEXCEPT
-						: currentRun_(std::begin(dummy_)), lastRun_(std::begin(dummy_)) {}
-					InlineProgressionDimensionRangeIterator(
-						const boost::iterator_range<std::vector<std::unique_ptr<const TextRun>>::const_iterator>& textRunsOfLine,
-						presentation::ReadingDirection layoutDirection, const StringPiece& effectiveCharacterRange,
-						const Direction& scanningDirection, Scalar firstLineEdgeIpd);
-					value_type dereference() const;
-					const StringPiece& effectiveCharacterRange() const BOOST_NOEXCEPT {
-						return effectiveCharacterRange_;
-					}
-					bool equal(const InlineProgressionDimensionRangeIterator& other) const BOOST_NOEXCEPT {
-						return isDone() && other.isDone();
-					}
-					void increment() {
-						return next(false);
-					}
-					Direction scanningDirection() const BOOST_NOEXCEPT {
-						int temp = (currentRun_ <= lastRun_) ? 0 : 1;
-						temp += (layoutDirection_ == presentation::LEFT_TO_RIGHT) ? 0 : 1;
-						return (temp % 2 == 0) ? Direction::FORWARD : Direction::BACKWARD;
-					}
-				private:
-					static presentation::ReadingDirection computeScanningReadingDirection(
-							presentation::ReadingDirection layoutDirection, const Direction& scanningDirection) {
-						presentation::ReadingDirection computed = layoutDirection;
-						if(scanningDirection == Direction::BACKWARD)
-							computed = !computed;
-						return computed;
-					}
-					void next(bool initializing);
-					bool isDone() const BOOST_NOEXCEPT {return currentRun_ == lastRun_;}
-				private:
-					static const std::vector<std::unique_ptr<const TextRun>> dummy_;
-					friend class boost::iterators::iterator_core_access;
-					/*const*/ presentation::ReadingDirection layoutDirection_;
-					/*const*/ StringPiece effectiveCharacterRange_;
-					std::vector<std::unique_ptr<const TextRun>>::const_iterator currentRun_;
-					/*const*/ std::vector<std::unique_ptr<const TextRun>>::const_iterator lastRun_;
-					Scalar currentRunAllocationStartEdge_;	// 'start' means for 'layoutDirection_'
-				};
-
-				InlineProgressionDimensionRangeIterator::InlineProgressionDimensionRangeIterator(
-						const boost::iterator_range<std::vector<std::unique_ptr<const TextRun>>::const_iterator>& textRunsOfLine,
-						presentation::ReadingDirection layoutDirection, const StringPiece& effectiveCharacterRange,
-						const Direction& scanningDirection, Scalar firstLineEdgeIpd) :
-						effectiveCharacterRange_(effectiveCharacterRange), layoutDirection_(layoutDirection),
-						currentRunAllocationStartEdge_(firstLineEdgeIpd) {
-					const presentation::ReadingDirection scanningReadingDirection = computeScanningReadingDirection(layoutDirection, scanningDirection);
-					currentRun_ = (scanningReadingDirection == presentation::LEFT_TO_RIGHT) ? textRunsOfLine.begin() : textRunsOfLine.end() - 1;
-					lastRun_ = (scanningReadingDirection == presentation::LEFT_TO_RIGHT) ? textRunsOfLine.end() : textRunsOfLine.begin() - 1;
-					next(true);
-				}
-
-				const std::vector<std::unique_ptr<const TextRun>> InlineProgressionDimensionRangeIterator::dummy_;
-
-				InlineProgressionDimensionRangeIterator::value_type InlineProgressionDimensionRangeIterator::dereference() const {
-					if(isDone())
-						throw NoSuchElementException();
-					const TextRunImpl& currentRun = static_cast<const TextRunImpl&>(**currentRun_);
-					const presentation::FlowRelativeFourSides<Scalar>* const padding = currentRun.padding();
-					const presentation::FlowRelativeFourSides<ActualBorderSide>* const border = currentRun.border();
-					const presentation::FlowRelativeFourSides<Scalar>* const margin = currentRun.margin();
-					const Scalar allocationStartOffset =
-						(padding != nullptr) ? padding->start() : 0
-						+ (margin != nullptr) ? margin->start() : 0
-						+ (border != nullptr) ? border->start().actualWidth() : 0;
-					const auto subrange(intersection(boost::make_iterator_range(currentRun.characterRange()), boost::make_iterator_range(effectiveCharacterRange())));
-					assert(!subrange.empty());
-					Scalar startInRun = currentRun.hitToLogicalPosition(TextHit<>::leading(subrange.begin() - currentRun.begin()));
-					Scalar endInRun = currentRun.hitToLogicalPosition(TextHit<>::trailing(subrange.end() - currentRun.begin()));
-					if(currentRun.direction() == presentation::RIGHT_TO_LEFT) {
-						const Scalar runMeasure = measure(currentRun);
-						startInRun = runMeasure - startInRun;
-						endInRun = runMeasure - endInRun;
-					}
-					startInRun += allocationStartOffset;
-					endInRun += allocationStartOffset;
-					assert(startInRun <= endInRun);
-					const Scalar startOffset = (currentRun.direction() == layoutDirection_) ? startInRun : allocationMeasure(currentRun) - endInRun;
-					const Scalar endOffset = (currentRun.direction() == layoutDirection_) ? endInRun : allocationMeasure(currentRun) - startInRun;
-					assert(startOffset <= endOffset);
-					return boost::irange(currentRunAllocationStartEdge_ + startOffset, currentRunAllocationStartEdge_ + endOffset);
-				}
-
-				void InlineProgressionDimensionRangeIterator::next(bool initializing) {
-					if(isDone())
-						throw NoSuchElementException();
-					std::vector<std::unique_ptr<const TextRun>>::const_iterator nextRun(currentRun_);
-					Scalar nextIpd = currentRunAllocationStartEdge_;
-					const Direction sd = scanningDirection();
-					const presentation::ReadingDirection srd = computeScanningReadingDirection(layoutDirection_, sd);
-					while(nextRun != lastRun_) {
-						if(sd == Direction::FORWARD) {
-							if(initializing && intersects(boost::make_iterator_range((*nextRun)->characterRange()), boost::make_iterator_range(effectiveCharacterRange())))
-								break;
-							nextIpd += allocationMeasure(**nextRun);
-						} else {
-							nextIpd -= allocationMeasure(**nextRun);
-							if(initializing && intersects(boost::make_iterator_range((*nextRun)->characterRange()), boost::make_iterator_range(effectiveCharacterRange())))
-								break;
-						}
-						if(srd == presentation::LEFT_TO_RIGHT)
-							++nextRun;
-						else
-							--nextRun;
-						if(!initializing)
-							break;
-					}
-					// commit
-					currentRun_ = nextRun;
-					currentRunAllocationStartEdge_ = nextIpd;
-				}
-			}
-
-
 			// TextLayout /////////////////////////////////////////////////////////////////////////////////////////////
 
 			// helpers for TextLayout.draw
@@ -2828,83 +2705,6 @@ namespace ascension {
 					}
 				}
 				return std::swap(result, bounds);
-			}
-
-			/**
-			 * Returns the smallest rectangle emcompasses all characters in the range. It might not coincide
-			 * exactly the ascent, descent or overhangs of the specified region of the text.
-			 * @param characterRange The character range
-			 * @return The bounds
-			 * @throw IndexOutOfBoundsException @a characterRange intersects with the outside of the line
-			 * @see #blackBoxBounds, #bounds(void), #lineBounds
-			 */
-			presentation::FlowRelativeFourSides<Scalar> TextLayout::bounds(const boost::integer_range<Index>& characterRange) const {
-				const auto orderedCharacterRange(characterRange | adaptors::ordered());
-				if(*orderedCharacterRange.end() > numberOfCharacters())
-					throw IndexOutOfBoundsException("characterRange");
-
-				Scalar before, after, start, end;	// results
-
-				if(isEmpty()) {	// empty line
-					start = end = 0;
-					const LineMetrics& lm(lineMetrics(0));
-					before = -lm.ascent;
-					after = lm.descent + lm.leading;
-				} else if(orderedCharacterRange.empty()) {	// an empty rectangle for an empty range
-					const LineMetrics& lm(lineMetrics(lineAt(orderedCharacterRange.front())));
-					const presentation::AbstractTwoAxes<Scalar> leading(hitToPoint(TextHit<>::leading(orderedCharacterRange.front())));
-					before = leading.bpd() - lm.ascent;
-					after = leading.bpd() + lm.descent + lm.leading;
-					start = end = leading.ipd();
-				} else {
-					const Index firstLine = lineAt(*orderedCharacterRange.begin()), lastLine = lineAt(*orderedCharacterRange.end());
-					const LineMetricsIterator firstLineMetrics(*this, firstLine), lastLineMetrics(*this, lastLine);
-
-					// calculate the block-progression-edges ('before' and 'after'; it's so easy)
-					before = firstLineMetrics.baselineOffset() - firstLineMetrics.ascent();
-					after = lastLineMetrics.baselineOffset() + lastLineMetrics.descent() + lastLineMetrics.leading();
-
-					// calculate start-edge and end-edge of fully covered lines
-					const bool firstLineIsFullyCovered = includes(orderedCharacterRange,
-						boost::irange(lineOffset(firstLine), lineOffset(firstLine) + lineLength(firstLine)));
-					const bool lastLineIsFullyCovered = includes(orderedCharacterRange,
-						boost::irange(lineOffset(lastLine), lineOffset(lastLine) + lineLength(lastLine)));
-					start = std::numeric_limits<Scalar>::max();
-					end = std::numeric_limits<Scalar>::min();
-					for(Index line = firstLine + firstLineIsFullyCovered ? 0 : 1;
-							line < lastLine + lastLineIsFullyCovered ? 1 : 0; ++line) {
-						const Scalar lineStart = lineStartEdge(line);
-						start = std::min(lineStart, start);
-						end = std::max(lineStart + measure(line), end);
-					}
-
-					// calculate start and end-edge of partially covered lines
-					std::vector<Index> partiallyCoveredLines;
-					if(!firstLineIsFullyCovered)
-						partiallyCoveredLines.push_back(firstLine);
-					if(!lastLineIsFullyCovered && (partiallyCoveredLines.empty() || partiallyCoveredLines[0] != lastLine))
-						partiallyCoveredLines.push_back(lastLine);
-					if(!partiallyCoveredLines.empty()) {
-						const StringPiece effectiveCharacterRange(textString_.data() + orderedCharacterRange.front(), orderedCharacterRange.size());
-						BOOST_FOREACH(Index line, partiallyCoveredLines) {
-							const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line));
-							const auto direction(*boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::Direction>::type>(style()));
-
-							// find 'start-edge'
-							InlineProgressionDimensionRangeIterator i(runs, direction, effectiveCharacterRange, Direction::FORWARD, lineStartEdge(line));
-							assert(i != InlineProgressionDimensionRangeIterator());
-							start = std::min(*i->begin(), start);
-
-							// find 'end-edge'
-							i = InlineProgressionDimensionRangeIterator(runs, direction, effectiveCharacterRange, Direction::BACKWARD, lineStartEdge(line) + measure(line));
-							assert(i != InlineProgressionDimensionRangeIterator());
-							end = std::max(*i->end(), end);
-						}
-					}
-				}
-
-				return presentation::FlowRelativeFourSides<Scalar>(
-					presentation::_before = before, presentation::_after = after, presentation::_start = start, presentation::_end = end);
 			}
 
 			namespace {

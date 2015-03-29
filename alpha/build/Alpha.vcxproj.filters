@@ -141,6 +141,12 @@
     <Filter Include="ascension\Header Files\corelib\numeric-range-algorithm">
       <UniqueIdentifier>{c4f3e2b6-83a2-43da-b6d3-ce55ced9987c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\graphics\font\detail">
+      <UniqueIdentifier>{137e416e-9fad-449e-ad41-bb6be0953f50}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\graphics\font\detail">
+      <UniqueIdentifier>{47cdf8b6-4f28-4f74-8592-23b186c1a165}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -523,6 +529,12 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-utility.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\detail\inline-progression-dimension-range-iterator.cpp">
+      <Filter>ascension\Source Files\graphics\font\detail</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\text-run.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1176,6 +1188,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\overlaps.hpp">
       <Filter>ascension\Header Files\corelib\numeric-range-algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\detail\inline-progression-dimension-range-iterator.hpp">
+      <Filter>ascension\Header Files\graphics\font\detail</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
