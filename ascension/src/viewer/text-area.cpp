@@ -5,6 +5,7 @@
  * @date 2015-03-18 Created.
  */
 
+#include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/text-layout.hpp>

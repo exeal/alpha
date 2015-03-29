@@ -58,7 +58,7 @@ namespace ascension {
 			 *                 @c Caret#position() should be used
 			 * @return A shape of the caret
 			 */
-			virtual Shape&& shape(const Caret& caret,
+			virtual Shape shape(const Caret& caret,
 				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT = 0;
 			typedef boost::signals2::signal<void(const Caret&)> StaticShapeChangedSignal;
 			SignalConnector<StaticShapeChangedSignal> staticShapeChangedSignal() BOOST_NOEXCEPT;

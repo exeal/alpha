@@ -15,6 +15,7 @@
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 #	include <ascension/graphics/physical-directions-dimensions.hpp>
 #endif
+#include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/caret-shaper.hpp>

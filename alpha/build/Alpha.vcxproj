@@ -364,12 +364,15 @@
     <ClInclude Include="..\..\ascension\ascension\content-assist\default-content-assistant.hpp" />
     <ClInclude Include="..\..\ascension\ascension\content-assist\identifiers-proposal-processor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\decay-or-refer.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\gap-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\is-close.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\listeners.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\scope-guard.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\shared-library.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\scoped-enum-emulation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\static-assert.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\type-traits.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\listeners.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\clamp.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\hull.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\includes.hpp" />
@@ -377,8 +380,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\order.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\overlaps.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\scope-guard.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\shared-library.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\signals.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\break-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\case-folder.hpp" />
@@ -558,7 +559,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\basic-exceptions.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\basic-types.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\encoder.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\gap-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\memory.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\regex.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\string-piece.hpp" />

@@ -8,7 +8,7 @@
 #ifndef ASCENSION_KILL_RING_HPP
 #define ASCENSION_KILL_RING_HPP
 
-#include <ascension/corelib/listeners.hpp>	// detail.Listeners
+#include <ascension/corelib/detail/listeners.hpp>	// detail.Listeners
 #include <ascension/corelib/string-piece.hpp>
 #include <list>
 

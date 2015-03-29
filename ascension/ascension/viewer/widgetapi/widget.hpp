@@ -7,7 +7,7 @@
 #ifndef ASCENSION_WIDGET_HPP
 #define ASCENSION_WIDGET_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
-#include <ascension/corelib/scope-guard.hpp>
+#include <ascension/corelib/detail/scope-guard.hpp>
 #include <ascension/graphics/geometry/geometry.hpp>
 #include <ascension/graphics/rendering-device.hpp>	// graphics.RenderingDevice, ...
 #include <ascension/viewer/widgetapi/widget-proxy.hpp>

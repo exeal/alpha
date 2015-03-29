@@ -9,6 +9,7 @@
 
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/current-line-highlighter.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
 
@@ -64,12 +65,12 @@ namespace ascension {
 		/// @see CaretListener#caretMoved
 		void CurrentLineHighlighter::caretMoved(const Caret&, const kernel::Region& oldRegion) {
 			if(oldRegion.isEmpty()) {
-				if(!isSelectionEmpty(*caret_) || line(*caret_) != oldRegion.first.line)
-					caret_->textViewer().redrawLine(oldRegion.first.line, false);
+				if(!isSelectionEmpty(*caret_) || kernel::line(*caret_) != oldRegion.first.line)
+					caret_->textViewer().textArea().redrawLine(oldRegion.first.line, false);
 			}
 			if(isSelectionEmpty(*caret_)) {
-				if(!oldRegion.isEmpty() || line(*caret_) != oldRegion.first.line)
-					caret_->textViewer().redrawLine(line(*caret_), false);
+				if(!oldRegion.isEmpty() || kernel::line(*caret_) != oldRegion.first.line)
+					caret_->textViewer().textArea().redrawLine(kernel::line(*caret_), false);
 			}
 		}
 

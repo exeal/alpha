@@ -646,9 +646,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\encoder.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\gap-vector.hpp">
-      <Filter>ascension\Header Files\corelib</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\memory.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
@@ -702,12 +699,6 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp">
       <Filter>ascension\Header Files\kernel</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\shared-library.hpp">
-      <Filter>ascension\Header Files\corelib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\listeners.hpp">
-      <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
@@ -918,9 +909,6 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\native-conversion.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\scope-guard.hpp">
-      <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
     <ClInclude Include="..\src\stdafx.hpp">
       <Filter>Header Files</Filter>
@@ -1185,6 +1173,18 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\font\detail\inline-progression-dimension-range-iterator.hpp">
       <Filter>ascension\Header Files\graphics\font\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\gap-vector.hpp">
+      <Filter>ascension\Header Files\corelib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\listeners.hpp">
+      <Filter>ascension\Header Files\corelib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\scope-guard.hpp">
+      <Filter>ascension\Header Files\corelib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\shared-library.hpp">
+      <Filter>ascension\Header Files\corelib\detail</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

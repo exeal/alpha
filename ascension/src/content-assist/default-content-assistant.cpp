@@ -9,10 +9,12 @@
 
 #include <ascension/content-assist/default-content-assistant.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/text-viewer.hpp>	// TextViewer
+#include <ascension/viewer/text-area.hpp>
+#include <ascension/viewer/text-viewer.hpp>
 #include <boost/range/algorithm/copy.hpp>
 
 
@@ -90,7 +92,7 @@ namespace ascension {
 		void DefaultContentAssistant::close() {
 			if(completionSession_.get() != nullptr) {
 				// these connections were maken by startPopup() method
-				textViewer_->textRenderer().viewport()->removeListener(*this);
+				textViewer_->textArea().textRenderer().viewport()->removeListener(*this);
 				caretMotionConnection_.disconnect();
 				if(completionSession_->incremental)
 					textViewer_->document().removeListener(*this);
@@ -251,14 +253,14 @@ namespace ascension {
 			// determine the horizontal orientation of the window
 			proposalsPopup_->setWritingMode(
 				graphics::font::writingMode(
-					textViewer_->textRenderer().layouts().at(
+					textViewer_->textArea().textRenderer().layouts().at(
 						kernel::line(textViewer_->caret()),
 						graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)));
 			proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 			updatePopupBounds();
 
 			// these connections are revoke by close() method
-			textViewer_->textRenderer().viewport()->addListener(*this);
+			textViewer_->textArea().textRenderer().viewport()->addListener(*this);
 			caretMotionConnection_ = textViewer_->caret().motionSignal().connect(
 				std::bind(&DefaultContentAssistant::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
 			if(completionSession_->incremental)
@@ -283,24 +285,26 @@ namespace ascension {
 			if(proposalsPopup_.get() == nullptr)
 				return;
 
-			using namespace ascension::graphics;
-			if(const std::shared_ptr<const font::TextViewport> viewport = textViewer_->textRenderer().viewport()) {
+			graphics::font::TextRenderer& textRenderer = textViewer_->textArea().textRenderer();
+			if(const std::shared_ptr<const graphics::font::TextViewport> viewport = textRenderer.viewport()) {
 				const presentation::WritingMode writingMode(
 					graphics::font::writingMode(
-						textViewer_->textRenderer().layouts().at(
+						textRenderer.layouts().at(
 							kernel::line(textViewer_->caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)));
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				const Glib::RefPtr<const Gdk::Screen> screen(textViewer_->get_screen());
 				graphics::Rectangle screenBounds(
 					boost::geometry::make_zero<graphics::Point>(),
-					Dimension(graphics::geometry::_dx = static_cast<Scalar>(screen->get_width()), graphics::geometry::_dy = static_cast<Scalar>(screen->get_height())));
+					graphics::Dimension(
+						graphics::geometry::_dx = static_cast<graphics::Scalar>(screen->get_width()),
+						graphics::geometry::_dy = static_cast<graphics::Scalar>(screen->get_height())));
 #else
 				graphics::Rectangle screenBounds(viewer::widgetapi::bounds(viewer::widgetapi::desktop(), false));
 #endif
 				screenBounds = viewer::widgetapi::mapFromGlobal(*textViewer_, screenBounds);
 
-				Dimension size;
+				graphics::Dimension size;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Gtk::TreeView* view = static_cast<Gtk::TreeView*>(proposalsPopup_->get_child());
 				assert(view != nullptr);
@@ -308,37 +312,41 @@ namespace ascension {
 				view->get_visible_range(startPath, endPath);
 				Gdk::Rectangle cellArea;
 				view->get_cell_area(startPath, *view->get_column(0/*1*/), cellArea);
-				const Scalar itemHeight = static_cast<Scalar>(cellArea.get_height());
+				const graphics::Scalar itemHeight = static_cast<graphics::Scalar>(cellArea.get_height());
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				const LRESULT listItemHeight = ::SendMessageW(proposalsPopup_->handle().get(), LB_GETITEMHEIGHT, 0, 0);
 				if(listItemHeight == LB_ERR)
 					throw makePlatformError();
-				const Scalar itemHeight = listItemHeight;
+				const graphics::Scalar itemHeight = listItemHeight;
 #endif
 				if(isHorizontal(writingMode.blockFlowDirection)) {
-					geometry::dx(size) = geometry::dx(screenBounds) / 4;
-					geometry::dy(size) = static_cast<Scalar>(itemHeight * std::min<std::size_t>(completionSession_->numberOfProposals, 10) + 6);
+					graphics::geometry::dx(size) = graphics::geometry::dx(screenBounds) / 4;
+					graphics::geometry::dy(size) = static_cast<graphics::Scalar>(itemHeight * std::min<std::size_t>(completionSession_->numberOfProposals, 10) + 6);
 				} else {
-					geometry::dx(size) = static_cast<Scalar>(itemHeight * std::min<std::size_t>(completionSession_->numberOfProposals, 10) + 6);
-					geometry::dy(size) = geometry::dy(screenBounds) / 4;
+					graphics::geometry::dx(size) = static_cast<graphics::Scalar>(itemHeight * std::min<std::size_t>(completionSession_->numberOfProposals, 10) + 6);
+					graphics::geometry::dy(size) = graphics::geometry::dy(screenBounds) / 4;
 				}
-				Point origin(font::modelToView(*viewport, font::TextHit<kernel::Position>::leading(completionSession_->replacementRegion.beginning())));
+				graphics::Point origin(
+					graphics::font::modelToView(
+						*viewport, graphics::font::TextHit<kernel::Position>::leading(completionSession_->replacementRegion.beginning())));
 				// TODO: This code does not support vertical writing mode.
 				if(writingMode.blockFlowDirection == presentation::LEFT_TO_RIGHT)
-					geometry::x(origin) = geometry::x(origin) - 3;
+					graphics::geometry::x(origin) = graphics::geometry::x(origin) - 3;
 				else
-					geometry::x(origin) = geometry::x(origin) - geometry::dx(size) - 1 + 3;
+					graphics::geometry::x(origin) = graphics::geometry::x(origin) - graphics::geometry::dx(size) - 1 + 3;
 				proposalsPopup_->setWritingMode(writingMode);
-				if(geometry::x(origin) + geometry::dx(size) > graphics::geometry::right(screenBounds)) {
+				if(graphics::geometry::x(origin) + graphics::geometry::dx(size) > graphics::geometry::right(screenBounds)) {
 //					if()
 				}
-				geometry::y(origin) = geometry::y(origin) + viewer::widgetapi::createRenderingContext(*textViewer_)->fontMetrics(textViewer_->textRenderer().defaultFont())->cellHeight();
-				if(geometry::y(origin) + geometry::dy(size) > geometry::bottom(screenBounds)) {
-					if(geometry::y(origin) - 1 - geometry::top(screenBounds) < geometry::bottom(screenBounds) - geometry::y(origin))
-						geometry::dy(size) = geometry::bottom(screenBounds) - geometry::y(origin);
+				graphics::geometry::y(origin) = graphics::geometry::y(origin) +
+					viewer::widgetapi::createRenderingContext(*textViewer_)->fontMetrics(textRenderer.defaultFont())->cellHeight();
+				if(graphics::geometry::y(origin) + graphics::geometry::dy(size) > graphics::geometry::bottom(screenBounds)) {
+					if(graphics::geometry::y(origin) - 1 - graphics::geometry::top(screenBounds) < graphics::geometry::bottom(screenBounds) - graphics::geometry::y(origin))
+						graphics::geometry::dy(size) = graphics::geometry::bottom(screenBounds) - graphics::geometry::y(origin);
 					else {
-						geometry::dy(size) = std::min<Scalar>(geometry::dy(size), geometry::y(origin) - geometry::top(screenBounds));
-						geometry::y(origin) = geometry::y(origin) - geometry::dy(size) - 1;
+						graphics::geometry::dy(size) = std::min<graphics::Scalar>(
+							graphics::geometry::dy(size), graphics::geometry::y(origin) - graphics::geometry::top(screenBounds));
+						graphics::geometry::y(origin) = graphics::geometry::y(origin) - graphics::geometry::dy(size) - 1;
 					}
 				}
 				viewer::widgetapi::setBounds(*proposalsPopup_, graphics::Rectangle(origin, size));

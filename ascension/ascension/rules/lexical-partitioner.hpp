@@ -9,7 +9,7 @@
 #ifndef ASCENSION_LEXICAL_PARTITIONER_HPP
 #define ASCENSION_LEXICAL_PARTITIONER_HPP
 
-#include <ascension/corelib/gap-vector.hpp>
+#include <ascension/corelib/detail/gap-vector.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/kernel/partition.hpp>
 #include <ascension/kernel/position.hpp>
