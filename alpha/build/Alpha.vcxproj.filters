@@ -655,9 +655,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\regex.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\standard-iterator-adapter.hpp">
-      <Filter>ascension\Header Files\corelib</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\string-piece.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
@@ -713,9 +710,6 @@
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp">
-      <Filter>ascension\Header Files\corelib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\native-object.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\text\case-folder.hpp">

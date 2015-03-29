@@ -370,7 +370,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\future\static-assert.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\type-traits.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\listeners.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\native-object.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\clamp.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\hull.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\includes.hpp" />
@@ -562,7 +561,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\gap-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\memory.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\regex.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\standard-iterator-adapter.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\string-piece.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\type-list.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\ustring.hpp" />
