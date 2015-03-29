@@ -10,6 +10,7 @@
 #define ASCENSION_NUMERIC_RANGE_HPP
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/operators.hpp>
+#include <boost/range/concepts.hpp>
 #include <boost/range/iterator_range.hpp>
 //#include <cassert>
 #include <iterator>		// std.random_access_iterator_tag
@@ -87,6 +88,19 @@ namespace ascension {
 	inline NumericRange<Value> nrange(Value first, Value last) {
 //		assert(first <= last);
 		return NumericRange<Value>(first, last);
+	}
+
+	/**
+	 * Generates a Numeric Range (half-open range).
+	 * @tparam SinglePassReadableRange The type of @a first and @a last
+	 * @param range The original range
+	 * @return A Numeric Range
+	 */
+	template<typename SinglePassReadableRange>
+	inline auto nrange(const SinglePassReadableRange& range) -> decltype(nrange(*boost::const_begin(range), *boost::const_end(range))) {
+		BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<SinglePassReadableRange>));
+//		assert(*boost::const_begin(range) <= *boost::const_end(range));
+		return nrange(*boost::const_begin(range), *boost::const_end(range));
 	}
 
 	/**
