@@ -10,13 +10,29 @@
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
-#include <ascension/viewer/source/ruler.hpp>
+#include <ascension/viewer/source/composite-ruler.hpp>
 #include <ascension/viewer/source/source-viewer.hpp>
 #include <ascension/viewer/text-area.hpp>
+#include <boost/geometry.hpp>	// boost.geometry.subtract_point, boost.geometry.within
 
 namespace ascension {
 	namespace viewer {
 		namespace source {
+			/// @see TextViewer#hitTest
+			const TextViewerComponent* SourceViewer::hitTest(const graphics::Point& location) const BOOST_NOEXCEPT {
+				if(ruler().get() != nullptr) {
+					const graphics::Rectangle rulerRectangle(locateComponent(*ruler()));
+					if(boost::geometry::within(location, rulerRectangle)) {
+						if(!rulerIsComposite_)
+							return ruler().get();
+						graphics::Point p(location);
+						boost::geometry::subtract_point(p, graphics::geometry::topLeft(rulerRectangle));
+						return static_cast<CompositeRuler*>(ruler().get())->hitTest(p);
+					}
+				}
+				return TextViewer::hitTest(location);
+			}
+
 			/// @see TextViewer#keyPressed
 			void SourceViewer::keyPressed(widgetapi::event::KeyInput& input) {
 				if(ruler_.get() != nullptr) {

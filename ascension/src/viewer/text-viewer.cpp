@@ -582,29 +582,24 @@ namespace ascension {
 			}
 		}
 
-		/**
-		 * Determines which part is at the specified position.
-		 * @param p The position to hit test, in the viewer-local coordinates
-		 * @return The result
-		 * @see TextViewer#HitTestResult
-		 */
-		const TextViewer::HitTestResult& TextViewer::hitTest(const graphics::Point& p) const {
-//			checkInitialization();
-			const graphics::Rectangle localBounds(widgetapi::bounds(*this, false));
-			if(!boost::geometry::within(p, localBounds))
-				return OUT_OF_VIEWER;
+		/// @overload
+		TextViewerComponent* TextViewer::hitTest(const graphics::Point& location) BOOST_NOEXCEPT {
+			const TextViewer& self = *this;
+			return const_cast<TextViewerComponent*>(self.hitTest(location));
+		}
 
-//			const RulerStyles& rulerStyles = rulerPainter_->declaredStyles();
-//			if(indicatorMargin(rulerStyles)->visible && boost::geometry::within(p, rulerPainter_->indicatorMarginAllocationRectangle()))
-//				return INDICATOR_MARGIN;
-//			else if(lineNumbers(rulerStyles)->visible && boost::geometry::within(p, rulerPainter_->lineNumbersAllocationRectangle()))
-//				return LINE_NUMBERS;
-			if(boost::geometry::within(p, textAreaContentRectangle()))
-				return TEXT_AREA_CONTENT_RECTANGLE;
-			else {
-				assert(boost::geometry::within(p, textAreaAllocationRectangle()));
-				return TEXT_AREA_PADDING_START;
-			}
+		/**
+		 * Returns the @c TextViewerComponent which contains the specified location.
+		 * @param location The position to hit test, in the viewer-local coordinates
+		 * @return The @c TextViewerComponent addressed by @a location, or @c nullptr if there is nothing
+		 * @see #textAreaAllocationRectangle, TextArea, TextViewerComponent#Locator
+		 */
+		const TextViewerComponent* TextViewer::hitTest(const graphics::Point& location) const BOOST_NOEXCEPT {
+//			checkInitialization();
+//			if(boost::geometry::within(location, textAreaContentRectangle()))
+			if(boost::geometry::within(location, textAreaAllocationRectangle()))
+				return &textArea();
+			return nullptr;
 		}
 
 		/// @internal Called by constructors.
