@@ -18,15 +18,19 @@ namespace ascension {
 		/// Provides stuffs for source code editors.
 		namespace source {
 			class Ruler;
+			class CompositeRuler;
 
 			class SourceViewer : public TextViewer, private RulerAllocationWidthSink {
 			public:
+				virtual const TextViewerComponent* hitTest(const graphics::Point& location) const BOOST_NOEXCEPT override;
+
 				/// @name Ruler
 				/// @{
 				std::shared_ptr<source::Ruler>& ruler() const BOOST_NOEXCEPT;
 				graphics::font::TextAlignment rulerAbstractAlignment() const BOOST_NOEXCEPT;
 				graphics::PhysicalDirection rulerPhysicalAlignment() const BOOST_NOEXCEPT;
 				void setRuler(std::unique_ptr<source::Ruler> ruler);
+				void setRuler(std::unique_ptr<source::CompositeRuler> ruler);
 				void setRulerAlignment(graphics::font::TextAlignment alignment);
 				/// @}
 
@@ -47,6 +51,7 @@ namespace ascension {
 				void updateRulerAllocationWidth(const Ruler& ruler) override;
 			private:
 				std::unique_ptr<Ruler> ruler_;
+				bool rulerIsComposite_;
 				graphics::font::TextAlignment rulerAbstractAlignment_;
 				graphics::PhysicalDirection rulerPhysicalAlignment_;
 			};

@@ -5,6 +5,7 @@
  * @date 2015-01-12 Created.
  */
 
+#include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/viewer/source/composite-ruler.hpp>
 #include <ascension/viewer/source/source-viewer.hpp>
 #include <boost/foreach.hpp>
@@ -34,6 +35,47 @@ namespace ascension {
 				if(viewer_ != nullptr)
 					rulerColumn->install(*viewer_, *this, *allocationWidthSink_);
 				columns_.insert(std::begin(columns_) + position, std::move(rulerColumn));
+			}
+
+			/// @overload
+			Ruler* CompositeRuler::hitTest(const graphics::Point& location) BOOST_NOEXCEPT {
+				const CompositeRuler& self = *this;
+				return const_cast<Ruler*>(self.hitTest(location));
+			}
+
+			/**
+			 * Returns the child @c Ruler which contains the specified location.
+			 * @param location The location to hit test, in ruler-local coordinates
+			 * @return The @c Ruler addressed by @a location, or @c nullptr if there is nothing
+			 */
+			const Ruler* CompositeRuler::hitTest(const graphics::Point& location) const BOOST_NOEXCEPT {
+				if(viewer_ != nullptr) {
+					const graphics::PhysicalDirection alignment = viewer_->rulerPhysicalAlignment();
+					graphics::Scalar p =
+						(alignment == graphics::PhysicalDirection::LEFT || alignment == graphics::PhysicalDirection::RIGHT) ?
+						graphics::geometry::x(location) : graphics::geometry::y(location);
+					graphics::Scalar c = 0;
+					if(alignment == graphics::PhysicalDirection::TOP || alignment == graphics::PhysicalDirection::LEFT) {
+						for(auto i(std::begin(columns_)), e(std::end(columns_)); i != e; ++i) {
+							const auto bounds(nrange(c, c + (*i)->width()));
+							if(includes(bounds, p))
+								return i->get();
+							c = *boost::const_end(bounds);
+						}
+					} else {
+#if 0
+						for(auto i(std::crbegin(columns_)), e(std::crend(columns_)); i != e; ++i) {
+#else
+						for(auto i(columns_.rbegin()), e(columns_.rend()); i != e; ++i) {
+#endif
+							const auto bounds(nrange(c, c + (*i)->width()));
+							if(includes(bounds, p))
+								return i->get();
+							c = *boost::const_end(bounds);
+						}
+					}
+				}
+				return nullptr;
 			}
 
 			/// @see Ruler#install

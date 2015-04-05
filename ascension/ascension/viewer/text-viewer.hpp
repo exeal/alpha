@@ -114,27 +114,6 @@ namespace ascension {
 				private detail::MouseVanish<TextViewer>, public kernel::detail::PointCollection<VisualPoint> {
 		public:
 			/**
-			 * Result of hit test.
-			 * @see #hitTest
-			 */
-			struct HitTestResult : private boost::equality_comparable<HitTestResult>, private boost::noncopyable {
-				/// Equality operator.
-				bool operator==(const HitTestResult& other) const BOOST_NOEXCEPT {
-					return this == &other;
-				}
-			};
-			/// The point is the indicator margin in the ruler.
-			BOOST_STATIC_CONSTEXPR HitTestResult INDICATOR_MARGIN;
-			/// The point is the line numbers area in the ruler.
-			BOOST_STATIC_CONSTEXPR HitTestResult LINE_NUMBERS;
-			/// The point is 'padding-start' of the text area.
-			BOOST_STATIC_CONSTEXPR HitTestResult TEXT_AREA_PADDING_START;
-			/// The point is 'content-rectangle' of the text area.
-			BOOST_STATIC_CONSTEXPR HitTestResult TEXT_AREA_CONTENT_RECTANGLE;
-			/// The point is outside of the local bounds of the text viewer.
-			BOOST_STATIC_CONSTEXPR HitTestResult OUT_OF_VIEWER;
-
-			/**
 			 * A general configuration of the viewer.
 			 * @see TextViewer#configurations, TextViewer#setConfigurations
 			 */
@@ -230,7 +209,8 @@ namespace ascension {
 
 			/// @name Geometries
 			/// @{
-			virtual const HitTestResult& hitTest(const graphics::Point& p) const;
+			TextViewerComponent* hitTest(const graphics::Point& location) BOOST_NOEXCEPT;
+			virtual const TextViewerComponent* hitTest(const graphics::Point& location) const BOOST_NOEXCEPT;
 			graphics::Rectangle textAreaAllocationRectangle() const BOOST_NOEXCEPT;
 			graphics::Rectangle textAreaContentRectangle() const BOOST_NOEXCEPT;
 			/// @}

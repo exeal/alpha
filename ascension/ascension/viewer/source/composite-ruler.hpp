@@ -25,6 +25,8 @@ namespace ascension {
 			public:
 				CompositeRuler() BOOST_NOEXCEPT;
 				void addDecorator(std::size_t position, std::unique_ptr<Ruler> rulerColumn);
+				Ruler* hitTest(const graphics::Point& location) BOOST_NOEXCEPT;
+				const Ruler* hitTest(const graphics::Point& location) const BOOST_NOEXCEPT;
 				void removeDecorator(std::size_t position);
 
 			private:
