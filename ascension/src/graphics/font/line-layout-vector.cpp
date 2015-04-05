@@ -483,6 +483,19 @@ namespace ascension {
 					}
 				}
 			}
+
+
+			// LineLayoutVector.NumberedLayout ////////////////////////////////////////////////////////////////////////
+
+			LineLayoutVector::NumberedLayout::NumberedLayout() BOOST_NOEXCEPT {
+			}
+
+			LineLayoutVector::NumberedLayout::NumberedLayout(NumberedLayout&& other) BOOST_NOEXCEPT
+					: lineNumber(other.lineNumber), layout(std::move(other.layout)) {
+			}
+
+			LineLayoutVector::NumberedLayout::~NumberedLayout() BOOST_NOEXCEPT {
+			}
 		}
 	}
 }

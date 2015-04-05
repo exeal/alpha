@@ -7,6 +7,7 @@
  * @date 2013-12-15 separated from viewer.cpp
  */
 
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/current-line-highlighter.hpp>
 #include <ascension/viewer/text-area.hpp>

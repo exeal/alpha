@@ -503,9 +503,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\source\ruler-border-decorator.cpp">
       <Filter>ascension\Source Files\viewer\source</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\source\utility.cpp">
-      <Filter>ascension\Source Files\viewer\source</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\source\source-viewer.cpp">
       <Filter>ascension\Source Files\viewer\source</Filter>
     </ClCompile>

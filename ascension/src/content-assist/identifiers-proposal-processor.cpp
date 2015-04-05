@@ -10,6 +10,7 @@
 #include <ascension/content-assist/default-completion-proposal.hpp>
 #include <ascension/content-assist/identifiers-proposal-processor.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-viewer.hpp>

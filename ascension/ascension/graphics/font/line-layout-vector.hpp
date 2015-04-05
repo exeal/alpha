@@ -114,9 +114,9 @@ namespace ascension {
 				struct NumberedLayout : private boost::noncopyable {
 					Index lineNumber;
 					std::unique_ptr<const TextLayout> layout;
-					NumberedLayout() BOOST_NOEXCEPT {}
-					NumberedLayout(NumberedLayout&& other) BOOST_NOEXCEPT
-						: lineNumber(other.lineNumber), layout(std::move(other.layout)) {}
+					NumberedLayout() BOOST_NOEXCEPT;
+					NumberedLayout(NumberedLayout&& other) BOOST_NOEXCEPT;
+					~NumberedLayout() BOOST_NOEXCEPT;
 				};
 				void clearCaches(const boost::integer_range<Index>& lines, bool repair);
 				void deleteLineLayout(Index line, TextLayout* newLayout = nullptr) BOOST_NOEXCEPT;

@@ -8,6 +8,7 @@
 #include "editor-view.hpp"
 #include "editor-panes.hpp"
 #include "function-pointer.hpp"
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
