@@ -8,6 +8,7 @@
 #include <ascension/viewer/text-viewer.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>

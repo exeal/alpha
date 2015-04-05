@@ -260,7 +260,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\source\line-number-ruler.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\ruler-border-decorator.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\source-viewer.cpp" />
-    <ClCompile Include="..\..\ascension\src\viewer\source\utility.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-area.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-utility.cpp" />

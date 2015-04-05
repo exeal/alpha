@@ -8,6 +8,7 @@
 
 #include <ascension/content-assist/content-assist.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>	// text.WordBreakIterator
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/viewer/caret.hpp>
