@@ -183,6 +183,7 @@
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\ascension\ascension\viewer\abstract-mouse-input-strategy.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\content-assist-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\content-assist-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\default-completion-proposal.cpp" />

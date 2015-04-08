@@ -999,20 +999,6 @@ namespace ascension {
 			return false;
 		}
 
-		inline void DefaultTextAreaMouseInputStrategy::showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor) {
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			viewer.get_window()->set_cursor(const_cast<widgetapi::Cursor&>(cursor).asNativeObject());
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-			QApplication::setOverrideCursor(cursor.asNativeObject());	// TODO: Restore later.
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-			[cursor set];
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			::SetCursor(cursor.asNativeObject().get());
-#else
-			ASCENSION_CANT_DETECT_PLATFORM();
-#endif
-		}
-
 		///
 		void DefaultTextAreaMouseInputStrategy::timeElapsed(Timer& timer) {
 			namespace geometry = graphics::geometry;
