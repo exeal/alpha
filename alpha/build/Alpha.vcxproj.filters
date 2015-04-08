@@ -533,6 +533,9 @@
     <ClCompile Include="..\..\ascension\src\graphics\font\text-run.cpp">
       <Filter>ascension\Source Files\graphics\font</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\ascension\viewer\abstract-mouse-input-strategy.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
