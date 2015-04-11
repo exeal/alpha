@@ -268,7 +268,7 @@ namespace ascension {
 		}
 
 		/// @see HasTimer#timeElapsed
-		void DefaultContentAssistant::timeElapsed(Timer&) {
+		void DefaultContentAssistant::timeElapsed(Timer<>&) {
 			timer_.stop();
 			showPossibleCompletions();
 		}

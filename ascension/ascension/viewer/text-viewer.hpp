@@ -432,7 +432,7 @@ namespace ascension {
 			// freeze information
 			boost::value_initialized<std::size_t> frozenCount_;
 
-			class CaretBlinker : private HasTimer {
+			class CaretBlinker : private HasTimer<> {
 			public:
 				explicit CaretBlinker(TextViewer& viewer) BOOST_NOEXCEPT;
 				bool isVisible() const BOOST_NOEXCEPT;
@@ -441,9 +441,9 @@ namespace ascension {
 				void update();
 			private:
 				void setVisible(bool visible);
-				void timeElapsed(Timer& timer);
+				void timeElapsed(Timer<>& timer);
 				TextViewer& viewer_;
-				Timer timer_;
+				Timer<> timer_;
 				bool visible_;
 			};
 

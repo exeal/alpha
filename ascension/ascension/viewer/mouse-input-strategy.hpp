@@ -118,7 +118,7 @@ namespace ascension {
 		class TextViewer;
 
 		/// Default implementation of @c MouseInputStrategy interface.
-		class AbstractMouseInputStrategy : public MouseInputStrategy, private HasTimer, private boost::noncopyable {
+		class AbstractMouseInputStrategy : public MouseInputStrategy, private HasTimer<>, private boost::noncopyable {
 		public:
 			AbstractMouseInputStrategy() BOOST_NOEXCEPT;
 			virtual ~AbstractMouseInputStrategy() BOOST_NOEXCEPT;
@@ -144,11 +144,11 @@ namespace ascension {
 			bool showArrowCursor(TextViewer& viewer);
 			bool showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor);
 			/// @}
-			static const unsigned int SELECTION_EXPANSION_INTERVAL_IN_MILLISECONDS;	// TODO: Use std.chrono.
-			static const unsigned int DRAGGING_TRACK_INTERVAL_IN_MILLISECONDS;	// TODO: Use std.chrono.
+			static const boost::chrono::milliseconds SELECTION_EXPANSION_INTERVAL;	// TODO: Replace with std.chrono.
+			static const boost::chrono::milliseconds DRAGGING_TRACK_INTERVAL;	// TODO: Replace with std.chrono.
 
 		private:
-			void timeElapsed(Timer& timer) override;
+			void timeElapsed(Timer<>& timer) override;
 			struct Tracking;
 			std::unique_ptr<Tracking> tracking_;
 		};

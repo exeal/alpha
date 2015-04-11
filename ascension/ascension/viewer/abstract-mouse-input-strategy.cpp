@@ -23,13 +23,13 @@
 
 namespace ascension {
 	namespace viewer {
-		const unsigned int AbstractMouseInputStrategy::SELECTION_EXPANSION_INTERVAL_IN_MILLISECONDS = 100;
-		const unsigned int AbstractMouseInputStrategy::DRAGGING_TRACK_INTERVAL_IN_MILLISECONDS = 100;
+		const boost::chrono::milliseconds AbstractMouseInputStrategy::SELECTION_EXPANSION_INTERVAL(100);
+		const boost::chrono::milliseconds AbstractMouseInputStrategy::DRAGGING_TRACK_INTERVAL(100);
 
 		struct AbstractMouseInputStrategy::Tracking {
 			std::shared_ptr<MouseInputStrategy> mouseInputStrategy;
 			TextViewer* viewer;
-			Timer timer;
+			Timer<> timer;
 			TargetLocker* inputTargetLocker;
 			bool autoScroll, locateCursor;
 		};
@@ -66,12 +66,8 @@ namespace ascension {
 				(tracking_->inputTargetLocker = &targetLocker)->lockMouseInputTarget(tracking_->mouseInputStrategy);
 				tracking_->autoScroll = autoScroll;
 				tracking_->locateCursor = locateCursor;
-				tracking_->timer.start(SELECTION_EXPANSION_INTERVAL_IN_MILLISECONDS, *this);
+				tracking_->timer.start(SELECTION_EXPANSION_INTERVAL, *this);
 			}
-		}
-
-		/// Does nothing.
-		void AbstractMouseInputStrategy::captureChanged() {
 		}
 
 		/**
@@ -93,7 +89,7 @@ namespace ascension {
 		
 		/// Calls @c #endTrackingLocation method.
 		void AbstractMouseInputStrategy::interruptMouseReaction(bool) {
-			endTrackingLocation();
+			endLocationTracking();
 		}
 
 		/// Returns @c true if is tracking the location.
@@ -108,7 +104,7 @@ namespace ascension {
 
 		/// Calls @c #endTrackingLocation method.
 		void AbstractMouseInputStrategy::mouseInputTargetUnlocked() {
-			endTrackingLocation();
+			endLocationTracking();
 		}
 		
 		/// Ignores the input.
@@ -173,7 +169,7 @@ namespace ascension {
 		}
 
 		/// @see HasTimer#timeElapsed
-		void AbstractMouseInputStrategy::timeElapsed(Timer& timer) {
+		void AbstractMouseInputStrategy::timeElapsed(Timer<>&) {
 			if(tracking_.get() != nullptr) {
 				TextViewer& viewer = *tracking_->viewer;
 
