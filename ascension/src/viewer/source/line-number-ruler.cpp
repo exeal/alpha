@@ -16,6 +16,7 @@
 #include <ascension/viewer/source/line-number-ruler.hpp>
 #include <ascension/viewer/source/ruler-allocation-width-sink.hpp>
 #include <ascension/viewer/source/source-viewer.hpp>
+#include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>
 
 namespace ascension {
@@ -40,9 +41,64 @@ namespace ascension {
 				return n;
 			}
 
+			/// @internal
+			void LineNumberRuler::continueLineSelection(const kernel::Position& to) {
+				if(viewer() != nullptr && lineSelectionAnchorLine_ != boost::none) {
+					const kernel::Document& document = viewer()->document();
+					const Index nlines = document.numberOfLines();
+					kernel::Region newSelection;
+					newSelection.first.line = (to.line >= boost::get(lineSelectionAnchorLine_)) ? boost::get(lineSelectionAnchorLine_) : boost::get(lineSelectionAnchorLine_) + 1;
+					newSelection.first.offsetInLine = (newSelection.first.line > nlines - 1) ? document.lineLength(--newSelection.first.line) : 0;
+					newSelection.second.line = (to.line >= boost::get(lineSelectionAnchorLine_)) ? to.line + 1 : to.line;
+					newSelection.second.offsetInLine = (newSelection.second.line > nlines - 1) ? document.lineLength(--newSelection.second.line) : 0;
+					viewer()->caret().select(newSelection);
+				}
+			}
+
+			/// @internal
+			void LineNumberRuler::endLineSelection() {
+				if(isTrackingLocation()) {
+					endLocationTracking();
+					lineSelectionAnchorLine_ = boost::none;
+				}
+			}
+
+			/// @see MouseInputStrategy#interruptMouseReaction
+			void LineNumberRuler::interruptMouseReaction(bool forKeyboardInput) {
+				endLineSelection();
+			}
+
 			inline void LineNumberRuler::invalidate() {
 				if(const TextViewerComponent::Locator* const componentLocator = locator())
 					widgetapi::scheduleRedraw(*viewer(), componentLocator->locateComponent(*this), false);
+			}
+
+			/// @see MouseInputStrategy#mouseButtonInput
+			void LineNumberRuler::mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) {
+				if(viewer() != nullptr) {
+					if(input.button() == widgetapi::event::LocatedUserInput::BUTTON1_DOWN) {
+						if(action == PRESSED) {
+							// select line(s)
+							Caret& caret = viewer()->caret();
+							const kernel::Position to(viewToModel(*viewer()->textArea().textRenderer().viewport(), input.location()).insertionIndex());
+							const bool extend = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN) && to.line != kernel::line(caret.anchor());
+							lineSelectionAnchorLine_ = extend ? kernel::line(caret.anchor()) : to.line;
+							caret.endRectangleSelection();
+							continueLineSelection(to);
+							beginLocationTracking(*viewer(), targetLocker, true, true);
+							return input.consume();
+						} else if(action == RELEASED) {
+							endLineSelection();
+							return input.consume();
+						}
+					}
+				}
+				return AbstractMouseInputStrategy::mouseButtonInput(action, input, targetLocker);
+			}
+
+			/// @see MouseInputStrategy#mouseInputTargetUnlocked
+			void LineNumberRuler::mouseInputTargetUnlocked() {
+				endLineSelection();
 			}
 
 			/// @see Ruler#paint
@@ -111,6 +167,16 @@ namespace ascension {
 				startValue_ = startValue;
 				numberOfDigits_ = boost::none;
 				updateWidth();
+			}
+
+			/// @see MouseInputStrategy#showCursor
+			bool LineNumberRuler::showCursor(const graphics::Point& position) {
+				return (viewer() != nullptr) ? showArrowCursor(*viewer()) : AbstractMouseInputStrategy::showCursor(position);
+			}
+
+			/// @see AbstractMouseInputStrategy#trackedLocationChanged
+			void LineNumberRuler::trackedLocationChanged(const kernel::Position& position) {
+				continueLineSelection(position);
 			}
 
 			/// @internal
