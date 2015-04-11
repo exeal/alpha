@@ -1304,6 +1304,17 @@ namespace ascension {
 			return widgetapi::bounds(*this, false);
 		}
 
+		/// @see MouseInputStrategy#TargetLocker#lockMouseInputTarget
+		bool TextViewer::lockMouseInputTarget(std::weak_ptr<MouseInputStrategy> strategy) {
+			if(strategy.expired())
+				throw std::bad_weak_ptr("strategy");
+			if(lockedMouseInputStrategy_.expired()) {
+				lockedMouseInputStrategy_ = strategy;
+				return true;
+			}
+			return false;
+		}
+
 #if 0
 		/**
 		 * @internal
@@ -1372,38 +1383,53 @@ namespace ascension {
 
 		/// Invoked when the mouse button has been double-clicked.
 		void TextViewer::mouseDoubleClicked(widgetapi::event::MouseButtonInput& input) {
-			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock())
-				mouseInputStrategy->mouseButtonInput(MouseInputStrategy::DOUBLE_CLICKED, input);
+			if(const auto mis = mouseInputStrategy(input.location()))
+				mis->mouseButtonInput(MouseInputStrategy::DOUBLE_CLICKED, input, *this);
+		}
+
+		/**
+		 * Returns @c MouseInputStrategy object to handle the event occurred at the specified location.
+		 * @param p The location where the event occurred, in viewer-local coordinates
+		 * @return The @c MouseInputStrategy object or @c null
+		 */
+		std::shared_ptr<MouseInputStrategy> TextViewer::mouseInputStrategy(const graphics::Point& p) {
+			if(!lockedMouseInputStrategy_.expired()) {
+				if(const std::shared_ptr<MouseInputStrategy> temp = lockedMouseInputStrategy_.lock())
+					return temp;
+			}
+			if(TextViewerComponent* const component = hitTest(p))
+				return component->mouseInputStrategy().lock();
+			return std::shared_ptr<MouseInputStrategy>();
 		}
 
 		/// Invoked when the mouse cursor has been moved onto a widget.
 		void TextViewer::mouseMoved(widgetapi::event::LocatedUserInput& input) {
-			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock())
-				mouseInputStrategy->mouseMoved(input);
+			if(const auto mis = mouseInputStrategy(input.location()))
+				mis->mouseMoved(input, *this);
 		}
 
 		/// Invoked when a mouse button has been pressed on a widget.
 		void TextViewer::mousePressed(widgetapi::event::MouseButtonInput& input) {
-			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock())
-				mouseInputStrategy->mouseButtonInput(MouseInputStrategy::PRESSED, input);
+			if(const auto mis = mouseInputStrategy(input.location()))
+				mis->mouseButtonInput(MouseInputStrategy::PRESSED, input, *this);
 		}
 
 		/// Invoked when a mouse button has been released on a widget.
 		void TextViewer::mouseReleased(widgetapi::event::MouseButtonInput& input) {
-			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock())
-				mouseInputStrategy->mouseButtonInput(MouseInputStrategy::RELEASED, input);
+			if(const auto mis = mouseInputStrategy(input.location()))
+				mis->mouseButtonInput(MouseInputStrategy::RELEASED, input, *this);
 		}
 
 		/// Invoked when the mouse button has been triple-clicked. 
 		void TextViewer::mouseTripleClicked(widgetapi::event::MouseButtonInput& input) {
-			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock())
-				mouseInputStrategy->mouseButtonInput(MouseInputStrategy::TRIPLE_CLICKED, input);
+			if(const auto mis = mouseInputStrategy(input.location()))
+				mis->mouseButtonInput(MouseInputStrategy::TRIPLE_CLICKED, input, *this);
 		}
 
 		/// Invoked when the mouse wheel is rotated.
 		void TextViewer::mouseWheelChanged(widgetapi::event::MouseWheelInput& input) {
-			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock())
-				mouseInputStrategy->mouseWheelRotated(input);
+			if(const auto mis = mouseInputStrategy(input.location()))
+				mis->mouseWheelRotated(input, *this);
 		}
 
 		/// @see Widget#paint
@@ -1606,6 +1632,12 @@ namespace ascension {
 				updateScrollBars();
 				widgetapi::scheduleRedraw(*this, false);
 			}*/
+		}
+
+		/// @see MouseInputStrategy#TargetLocker#unlockMouseInputTarget
+		void TextViewer::unlockMouseInputTarget(MouseInputStrategy& strategy) BOOST_NOEXCEPT {
+			if(&strategy == lockedMouseInputStrategy_.lock().get())
+				lockedMouseInputStrategy_.reset();
 		}
 
 		namespace {

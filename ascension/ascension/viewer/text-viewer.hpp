@@ -19,6 +19,7 @@
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
+#include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
 #include <ascension/viewer/widgetapi/event/key-input.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-button-input.hpp>
@@ -111,6 +112,7 @@ namespace ascension {
 #endif
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				public graphics::font::TextViewportListener, protected TextViewerComponent::Locator,
+				protected MouseInputStrategy::TargetLocker,
 				private detail::MouseVanish<TextViewer>, public kernel::detail::PointCollection<VisualPoint> {
 		public:
 			/**
@@ -226,10 +228,14 @@ namespace ascension {
 		protected:
 			virtual void doBeep() BOOST_NOEXCEPT;
 			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::Rectangle& rect);
+			std::shared_ptr<MouseInputStrategy> mouseInputStrategy(const graphics::Point& p);
 			virtual void unfrozen();
 			void updateTextAreaAllocationRectangle();
 			// TextViewerComponent.Locator
 			virtual graphics::Rectangle locateComponent(const TextViewerComponent& component) const override;
+			// MouseInputStrategy.TargetLocker
+			bool lockMouseInputTarget(std::weak_ptr<MouseInputStrategy> strategy) override;
+			void unlockMouseInputTarget(MouseInputStrategy& strategy) BOOST_NOEXCEPT override;
 
 			// helpers
 		private:
@@ -386,6 +392,7 @@ namespace ascension {
 			std::unique_ptr<TextArea> textArea_;
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
+			std::weak_ptr<MouseInputStrategy> lockedMouseInputStrategy_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			win32::Handle<HWND>::Type toolTip_;
 			std::basic_string<WCHAR> tipText_;
