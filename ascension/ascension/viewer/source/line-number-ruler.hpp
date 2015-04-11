@@ -13,6 +13,7 @@
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/presentation/writing-mode.hpp>
+#include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/source/abstract-ruler.hpp>
 #include <boost/optional.hpp>
 
@@ -20,7 +21,7 @@ namespace ascension {
 	namespace viewer {
 		namespace source {
 			/// A ruler (column) displaying line numbers.
-			class LineNumberRuler : public AbstractRuler,
+			class LineNumberRuler : public AbstractRuler, public AbstractMouseInputStrategy,
 				public graphics::font::TextViewportListener, public graphics::font::VisualLinesListener {
 			public:
 				LineNumberRuler();
@@ -39,12 +40,21 @@ namespace ascension {
 
 			private:
 				std::uint8_t computeNumberOfDigits() const BOOST_NOEXCEPT;
+				void continueLineSelection(const kernel::Position& to);
+				void endLineSelection();
 				void invalidate();
 				bool updateNumberOfDigits() BOOST_NOEXCEPT;
 				void updateWidth();
 				// Ruler
 				void paint(graphics::PaintContext& context) override;
 				graphics::Scalar width() const BOOST_NOEXCEPT override;
+				// MouseInputStrategy
+				void interruptMouseReaction(bool forKeyboardInput) override;
+				void mouseButtonInput(Action, widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) override;
+				void mouseInputTargetUnlocked() override;
+				bool showCursor(const graphics::Point& position) override;
+				// AbstractMouseInputStrategy
+				void trackedLocationChanged(const kernel::Position& position) override;
 				// graphics.font.TextViewportListener
 				void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
 				void viewportScrollPositionChanged(
@@ -69,6 +79,7 @@ namespace ascension {
 				Index startValue_;
 				boost::optional<std::uint8_t> numberOfDigits_;
 				boost::optional<graphics::Scalar> width_;
+				boost::optional<Index> lineSelectionAnchorLine_;
 			};
 		}
 	}

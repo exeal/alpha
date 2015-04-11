@@ -7,7 +7,9 @@
 
 #ifndef ASCENSION_MOUSE_INPUT_STRATEGY_HPP
 #define ASCENSION_MOUSE_INPUT_STRATEGY_HPP
+#include <ascension/corelib/timer.hpp>
 #include <ascension/graphics/geometry/point.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <memory>
 
 namespace ascension {
@@ -67,8 +69,6 @@ namespace ascension {
 
 			/// Destructor.
 			virtual ~MouseInputStrategy() BOOST_NOEXCEPT {}
-			/// The viewer lost the mouse capture.
-			virtual void captureChanged() = 0;
 			/**
 			 * Returns @c DropTarget if this object supports the interface, or @c null.
 			 * Default implementation returns @c null.
@@ -88,6 +88,12 @@ namespace ascension {
 			 * @param targetLocker The @c TargetLocker object
 			 */
 			virtual void mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) = 0;
+			/**
+			 * The lock by @c TargetLocker#lockMouseInputTarget method was revoked.
+			 * @note The lock may be revoked regardless of call of @c TargetLocker#lockMouseInputTarget method. For
+			 *       example, if the text viewer lost the input grab in the window system.
+			 */
+			virtual void mouseInputTargetUnlocked() = 0;
 			/**
 			 * The mouse was moved and the viewer had focus.
 			 * @param input The input information
@@ -112,20 +118,39 @@ namespace ascension {
 		class TextViewer;
 
 		/// Default implementation of @c MouseInputStrategy interface.
-		class AbstractMouseInputStrategy : public MouseInputStrategy {
+		class AbstractMouseInputStrategy : public MouseInputStrategy, private HasTimer, private boost::noncopyable {
 		public:
+			AbstractMouseInputStrategy() BOOST_NOEXCEPT;
 			virtual ~AbstractMouseInputStrategy() BOOST_NOEXCEPT;
-			virtual void captureChanged() override;
 			virtual std::shared_ptr<widgetapi::DropTarget> handleDropTarget() const override;
 			virtual void interruptMouseReaction(bool) override;
 			virtual void mouseButtonInput(Action, widgetapi::event::MouseButtonInput& input, TargetLocker&) override;
+			virtual void mouseInputTargetUnlocked() override;
 			virtual void mouseMoved(widgetapi::event::LocatedUserInput& input, TargetLocker&) override;
 			virtual void mouseWheelRotated(widgetapi::event::MouseWheelInput& input, TargetLocker&) override;
 			virtual bool showCursor(const graphics::Point&) override;
 
 		protected:
+			/// @name
+			/// @{
+			void beginLocationTracking(TextViewer& viewer, TargetLocker& targetLocker, bool autoScroll, bool locateCursor);
+			void endLocationTracking();
+			bool isTrackingLocation() const BOOST_NOEXCEPT;
+			virtual void trackedLocationChanged(const kernel::Position& position);
+			/// @}
+
+			/// @name
+			/// @{
 			bool showArrowCursor(TextViewer& viewer);
 			bool showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor);
+			/// @}
+			static const unsigned int SELECTION_EXPANSION_INTERVAL_IN_MILLISECONDS;	// TODO: Use std.chrono.
+			static const unsigned int DRAGGING_TRACK_INTERVAL_IN_MILLISECONDS;	// TODO: Use std.chrono.
+
+		private:
+			void timeElapsed(Timer& timer) override;
+			struct Tracking;
+			std::unique_ptr<Tracking> tracking_;
 		};
 	}
 }
