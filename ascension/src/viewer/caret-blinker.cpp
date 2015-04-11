@@ -64,7 +64,7 @@ namespace ascension {
 		}
 
 		/// @see HasTimer#timeElapsed
-		void TextViewer::CaretBlinker::timeElapsed(Timer&) {
+		void TextViewer::CaretBlinker::timeElapsed(Timer<>&) {
 			if(!widgetapi::hasFocus(viewer_)) {
 				timer_.stop();
 				update();

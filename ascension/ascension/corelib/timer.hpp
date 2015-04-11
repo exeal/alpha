@@ -8,6 +8,7 @@
 #define ASCENSION_TIMER_HPP
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
+#include <boost/chrono/duration.hpp>
 #include <boost/config.hpp>	// BOOST_NOEXCEPT
 #include <boost/optional.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -19,20 +20,27 @@
 #endif
 
 namespace ascension {
+	template<typename T> class Timer;
 
-	class Timer;
-
-	/// @c HasTimer is an abstract base class of type which is a receiver called by @c Timer instance.
+	/**
+	 * @c HasTimer is an abstract base class of type which is a receiver called by @c Timer instance.
+	 * @tparam T The unique type to prevent the duplication in the derived class
+	 */
+	template<typename T = void>
 	class HasTimer {
 	private:
 		/**
 		 * Called by @c Timer instance.
 		 * @param timer The timer
 		 */
-		virtual void timeElapsed(Timer& timer) = 0;
-		friend class Timer;
+		virtual void timeElapsed(Timer<T>& timer) = 0;
+		friend class Timer<T>;
 	};
 
+	/**
+	 * @tparam T The type for uniqueness. See the description of @c HasTimer class template
+	 */
+	template<typename T = void>
 	class Timer
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 		: protected QTimer
@@ -47,13 +55,13 @@ namespace ascension {
 		 * @param object The object receives the timer event
 		 * @throw PlatformDependentError&lt;&gt;
 		 */
-		Timer(unsigned int interval, HasTimer& object) : object_(nullptr) {
+		Timer(const boost::chrono::milliseconds& interval, HasTimer<T>& object) : object_(nullptr) {
 			start(interval, object);
 		}
 		/// Destructor.
 		~Timer() {stop();}
 		/// Returns the timeout interval in milliseconds or @c boost#none if not active.
-		boost::optional<unsigned int> Timer::interval() const BOOST_NOEXCEPT {
+		boost::optional<boost::chrono::milliseconds> Timer::interval() const BOOST_NOEXCEPT {
 			return isActive() ? boost::make_optional(interval_) : boost::none;
 		}
 		/// Returns @c true if this timer is running.
@@ -66,17 +74,17 @@ namespace ascension {
 		 * @param object The object receives the timer event
 		 * @throw PlatformDependentError&lt;&gt;
 		 */
-		void start(unsigned int interval, HasTimer& object) {
+		void start(const boost::chrono::milliseconds& interval, HasTimer<T>& object) {
 			stop();
 			object_ = &object;
 			interval_ = interval;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			connection_ = Glib::signal_timeout().connect(sigc::mem_fun(*this, &Timer::function), interval);
+			connection_ = Glib::signal_timeout().connect(sigc::mem_fun(*this, &Timer::function), static_cast<unsigned int>(interval.count()));
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM_(QT)
 			setSingleShot(false);
-			start(interval);
+			start(interval.count());
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			identifier_ = ::SetTimer(nullptr, 0, interval, &function);
+			identifier_ = ::SetTimer(nullptr, 0, static_cast<UINT>(interval.count()), &function);
 			if(identifier_ == 0)
 				throw makePlatformError();
 #else
@@ -116,13 +124,13 @@ namespace ascension {
 #endif
 		}
 	private:
-		HasTimer* object_;
+		HasTimer<T>* object_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		sigc::connection connection_;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		UINT_PTR identifier_;
 #endif
-		unsigned int interval_;
+		boost::chrono::milliseconds interval_;
 	};
 
 }

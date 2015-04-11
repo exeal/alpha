@@ -53,7 +53,7 @@ namespace ascension {
 			void startPopup();
 			void updatePopupBounds();
 			// HasTimer
-			void timeElapsed(Timer& timer) override;
+			void timeElapsed(Timer<>& timer) override;
 			// ContentAssistant
 			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const BOOST_NOEXCEPT override;
 			std::shared_ptr<const ContentAssistProcessor>
@@ -85,7 +85,7 @@ namespace ascension {
 			viewer::TextViewer* textViewer_;
 			std::map<kernel::ContentType, std::shared_ptr<ContentAssistProcessor>> processors_;
 			std::uint32_t autoActivationDelay_;
-			Timer timer_;
+			Timer<> timer_;
 			struct CompletionSession {
 				std::shared_ptr<const ContentAssistProcessor> processor;
 				bool incremental;
