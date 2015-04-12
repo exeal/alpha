@@ -16,7 +16,7 @@
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/timer.hpp>	// Timer
 #include <ascension/kernel/position.hpp>	// kernel.Position
-#include <ascension/viewer/text-viewer-mouse-input-strategy.hpp>
+#include <ascension/viewer/text-area-mouse-input-strategy.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
 #include <memory>	// std.unique_ptr
 #include <utility>	// std.pair
@@ -44,11 +44,12 @@ namespace ascension {
 		}
 
 		// the documentation is user-input.cpp
-		class DefaultTextAreaMouseInputStrategy : public TextViewerMouseInputStrategy,
+		class DefaultTextAreaMouseInputStrategy :
+				public AbstractMouseInputStrategy, public TextAreaMouseInputStrategy,
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::com::IUnknownImpl<ASCENSION_WIN32_COM_INTERFACE(IDropSource), win32::com::NoReferenceCounting>,
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				private HasTimer, private widgetapi::DropTarget {
+				private HasTimer<DefaultTextAreaMouseInputStrategy>, private widgetapi::DropTarget {
 		public:
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
@@ -87,22 +88,22 @@ namespace ascension {
 			static void showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor);
 		private:
 			bool endAutoScroll();
-			void extendSelectionTo(const kernel::Position* to = nullptr);
-			void handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input);
+			void continueSelectionExtension(const kernel::Position& to);
+			void handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker);
 			void handleLeftButtonReleased(widgetapi::event::MouseButtonInput& input);
 			// MouseInputStrategy
-			void captureChanged() override;
 			std::shared_ptr<widgetapi::DropTarget> handleDropTarget() const override;
 			void interruptMouseReaction(bool forKeyboardInput) override;
-			void mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input) override;
-			void mouseMoved(widgetapi::event::LocatedUserInput& input) override;
-			void mouseWheelRotated(widgetapi::event::MouseWheelInput& input) override;
+			void mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) override;
+			void mouseInputTargetUnlocked() override;
+			void mouseMoved(widgetapi::event::LocatedUserInput& input, TargetLocker& targetLocker) override;
+			void mouseWheelRotated(widgetapi::event::MouseWheelInput& input, TargetLocker& targetLocker) override;
 			bool showCursor(const graphics::Point& position) override;
 			// TextViewerMouseInputStrategy
 			void install(TextViewer& viewer) override;
 			void uninstall() override;
-			// HasTimer
-			void timeElapsed(Timer& timer) override;
+			// HasTimer<DefaultTextAreaMouseInputStrategy>
+			void timeElapsed(Timer<DefaultTextAreaMouseInputStrategy>& timer) override;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// IDropSource
 			STDMETHODIMP QueryContinueDrag(BOOL escapePressed, DWORD keyState) override;
@@ -134,8 +135,7 @@ namespace ascension {
 			} dnd_;
 			std::unique_ptr<widgetapi::Widget::value_type> autoScrollOriginMark_;
 			const presentation::hyperlink::Hyperlink* lastHoveredHyperlink_;
-			Timer timer_;
-			static const unsigned int SELECTION_EXPANSION_INTERVAL, DRAGGING_TRACK_INTERVAL;
+			Timer<DefaultTextAreaMouseInputStrategy> timer_;
 		};
 	}
 

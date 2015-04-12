@@ -25,12 +25,14 @@
 namespace ascension {
 	namespace viewer {
 		/// Default constructor.
-		TextArea::TextArea() : viewer_(nullptr), locator_(nullptr), linesToRedraw_(boost::irange<Index>(0, 0)) {
+		TextArea::TextArea() : viewer_(nullptr), locator_(nullptr),
+				linesToRedraw_(boost::irange<Index>(0, 0)), mouseInputStrategyIsInstalled_(false) {
 		}
 
 		/// Destructor.
 		TextArea::~TextArea() BOOST_NOEXCEPT {
-			textRenderer().layouts().removeVisualLinesListener(*this);
+			if(viewer_ != nullptr)
+				uninstall(*viewer_);
 		}
 
 		/// @see Caret#MotionSignal
@@ -178,7 +180,11 @@ namespace ascension {
 				renderer_->defaultFontChangedSignal().connect(std::bind(&TextArea::defaultFontChanged, this, std::placeholders::_1));
 			renderer_->viewport()->addListener(*this);
 			renderer_->layouts().addVisualLinesListener(*this);
-			setMouseInputStrategy(std::unique_ptr<MouseInputStrategy>());
+			if(mouseInputStrategy_.get() != nullptr) {
+				assert(!mouseInputStrategyIsInstalled_);
+				mouseInputStrategy_->install(*viewer_);
+			} else
+				setMouseInputStrategy(std::unique_ptr<TextAreaMouseInputStrategy>());
 		}
 
 		/// @see Caret#MatchBracketsChangedSignal
@@ -352,17 +358,37 @@ namespace ascension {
 		 * by @c DefaultTextViewerMouseInputStrategy class as the construction.
 		 * @param newStrategy The new strategy or @c null
 		 */
-		void TextArea::setMouseInputStrategy(std::unique_ptr<MouseInputStrategy> newStrategy) {
+		void TextArea::setMouseInputStrategy(std::unique_ptr<TextAreaMouseInputStrategy> newStrategy) {
 //			checkInitialization();
 			if(mouseInputStrategy_.get() != nullptr) {
 				mouseInputStrategy_->interruptMouseReaction(false);
+				mouseInputStrategy_->uninstall();
 				dropTargetHandler_.reset();
 			}
 			if(newStrategy.get() != nullptr)
 				mouseInputStrategy_ = std::move(newStrategy);
 			else
 				mouseInputStrategy_ = std::make_shared<DefaultTextAreaMouseInputStrategy>();	// TODO: the two parameters don't have rationales.
+			mouseInputStrategy_->install(*viewer_);
 			dropTargetHandler_ = mouseInputStrategy_->handleDropTarget();
+		}
+
+		/// @see TextViewerComponent#uninstall
+		void TextArea::uninstall(TextViewer& viewer) {
+			if(&viewer == viewer_) {
+				mouseInputStrategy_->uninstall();
+				mouseInputStrategyIsInstalled_ = false;
+				renderer_->layouts().removeVisualLinesListener(*this);
+				renderer_->viewport()->removeListener(*this);
+				caretMotionConnection_.disconnect();
+				selectionShapeChangedConnection_.disconnect();
+				matchBracketsChangedConnection_.disconnect();
+				defaultFontChangedConnection_.disconnect();
+				viewer_->document().removeListener(*this);
+				renderer_.reset();
+				locator_ = nullptr;
+				viewer_ = nullptr;
+			}
 		}
 
 		/// @see TextViewportListener#viewportBoundsInViewChanged

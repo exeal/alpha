@@ -118,7 +118,7 @@ namespace ascension {
 		class TextViewer;
 
 		/// Default implementation of @c MouseInputStrategy interface.
-		class AbstractMouseInputStrategy : public MouseInputStrategy, private HasTimer<>, private boost::noncopyable {
+		class AbstractMouseInputStrategy : virtual public MouseInputStrategy, private HasTimer<>, private boost::noncopyable {
 		public:
 			AbstractMouseInputStrategy() BOOST_NOEXCEPT;
 			virtual ~AbstractMouseInputStrategy() BOOST_NOEXCEPT;

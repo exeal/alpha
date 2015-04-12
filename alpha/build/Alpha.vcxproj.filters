@@ -1132,9 +1132,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\mouse-input-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-mouse-input-strategy.hpp">
-      <Filter>ascension\Header Files\viewer</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-component.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
@@ -1185,6 +1182,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\shared-library.hpp">
       <Filter>ascension\Header Files\corelib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-area-mouse-input-strategy.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

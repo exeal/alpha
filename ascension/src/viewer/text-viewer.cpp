@@ -21,9 +21,9 @@
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-caret-shaper.hpp>
+#include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
-#include <ascension/viewer/text-viewer-mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
