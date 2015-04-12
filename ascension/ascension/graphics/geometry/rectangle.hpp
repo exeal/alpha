@@ -62,6 +62,8 @@ namespace ascension {
 				BasicRectangleBase(const Arguments& arguments) :
 					ranges_(nrange(arguments[_left], arguments[_right]), nrange(arguments[_top], arguments[_bottom])) {}
 			private:
+				template<typename OtherCoordinate>
+				friend class BasicRectangleBase;
 				template<std::size_t dimension, typename Coordinate>
 				friend NumericRange<Coordinate>& range(BasicRectangleBase<Coordinate>& rectangle);
 				template<std::size_t dimension, typename Coordinate>
@@ -108,7 +110,8 @@ namespace ascension {
 				 * @param other The source object
 				 */
 				template<typename OtherCoordinate>
-				BasicRectangle(const BasicRectangle<OtherCoordinate>& other) : BasicRectangleBase<Coordinate>(other) {}
+				BasicRectangle(const BasicRectangle<OtherCoordinate>& other) :
+					BasicRectangleBase<Coordinate>(static_cast<const BasicRectangleBase<OtherCoordinate>&>(other)) {}
 				/**
 				 * Copy-constructor for different rectangle type.
 				 * @tparam Geometry The type of @a other
@@ -145,9 +148,10 @@ namespace ascension {
 				explicit BasicRectangle(const std::pair<Point1, Point2>& points,
 					typename detail::EnableIfTagIs<Point1, boost::geometry::point_tag>::type* = nullptr,
 					typename detail::EnableIfTagIs<Point2, boost::geometry::point_tag>::type* = nullptr)
-					: BasicRectangleBase<Coordinate>((
-						_left = boost::geometry::get<0>(points.first), _top = boost::geometry::get<1>(points.first),
-						_right = boost::geometry::get<0>(points.second), _bottom = boost::geometry::get<1>(points.second))) {}
+					: BasicRectangleBase<Coordinate>(
+						std::make_pair(
+							nrange(boost::geometry::get<0>(points.first), boost::geometry::get<0>(points.second)),
+							nrange(boost::geometry::get<1>(points.first), boost::geometry::get<1>(points.second)))) {}
 				/**
 				 * Constructor creates a rectangle described by the given origin and size.
 				 * @tparam Origin The type of @a origin
@@ -158,9 +162,10 @@ namespace ascension {
 				template<typename Origin, typename SizeCoordinate>
 				BasicRectangle(const Origin& origin, const BasicDimension<SizeCoordinate>& size,
 						typename detail::EnableIfTagIs<Origin, boost::geometry::point_tag>::type* = nullptr)
-					: BasicRectangleBase<Coordinate>((
-						_left = boost::geometry::get<0>(origin), _top = boost::geometry::get<1>(origin),
-						_right = boost::geometry::get<0>(origin) + dx(size), _bottom = boost::geometry::get<1>(origin) + dy(size))) {}
+					: BasicRectangleBase<Coordinate>(
+						std::make_pair(
+							nrange<Coordinate>(boost::geometry::get<0>(origin), boost::geometry::get<0>(origin) + dx(size)),
+							nrange<Coordinate>(boost::geometry::get<1>(origin), boost::geometry::get<1>(origin) + dy(size)))) {}
 				/// Constructor takes named parameters.
 				BOOST_PARAMETER_CONSTRUCTOR(
 					BasicRectangle, (BasicRectangleBase<Coordinate>), tag,
