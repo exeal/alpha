@@ -54,9 +54,6 @@ namespace ascension {
 		 * - Changes the mouse cursor according to the position of the cursor (Arrow, I-beam and hand).
 		 */
 
-		const unsigned int DefaultTextAreaMouseInputStrategy::SELECTION_EXPANSION_INTERVAL = 100;
-		const unsigned int DefaultTextAreaMouseInputStrategy::DRAGGING_TRACK_INTERVAL = 100;
-
 		/// Default constructor.
 		DefaultTextAreaMouseInputStrategy::DefaultTextAreaMouseInputStrategy() : viewer_(nullptr), state_(NONE), lastHoveredHyperlink_(nullptr) {
 		}
@@ -262,12 +259,6 @@ namespace ascension {
 			state_ = NONE;
 			if(widgetapi::isVisible(*viewer_))
 				widgetapi::setFocus(*viewer_);
-		}
-
-		/// @see MouseInputStrategy#captureChanged
-		void DefaultTextAreaMouseInputStrategy::captureChanged() {
-			timer_.stop();
-			state_ = NONE;
 		}
 
 		namespace {
@@ -547,64 +538,33 @@ namespace ascension {
 		}
 
 		/// Extends the selection to the current cursor position.
-		void DefaultTextAreaMouseInputStrategy::extendSelectionTo(const kernel::Position* to /* = nullptr */) {
+		void DefaultTextAreaMouseInputStrategy::continueSelectionExtension(const kernel::Position& to) {
 			if((state_ & SELECTION_EXTENDING_MASK) != SELECTION_EXTENDING_MASK)
 				throw IllegalStateException("not extending the selection.");
-			kernel::Position destination;
-			if(to == nullptr) {
-				graphics::Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
-				Caret& caret = viewer_->caret();
-				if(state_ != EXTENDING_CHARACTER_SELECTION) {
-					const TextViewer::HitTestResult htr = viewer_->hitTest(p);
-					if(state_ == EXTENDING_LINE_SELECTION && htr == source::SourceViewer::RULER)
-						// end line selection
-						state_ = EXTENDING_CHARACTER_SELECTION;
-				}
-				// snap cursor position into 'content-rectangle' of the text area
-				namespace geometry = graphics::geometry;
-				const graphics::Rectangle contentRectangle(viewer_->textAreaContentRectangle());
-				geometry::x(p) = std::min<graphics::Scalar>(
-					std::max<graphics::Scalar>(geometry::x(p), geometry::left(contentRectangle)),
-					geometry::right(contentRectangle));
-				geometry::y(p) = std::min<graphics::Scalar>(
-					std::max<graphics::Scalar>(geometry::y(p), geometry::top(contentRectangle)),
-					geometry::bottom(contentRectangle));
-				destination = viewToModel(*viewer_->textArea().textRenderer().viewport(), p).characterIndex();
-			} else
-				destination = *to;
 
-			const kernel::Document& document = viewer_->document();
 			Caret& caret = viewer_->caret();
 			if(state_ == EXTENDING_CHARACTER_SELECTION)
-				caret.extendSelectionTo(destination);
-			else if(state_ == EXTENDING_LINE_SELECTION) {
-				const Index lines = document.numberOfLines();
-				kernel::Region s;
-				s.first.line = (destination.line >= selection_.initialLine) ? selection_.initialLine : selection_.initialLine + 1;
-				s.first.offsetInLine = (s.first.line > lines - 1) ? document.lineLength(--s.first.line) : 0;
-				s.second.line = (destination.line >= selection_.initialLine) ? destination.line + 1 : destination.line;
-				s.second.offsetInLine = (s.second.line > lines - 1) ? document.lineLength(--s.second.line) : 0;
-				caret.select(s);
-			} else if(state_ == EXTENDING_WORD_SELECTION) {
-				using namespace text;
-				const IdentifierSyntax& id = document.contentTypeInformation().getIdentifierSyntax(contentType(caret));
-				if(destination.line < selection_.initialLine
-						|| (destination.line == selection_.initialLine
-							&& destination.offsetInLine < selection_.initialWordColumns.first)) {
-					WordBreakIterator<kernel::DocumentCharacterIterator> i(
-						kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
+				caret.extendSelectionTo(to);
+			else if(state_ == EXTENDING_WORD_SELECTION) {
+				const kernel::Document& document = viewer_->document();
+				const text::IdentifierSyntax& id = document.contentTypeInformation().getIdentifierSyntax(kernel::contentType(caret));
+				if(to.line < selection_.initialLine
+						|| (to.line == selection_.initialLine
+							&& to.offsetInLine < selection_.initialWordColumns.first)) {
+					text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
+						kernel::DocumentCharacterIterator(document, to), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 					--i;
 					caret.select(kernel::Position(selection_.initialLine, selection_.initialWordColumns.second),
-						(i.base().tell().line == destination.line) ? i.base().tell() : kernel::Position(destination.line, 0));
-				} else if(destination.line > selection_.initialLine
-						|| (destination.line == selection_.initialLine
-							&& destination.offsetInLine > selection_.initialWordColumns.second)) {
+						(i.base().tell().line == to.line) ? i.base().tell() : kernel::Position(to.line, 0));
+				} else if(to.line > selection_.initialLine
+						|| (to.line == selection_.initialLine
+							&& to.offsetInLine > selection_.initialWordColumns.second)) {
 					text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
-						kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
+						kernel::DocumentCharacterIterator(document, to), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 					++i;
 					caret.select(kernel::Position(selection_.initialLine, selection_.initialWordColumns.first),
-						(i.base().tell().line == destination.line) ?
-							i.base().tell() : kernel::Position(destination.line, document.lineLength(destination.line)));
+						(i.base().tell().line == to.line) ?
+							i.base().tell() : kernel::Position(to.line, document.lineLength(to.line)));
 				} else
 					caret.select(kernel::Position(selection_.initialLine, selection_.initialWordColumns.first),
 						kernel::Position(selection_.initialLine, selection_.initialWordColumns.second));
@@ -634,28 +594,15 @@ namespace ascension {
 		}
 
 		/// @internal
-		void DefaultTextAreaMouseInputStrategy::handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input) {
+		void DefaultTextAreaMouseInputStrategy::handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) {
 			bool boxDragging = false;
 			Caret& caret = viewer_->caret();
-			const TextViewer::HitTestResult htr = viewer_->hitTest(input.location());
 
 			utils::closeCompletionProposalsPopup(*viewer_);
 			texteditor::endIncrementalSearch(*viewer_);
 
-			// select line(s)
-			if(htr == source::SourceViewer::RULER) {
-				const kernel::Position to(viewToModel(*viewer_->textArea().textRenderer().viewport(), input.location()).insertionIndex());
-				const bool extend = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN) && to.line != line(caret.anchor());
-				state_ = EXTENDING_LINE_SELECTION;
-				selection_.initialLine = extend ? line(caret.anchor()) : to.line;
-				viewer_->caret().endRectangleSelection();
-				extendSelectionTo(&to);
-				widgetapi::grabInput(*viewer_);
-				timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
-			}
-
 			// approach drag-and-drop
-			else if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(caret) && isPointOverSelection(caret, input.location())) {
+			if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(caret) && isPointOverSelection(caret, input.location())) {
 				state_ = APPROACHING_DND;
 				dragApproachedPosition_ = input.location();
 				if(caret.isSelectionRectangle())
@@ -696,15 +643,14 @@ namespace ascension {
 								selection_.initialWordColumns = std::make_pair(offsetInLine(caret.beginning()), offsetInLine(caret.end()));
 							}
 							if(input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN))
-								extendSelectionTo(&to->characterIndex());
+								continueSelectionExtension(to->characterIndex());
 						} else
 							caret.moveTo(to->characterIndex());
 						if(input.hasModifier(widgetapi::event::UserInput::ALT_DOWN))	// make the selection reactangle
 							caret.beginRectangleSelection();
 						else
 							caret.endRectangleSelection();
-						widgetapi::grabInput(*viewer_);
-						timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
+						beginLocationTracking(*viewer_, targetLocker, true, true);
 					}
 				}
 			}
@@ -793,32 +739,30 @@ namespace ascension {
 		}
 
 		/// @see MouseInputStrategy#mouseButtonInput
-		void DefaultTextAreaMouseInputStrategy::mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input) {
+		void DefaultTextAreaMouseInputStrategy::mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) {
+			if(viewer_ == nullptr)
+				return input.ignore();
 			if(action != RELEASED && endAutoScroll())
 				return input.consume();
 
 			switch(input.button()) {
 				case widgetapi::event::LocatedUserInput::BUTTON1_DOWN:
 					if(action == PRESSED)
-						handleLeftButtonPressed(input);
+						handleLeftButtonPressed(input, targetLocker);
 					else if(action == RELEASED)
 						handleLeftButtonReleased(input);
 					else if(action == DOUBLE_CLICKED) {
 						texteditor::abortIncrementalSearch(*viewer_);
 						handleLeftButtonDoubleClick(input);
 						if(!input.isConsumed()) {
-							const TextViewer::HitTestResult htr = viewer_->hitTest(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
-							if(htr == TextViewer::TEXT_AREA_CONTENT_RECTANGLE || htr == TextViewer::TEXT_AREA_PADDING_START) {
-								// begin word selection
-								Caret& caret = viewer_->caret();
-								selectWord(caret);
-								state_ = EXTENDING_WORD_SELECTION;
-								selection_.initialLine = line(caret);
-								selection_.initialWordColumns = std::make_pair(offsetInLine(caret.anchor()), offsetInLine(caret));
-								widgetapi::grabInput(*viewer_);
-								timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
-								input.consume();
-							}
+							// begin word selection
+							Caret& caret = viewer_->caret();
+							selectWord(caret);
+							state_ = EXTENDING_WORD_SELECTION;
+							selection_.initialLine = line(caret);
+							selection_.initialWordColumns = std::make_pair(offsetInLine(caret.anchor()), offsetInLine(caret));
+							beginLocationTracking(*viewer_, targetLocker, true, true);
+							input.consume();
 						}
 					}
 					break;
@@ -845,7 +789,7 @@ namespace ascension {
 					} else if(action == RELEASED) {
 						if(state_ == APPROACHING_AUTO_SCROLL) {
 							state_ = AUTO_SCROLL;
-							timer_.start(0, *this);
+							timer_.start(boost::chrono::milliseconds(0), *this);
 						} else if(state_ == AUTO_SCROLL_DRAGGING)
 							endAutoScroll();
 					}
@@ -862,8 +806,14 @@ namespace ascension {
 			}
 		}
 
+		/// @see MouseInputStrategy#mouseInputTargetUnlocked
+		void DefaultTextAreaMouseInputStrategy::mouseInputTargetUnlocked() {
+			timer_.stop();
+			state_ = NONE;
+		}
+
 		/// @see MouseInputStrategy#mouseMoved
-		void DefaultTextAreaMouseInputStrategy::mouseMoved(widgetapi::event::LocatedUserInput& input) {
+		void DefaultTextAreaMouseInputStrategy::mouseMoved(widgetapi::event::LocatedUserInput& input, TargetLocker&) {
 			if(state_ == APPROACHING_AUTO_SCROLL
 					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ state_ == APPROACHING_DND)) {	// dragging starts?
 				if(state_ == APPROACHING_DND && isSelectionEmpty(viewer_->caret())) {
@@ -883,20 +833,20 @@ namespace ascension {
 							beginDragAndDrop(input);
 						else {
 							state_ = AUTO_SCROLL_DRAGGING;
-							timer_.start(0, *this);
+							timer_.start(boost::chrono::milliseconds::zero(), *this);
 						}
 					}
 					input.consume();
 #endif
 				}
 			} else if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {
-				extendSelectionTo();
+				assert(isTrackingLocation());
 				input.consume();
 			}
 		}
 
 		/// @see MouseInputStrategy#mouseWheelRotated
-		void DefaultTextAreaMouseInputStrategy::mouseWheelRotated(widgetapi::event::MouseWheelInput& input) {
+		void DefaultTextAreaMouseInputStrategy::mouseWheelRotated(widgetapi::event::MouseWheelInput& input, TargetLocker&) {
 			if(!endAutoScroll()) {
 				const std::shared_ptr<graphics::font::TextViewport> viewport(viewer_->textArea().textRenderer().viewport());
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
@@ -952,9 +902,7 @@ namespace ascension {
 			boost::optional<widgetapi::Cursor::BuiltinShape> builtinShape;
 			const presentation::hyperlink::Hyperlink* newlyHoveredHyperlink = nullptr;
 
-			const TextViewer::HitTestResult& htr = viewer_->hitTest(position);
-			if((htr == source::SourceViewer::RULER)	// on the ruler?
-					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(viewer_->caret()) && isPointOverSelection(viewer_->caret(), position)))	// on a draggable text selection?
+			if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(viewer_->caret()) && isPointOverSelection(viewer_->caret(), position))	// on a draggable text selection?
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				builtinShape = Gdk::ARROW;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
@@ -966,7 +914,7 @@ namespace ascension {
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif
-			else if(htr == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {
+			else {
 				// on a hyperlink?
 				if(const boost::optional<graphics::font::TextHit<kernel::Position>> p =
 						viewToModelInBounds(*viewer_->textArea().textRenderer().viewport(), position, kernel::locations::UTF16_CODE_UNIT))
@@ -999,72 +947,57 @@ namespace ascension {
 			return false;
 		}
 
-		///
-		void DefaultTextAreaMouseInputStrategy::timeElapsed(Timer& timer) {
-			namespace geometry = graphics::geometry;
-			using graphics::font::TextViewport;
-			using graphics::font::TextViewportSignedScrollOffset;
+		/// @see Timer#timeElapsed
+		void DefaultTextAreaMouseInputStrategy::timeElapsed(Timer<DefaultTextAreaMouseInputStrategy>& timer) {
+			if(viewer_ != nullptr) {
+				if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
+					const std::shared_ptr<graphics::font::TextViewport> viewport(viewer_->textArea().textRenderer().viewport());
+					timer.stop();
+					const graphics::Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
+					graphics::Dimension scrollUnits(
+						graphics::geometry::_dx =
+							graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
+						graphics::geometry::_dy =
+							widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textArea().textRenderer().defaultFont())->linePitch());
+					if(presentation::isVertical(viewer_->textArea().textRenderer().computedBlockFlowDirection()))
+						graphics::geometry::transpose(scrollUnits);
+					const graphics::Dimension scrollOffsets(
+						graphics::geometry::_dx =
+							(graphics::geometry::x(p) - graphics::geometry::x(dragApproachedPosition_)) / graphics::geometry::dx(scrollUnits),
+						graphics::geometry::_dy =
+							(graphics::geometry::y(p) - graphics::geometry::y(dragApproachedPosition_)) / graphics::geometry::dy(scrollUnits));
+//					const graphics::Scalar scrollDegree = std::max(std::abs(yScrollDegree), std::abs(xScrollDegree));
 
-			if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {	// scroll automatically during extending the selection
-				const std::shared_ptr<TextViewport> viewport(viewer_->textArea().textRenderer().viewport());
-				const graphics::Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
-				const graphics::Rectangle contentRectangle(viewer_->textAreaContentRectangle());
-				graphics::Dimension scrollUnits(
-					geometry::_dx = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
-					geometry::_dy = widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textArea().textRenderer().defaultFont())->linePitch());
-				if(isVertical(viewer_->textArea().textRenderer().computedBlockFlowDirection()))
-					geometry::transpose(scrollUnits);
+					if(graphics::geometry::dy(scrollOffsets) != 0 /*&& abs(geometry::dy(scrollOffsets)) >= abs(geometry::dx(scrollOffsets))*/)
+						viewport->scroll(
+							graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
+								0, (graphics::geometry::dy(scrollOffsets) > 0) ? +1 : -1));
+//					else if(graphics::geometry::dx(scrollOffsets) != 0)
+//						viewport->scroll(
+//							graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
+//								(graphics::geometry::dx(scrollOffsets) > 0) ? +1 : -1, 0));
 
-				graphics::PhysicalTwoAxes<TextViewportSignedScrollOffset> scrollOffsets(0, 0);
-				// no rationale about these scroll amounts
-				if(geometry::y(p) < geometry::top(contentRectangle))
-					scrollOffsets.y() = static_cast<TextViewportSignedScrollOffset>((geometry::y(p) - (geometry::top(contentRectangle))) / geometry::dy(scrollUnits) - 1);
-				else if(geometry::y(p) >= geometry::bottom(contentRectangle))
-					scrollOffsets.y() = static_cast<TextViewportSignedScrollOffset>((geometry::y(p) - (geometry::bottom(contentRectangle))) / geometry::dy(scrollUnits) + 1);
-				else if(geometry::x(p) < geometry::left(contentRectangle))
-					scrollOffsets.x() = static_cast<TextViewportSignedScrollOffset>((geometry::x(p) - (geometry::left(contentRectangle))) / geometry::dx(scrollUnits) - 1);
-				else if(geometry::x(p) >= geometry::right(contentRectangle))
-					scrollOffsets.x() = static_cast<TextViewportSignedScrollOffset>((geometry::x(p) - (geometry::right(contentRectangle))) / geometry::dx(scrollUnits) + 1);
-				if(scrollOffsets.x() != 0 || scrollOffsets.y() != 0)
-					viewport->scroll(scrollOffsets);
-				extendSelectionTo();
-			} else if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
-				const std::shared_ptr<TextViewport> viewport(viewer_->textArea().textRenderer().viewport());
-				timer.stop();
-				const graphics::Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
-				graphics::Dimension scrollUnits(
-					geometry::_dx = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
-					geometry::_dy = widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textArea().textRenderer().defaultFont())->linePitch());
-				if(isVertical(viewer_->textArea().textRenderer().computedBlockFlowDirection()))
-					geometry::transpose(scrollUnits);
-				const graphics::Dimension scrollOffsets(
-					geometry::_dx = (geometry::x(p) - geometry::x(dragApproachedPosition_)) / geometry::dx(scrollUnits),
-					geometry::_dy = (geometry::y(p) - geometry::y(dragApproachedPosition_)) / geometry::dy(scrollUnits));
-//				const Scalar scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
-
-				if(geometry::dy(scrollOffsets) != 0 /*&& abs(geometry::dy(scrollOffsets)) >= abs(geometry::dx(scrollOffsets))*/)
-					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(0, (geometry::dy(scrollOffsets) > 0) ? +1 : -1));
-//				else if(geometry::dx(scrollOffsets) != 0)
-//					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>((geometry::dx(scrollOffsets) > 0) ? +1 : -1, 0));
-
-				if(geometry::dy(scrollOffsets) != 0) {
-					timer_.start(500 / static_cast<unsigned int>((std::pow(2.0f, abs(geometry::dy(scrollOffsets)) / 2))), *this);
-					const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(
-						(geometry::dy(scrollOffsets) > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD);
-					showCursor(*viewer_, cursor);
-				} else {
-					timer_.start(300, *this);
-					const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL);
-					showCursor(*viewer_, cursor);
-				}
+					if(graphics::geometry::dy(scrollOffsets) != 0) {
+						const boost::chrono::milliseconds interval(
+							500 / static_cast<unsigned int>((std::pow(2.0f, abs(graphics::geometry::dy(scrollOffsets)) / 2))));
+						timer_.start(interval, *this);
+						const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(
+							(graphics::geometry::dy(scrollOffsets) > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD);
+						showCursor(*viewer_, cursor);
+					} else {
+						timer_.start(boost::chrono::milliseconds(300), *this);
+						const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL);
+						showCursor(*viewer_, cursor);
+					}
 #if 0
-			} else if(self.dnd_.enabled && (self.state_ & DND_MASK) == DND_MASK) {	// scroll automatically during dragging
-				const SIZE scrollOffset = calculateDnDScrollOffset(*self.viewer_);
-				if(scrollOffset.cy != 0)
-					self.viewer_->scroll(0, scrollOffset.cy, true);
-				else if(scrollOffset.cx != 0)
-					self.viewer_->scroll(scrollOffset.cx, 0, true);
+				} else if(self.dnd_.enabled && (self.state_ & DND_MASK) == DND_MASK) {	// scroll automatically during dragging
+					const SIZE scrollOffset = calculateDnDScrollOffset(*self.viewer_);
+					if(scrollOffset.cy != 0)
+						self.viewer_->scroll(0, scrollOffset.cy, true);
+					else if(scrollOffset.cx != 0)
+						self.viewer_->scroll(scrollOffset.cx, 0, true);
 #endif
+				}
 			}
 		}
 

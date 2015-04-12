@@ -490,9 +490,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-decorator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\source-viewer.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-area-mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-component.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-utility.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\virtual-box.hpp" />

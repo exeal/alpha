@@ -14,6 +14,7 @@
 namespace ascension {
 	namespace viewer {
 		class Caret;
+		class TextAreaMouseInputStrategy;
 
 		namespace widgetapi {
 			class DropTarget;
@@ -61,7 +62,7 @@ namespace ascension {
 
 			/// @name Listeners and Strategies
 			/// @{
-			void setMouseInputStrategy(std::unique_ptr<MouseInputStrategy> newStrategy);
+			void setMouseInputStrategy(std::unique_ptr<TextAreaMouseInputStrategy> newStrategy);
 			/// @}
 
 			// TextViewerComponent
@@ -118,7 +119,8 @@ namespace ascension {
 			const Locator* locator_;
 			std::unique_ptr<Renderer> renderer_;
 			boost::integer_range<Index> linesToRedraw_;
-			std::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
+			std::shared_ptr<TextAreaMouseInputStrategy> mouseInputStrategy_;
+			bool mouseInputStrategyIsInstalled_;
 			std::shared_ptr<widgetapi::DropTarget> dropTargetHandler_;
 			boost::signals2::scoped_connection caretMotionConnection_,
 				defaultFontChangedConnection_, matchBracketsChangedConnection_, selectionShapeChangedConnection_;
