@@ -133,7 +133,7 @@ namespace ascension {
 		protected:
 			/// @name
 			/// @{
-			void beginLocationTracking(TextViewer& viewer, TargetLocker& targetLocker, bool autoScroll, bool locateCursor);
+			void beginLocationTracking(TextViewer& viewer, TargetLocker* targetLocker, bool autoScroll, bool locateCursor);
 			void endLocationTracking();
 			bool isTrackingLocation() const BOOST_NOEXCEPT;
 			virtual void trackedLocationChanged(const kernel::Position& position);

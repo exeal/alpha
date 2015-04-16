@@ -18,6 +18,8 @@
 #include <ascension/kernel/position.hpp>	// kernel.Position
 #include <ascension/viewer/text-area-mouse-input-strategy.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
+#include <boost/optional.hpp>
+#include <boost/range/irange.hpp>
 #include <memory>	// std.unique_ptr
 #include <utility>	// std.pair
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -51,6 +53,7 @@ namespace ascension {
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				private HasTimer<DefaultTextAreaMouseInputStrategy>, private widgetapi::DropTarget {
 		public:
+			struct SelectionExtender;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
 			 * Defines drag-and-drop support levels.
@@ -91,6 +94,7 @@ namespace ascension {
 			void continueSelectionExtension(const kernel::Position& to);
 			void handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker);
 			void handleLeftButtonReleased(widgetapi::event::MouseButtonInput& input);
+			bool isStateNeutral() const BOOST_NOEXCEPT;
 			// MouseInputStrategy
 			std::shared_ptr<widgetapi::DropTarget> handleDropTarget() const override;
 			void interruptMouseReaction(bool forKeyboardInput) override;
@@ -116,26 +120,24 @@ namespace ascension {
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		private:
 			TextViewer* viewer_;
-			enum {
-				NONE = 0x00,
-				SELECTION_EXTENDING_MASK = 0x10, EXTENDING_CHARACTER_SELECTION, EXTENDING_WORD_SELECTION, EXTENDING_LINE_SELECTION,
-				AUTO_SCROLL_MASK = 0x20, APPROACHING_AUTO_SCROLL, AUTO_SCROLL_DRAGGING, AUTO_SCROLL,
-				DND_MASK = 0x40, APPROACHING_DND, DND_SOURCE, DND_TARGET
-			} state_;
-			graphics::Point dragApproachedPosition_;	// in client coordinates
-			struct Selection {
-				Index initialLine;	// line of the anchor when entered the selection extending
-				std::pair<Index, Index> initialWordColumns;
-			} selection_;
+			std::unique_ptr<SelectionExtender> selectionExtender_;	// not null only if selecting text
+			struct AutoScroll {
+				enum State {APPROACHING, SCROLLING_WITH_DRAG, SCROLLING_WITHOUT_DRAG} state;
+				graphics::Point approachedPosition;	// in viewer-local coordinates
+			};
+			boost::optional<AutoScroll> autoScroll_;
+			std::unique_ptr<widgetapi::Widget::value_type> autoScrollOriginMark_;
 			struct DragAndDrop {
+				enum State {APPROACHING, PROCESSING_AS_SOURCE, PROCESSING_AS_TARGET} state;
+				graphics::Point approachedPosition;	// in viewer-local coordinates
 				Index numberOfRectangleLines;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::com::SmartPointer<IDragSourceHelper> dragSourceHelper;
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			} dnd_;
-			std::unique_ptr<widgetapi::Widget::value_type> autoScrollOriginMark_;
-			const presentation::hyperlink::Hyperlink* lastHoveredHyperlink_;
+			};
+			boost::optional<DragAndDrop> dragAndDrop_;
 			Timer<DefaultTextAreaMouseInputStrategy> timer_;
+			const presentation::hyperlink::Hyperlink* lastHoveredHyperlink_;
 		};
 	}
 
