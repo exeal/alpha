@@ -47,13 +47,13 @@ namespace ascension {
 		 * Begins tracking of the mouse location. See the descriptions of the parameters.
 		 * @param viewer The text viewer
 		 * @param targetLocker The @c MouseInputStrategy#TargetLocker object. This method calls
-		 *                     @c MouseInputStrategy#TargetLocker#lockMouseInputTarget method.
+		 *                     @c MouseInputStrategy#TargetLocker#lockMouseInputTarget method if not @c null
 		 * @param autoScroll If @c true, this object scrolls @a viewer automatically and continuously toward the
 		 *                   location of the mouse if the mouse was outside @a viewer
 		 * @param locateCursor If @c true, @c #trackedLocationChanged method is called continuously
 		 * @see #endLocationTracking, #trackedLocationChanged
 		 */
-		void AbstractMouseInputStrategy::beginLocationTracking(TextViewer& viewer, TargetLocker& targetLocker, bool autoScroll, bool locateCursor) {
+		void AbstractMouseInputStrategy::beginLocationTracking(TextViewer& viewer, TargetLocker* targetLocker, bool autoScroll, bool locateCursor) {
 			if(!isTrackingLocation()) {
 				// cancel other modes
 				utils::closeCompletionProposalsPopup(viewer);
@@ -63,7 +63,8 @@ namespace ascension {
 				tracking_.reset(new Tracking);
 				tracking_->mouseInputStrategy.reset(this, boost::null_deleter());
 				tracking_->viewer = &viewer;
-				(tracking_->inputTargetLocker = &targetLocker)->lockMouseInputTarget(tracking_->mouseInputStrategy);
+				if((tracking_->inputTargetLocker = targetLocker) != nullptr)
+					tracking_->inputTargetLocker->lockMouseInputTarget(tracking_->mouseInputStrategy);
 				tracking_->autoScroll = autoScroll;
 				tracking_->locateCursor = locateCursor;
 				tracking_->timer.start(SELECTION_EXPANSION_INTERVAL, *this);
@@ -77,7 +78,8 @@ namespace ascension {
 		void AbstractMouseInputStrategy::endLocationTracking() {
 			if(isTrackingLocation()) {
 				tracking_->timer.stop();
-				tracking_->inputTargetLocker->unlockMouseInputTarget(*tracking_->mouseInputStrategy);
+				if(tracking_->inputTargetLocker != nullptr)
+					tracking_->inputTargetLocker->unlockMouseInputTarget(*tracking_->mouseInputStrategy);
 				tracking_.reset();
 			}
 		}
