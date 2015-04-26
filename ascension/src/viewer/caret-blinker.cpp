@@ -5,6 +5,7 @@
  */
 
 #include <ascension/viewer/caret.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/settings.h>
@@ -13,12 +14,12 @@
 namespace ascension {
 	namespace viewer {
 		namespace {
-			inline boost::optional<unsigned int> systemBlinkTimeInMilliseconds(TextViewer& viewer) {
+			inline boost::optional<boost::chrono::milliseconds> systemBlinkTime(TextViewer& viewer) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #ifndef GTKMM_DISABLE_DEPRECATED
 				const Glib::RefPtr<const Gtk::Settings> settings(viewer.get_settings());
 				if(settings->property_gtk_cursor_blink().get_value())
-					return settings->property_gtk_cursor_blink_time().get_value();
+					return boost::chrono::milliseconds(settings->property_gtk_cursor_blink_time().get_value());
 #endif // !GTKMM_DISABLE_DEPRECATED
 				return boost::none;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
@@ -27,7 +28,7 @@ namespace ascension {
 				const UINT ms = ::GetCaretBlinkTime();
 				if(ms == 0)
 					throw makePlatformError();
-				return (ms != INFINITE) ? ms : boost::none;
+				return (ms != INFINITE) ? boost::chrono::milliseconds(ms) : boost::none;
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif
@@ -46,8 +47,8 @@ namespace ascension {
 			if(widgetapi::hasFocus(viewer_)) {
 				stop();
 				setVisible(true);
-				if(const boost::optional<unsigned int> blinkTime = systemBlinkTimeInMilliseconds(viewer_))
-					timer_.start(*blinkTime, *this);
+				if(const boost::optional<boost::chrono::milliseconds> blinkTime = systemBlinkTime(viewer_))
+					timer_.start(boost::get(blinkTime), *this);
 			}
 		}
 
@@ -55,7 +56,7 @@ namespace ascension {
 			if(visible == visible_)
 				return;
 			visible_ = visible;
-			viewer_.redrawLine(kernel::line(viewer_.caret()));	// TODO: This code is not efficient.
+			viewer_.textArea().redrawLine(kernel::line(viewer_.caret()));	// TODO: This code is not efficient.
 		}
 
 		/// Stops blinking of the caret(s).
@@ -77,10 +78,10 @@ namespace ascension {
 		/// Checks and updates state of blinking of the caret.
 		void TextViewer::CaretBlinker::update() {
 			if(widgetapi::hasFocus(viewer_)) {
-				if(const boost::optional<unsigned int> blinkTime = systemBlinkTimeInMilliseconds(viewer_)) {
+				if(const boost::optional<boost::chrono::milliseconds> blinkTime = systemBlinkTime(viewer_)) {
 					if(!timer_.isActive()) {
 						setVisible(true);
-						timer_.start(*blinkTime / 2, *this);
+						timer_.start(boost::get(blinkTime) / 2, *this);
 					}
 				} else {
 					stop();

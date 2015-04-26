@@ -11,6 +11,7 @@
 
 #include <ascension/platforms.hpp>
 #include <ascension/content-assist/content-assist.hpp>
+#include <ascension/corelib/timer.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -36,15 +37,16 @@ namespace ascension {
 		 * Default implementation of @c ContentAssistant.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class DefaultContentAssistant : public ContentAssistant, public kernel::DocumentListener,
+		class DefaultContentAssistant : public ContentAssistant,
+			public HasTimer<>, public kernel::DocumentListener,
 			public graphics::font::TextViewportListener, private ContentAssistant::CompletionProposalsUI {
 		public:
 			// constructors
 			DefaultContentAssistant() BOOST_NOEXCEPT;
 			// attributes
-			std::uint32_t autoActivationDelay() const BOOST_NOEXCEPT;
+			boost::chrono::milliseconds autoActivationDelay() const BOOST_NOEXCEPT;
 			void enablePrefixCompletion(bool enable);
-			void setAutoActivationDelay(std::uint32_t milliseconds);
+			void setAutoActivationDelay(boost::chrono::milliseconds newValue);
 			void setContentAssistProcessor(kernel::ContentType contentType, std::unique_ptr<ContentAssistProcessor> processor);
 			// operation
 			void showPossibleCompletions();
@@ -84,7 +86,7 @@ namespace ascension {
 		private:
 			viewer::TextViewer* textViewer_;
 			std::map<kernel::ContentType, std::shared_ptr<ContentAssistProcessor>> processors_;
-			std::uint32_t autoActivationDelay_;
+			boost::chrono::milliseconds autoActivationDelay_;
 			Timer<> timer_;
 			struct CompletionSession {
 				std::shared_ptr<const ContentAssistProcessor> processor;
