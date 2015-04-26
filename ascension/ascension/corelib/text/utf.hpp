@@ -16,7 +16,7 @@
 #define ASCENSION_UTF_HPP
 
 #include <ascension/corelib/basic-exceptions.hpp>
-#include <ascension/corelib/text/character.hpp>	// CodePoint, ASCENSION_STATIC_ASSERT, surrogates.*
+#include <ascension/corelib/text/character.hpp>	// CodePoint, surrogates.*
 #include <cassert>								// assert
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
@@ -103,8 +103,8 @@ namespace ascension {
 			}
 	
 			template<typename InputIterator>
-			inline CodePoint decodeUTF8(InputIterator first, InputIterator last, bool checkMalformedInput) {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::value == 1);
+			inline CodePoint decodeUTF8(InputIterator first, InputIterator last, bool checkMalformedInput,
+					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 1>::type* = nullptr) {
 				assert(first != last);
 				InputIterator p(first);	// for throw
 				std::uint8_t bytes[4] = {*first};
@@ -125,8 +125,8 @@ namespace ascension {
 			}
 	
 			template<bool check, typename OutputIterator>
-			inline std::size_t encodeUTF8(CodePoint c, OutputIterator& out) {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 1);
+			inline std::size_t encodeUTF8(CodePoint c, OutputIterator& out,
+					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 1>::type* = nullptr) {
 				if(c < 0x0080u) {	// 00000000 0xxxxxxx -> 0xxxxxxx
 					*(out++) = static_cast<std::uint8_t>(c);
 					return 1;
@@ -152,8 +152,8 @@ namespace ascension {
 			}
 	
 			template<bool check, typename OutputIterator>
-			inline std::size_t encodeUTF16(CodePoint c, OutputIterator& out) {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 2);
+			inline std::size_t encodeUTF16(CodePoint c, OutputIterator& out,
+					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 2>::type* = nullptr) {
 				if(c < 0x00010000ul) {
 					if(check && surrogates::isSurrogate(c))
 						throw InvalidScalarValueException(c);

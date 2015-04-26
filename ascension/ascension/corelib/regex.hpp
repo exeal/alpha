@@ -65,6 +65,7 @@ namespace ascension {
 		 */
 		template<typename CodePointIterator>
 		class MatchResult {
+			static_assert(text::CodeUnitSizeOf<CodePointIterator>::value == 4, "");
 		public:
 			/// Destructor.
 			virtual ~MatchResult() BOOST_NOEXCEPT {}
@@ -111,8 +112,6 @@ namespace ascension {
 			 * @return The position of the first character captured by the group
 			 */
 			virtual const CodePointIterator& start(int group = 0) const = 0;
-		private:
-			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<CodePointIterator>::value == 4);
 		};
 
 		namespace detail {

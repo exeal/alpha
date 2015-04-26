@@ -40,7 +40,7 @@ namespace ascension {
 				boost::iterators::bidirectional_traversal_tag, const UChar32,
 				typename std::iterator_traits<BaseIterator>::difference_type
 			> {
-				ASCENSION_STATIC_ASSERT(sizeof(UChar32) == 4);
+				static_assert(sizeof(UChar32) == 4, "UChar32 should be UCS-4 character type.");
 			public:
 				/// Default constructor.
 				CharacterDecodeIterator() : extractedBytes_(0) {}
@@ -191,8 +191,7 @@ namespace ascension {
 
 			/**
 			 * Converts UCS-4 into UTF-x character sequence.
-			 * @tparam BaseIterator The base iterator. This should represents UCS-4 or UTF-32
-			 *                      character sequence
+			 * @tparam BaseIterator The base iterator. This should represents UCS-4 or UTF-32 character sequence
 			 * @tparam CodeUnit The returned code unit type
 			 * @see CharacterDecodeIterator, CharacterOutputIterator, makeCharacterEncodeIterator
 			 */
@@ -202,7 +201,8 @@ namespace ascension {
 				boost::bidirectional_traversal_tag, const CodeUnit,
 				typename std::iterator_traits<BaseIterator>::difference_type
 			> {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BaseIterator>::value == 4);
+				static_assert(CodeUnitSizeOf<BaseIterator>::value == 4,
+					"BaseIterator should be UCS-4 or UTF-32 character sequence.");
 			public:
 				/// Default constructor.
 				CharacterEncodeIterator() {

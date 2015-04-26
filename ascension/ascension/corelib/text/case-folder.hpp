@@ -82,8 +82,10 @@ namespace ascension {
 				return (*p == c) ? SIMPLE_FOLDED_[p - SIMPLE_CASED_] : c;
 			}
 
-			template<typename InputIterator> static String fold(
-				InputIterator first, InputIterator last, bool excludeTurkishI = false);
+			template<typename CharacterSequence>
+			static String fold(
+				CharacterSequence first, CharacterSequence last, bool excludeTurkishI = false,
+				typename std::enable_if<CodeUnitSizeOf<CharacterSequence>::value == 2>::type* = nullptr);
 
 			/**
 			 * Folds case of the specified character sequence. This method performs "full case folding."
@@ -105,8 +107,8 @@ namespace ascension {
 				return (*p == c) ? COMMON_FOLDED_[p - COMMON_CASED_] : c;
 			}
 			template<typename OutputIterator>
-			static std::size_t foldFull(CodePoint c, bool excludeTurkishI, OutputIterator out) {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 4);
+			static std::size_t foldFull(CodePoint c, bool excludeTurkishI, OutputIterator out,
+					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 4>::type* = nullptr) {
 				CodePoint first;
 				if(!excludeTurkishI || c == (first = foldTurkishI(c)))
 					first = foldCommon(c);
@@ -151,10 +153,9 @@ namespace ascension {
 		 */
 		template<typename CharacterSequence>
 		inline String CaseFolder::fold(CharacterSequence first,
-				CharacterSequence last, bool excludeTurkishI /* = false */) {
-			ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::value == 2);
-			using namespace std;
-			std::basic_stringbuf<Char> s(ios_base::out);
+				CharacterSequence last, bool excludeTurkishI /* = false */,
+				typename std::enable_if<CodeUnitSizeOf<CharacterSequence>::value == 2>::type* /* = nullptr */) {
+			std::basic_stringbuf<Char> s(std::ios_base::out);
 			CodePoint c, f;
 			Char buffer[2];
 			for(utf::CharacterDecodeIterator<CharacterSequence> i(first, last), e(last, last); i != e; ++i) {
@@ -168,7 +169,7 @@ namespace ascension {
 					else
 						s.sputn(buffer, 2);
 				} else {
-					const CodePoint* const p = lower_bound(
+					const CodePoint* const p = std::lower_bound(
 						FULL_CASED_, FULL_CASED_ + NUMBER_OF_FULL_CASED_, c);
 					if(*p == c) {
 						const std::ptrdiff_t* const offset = &FULL_FOLDED_OFFSETS_[p - FULL_CASED_];
