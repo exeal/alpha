@@ -8,6 +8,7 @@
 #ifndef ASCENSION_KILL_RING_HPP
 #define ASCENSION_KILL_RING_HPP
 
+#include <ascension/config.hpp>	// ASCENSION_DEFAULT_MAXIMUM_KILLS
 #include <ascension/corelib/detail/listeners.hpp>	// detail.Listeners
 #include <ascension/corelib/string-piece.hpp>
 #include <list>

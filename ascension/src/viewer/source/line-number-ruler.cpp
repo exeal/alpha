@@ -85,7 +85,7 @@ namespace ascension {
 							lineSelectionAnchorLine_ = extend ? kernel::line(caret.anchor()) : to.line;
 							caret.endRectangleSelection();
 							continueLineSelection(to);
-							beginLocationTracking(*viewer(), targetLocker, true, true);
+							beginLocationTracking(*viewer(), &targetLocker, true, true);
 							return input.consume();
 						} else if(action == RELEASED) {
 							endLineSelection();

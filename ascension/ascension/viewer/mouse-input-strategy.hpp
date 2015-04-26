@@ -13,6 +13,10 @@
 #include <memory>
 
 namespace ascension {
+	namespace kernel {
+		class Position;
+	}
+
 	namespace viewer {
 		namespace widgetapi {
 			class Cursor;
