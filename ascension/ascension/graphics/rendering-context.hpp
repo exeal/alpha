@@ -81,7 +81,7 @@ namespace ascension {
 
 		/// Valid values for 'lineCap' attribute.
 		/// Each point has a flat edge perpendicular to the direction of the line coming out of it.
-		ASCENSION_SCOPED_ENUMS_BEGIN(LineCap)
+		ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(LineCap)
 			/// No additional line cap is added.
 			BUTT,
 			/// A semi-circle with the diameter equal to the styles 'lineWidth' width must additionally be placed on to
@@ -91,13 +91,13 @@ namespace ascension {
 			/// width, placed flat against the edge perpendicular to the direction of the line coming out of the point,
 			/// must be added at each point.
 			SQUARE
-		ASCENSION_SCOPED_ENUMS_END
+		ASCENSION_SCOPED_ENUM_DECLARE_END(LineCap)
 
 		/// Valid values for 'lineJoin' attribute.
 		/// In addition to the point where a join occurs, two additional points are relevant to each join, one for each
 		/// line: the two corners found half the line width away from the join point, one perpendicular to each line,
 		/// each on the side furthest from the other line.
-		ASCENSION_SCOPED_ENUMS_BEGIN(LineJoin)
+		ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(LineJoin)
 			/// This is all that is rendered at joins.
 			BEVEL,
 			/// A filled arc connecting the two aforementioned corners of the join, abutting (and not overlapping) the
@@ -109,16 +109,16 @@ namespace ascension {
 			/// being continuations of the outside edges of the two joining lines, as long as required to intersect
 			/// without going over the miter length.
 			MITER
-		ASCENSION_SCOPED_ENUMS_END
+		ASCENSION_SCOPED_ENUM_DECLARE_END(LineJoin)
 
 		/// Valid values for 'textAlignment' attribute.
-		ASCENSION_SCOPED_ENUMS_BEGIN(TextAlignment)
+		ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextAlignment)
 			START = font::TextAlignment::START,
 			END = font::TextAlignment::END,
 			LEFT = font::TextAlignment::LEFT,
 			RIGHT = font::TextAlignment::RIGHT,
 			CENTER = font::TextAlignment::CENTER
-		ASCENSION_SCOPED_ENUMS_END
+		ASCENSION_SCOPED_ENUM_DECLARE_END(TextAlignment)
 
 		class ImageData : private boost::noncopyable {
 		public:

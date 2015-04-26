@@ -29,7 +29,7 @@ namespace ascension {
 			 * Defines line-relative directions.
 			 * @see PhysicalDirection, presentation#FlowRelativeDirection
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(LineRelativeDirection)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(LineRelativeDirection)
 				/// 'over' means nominally the side that corresponds to the ascender side or ÅgtopÅh side of a line box.
 				OVER,
 				/// 'under' means opposite of 'over': the line-relative ÅgbottomÅh or descender side.
@@ -42,7 +42,7 @@ namespace ascension {
 				LINE_OVER,
 				/// 'line-under' is an alias of 'under'.
 				LINE_UNDER
-			ASCENSION_SCOPED_ENUMS_END
+			ASCENSION_SCOPED_ENUM_DECLARE_END(LineRelativeDirection)
 
 			/**
 			 * Returns direction opposite @a direction.

@@ -67,18 +67,18 @@ namespace ascension {
 			 * and kept by the user agent.
 			 * @see http://www.w3.org/TR/css-fonts-3/#absolute-size-value
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(AbsoluteFontSize)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(AbsoluteFontSize)
 				XX_SMALL, X_SMALL, SMALL, MEDIUM, LARGE, X_LARGE, XX_LARGE
-			ASCENSION_SCOPED_ENUMS_END
+			ASCENSION_SCOPED_ENUM_DECLARE_END(AbsoluteFontSize)
 
 			/**
 			 * [Copied from CSS3] A &lt;relative-size&gt; keyword is interpreted relative to the table of font sizes
 			 * and the computed ‘font-size’ of the parent element.
 			 * @see http://www.w3.org/TR/css-fonts-3/#relative-size-value
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(RelativeFontSize)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(RelativeFontSize)
 				LARGER, SMALLER
-			ASCENSION_SCOPED_ENUMS_END
+			ASCENSION_SCOPED_ENUM_DECLARE_END(RelativeFontSize)
 
 			/**
 			 * [Copied from CSS3] This property indicates the desired height of glyphs from the font. For scalable
@@ -92,12 +92,12 @@ namespace ascension {
 			typedef StyleProperty<
 				Multiple<
 					boost::variant<
-						BOOST_SCOPED_ENUM_NATIVE(AbsoluteFontSize),
-						BOOST_SCOPED_ENUM_NATIVE(RelativeFontSize),
+						AbsoluteFontSize,
+						RelativeFontSize,
 						Length,
 						Percentage
 					>,
-					BOOST_SCOPED_ENUM_NATIVE(AbsoluteFontSize), AbsoluteFontSize::MEDIUM
+					AbsoluteFontSize, AbsoluteFontSize::MEDIUM
 				>,
 				Inherited<true>
 			> FontSize;

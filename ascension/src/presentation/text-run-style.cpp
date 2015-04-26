@@ -61,9 +61,9 @@ namespace ascension {
 						computedValue[i] = *length;
 					else if(const styles::Percentage* const percentage = boost::get<styles::Percentage>(&specifiedValue[i]))
 						computedValue[i] = *percentage;
-					else if(const styles::PaddingEnums* const paddingEnums = boost::get<styles::PaddingEnums>(&specifiedValue[i]))
+					else if(const styles::PaddingEnums* const paddingEnums = boost::relaxed_get<styles::PaddingEnums>(&specifiedValue[i]))
 						computedValue[i] = std::make_tuple();
-					else if(const styles::MarginEnums* const marginEnums = boost::get<styles::MarginEnums>(&specifiedValue[i]))
+					else if(const styles::MarginEnums* const marginEnums = boost::relaxed_get<styles::MarginEnums>(&specifiedValue[i]))
 						computedValue[i] = std::make_tuple();	// TODO: Handle 'fill' keyword.
 					else
 						computedValue[i] = Property::initialValue();

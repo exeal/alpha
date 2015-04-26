@@ -12,8 +12,8 @@
  * @date 2014-12-09 Renamed from computed-text-styles.hpp
  */
 
-#ifndef ACTUAL_TEXT_STYLES_HPP
-#define ACTUAL_TEXT_STYLES_HPP
+#ifndef ASCENSION_ACTUAL_TEXT_STYLES_HPP
+#define ASCENSION_ACTUAL_TEXT_STYLES_HPP
 
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/presentation/detail/style-sequence.hpp>
@@ -130,11 +130,11 @@ namespace ascension {
 			/// Specialization of @c boost#hash_value function template for @c ActualTextDecoration.
 			inline std::size_t hash_value(const ActualTextDecoration& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
-				boost::hash_combine<int>(seed, boost::fusion::at_key<presentation::styles::TextDecorationLine>(object));
+				boost::hash_combine(seed, boost::native_value(boost::fusion::at_key<presentation::styles::TextDecorationLine>(object)));
 				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextDecorationColor>(object));
-				boost::hash_combine<int>(seed, boost::fusion::at_key<presentation::styles::TextDecorationStyle>(object));
-				boost::hash_combine<int>(seed, boost::fusion::at_key<presentation::styles::TextDecorationSkip>(object));
-				boost::hash_combine<int>(seed, boost::fusion::at_key<presentation::styles::TextUnderlinePosition>(object));
+				boost::hash_combine(seed, boost::native_value(boost::fusion::at_key<presentation::styles::TextDecorationStyle>(object)));
+				boost::hash_combine(seed, boost::native_value(boost::fusion::at_key<presentation::styles::TextDecorationSkip>(object)));
+				boost::hash_combine(seed, boost::native_value(boost::fusion::at_key<presentation::styles::TextUnderlinePosition>(object)));
 				return seed;
 			}
 
@@ -158,7 +158,7 @@ namespace ascension {
 				std::size_t seed = 0;
 				const auto& style = boost::fusion::at_key<presentation::styles::TextEmphasisStyle>(object);
 				if(style != boost::none)
-					boost::hash_combine<int>(seed, boost::get(style));
+					boost::hash_combine(seed, boost::get(style));
 				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextEmphasisColor>(object));
 				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextEmphasisPosition>(object));
 				return seed;
@@ -230,4 +230,4 @@ namespace std {
 	};
 }
 
-#endif // !ACTUAL_TEXT_STYLES_HPP
+#endif // !ASCENSION_ACTUAL_TEXT_STYLES_HPP

@@ -96,11 +96,11 @@ namespace ascension {
 			typedef TypedColor<BorderColorSpec> BorderColor;
 
 			/// Enumerated values for @c BorderStyle.
-			ASCENSION_SCOPED_ENUMS_BEGIN(BorderStyleEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(BorderStyleEnums)
 				NONE, HIDDEN, DOTTED, DASHED, SOLID,
 				DOT_DASH, DOT_DOT_DASH,
 				DOUBLE, GROOVE, RIDGE, INSET, OUTSET
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(BorderStyleEnums)
 
 			/**
 			 * [Copied from CSS3] This property sets the style of the border, unless there is a border image.

@@ -25,7 +25,7 @@ namespace ascension {
 			 *      (http://dev.w3.org/csswg/css-inline/#LineStacking)
 			 * @see XSL 1.1, 7.16.6 "line-stacking-strategy" (http://www.w3.org/TR/xsl/#line-stacking-strategy)
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(LineBoxContain)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(LineBoxContain)
 				// TODO: 'NONE' should be 0.
 				// TODO: Values other than 'NONE' can be combined by bitwise-OR.
 				/// The extended block progression dimension of the root inline box must fit within the line box.
@@ -48,7 +48,7 @@ namespace ascension {
 				INLINE_BOX,
 				/// 
 				NONE
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(LineBoxContain)
 
 			/**
 			 * [Copied from CSS3] The dominant-baseline property is used to determine or re-determine a
@@ -59,7 +59,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/SVG/text.html#DominantBaselineProperty)
 			 * @see XSL 1.1, 7.14.5 "dominant-basline" (http://www.w3.org/TR/xsl/#dominant-baseline)
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(DominantBaseline)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(DominantBaseline)
 				/// If this property occurs on a block or inline-block element, then the user agent behavior depends on
 				/// the value of the ‘text-script’ property.
 				AUTO,
@@ -96,7 +96,7 @@ namespace ascension {
 				TEXT_UNDER_EDGE,
 				/// The dominant baseline-identifier is set to be ‘text-over-edge’.
 				TEXT_OVER_EDGE,
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(DominantBaseline)
 
 			/**
 			 * [Copied from CSS3] This property specifies how an inline-level element is aligned with respect to its
@@ -107,7 +107,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/SVG/text.html#AlignmentBaselineProperty)
 			 * @see XSL 1.1, 7.14.2 "alignment-baseline" (http://www.w3.org/TR/xsl/#alignment-baseline)
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(AlignmentBaseline)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(AlignmentBaseline)
 				/// The alignment-point of the element being aligned is aligned with the dominant baseline of the
 				/// parent.
 				BASELINE,
@@ -140,7 +140,7 @@ namespace ascension {
 				/// The alignment-point of the element being aligned is aligned with the mathematical baseline of the
 				/// parent.
 				MATHEMATICAL
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(AlignmentBaseline)
 			/// @}
 
 			/// @addtogroup css_text_3
@@ -154,7 +154,7 @@ namespace ascension {
 			 * @see XSL 1.1, 7.16.9 "text-align"
 			 *      (http://www.w3.org/TR/2006/REC-xsl11-20061205/#text-align)
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextAlignment)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextAlignment)
 				/// Inline-level content is aligned to the start edge of the line box.
 				START,
 				/// Inline-level content is aligned to the end edge of the line box.
@@ -177,7 +177,7 @@ namespace ascension {
 				/// Specifies ‘start’ alignment of the first line and any line immediately after a forced line break;
 				/// and ‘end’ alignment of any remaining lines.
 				START_END
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextAlignment)
 
 			/**
 			 * [Copied from CSS3] This property selects the justification method used when a line's alignment is set to
@@ -187,7 +187,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css-text-3/#text-justify-property)
 			 * @note The name of this type is @c TextJustification, not @c TextJustify.
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextJustification)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextJustification)
 				/// The UA determines the justification algorithm to follow, based on a balance between performance and
 				/// adequate presentation quality.
 				AUTO,
@@ -203,7 +203,7 @@ namespace ascension {
 				INTER_IDEOGRAPH,
 				INTER_CLUSTER,
 				KASHIDA*/
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextJustification)
 			/// @}
 	
 			/**
@@ -212,18 +212,18 @@ namespace ascension {
 			 * @see SVG 1.1, 10.9.1 Text alignment properties
 			 *      (http://www.w3.org/TR/SVG/text.html#TextAlignmentProperties)
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextAnchor)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextAnchor)
 				START = TextAlignment::START,
 				MIDDLE = TextAlignment::CENTER,
 				END = TextAlignment::END
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextAnchor)
 
 			namespace detail {
-				ASCENSION_SCOPED_ENUMS_BEGIN(PhysicalTextAnchor)
+				ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(PhysicalTextAnchor)
 					LEFT = TextAlignment::LEFT,
 					CENTER = TextAlignment::CENTER,
 					RIGHT = TextAlignment::RIGHT
-				ASCENSION_SCOPED_ENUMS_END;
+				ASCENSION_SCOPED_ENUM_DECLARE_END(PhysicalTextAnchor)
 #if 0
 				inline PhysicalTextAnchor computePhysicalTextAnchor(
 						presentation::styles::TextAnchor anchor, presentation::ReadingDirection readingDirection) {

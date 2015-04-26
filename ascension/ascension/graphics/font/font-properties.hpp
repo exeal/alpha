@@ -76,7 +76,7 @@ namespace ascension {
 			 * @see Fonts - SVG 1.1 (Second Edition), 20.8.3 The Åefont-faceÅf element
 			 *      (http://www.w3.org/TR/SVG11/fonts.html#FontFaceElementFontWeightAttribute)
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(FontWeight)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(FontWeight)
 				/// Same as 400.
 				NORMAL = 400,
 				/// Same as 700.
@@ -96,7 +96,7 @@ namespace ascension {
 				ULTRA_BOLD = 800,
 				BLACK = 900,
 				HEAVY = 900
-			ASCENSION_SCOPED_ENUMS_END
+			ASCENSION_SCOPED_ENUM_DECLARE_END(FontWeight)
 
 			/**
 			 * [Copied from CSS3] The Åefont-stretchÅf property selects a normal, condensed, or expanded face from a font
@@ -108,7 +108,7 @@ namespace ascension {
 			 * @see Fonts - SVG 1.1 (Second Edition), 20.8.3 The Åefont-faceÅf element
 			 *      (http://www.w3.org/TR/SVG11/fonts.html#FontFaceElementFontStretchAttribute)
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(FontStretch)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(FontStretch)
 				NORMAL = 1000,			///< Normal.
 //				WIDER,
 //				NARROWER,
@@ -120,7 +120,7 @@ namespace ascension {
 				EXPANDED = 1250,		///< Expanded.
 				EXTRA_EXPANDED = 1500,	///< Extra Expanded.
 				ULTRA_EXPANDED = 2000	///< Ultra Expanded.
-			ASCENSION_SCOPED_ENUMS_END
+			ASCENSION_SCOPED_ENUM_DECLARE_END(FontStretch)
 
 			/**
 			 * [Copied from CSS3] The Åefont-styleÅf property allows italic or oblique faces to be selected. Italic forms
@@ -132,7 +132,7 @@ namespace ascension {
 			 * @see Fonts - SVG 1.1 (Second Edition), 20.8.3 The Åefont-faceÅf element
 			 *      (http://www.w3.org/TR/SVG11/fonts.html#FontFaceElementFontStyleAttribute)
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(FontStyle)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(FontStyle)
 				/// selects a face that is classified as a normal face, one that is neither italic or obliqued
 				NORMAL,
 				/// selects a font that is labeled as an italic face, or an oblique face if one is not
@@ -141,23 +141,23 @@ namespace ascension {
 				OBLIQUE,
 				/// Selects a face that is labeled 'backslant'. This is not part of CSS level 3.
 				BACKSLANT
-			ASCENSION_SCOPED_ENUMS_END
+			ASCENSION_SCOPED_ENUM_DECLARE_END(FontStyle)
 
-//			ASCENSION_SCOPED_ENUMS_BEGIN(FontSynthesis)
+//			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(FontSynthesis)
 //				NONE = 0,
 //				WEIGHT = 1 << 0,
 //				STYLE = 1 << 1
-//			ASCENSION_SCOPED_ENUMS_END
+//			ASCENSION_SCOPED_ENUM_DECLARE_END(FontSynthesis)
 
-//			ASCENSION_SCOPED_ENUMS_BEGIN(FontVariant)
+//			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(FontVariant)
 //				NORMAL,
 //				SMALL_CAPS
-//			ASCENSION_SCOPED_ENUMS_END
+//			ASCENSION_SCOPED_ENUM_DECLARE_END(FontVariant)
 #if 0
-			ASCENSION_SCOPED_ENUMS_BEGIN(FontOrientation)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(FontOrientation)
 				HORIZONTAL,
 				VERTICAL
-			ASCENSION_SCOPED_ENUMS_END
+			ASCENSION_SCOPED_ENUM_DECLARE_END(FontOrientation)
 #endif
 			struct FontFeatureSetting {
 				OpenTypeFontTag name;
@@ -202,12 +202,12 @@ namespace ascension {
 			/// Specialization of @c boost#hash_value function template for @c FontProperties.
 			inline std::size_t hash_value(const FontProperties& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
-				boost::hash_combine<int>(seed, boost::native_value(object.weight));
-				boost::hash_combine<int>(seed, boost::native_value(object.stretch));
-				boost::hash_combine<int>(seed, boost::native_value(object.style));
-//				boost::hash_combine<int>(seed, boost::native_value(object.variant));
-//				boost::hash_combine<int>(seed, boost::native_value(object.synthesis));
-//				boost::hash_combine<int>(seed, boost::native_value(object.orientation));
+				boost::hash_combine(seed, boost::native_value(object.weight));
+				boost::hash_combine(seed, boost::native_value(object.stretch));
+				boost::hash_combine(seed, boost::native_value(object.style));
+//				boost::hash_combine(seed, boost::native_value(object.variant));
+//				boost::hash_combine(seed, boost::native_value(object.synthesis));
+//				boost::hash_combine(seed, boost::native_value(object.orientation));
 				return seed;
 			}
 		}

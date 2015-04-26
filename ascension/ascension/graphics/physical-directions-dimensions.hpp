@@ -29,12 +29,12 @@ namespace ascension {
 		 * Defines physical directions.
 		 * @see font#LineRelativeDirection, presentation#FlowRelativeDirection
 		 */
-		ASCENSION_SCOPED_ENUMS_BEGIN(PhysicalDirection)
+		ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(PhysicalDirection)
 			TOP,	///< Physical top.
 			RIGHT,	///< Physical right.
 			BOTTOM,	///< Physical bottom.
 			LEFT	///< Physical left.
-		ASCENSION_SCOPED_ENUMS_END
+		ASCENSION_SCOPED_ENUM_DECLARE_END(PhysicalDirection)
 
 		/**
 		 * Returns direction opposite @a direction.
