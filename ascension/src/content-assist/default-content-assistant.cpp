@@ -39,8 +39,8 @@ namespace ascension {
 		DefaultContentAssistant::DefaultContentAssistant() BOOST_NOEXCEPT : textViewer_(nullptr), autoActivationDelay_(500) {
 		}
 
-		/// Returns the automatic activation delay in milliseconds.
-		std::uint32_t DefaultContentAssistant::autoActivationDelay() const BOOST_NOEXCEPT {
+		/// Returns the automatic activation delay.
+		boost::chrono::milliseconds DefaultContentAssistant::autoActivationDelay() const BOOST_NOEXCEPT {
 			return autoActivationDelay_;
 		}
 
@@ -78,7 +78,7 @@ namespace ascension {
 					// activate automatically
 					if(const std::shared_ptr<const ContentAssistProcessor> cap = contentAssistProcessor(contentType(textViewer_->caret()))) {
 						if(cap->isCompletionProposalAutoActivationCharacter(c)) {
-							if(autoActivationDelay_ == 0)
+							if(autoActivationDelay_ == boost::chrono::milliseconds::zero())
 								showPossibleCompletions();
 							else
 								timer_.start(autoActivationDelay_, *this);
@@ -191,10 +191,10 @@ namespace ascension {
 
 		/**
 		 * Sets the delay between a character input and the session activation.
-		 * @param milliseconds The delay amount as milliseconds. if set to zero, the proposals will popup immediately
+		 * @param milliseconds The delay amount. If set to zero, the proposals will popup immediately
 		 */
-		void DefaultContentAssistant::setAutoActivationDelay(std::uint32_t milliseconds) {
-			autoActivationDelay_ = milliseconds;
+		void DefaultContentAssistant::setAutoActivationDelay(boost::chrono::milliseconds newValue) {
+			autoActivationDelay_ = newValue;
 		}
 
 		/**

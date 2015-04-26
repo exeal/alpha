@@ -9,7 +9,6 @@
 #define ASCENSION_CONTENT_ASSIST_HPP
 
 #include <ascension/platforms.hpp>
-#include <ascension/corelib/timer.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/partition.hpp>	// kernel.ContentType
 #include <memory>	// std.shared_ptr
@@ -156,7 +155,7 @@ namespace ascension {
 		 * An content assistant provides support on interactive content completion.
 		 * @see TextViewer#contentAssistant, TextViewer#setContentAssistant
 		 */
-		class ContentAssistant : public HasTimer {
+		class ContentAssistant {
 		public:
 			/**
 			 * Represents an user interface of a completion proposal list.
