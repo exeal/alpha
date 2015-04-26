@@ -8,10 +8,13 @@
  */
 
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 
 namespace ascension {
@@ -23,7 +26,7 @@ namespace ascension {
 		 * @retval boost#none The layout of the line the given caret addresses is not calculated
 		 */
 		boost::optional<graphics::Rectangle> currentCharacterLogicalBounds(const Caret& caret) {
-			const graphics::font::TextRenderer& textRenderer = caret.textViewer().textRenderer();
+			const graphics::font::TextRenderer& textRenderer = caret.textViewer().textArea().textRenderer();
 			if(const graphics::font::TextLayout* const layout = textRenderer.layouts().at(kernel::line(caret))) {
 				const Index subline = layout->lineAt(kernel::offsetInLine(caret));
 				NumericRange<graphics::Scalar> extent(layout->extent(boost::irange(subline, subline + 1)));

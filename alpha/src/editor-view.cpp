@@ -9,11 +9,13 @@
 #include "buffer-list.hpp"
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/text-editor/command.hpp>	// ascension.texteditor.commands.IncrementalSearchCommand
 #include <ascension/viewer/caret.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <boost/range/algorithm/replace_if.hpp>
 #include <glibmm/i18n.h>
 
@@ -43,7 +45,7 @@ namespace alpha {
 
 	/// @see BookmarkListener#bookmarkChanged
 	void EditorView::bookmarkChanged(ascension::Index line) {
-		redrawLine(line);
+		textArea().redrawLine(line);
 	}
 
 	/// @see BookmarkListener#bookmarkCleared
@@ -293,22 +295,22 @@ namespace alpha {
 				boost::python::return_internal_reference<>()))
 			.add_property("caret", &EditorView::asCaret)
 			.add_property("page_size_in_block_flow_direction", ambient::makeFunctionPointer([](const EditorView& editor) -> ascension::graphics::font::TextViewportScrollOffset {
-				return ascension::graphics::font::pageSize<ascension::presentation::BlockFlowDirection>(*editor.textRenderer().viewport());
+				return ascension::graphics::font::pageSize<ascension::presentation::BlockFlowDirection>(*editor.textArea().textRenderer().viewport());
 			}))
 			.add_property("page_size_in_inline_flow_direction", ambient::makeFunctionPointer([](const EditorView& editor) -> ascension::graphics::font::TextViewportScrollOffset {
-				return ascension::graphics::font::pageSize<ascension::presentation::ReadingDirection>(*editor.textRenderer().viewport());
+				return ascension::graphics::font::pageSize<ascension::presentation::ReadingDirection>(*editor.textArea().textRenderer().viewport());
 			}))
 			.add_property("scrollable_range_in_block_flow_direction", ambient::makeFunctionPointer([](const EditorView& editor) -> boost::python::object {
-				return makePythonRange(ascension::graphics::font::scrollableRange<ascension::presentation::BlockFlowDirection>(*editor.textRenderer().viewport()));
+				return makePythonRange(ascension::graphics::font::scrollableRange<ascension::presentation::BlockFlowDirection>(*editor.textArea().textRenderer().viewport()));
 			}))
 			.add_property("scrollable_range_in_inline_flow_direction", ambient::makeFunctionPointer([](const EditorView& editor) -> boost::python::object {
-				return makePythonRange(ascension::graphics::font::scrollableRange<ascension::presentation::ReadingDirection>(*editor.textRenderer().viewport()));
+				return makePythonRange(ascension::graphics::font::scrollableRange<ascension::presentation::ReadingDirection>(*editor.textArea().textRenderer().viewport()));
 			}))
 			.def("is_scroll_locked", ambient::makeFunctionPointer([](const EditorView& editor) {
-				return editor.textRenderer().viewport()->isScrollLocked();
+				return editor.textArea().textRenderer().viewport()->isScrollLocked();
 			}))
 			.def("lock_scroll", ambient::makeFunctionPointer([](EditorView& editor) {
-				editor.textRenderer().viewport()->lockScroll();
+				editor.textArea().textRenderer().viewport()->lockScroll();
 			}))
 			.def("scroll", ambient::makeFunctionPointer([](EditorView& editor, boost::python::object offsets) {
 				const boost::python::extract<FlowRelativeTwoAxes> abstractOffsets(offsets);
@@ -317,7 +319,7 @@ namespace alpha {
 					const boost::python::extract<ascension::graphics::font::TextViewportSignedScrollOffset> ebpd(ao.bpd()), eipd(ao.ipd());
 					if(ebpd.check() && eipd.check()) {
 						const ascension::graphics::font::TextViewportSignedScrollOffset bpd(ebpd), ipd(eipd);
-						return editor.textRenderer().viewport()->scroll(
+						return editor.textArea().textRenderer().viewport()->scroll(
 #if 0
 							ascension::presentation::makeFlowRelativeTwoAxes((ascension::presentation::_bpd = bpd, ascension::presentation::_ipd = ipd)));
 #else
@@ -331,7 +333,7 @@ namespace alpha {
 					const boost::python::extract<ascension::graphics::font::TextViewportSignedScrollOffset> ex(po.x()), ey(po.y());
 					if(ex.check() && ey.check()) {
 						const ascension::graphics::font::TextViewportSignedScrollOffset x(ex), y(ey);
-						return editor.textRenderer().viewport()->scroll(
+						return editor.textArea().textRenderer().viewport()->scroll(
 							ascension::graphics::makePhysicalTwoAxes((ascension::graphics::_x = x, ascension::graphics::_y = y)));
 					}
 				}
@@ -339,10 +341,10 @@ namespace alpha {
 				boost::python::throw_error_already_set();
 			}))
 			.def("scroll_block_flow_page", ambient::makeFunctionPointer([](EditorView& editor, boost::python::ssize_t pages) {
-				editor.textRenderer().viewport()->scrollBlockFlowPage(pages);
+				editor.textArea().textRenderer().viewport()->scrollBlockFlowPage(pages);
 			}))
 			.def("unlock_scroll", ambient::makeFunctionPointer([](EditorView& editor) {
-				editor.textRenderer().viewport()->unlockScroll();
+				editor.textArea().textRenderer().viewport()->unlockScroll();
 			}));
 	ALPHA_EXPOSE_EPILOGUE()
 }

@@ -38,7 +38,7 @@ namespace alpha {
 //				WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 //			assert(succeeded);
 			newView->setConfiguration(src.configuration(), true);
-			newView->textRenderer().viewport()->scrollTo(src.textRenderer().viewport()->scrollPositions());
+			newView->textArea().textRenderer().viewport()->scrollTo(src.textRenderer().viewport()->scrollPositions());
 			add(std::move(newView));
 		}
 	}
