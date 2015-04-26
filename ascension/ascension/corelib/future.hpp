@@ -12,7 +12,6 @@
 //#include <ascension/config.hpp>
 //#include <ascension/platforms.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
-#include <ascension/corelib/future/static-assert.hpp>
 #include <ascension/corelib/future/type-traits.hpp>
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08

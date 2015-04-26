@@ -371,7 +371,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\shared-library.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\scoped-enum-emulation.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\future\static-assert.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\type-traits.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\clamp.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\hull.hpp" />
