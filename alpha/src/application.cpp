@@ -172,7 +172,7 @@ namespace alpha {
 		}
 #else
 		Gtk::FontChooserDialog dialog(Glib::ustring(), window());
-		dialog.set_font_desc(ascension::graphics::toNative<Pango::FontDescription>(activeView.textRenderer().defaultFont()->describe()));
+		dialog.set_font_desc(ascension::graphics::toNative<Pango::FontDescription>(activeView.textArea().textRenderer().defaultFont()->describe()));
 		if(dialog.run() == Gtk::RESPONSE_ACCEPT)
 			setFont(ascension::graphics::fromNative<ascension::graphics::font::FontDescription>(dialog.get_font_desc()));
 #endif

@@ -85,7 +85,7 @@ namespace ascension {
 			using graphics::font::TextRenderer;
 			// TODO: This code can't handle vertical writing-mode.
 //			assert(viewer_.isWindow());
-			if(viewer_.hitTest(p) != TextViewer::TEXT_AREA_CONTENT_RECTANGLE)
+			if(viewer_.hitTest(p) != &viewer_.textArea())
 				return false;	// ignore if not in text area
 
 			const graphics::font::TextRenderer& renderer = viewer_.textArea().textRenderer();

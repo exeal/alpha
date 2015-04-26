@@ -185,17 +185,18 @@ namespace ascension {
 		 * Returns @c true if the specified point is over the selection.
 		 * @param p The client coordinates of the point
 		 * @return true if the point is over the selection
-		 * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
-		 * @throw TextViewerDisposedException The text viewer @a caret connecting to has been disposed
+		 * @throw kernel#DocumentDisposedException The document of @a caret connecting to has been disposed
+		 * @throw TextViewerDisposedException The text viewer of @a caret connecting to has been disposed
 		 */
 		bool isPointOverSelection(const Caret& caret, const graphics::Point& p) {
 			if(!isSelectionEmpty(caret)) {
 				if(caret.isSelectionRectangle())
 					return caret.boxForRectangleSelection().includes(p);
-				if(caret.textViewer().hitTest(p) == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {	// ignore if on the margin
-					const graphics::Rectangle viewerBounds(widgetapi::bounds(caret.textViewer(), false));
+				const TextViewer& textViewer = caret.textViewer();
+				if(caret.textViewer().hitTest(p) == &textViewer.textArea()) {	// ignore if on the margin
+					const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer, false));
 					if(graphics::geometry::x(p) <= graphics::geometry::right(viewerBounds) && graphics::geometry::y(p) <= graphics::geometry::bottom(viewerBounds)) {
-						const std::shared_ptr<const graphics::font::TextViewport> viewport(caret.textViewer().textArea().textRenderer().viewport());
+						const std::shared_ptr<const graphics::font::TextViewport> viewport(textViewer.textArea().textRenderer().viewport());
 						const boost::optional<graphics::font::TextHit<kernel::Position>> hit(viewToModelInBounds(*viewport, p));
 						return hit != boost::none && hit->characterIndex() >= caret.beginning() && hit->characterIndex() <= caret.end();
 					}
