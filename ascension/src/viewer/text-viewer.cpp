@@ -1172,7 +1172,7 @@ namespace ascension {
 				case 'M':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
-						NewlineCommand(*this, false)();	// ^J or ^M -> New Line
+						NewlineCommand(*this, boost::none)();	// ^J or ^M -> New Line
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_V:

@@ -440,7 +440,7 @@ namespace ascension {
 				antiAliased = win32::boole(temp);
 			}
 
-			return font::FontRenderContext(tx, antiAliased, boost::none);
+			return font::FontRenderContext(tx, antiAliased, false);
 		}
 
 		std::unique_ptr<ImageData> RenderingContext2D::getImageData(const graphics::Rectangle& bounds) const {
