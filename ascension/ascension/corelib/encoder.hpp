@@ -617,7 +617,7 @@ namespace ascension {
 			} // namespace sbcs
 
 			namespace dbcs {
-				ASCENSION_STATIC_ASSERT(sizeof(std::uint16_t) == 2);
+				static_assert(sizeof(std::uint16_t) == 2, "");
 
 				/// Generates 16-DBCS character sequence.
 				template<
