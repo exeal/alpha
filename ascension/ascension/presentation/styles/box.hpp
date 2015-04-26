@@ -27,9 +27,9 @@ namespace ascension {
 			/// @{
 
 			/// Enumerated values for @c PaddingSide.
-			ASCENSION_SCOPED_ENUMS_BEGIN(PaddingEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(PaddingEnums)
 				AUTO
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(PaddingEnums)
 
 			/**
 			 * [Copied from CSS3] Sets the thickness of the padding area. The value may not be negative.
@@ -39,7 +39,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<Length, Percentage, BOOST_SCOPED_ENUM_NATIVE(PaddingEnums)>,
+					boost::variant<Length, Percentage, PaddingEnums>,
 					Length, 0
 				>,
 				Inherited<false>,
@@ -53,20 +53,20 @@ namespace ascension {
 				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
 					return *percentage;
 				else if(const std::tuple<>* const autoValue = boost::get<std::tuple<>>(&computedValue))
-					return PaddingEnums::AUTO;
+					return PaddingEnums(PaddingEnums::AUTO);
 				else
 					throw UnknownValueException("computedValue");
 			}
 
 			/// Enumerated values for @c MarginSide.
-			ASCENSION_SCOPED_ENUMS_BEGIN(MarginEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(MarginEnums)
 				/// Makes the margin depend on the available space, as defined in “Calculating widths, heights and
 				/// margins” and in ...
 				FILL,
 				/// On the A edge and C edge, the used value of ‘auto’ is 0. On the B edge and D edge, the used value
 				/// depends on the available space, as defined in “Calculating widths, heights and margins.”
 				AUTO
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(MarginEnums)
 
 			/**
 			 * [Copied from CSS3] These properties set the thickness of the margin area. The value may be negative.
@@ -75,7 +75,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<Length, Percentage, BOOST_SCOPED_ENUM_NATIVE(MarginEnums)>,
+					boost::variant<Length, Percentage, MarginEnums>,
 					Length, 0
 				>,
 				Inherited<false>,
@@ -89,7 +89,7 @@ namespace ascension {
 				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
 					return *percentage;
 				else if(const std::tuple<>* const autoValue = boost::get<std::tuple<>>(&computedValue))
-					return MarginEnums::AUTO;
+					return MarginEnums(MarginEnums::AUTO);
 				else
 					throw UnknownValueException("computedValue");
 			}

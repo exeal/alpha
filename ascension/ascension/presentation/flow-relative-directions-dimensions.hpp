@@ -35,7 +35,7 @@ namespace ascension {
 		 * Defines the 'flow-relative directions' which are defined relative to the flow of content on the page.
 		 * @see graphics#PhysicalDirection, graphics#font#LineRelativeDirection
 		 */
-		ASCENSION_SCOPED_ENUMS_BEGIN(FlowRelativeDirection)
+		ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(FlowRelativeDirection)
 			/// 'block-start' means the side that comes earlier in the block progression.
 			BLOCK_START,
 			/// 'block-end' means the side opposite 'block-start'.
@@ -55,7 +55,7 @@ namespace ascension {
 			/// 'end' -- The side opposite 'start'.
 			END = INLINE_END
 #endif // !ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
-		ASCENSION_SCOPED_ENUMS_END
+		ASCENSION_SCOPED_ENUM_DECLARE_END(FlowRelativeDirection)
 
 		/**
 		 * Returns direction opposite @a direction.

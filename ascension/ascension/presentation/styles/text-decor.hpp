@@ -29,13 +29,13 @@ namespace ascension {
 			 * @{
 			 */
 			/// Enumerated values for @c TextDecorationLine.
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextDecorationLineEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextDecorationLineEnums)
 				NONE = 0,				///< Neither produces nor inhibits text decoration.
 				UNDERLINE = 1 << 0,		///< Each line of text is underlined.
 				OVERLINE = 1 << 1,		///< Each line of text has a line above it.
 //				BASELINE = 1 << 2,
 				LINE_THROUGH = 1 << 3	///< Each line of text has a line through the middle.
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextDecorationLineEnums)
 
 			/**
 			 * [Copied from CSS3] Specifies what line decorations, if any, are added to the element.
@@ -46,7 +46,7 @@ namespace ascension {
 			 * @see XSL 1.1, 7.17.4 "text-decoration" (http://www.w3.org/TR/xsl/#text-decoration)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextDecorationLineEnums), TextDecorationLineEnums::NONE>,
+				Enumerated<TextDecorationLineEnums, TextDecorationLineEnums::NONE>,
 				Inherited<false>
 			> TextDecorationLine;
 
@@ -62,13 +62,13 @@ namespace ascension {
 			typedef TypedColor<TextDecorationColorSpec> TextDecorationColor;
 
 			/// Enumerated values for @c TextDecorationStyle.
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextDecorationStyleEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextDecorationStyleEnums)
 				SOLID = BorderStyleEnums::SOLID,	///< Same meaning as for @c Border#Style.
 				DOUBLE = BorderStyleEnums::DOUBLE,	///< Same meaning as for @c Border#Style.
 				DOTTED = BorderStyleEnums::DOTTED,	///< Same meaning as for @c Border#Style.
 				DAHSED = BorderStyleEnums::DASHED,	///< Same meaning as for @c Border#Style.
 				WAVY = BorderStyleEnums::OUTSET + 1	///< A wavy line.
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextDecorationStyleEnums)
 
 			/**
 			 * [Copied from CSS3] This property specifies the style of the line(s) drawn for text decoration specified
@@ -77,12 +77,12 @@ namespace ascension {
 			 *      property (http://www.w3.org/TR/css-text-decor-3/#text-decoration-style-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextDecorationStyleEnums), TextDecorationStyleEnums::SOLID>,
+				Enumerated<TextDecorationStyleEnums, TextDecorationStyleEnums::SOLID>,
 				Inherited<false>
 			> TextDecorationStyle;
 
 			/// Enumerated values for @c TextDecorationSkip. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextDecorationSkipEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextDecorationSkipEnums)
 				/// Skip nothing: text-decoration is drawn for all text content and for inline replaced elements.
 				NONE = 0,
 				/// Skip this element if it is an atomic inline (such as an image or inline-block).
@@ -102,7 +102,7 @@ namespace ascension {
 				/// Skip over the box's margin, border, and padding areas. Note that this only has an effect on
 				/// decorations imposed by an ancestor.
 				BOX_DECORATION = 1 << 5
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextDecorationSkipEnums)
 
 			/**
 			 * [Copied from CSS3] This property specifies what parts of the element's content any text decoration
@@ -113,12 +113,12 @@ namespace ascension {
 			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-decoration-skip-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextDecorationSkipEnums), TextDecorationSkipEnums::OBJECTS>,
+				Enumerated<TextDecorationSkipEnums, TextDecorationSkipEnums::OBJECTS>,
 				Inherited<true>
 			> TextDecorationSkip;
 
 			/// Enumerated values for @c TextUnderlinePosition. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextUnderlinePositionEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextUnderlinePositionEnums)
 				/// The user agent may use any algorithm to determine the underline's position; however it must be
 				/// placed at or under the alphabetic baseline.
 				AUTO = 0,
@@ -136,7 +136,7 @@ namespace ascension {
 				/// the right edge of the text. If this causes the underline to be drawn on the "over" side of the
 				/// text, then an overline also switches sides and is drawn on the "under" side.
 				UNDER_RIGHT
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextUnderlinePositionEnums)
 
 			/**
 			 * [Copied from CSS3] This property sets the position of an underline specified on the same element. (It
@@ -146,7 +146,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css-text-decor-3/#text-underline-position-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextUnderlinePositionEnums), TextUnderlinePositionEnums::AUTO>,
+				Enumerated<TextUnderlinePositionEnums, TextUnderlinePositionEnums::AUTO>,
 				Inherited<true>
 			> TextUnderlinePosition;
 
@@ -157,7 +157,7 @@ namespace ascension {
 			 * @note This does not define a value for 'none' as enumerated one. Use @c boost#none for "no emphasis
 			 *       mark" meaning.
 			 */
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextEmphasisStyleEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextEmphasisStyleEnums)
 //				/// No emphasis marks.
 //				NONE = 0,
 				/// Display small circles as marks. The filled dot is U+2022 ‘•’.
@@ -180,7 +180,7 @@ namespace ascension {
 				FILLED_SESAME = 0xfe45u,
 				/// Display sesames as marks. The open sesame is U+FE46 ‘﹆’.
 				OPEN_SESAME = 0xfe46u
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextEmphasisStyleEnums)
 
 			/**
 			 * [Copied from CSS3] This property applies emphasis marks to the element's text.
@@ -218,12 +218,12 @@ namespace ascension {
 			typedef TypedColor<TextEmphasisColorSpec> TextEmphasisColor;
 
 			/// Enumerated values for @c TextEmphasisPosition.
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextEmphasisPositionEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextEmphasisPositionEnums)
 				OVER = 0,	///< Draw marks over the text in horizontal writing mode.
 				UNDER = 1,	///< Draw marks under the text in horizontal writing mode.
 				RIGHT = 0,	///< Draw marks to the right of the text in vertical writing mode.
 				LEFT = 2	///< Draw marks to the left of the text in vertical writing mode.
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextEmphasisPositionEnums)
 
 			/**
 			 * [Copied from CSS3] This property describes where emphasis marks are drawn at.
@@ -232,7 +232,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css-text-decor-3/#text-emphasis-position-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextEmphasisPositionEnums), TextEmphasisPositionEnums::OVER | TextEmphasisPositionEnums::RIGHT>,
+				Enumerated<TextEmphasisPositionEnums, TextEmphasisPositionEnums::OVER | TextEmphasisPositionEnums::RIGHT>,
 				Inherited<true>
 			> TextEmphasisPosition;
 #if 0

@@ -26,7 +26,7 @@ namespace ascension {
 			/// @{
 
 			/// Enumerated values for @c TextHeight. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextHeightEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextHeightEnums)
 				/// The block-progression dimension is based either on the em square determined by the computed element
 				/// font-size property value or the cell-height (ascender + descender) related to the computed element
 				/// font-size as chosen by the user agent.
@@ -41,7 +41,7 @@ namespace ascension {
 				/// of the box obtained by considering all children elements located on the same line, ruby annotations
 				/// (elements with 'display:ruby-text') and baseline shifted elements.
 				MAX_SIZE
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextHeightEnums)
 
 			/**
 			 * [Copied from CSS3] The text-height property determine the block-progression dimension of the text
@@ -51,13 +51,13 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<BOOST_SCOPED_ENUM_NATIVE(TextHeightEnums), Number>,
-					BOOST_SCOPED_ENUM_NATIVE(TextHeightEnums), TextHeightEnums::AUTO
+					boost::variant<TextHeightEnums, Number>,
+					TextHeightEnums, TextHeightEnums::AUTO
 				>, Inherited<true>
 			> TextHeight;
 
 			/// Enumerated values for @c LineHeight. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(LineHeightEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(LineHeightEnums)
 				/// Tells user agents to set the computed value to a "reasonable" value based on the font size of the
 				/// element. The value has the same meaning as &lt;number&gt;. We recommend a computed value for normal
 				/// between 1.0 to 1.2. The user agent may allow the &lt;number&gt; to vary depending on the metrics of
@@ -67,7 +67,7 @@ namespace ascension {
 				/// of the line. The computed value is the specified value (none). For block-level elements, equivalent
 				/// to normal (and the computed value is normal).
 				NONE
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(LineHeightEnums)
 
 			/**
 			 * [Copied from CSS3] The line-height property controls the amount of leading space which is added over and
@@ -80,8 +80,8 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<BOOST_SCOPED_ENUM_NATIVE(LineHeightEnums), Number, Length, Percentage>,
-					BOOST_SCOPED_ENUM_NATIVE(LineHeightEnums), LineHeightEnums::NORMAL
+					boost::variant<LineHeightEnums, Number, Length, Percentage>,
+					LineHeightEnums, LineHeightEnums::NORMAL
 				>,
 				Inherited<true>,
 				boost::variant<
@@ -101,7 +101,7 @@ namespace ascension {
 				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
 					return *percentage;
 				else if(const std::tuple<>* const none = boost::get<std::tuple<>>(&computedValue))
-					return LineHeightEnums::NONE;
+					return LineHeightEnums(LineHeightEnums::NONE);
 				else
 					throw UnknownValueException("computedValue");
 			}
@@ -109,25 +109,25 @@ namespace ascension {
 			/// @see graphics#font#LineBoxContain
 			typedef StyleProperty<
 				Enumerated<
-					BOOST_SCOPED_ENUM_NATIVE(graphics::font::LineBoxContain),
+					graphics::font::LineBoxContain,
 					graphics::font::LineBoxContain::BLOCK | graphics::font::LineBoxContain::INLINE | graphics::font::LineBoxContain::REPLACED
 				>, Inherited<true>
 			> LineBoxContain;
 
 			/// @see graphics#font#DominantBaseline
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::DominantBaseline), graphics::font::DominantBaseline::AUTO>,
+				Enumerated<graphics::font::DominantBaseline, graphics::font::DominantBaseline::AUTO>,
 				Inherited<false>
 			> DominantBaseline;
 
 			/// @see graphics#font#AlignmentBaseline
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::AlignmentBaseline), graphics::font::AlignmentBaseline::BASELINE>,
+				Enumerated<graphics::font::AlignmentBaseline, graphics::font::AlignmentBaseline::BASELINE>,
 				Inherited<false>
 			> AlignmentBaseline;
 
 			/// Enumerated values for @c AlignmentAdjust. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(AlignmentAdjustEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(AlignmentAdjustEnums)
 				// TODO: Describe the values.
 				AUTO,
 				BASELINE,
@@ -141,7 +141,7 @@ namespace ascension {
 				ALPHABETIC,
 				HANGING,
 				MATHEMATICAL
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(AlignmentAdjustEnums)
 
 			/**
 			 * [Copied from CSS3] The ‘alignment-adjust’ property allows more precise alignment of elements, such as
@@ -152,20 +152,20 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<BOOST_SCOPED_ENUM_NATIVE(AlignmentAdjustEnums), Percentage, Length>,
-					BOOST_SCOPED_ENUM_NATIVE(AlignmentAdjustEnums), AlignmentAdjustEnums::AUTO
+					boost::variant<AlignmentAdjustEnums, Percentage, Length>,
+					AlignmentAdjustEnums, AlignmentAdjustEnums::AUTO
 				>,
 				Inherited<false>
 				// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
 			> AlignmentAdjust;
 
 			/// Enumerated values for @c BaselineShift. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(BaselineShiftEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(BaselineShiftEnums)
 				// TODO: Describe the values.
 				BASELINE,
 				SUB,
 				SUPER
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(BaselineShiftEnums)
 
 			/**
 			 * [Copied from CSS3] The ‘baseline-shift’ property allows repositioning of the dominant-baseline relative
@@ -178,20 +178,20 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<BOOST_SCOPED_ENUM_NATIVE(BaselineShiftEnums), Percentage, Length>,
-					BOOST_SCOPED_ENUM_NATIVE(BaselineShiftEnums), BaselineShiftEnums::BASELINE
+					boost::variant<BaselineShiftEnums, Percentage, Length>,
+					BaselineShiftEnums, BaselineShiftEnums::BASELINE
 				>,
 				Inherited<false>
 				// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
 			> BaselineShift;
 
 			/// Enumerated values for @c InlineBoxAlignment. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(InlineBoxAlignmentEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(InlineBoxAlignmentEnums)
 				/// Use the initial line of the inline block element for alignment purpose.
 				INITIAL,
 				/// Use the last line of the inline block element for alignment purpose.
 				LAST
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(InlineBoxAlignmentEnums)
 
 			/**
 			 * [Copied from CSS3] The ‘inline-box-align’ property determines which line of a multi-line inline block
@@ -201,8 +201,8 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<BOOST_SCOPED_ENUM_NATIVE(InlineBoxAlignmentEnums), Integer>,
-					BOOST_SCOPED_ENUM_NATIVE(InlineBoxAlignmentEnums), InlineBoxAlignmentEnums::LAST
+					boost::variant<InlineBoxAlignmentEnums, Integer>,
+					InlineBoxAlignmentEnums, InlineBoxAlignmentEnums::LAST
 				>, Inherited<false>
 			> InlineBoxAlignment;
 			/// @}

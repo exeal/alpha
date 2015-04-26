@@ -25,17 +25,17 @@ namespace ascension {
 			/// Specifies how numbers in text are displayed in different locales.
 			struct NumberSubstitution : private boost::equality_comparable<NumberSubstitution> {
 				/// Specifies how the locale for numbers in a text run is determined.
-				ASCENSION_SCOPED_ENUMS_BEGIN(LocaleSource)
+				ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(LocaleSource)
 					/// Number locale is derived from the text run.
 					TEXT,
 					/// Number locale is derived from the value of the current thread.
 					USER,
 					/// Number locale is derived from @c #localeOverride.
 					OVERRIDE
-				ASCENSION_SCOPED_ENUMS_END
+				ASCENSION_SCOPED_ENUM_DECLARE_END(LocaleSource)
 
 				/// The type of number substitution to perform on numbers in a text run.
-				ASCENSION_SCOPED_ENUMS_BEGIN(Method)
+				ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(Method)
 					/// The substitution method should be determined based on the number locale.
 					AS_LOCALE,
 					/// If the number locale is an Arabic or Farsi, specifies that the digits depend on the context.
@@ -53,7 +53,7 @@ namespace ascension {
 					/// result in Latin digits for some Arabic locales, whereas using @c TRADITIONAL results in Arabic
 					/// digits for all Arabic locales.
 					TRADITIONAL
-				ASCENSION_SCOPED_ENUMS_END
+				ASCENSION_SCOPED_ENUM_DECLARE_END(Method)
 
 				/**
 				 * The locale to use when the value of @c #localeSource is @c LocaleSource#OVERRIDE. If
@@ -88,8 +88,8 @@ namespace ascension {
 			inline std::size_t hash_value(const NumberSubstitution& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
 				boost::hash_combine(seed, object.localeOverride);
-				boost::hash_combine<int>(seed, boost::native_value(object.localeSource));
-				boost::hash_combine<int>(seed, boost::native_value(object.method));
+				boost::hash_combine(seed, boost::native_value(object.localeSource));
+				boost::hash_combine(seed, boost::native_value(object.method));
 				return seed;
 			}
 		}

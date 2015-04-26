@@ -34,7 +34,7 @@ namespace ascension {
 			/// @{
 
 			/// Enumerated values for @c TextTransform. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextTransformEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextTransformEnums)
 				/// No effects.
 				NONE,
 				/// Puts the first letter of each word in titlecase; other characters are unaffected.
@@ -48,7 +48,7 @@ namespace ascension {
 				/// ideographic characters.
 				FULL_WIDTH/*,
 				FULL_SIZE_KANA*/
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextTransformEnums)
 
 			/**
 			 * [Copied from CSS3] This property transforms text for styling purposes.
@@ -57,12 +57,12 @@ namespace ascension {
 			 * @see XSL 1.1, 7.17.6 "text-transform" (http://www.w3.org/TR/xsl/#text-transform)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextTransformEnums), TextTransformEnums::NONE>,
+				Enumerated<TextTransformEnums, TextTransformEnums::NONE>,
 				Inherited<true>
 			> TextTransform;
 
 			/// Enumerated values for @c WhiteSpace. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(WhiteSpaceEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(WhiteSpaceEnums)
 				/// This value directs user agents to collapse sequences of white space into a single characer (or in
 				/// some cases, no character). Lines may wrap at allowed soft wrap opportunities, as determined by the
 				/// line-breaking rules in effect, in order to minimize inline-axis overflow.
@@ -78,7 +78,7 @@ namespace ascension {
 				/// Like ‘normal’, this value collapses consecutive spaces and allows wrapping, but preserves segment
 				/// breaks in the source as forced line breaks.
 				PRE_LINE	= 0 << 0 | 1 << 1 | 1 << 2
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(WhiteSpaceEnums)
 
 			inline BOOST_CONSTEXPR bool collapsesNewLines(WhiteSpaceEnums value) BOOST_NOEXCEPT {
 				return (boost::native_value(value) & (1 << 0)) != 0;
@@ -99,7 +99,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#white-space)
 			 */			
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(WhiteSpaceEnums), WhiteSpaceEnums::NORMAL>,
+				Enumerated<WhiteSpaceEnums, WhiteSpaceEnums::NORMAL>,
 				Inherited<true>
 			> WhiteSpace;
 
@@ -118,7 +118,7 @@ namespace ascension {
 			> TabSize;
 
 			/// Enumerated values for @c LineBreak. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(LineBreakEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(LineBreakEnums)
 				/// The UA determines the set of line-breaking restrictions to use, and it may vary the restrictions
 				/// based on the length of the line; e.g., use a less restrictive set of line-break rules for short
 				/// lines.
@@ -138,7 +138,7 @@ namespace ascension {
 #	define STRICT ASCENSION_DEFINED_STRICT
 #	undef ASCENSION_DEFINED_STRICT
 #endif
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(LineBreakEnums)
 
 			/**
 			 * [Copied from CSS3] This property specifies the strictness of line-breaking rules applied
@@ -147,12 +147,12 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#line-break-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(LineBreakEnums), LineBreakEnums::AUTO>,
+				Enumerated<LineBreakEnums, LineBreakEnums::AUTO>,
 				Inherited<true>
 			> LineBreak;
 
 			/// Enumerated values for @c WordBreak. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(WordBreakEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(WordBreakEnums)
 				/// Words break according to their usual rules.
 				NORMAL,
 				/// In addition to ‘normal’ soft wrap opportunities, lines may break between any two letters (except
@@ -165,7 +165,7 @@ namespace ascension {
 				/// exist due to dictionary-based breaking. Otherwise this option is equivalent to ‘normal’. In this
 				/// style, sequences of CJK characters do not break.
 				KEEP_ALL
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(WordBreakEnums)
 
 			/**
 			 * [Copied from CSS3] This property specifies soft wrap opportunities between letters, i.e. where it is
@@ -174,12 +174,12 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#word-break-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(WordBreakEnums), WordBreakEnums::NORMAL>,
+				Enumerated<WordBreakEnums, WordBreakEnums::NORMAL>,
 				Inherited<true>
 			> WordBreak;
 
 			/// Enumerated values for @c Hyphens. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(HyphensEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(HyphensEnums)
 				/// Words are not hyphenated, even if characters inside the word explicitly define hyphenation
 				/// opportunities.
 				NONE,
@@ -191,7 +191,7 @@ namespace ascension {
 				/// resource. Conditional hyphenation characters inside a word, if present, take priority over
 				/// automatic resources when determining hyphenation opportunities within the word.
 				AUTO
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(HyphensEnums)
 
 			/**
 			 * [Copied from CSS3] This property controls whether hyphenation is allowed to create more soft wrap
@@ -202,12 +202,12 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/xsl/#common-hyphenation-properties)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(HyphensEnums), HyphensEnums::MANUAL>,
+				Enumerated<HyphensEnums, HyphensEnums::MANUAL>,
 				Inherited<true>
 			> Hyphens;
 			
 			/// Enumerated values for @c OverflowWrap. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(OverflowWrapEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(OverflowWrapEnums)
 				/// Lines may break only at allowed break points. However, the restrictions introduced by ‘word-break:
 				/// keep-all’ may be relaxed to match ‘word-break: normal’ if there are no otherwise-acceptable break
 				/// points in the line.
@@ -218,7 +218,7 @@ namespace ascension {
 				/// point.
 				BREAK_WORD/*,
 				HYPHENATE*/
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(OverflowWrapEnums)
 
 			/**
 			 * [Copied from CSS3] This property specifies whether the UA may arbitrarily break within a word to prevent
@@ -228,20 +228,20 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#overflow-wrap-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(OverflowWrapEnums), OverflowWrapEnums::NORMAL>,
+				Enumerated<OverflowWrapEnums, OverflowWrapEnums::NORMAL>,
 				Inherited<true>
 			> OverflowWrap;
 
 			/// @see graphics#font#TextAlignment
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextAlignment), graphics::font::TextAlignment::START>,
+				Enumerated<graphics::font::TextAlignment, graphics::font::TextAlignment::START>,
 				Inherited<true>
 			> TextAlignment;
 
 			using graphics::font::TextAnchor;
 			
 			/// Enumerated values for @c TextAlignmentLast. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(TextAlignmentLastEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(TextAlignmentLastEnums)
 				START = graphics::font::TextAlignment::START,
 				CENTER = graphics::font::TextAlignment::CENTER,
 				END = graphics::font::TextAlignment::END,
@@ -249,7 +249,7 @@ namespace ascension {
 				RIGHT = graphics::font::TextAlignment::RIGHT,
 				JUSTIFY = graphics::font::TextAlignment::JUSTIFY,
 				AUTO = graphics::font::TextAlignment::START_END + 1
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(TextAlignmentLastEnums)
 
 			/**
 			 * [Copied from CSS3] This property describes how the last line of a block or a line right before a forced
@@ -266,7 +266,7 @@ namespace ascension {
 			 * @note The name of this type is @c TextAlignmentLast, not @c TextAlignLast.
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextAlignmentLastEnums), TextAlignmentLastEnums::AUTO>,
+				Enumerated<TextAlignmentLastEnums, TextAlignmentLastEnums::AUTO>,
 				Inherited<true>
 			> TextAlignmentLast;
 
@@ -275,7 +275,7 @@ namespace ascension {
 			
 			/// @see graphics#font#TextJustification
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextJustification), graphics::font::TextJustification::AUTO>,
+				Enumerated<graphics::font::TextJustification, graphics::font::TextJustification::AUTO>,
 				Inherited<true>
 			> TextJustification;
 
@@ -467,7 +467,7 @@ namespace ascension {
 			> TextIndent;
 			
 			/// Enumerated values for @c HangingPunctuation. The documentation of the members are copied from CSS 3.
-			ASCENSION_SCOPED_ENUMS_BEGIN(HangingPunctuationEnums)
+			ASCENSION_SCOPED_ENUM_DECLARE_BEGIN(HangingPunctuationEnums)
 				// TODO: Some values should be able to be combined by bitwise-OR.
 				/// No character hangs.
 				NONE,
@@ -481,7 +481,7 @@ namespace ascension {
 				FORCE_END,
 				/// A stop or comma at the end of a line hangs if it does not otherwise fit prior to justification.
 				ALLOW_END
-			ASCENSION_SCOPED_ENUMS_END;
+			ASCENSION_SCOPED_ENUM_DECLARE_END(HangingPunctuationEnums)
 
 			/**
 			 * [Copied from CSS3] This property determines whether a punctuation mark, if one is present, hangs and may
@@ -490,7 +490,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#hanging-punctuation-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<BOOST_SCOPED_ENUM_NATIVE(HangingPunctuationEnums), HangingPunctuationEnums::NONE>,
+				Enumerated<HangingPunctuationEnums, HangingPunctuationEnums::NONE>,
 				Inherited<true>
 			> HangingPunctuation;
 			/// @}
