@@ -823,9 +823,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\future\type-traits.hpp">
       <Filter>ascension\Header Files\corelib\future</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\future\static-assert.hpp">
-      <Filter>ascension\Header Files\corelib\future</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\style-property.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
