@@ -147,6 +147,9 @@
     <Filter Include="ascension\Source Files\graphics\font\detail">
       <UniqueIdentifier>{47cdf8b6-4f28-4f74-8592-23b186c1a165}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\viewer\detail">
+      <UniqueIdentifier>{d3185af3-5e29-4655-8bad-84a7b315dcec}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -1185,6 +1188,21 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area-mouse-input-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\font-face.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\open-type-layout-tag.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-code.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\visual-line.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\detail\weak-reference-for-points.hpp">
+      <Filter>ascension\Header Files\viewer\detail</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

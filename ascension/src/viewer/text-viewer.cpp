@@ -180,11 +180,6 @@ namespace ascension {
 		TextViewer::~TextViewer() {
 			document().removeListener(*this);
 			document().removeRollbackListener(*this);
-			BOOST_FOREACH(VisualPoint* p, points_)
-				p->viewerDisposed();
-
-			// 非共有データ
-		//	delete selection_;
 		}
 
 		/// @see Presentation#ComputedTextToplevelStyleChangedSignal
@@ -281,7 +276,7 @@ namespace ascension {
 				Gdk::ModifierType state;
 				if(!abstractEvent.get_state(state))
 					return;
-				location = graphics::Point(geom::_x = x, geom::_y = y);
+				location = graphics::Point(geom::_x = static_cast<graphics::Scalar>(x), geom::_y = static_cast<graphics::Scalar>(y));
 				static const Gdk::ModifierType NATIVE_BUTTON_MASK = Gdk::BUTTON1_MASK | Gdk::BUTTON2_MASK | Gdk::BUTTON3_MASK | Gdk::BUTTON4_MASK | Gdk::BUTTON5_MASK;
 				buttons = !byKeyboard ? (state & NATIVE_BUTTON_MASK) : widgetapi::event::LocatedUserInput::NO_BUTTON;
 				modifiers = state & ~NATIVE_BUTTON_MASK;
