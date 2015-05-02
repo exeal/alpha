@@ -399,6 +399,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\detail\inline-progression-dimension-range-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-collection.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-description.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\font-face.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-family.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-metrics.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-properties.hpp" />
