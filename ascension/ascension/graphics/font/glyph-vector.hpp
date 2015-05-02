@@ -9,15 +9,13 @@
 
 #ifndef ASCENSION_GLYPH_VECTOR_HPP
 #define ASCENSION_GLYPH_VECTOR_HPP
-
+#include <ascension/graphics/font/glyph-code.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/geometry/rectangle.hpp>
 #include <ascension/presentation/writing-mode.hpp>
-#include <cstdint>
-#include <memory>
-#include <boost/flyweight.hpp>
 #include <boost/range/irange.hpp>
 #include <boost/optional.hpp>
+#include <memory>
 
 namespace ascension {
 	namespace graphics {
@@ -25,9 +23,6 @@ namespace ascension {
 		class PaintContext;
 
 		namespace font {
-			/// 16-bit glyph index value.
-			typedef std::uint16_t GlyphCode;
-
 			class Font;
 			class FontRenderContext;
 			class GlyphMetrics;

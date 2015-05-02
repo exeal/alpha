@@ -7,9 +7,9 @@
 
 #ifndef ASCENSION_FONT_HPP
 #define ASCENSION_FONT_HPP
+#include <ascension/config.hpp>
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/graphics/font/font-description.hpp>
-#include <ascension/graphics/font/glyph-vector.hpp>
+#include <ascension/graphics/font/glyph-code.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/geometry/affine-transform.hpp>
 #include <ascension/graphics/object.hpp>
@@ -28,8 +28,10 @@ namespace ascension {
 
 	namespace graphics {
 		namespace font {
-			class FontCollection;
+			class FontDescription;
 			class FontFamily;
+			class FontRenderContext;
+			class GlyphVector;
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 			namespace detail {
