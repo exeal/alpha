@@ -18,13 +18,11 @@ namespace ascension {
 	namespace graphics {
 		namespace font {
 			/**
-			 * Represents a character position in a text layout or a text viewport, and a
-			 * <strong>bias</strong> or side of the character. Biases are either <em>leading</em>
-			 * (the left edge, for a left-to-right character) or <em>trailing</em> (the right edge,
-			 * for a left-to-right character). Instances of @c TextHit are used to specify caret
-			 * and insertion positions within text.
-			 * @tparam Position A type represents a character position. Typically either @c Index
-			 *                  or kernel#Position
+			 * Represents a character position in a text layout or a text viewport, and a <strong>bias</strong> or side
+			 * of the character. Biases are either <em>leading</em> (the left edge, for a left-to-right character) or
+			 * <em>trailing</em> (the right edge, for a left-to-right character). Instances of @c TextHit are used to
+			 * specify caret and insertion positions within text.
+			 * @tparam Position A type represents a character position. Typically either @c Index or kernel#Position
 			 * @see TextLayout, TextViewport
 			 * @note This class is designed based on @c java.awt.font.TextHitInfo class in Java.
 			 */
@@ -36,41 +34,35 @@ namespace ascension {
 				/// @name Factories
 				/// @{
 				/**
-				 * Creates a @c TextHit at the specified offset, associated with the character
-				 * after the offset.
+				 * Creates a @c TextHit at the specified offset, associated with the character after the offset.
 				 * @param offset An offset associated with the character after the offset
 				 * @return A @c TextHit at the specified offset
 				 * @see #beforeOffset
 				 */
-				static TextHit&& afterOffset(const value_type& offset) BOOST_NOEXCEPT {
+				static TextHit afterOffset(const value_type& offset) BOOST_NOEXCEPT {
 					return TextHit(offset, true);
 				}
 				/**
-				 * Creates a @c TextHit at the specified offset, associated with the character
-				 * before the offset.
+				 * Creates a @c TextHit at the specified offset, associated with the character before the offset.
 				 * @param offset An offset associated with the character before the offset
 				 * @return A @c TextHit at the specified offset
 				 * @see #afterOffset
 				 */
-				static TextHit&& beforeOffset(const value_type& offset) BOOST_NOEXCEPT;
+				static TextHit beforeOffset(const value_type& offset) BOOST_NOEXCEPT;
 				/**
-				 * Creates a @c TextHit on the leading edge of the character at the specified
-				 * @a characterIndex.
+				 * Creates a @c TextHit on the leading edge of the character at the specified @a characterIndex.
 				 * @param characterIndex The index of the character hit
-				 * @return A @c TextHit on the leading edge of the character at the
-				 *         specified @a characterIndex
+				 * @return A @c TextHit on the leading edge of the character at the specified @a characterIndex
 				 */
-				static TextHit&& leading(const value_type& characterIndex) BOOST_NOEXCEPT {
+				static TextHit leading(const value_type& characterIndex) BOOST_NOEXCEPT {
 					return TextHit(characterIndex, true);
 				}
 				/**
-				 * Creates a @c TextHit on the trailing edge of the character at the specified
-				 * @a characterIndex.
+				 * Creates a @c TextHit on the trailing edge of the character at the specified @a characterIndex.
 				 * @param characterIndex The index of the character hit
-				 * @return A @c TextHit on the trailing edge of the character at the
-				 *         specified @a characterIndex
+				 * @return A @c TextHit on the trailing edge of the character at the specified @a characterIndex
 				 */
-				static TextHit&& trailing(const value_type& characterIndex) BOOST_NOEXCEPT {
+				static TextHit trailing(const value_type& characterIndex) BOOST_NOEXCEPT {
 					return TextHit(characterIndex, false);
 				}
 				/// @}
@@ -96,9 +88,8 @@ namespace ascension {
 				 */
 				const value_type& characterIndex() const BOOST_NOEXCEPT {return characterIndex_;}
 				/**
-				 * Returns the insertion index. This is the character index if the leading edge of
-				 * the character was hit, and one greater than the character index if the trailing
-				 * edge was hit.
+				 * Returns the insertion index. This is the character index if the leading edge of the character was
+				 * hit, and one greater than the character index if the trailing edge was hit.
 				 * @see #characterIndex
 				 */
 				value_type insertionIndex() const BOOST_NOEXCEPT;
@@ -109,24 +100,24 @@ namespace ascension {
 				/// @name Other Factories
 				/// @{
 				/**
-				 * Creates a @c TextHit whose character index is offset by @a delta from the
-				 * @c #characterIndex of this @c TextHit. This @c TextHit remains unchanged.
+				 * Creates a @c TextHit whose character index is offset by @a delta from the @c #characterIndex of this
+				 * @c TextHit. This @c TextHit remains unchanged.
 				 * @param delta The value to offset this @c #characterIndex
-				 * @return A @c TextHit whose @c #characterIndex is offset by @a delta
-				 *         from the @c #characterIndex of this @c TextHit
+				 * @return A @c TextHit whose @c #characterIndex is offset by @a delta from the @c #characterIndex of
+				 *         this @c TextHit
 				 * @throw std#overflow_error
 				 * @throw std#underflow_error
 				 * @see #otherHit
 				 */
-				TextHit&& offsetHit(SignedIndex delta) const;
+				TextHit offsetHit(SignedIndex delta) const;
 				/**
-				 * Creates a @c TextHit on the other side of the insertion point. This @c TextHit
-				 * remains unchanged.
+				 * Creates a @c TextHit on the other side of the insertion point. This @c TextHit remains unchanged.
 				 * @return A @c TextHit on the other side of the insertion point
 				 * @see #offsetHit
 				 */
-				TextHit&& otherHit() const BOOST_NOEXCEPT;
+				TextHit otherHit() const BOOST_NOEXCEPT;
 				/// @}
+
 			private:
 				TextHit(const value_type& characterIndex, bool isLeadingEdge) BOOST_NOEXCEPT
 					: characterIndex_(characterIndex), isLeadingEdge_(isLeadingEdge) {}
@@ -142,7 +133,7 @@ namespace ascension {
 				return out << std::basic_string<Character, Traits>(std::begin(s), std::end(s));
 			}
 
-			template<> inline TextHit<Index>&& TextHit<Index>::beforeOffset(const Index& offset) BOOST_NOEXCEPT {
+			template<> inline TextHit<Index> TextHit<Index>::beforeOffset(const Index& offset) BOOST_NOEXCEPT {
 				return TextHit<Index>(offset - 1, false);
 			}
 
@@ -150,7 +141,7 @@ namespace ascension {
 				return isLeadingEdge() ? characterIndex() : characterIndex() + 1;
 			}
 
-			template<> inline TextHit<Index>&& TextHit<Index>::offsetHit(SignedIndex delta) const {
+			template<> inline TextHit<Index> TextHit<Index>::offsetHit(SignedIndex delta) const {
 				if(delta > 0 && static_cast<Index>(delta) > std::numeric_limits<Index>::max() - characterIndex())
 					throw std::overflow_error("delta");
 				else if(delta < 0 && static_cast<Index>(-delta) > characterIndex())
@@ -158,7 +149,7 @@ namespace ascension {
 				return TextHit(characterIndex() + delta, isLeadingEdge());
 			}
 
-			template<> inline TextHit<Index>&& TextHit<Index>::otherHit() const BOOST_NOEXCEPT {
+			template<> inline TextHit<Index> TextHit<Index>::otherHit() const BOOST_NOEXCEPT {
 				return isLeadingEdge() ? trailing(characterIndex() - 1) : leading(characterIndex() + 1);
 			}
 		}
