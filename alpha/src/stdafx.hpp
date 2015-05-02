@@ -7,6 +7,11 @@
 
 #ifndef ALPHA_STDAFX_HPP
 #define ALPHA_STDAFX_HPP
+
+#include <ascension/presentation/detail/style-sequence.hpp>
+#include <boost/flyweight.hpp>
+#include <boost/fusion/container/vector.hpp>
+
 #include <ascension/platforms.hpp>
 
 #if ASCENSION_SUPPORTS_WINDOW_SYSTEM(GTK)
