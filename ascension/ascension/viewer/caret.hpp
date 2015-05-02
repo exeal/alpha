@@ -74,7 +74,7 @@ namespace ascension {
 			};
 
 		public:
-			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position(0, 0));
+			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position::zero());
 			~Caret();
 
 			/// @name The Anchor and The Caret

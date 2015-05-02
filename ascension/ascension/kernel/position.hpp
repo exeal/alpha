@@ -7,7 +7,6 @@
 
 #ifndef ASCENSION_POSITION_HPP
 #define ASCENSION_POSITION_HPP
-
 #include <ascension/corelib/basic-types.hpp>	// Index
 #include <ascension/corelib/memory.hpp>			// FastArenaObject
 #include <boost/operators.hpp>
@@ -48,6 +47,10 @@ namespace ascension {
 			bool operator<(const Position& other) const BOOST_NOEXCEPT {
 				return line < other.line || (line == other.line && offsetInLine < other.offsetInLine);
 			}
+			/// Returns the result of @c Position(0, 0).
+			static BOOST_CONSTEXPR Position zero() BOOST_NOEXCEPT {
+				return Position(0, 0);
+			}
 		};
 
 		/**
@@ -71,9 +74,9 @@ namespace ascension {
 		}
 
 		/**
-		 * A region consists of two positions and represents a linear range in a document. There
-		 * are no restriction about greater/less relationship between the two positions, but the
-		 * region is called "normalized" when the first position is less than or equal to the second.
+		 * A region consists of two positions and represents a linear range in a document. There are no restriction
+		 * about greater/less relationship between the two positions, but the region is called "normalized" when the
+		 * first position is less than or equal to the second.
 		 * @note This class is not intended to be subclassed.
 		 */
 		class Region : public std::pair<Position, Position>, public FastArenaObject<Region> {
@@ -94,6 +97,10 @@ namespace ascension {
 			}
 			/// Returns a union of the two regions. Same as @c #getUnion.
 			Region operator|(const Region& other) const {return getUnion(other);}
+			/// Returns the result of Region(Position::zero()).
+			static BOOST_CONSTEXPR Region zero() BOOST_NOEXCEPT {
+				return Region(Position::zero());
+			}
 			/// Returns the beginning of the region.
 			Position& beginning() BOOST_NOEXCEPT {return (first < second) ? first : second;}
 			/// Returns the beginning of the region.

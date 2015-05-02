@@ -124,7 +124,7 @@ namespace ascension {
 		 * @param position The initial position of the point
 		 * @throw BadPositionException @a position is outside of the document
 		 */
-		Caret::Caret(TextViewer& viewer, const kernel::Position& position /* = kernel::Position(0, 0) */) BOOST_NOEXCEPT : VisualPoint(viewer, position, nullptr),
+		Caret::Caret(TextViewer& viewer, const kernel::Position& position /* = kernel::Position::zero() */) BOOST_NOEXCEPT : VisualPoint(viewer, position, nullptr),
 				anchor_(new SelectionAnchor(viewer, position)),
 #ifdef BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
