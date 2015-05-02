@@ -17,6 +17,7 @@
 #include <ascension/corelib/regex.hpp>
 #include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/native-conversion.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <gtkmm/fontchooserdialog.h>
 #include <gtkmm/messagedialog.h>
 #include <glibmm/i18n.h>
