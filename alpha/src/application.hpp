@@ -87,7 +87,7 @@ namespace alpha {
 			return boost::none;	// dummy
 		}
 		template<typename Section, typename Key, typename T> inline bool readStructureProfile(Section section, Key key, T& data) const {
-			return boost::none;	// dummy
+			return false;	// dummy
 		}
 		void saveSettings();
 //		void	setupToolbar();

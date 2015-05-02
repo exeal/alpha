@@ -12,6 +12,7 @@
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/viewer/text-area.hpp>
 #include <boost/core/addressof.hpp>
 #include <boost/foreach.hpp>
 
@@ -38,7 +39,7 @@ namespace alpha {
 //				WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 //			assert(succeeded);
 			newView->setConfiguration(src.configuration(), true);
-			newView->textArea().textRenderer().viewport()->scrollTo(src.textRenderer().viewport()->scrollPositions());
+			newView->textArea().textRenderer().viewport()->scrollTo(src.textArea().textRenderer().viewport()->scrollPositions());
 			add(std::move(newView));
 		}
 	}
