@@ -128,55 +128,51 @@ namespace ascension {
 		 * @throw BadPositionException @a position is outside of the document
 		 */
 		VisualPoint::VisualPoint(TextViewer& viewer, const kernel::Position& position, kernel::PointListener* listener /* = nullptr */) :
-				Point(viewer.document(), position, listener), viewer_(&viewer), crossingLines_(false) {
-			static_cast<kernel::detail::PointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
-			viewer_->textArea().textRenderer().layouts().addVisualLinesListener(*this);
+				Point(viewer.document(), position, listener), viewerProxy_(viewer.referByPoint()), crossingLines_(false) {
+			textViewer().textArea().textRenderer().layouts().addVisualLinesListener(*this);
 		}
 
-			/**
-			 * Copy-constructor.
-			 * @param other The source object
-			 * @throw DocumentDisposedException The document to which @a other belongs had been disposed
-			 * @throw TextViewerDisposedException The text viewer to which @a other belongs had been disposed
-			 */
-			VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), viewer_(other.viewer_),
-					positionInVisualLine_(other.positionInVisualLine_), crossingLines_(false), lineNumberCaches_(other.lineNumberCaches_) {
-				if(viewer_ == nullptr)
-					throw TextViewerDisposedException();
-				static_cast<kernel::detail::PointCollection<VisualPoint>*>(viewer_)->addNewPoint(*this);
-				viewer_->textArea().textRenderer().layouts().addVisualLinesListener(*this);
-			}
+		/**
+		 * Copy-constructor.
+		 * @param other The source object
+		 * @throw DocumentDisposedException The document to which @a other belongs had been disposed
+		 * @throw TextViewerDisposedException The text viewer to which @a other belongs had been disposed
+		 */
+		VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), viewerProxy_(other.viewerProxy_),
+				positionInVisualLine_(other.positionInVisualLine_), crossingLines_(false), lineNumberCaches_(other.lineNumberCaches_) {
+			if(isTextViewerDisposed())
+				throw TextViewerDisposedException();
+			textViewer().textArea().textRenderer().layouts().addVisualLinesListener(*this);
+		}
 
-			/// Destructor.
-			VisualPoint::~VisualPoint() BOOST_NOEXCEPT {
-				if(viewer_ != nullptr) {
-					static_cast<kernel::detail::PointCollection<VisualPoint>*>(viewer_)->removePoint(*this);
-					viewer_->textArea().textRenderer().layouts().removeVisualLinesListener(*this);
-				}
-			}
+		/// Destructor.
+		VisualPoint::~VisualPoint() BOOST_NOEXCEPT {
+			if(!isTextViewerDisposed())
+				textViewer().textArea().textRenderer().layouts().removeVisualLinesListener(*this);
+		}
 
-			/// @see Point#aboutToMove
-			void VisualPoint::aboutToMove(kernel::Position& to) {
-				if(isTextViewerDisposed())
-					throw TextViewerDisposedException();
-				Point::aboutToMove(to);
-			}
+		/// @see Point#aboutToMove
+		void VisualPoint::aboutToMove(kernel::Position& to) {
+			if(isTextViewerDisposed())
+				throw TextViewerDisposedException();
+			Point::aboutToMove(to);
+		}
 
-			/// @see Point#moved
-			void VisualPoint::moved(const kernel::Position& from) {
-				if(isTextViewerDisposed())
-					return;
-				if(from.line == kernel::line(*this) && lineNumberCaches_) {
-					const graphics::font::TextLayout* const layout = viewer_->textArea().textRenderer().layouts().at(kernel::line(*this));
-					lineNumberCaches_->visualLine -= lineNumberCaches_->visualSubline;
-					lineNumberCaches_->visualSubline = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(*this)) : 0;
-					lineNumberCaches_->visualLine += lineNumberCaches_->visualSubline;
-				} else
-					lineNumberCaches_ = boost::none;
-				Point::moved(from);
-				if(!crossingLines_)
-					positionInVisualLine_ = boost::none;
-			}
+		/// @see Point#moved
+		void VisualPoint::moved(const kernel::Position& from) {
+			if(isTextViewerDisposed())
+				return;
+			if(from.line == kernel::line(*this) && lineNumberCaches_) {
+				const graphics::font::TextLayout* const layout = textViewer().textArea().textRenderer().layouts().at(kernel::line(*this));
+				lineNumberCaches_->visualLine -= lineNumberCaches_->visualSubline;
+				lineNumberCaches_->visualSubline = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(*this)) : 0;
+				lineNumberCaches_->visualLine += lineNumberCaches_->visualSubline;
+			} else
+				lineNumberCaches_ = boost::none;
+			Point::moved(from);
+			if(!crossingLines_)
+				positionInVisualLine_ = boost::none;
+		}
 #if 0
 		/**
 		 * Inserts the spcified text as a rectangle at the current position. This method has two

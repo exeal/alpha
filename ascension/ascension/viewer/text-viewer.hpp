@@ -18,7 +18,7 @@
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
-#include <ascension/viewer/caret-shaper.hpp>
+#include <ascension/viewer/detail/weak-reference-for-points.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
 #include <ascension/viewer/widgetapi/event/key-input.hpp>
@@ -66,6 +66,7 @@ namespace ascension {
 
 	namespace viewer {
 		class Caret;
+		class CaretShaper;
 		class TextArea;
 		class VirtualBox;
 		class VisualPoint;
@@ -113,7 +114,7 @@ namespace ascension {
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				public graphics::font::TextViewportListener, protected TextViewerComponent::Locator,
 				protected MouseInputStrategy::TargetLocker,
-				private detail::MouseVanish<TextViewer>, public kernel::detail::PointCollection<VisualPoint> {
+				private detail::MouseVanish<TextViewer>, public detail::WeakReferenceForPoints<TextViewer> {
 		public:
 			/**
 			 * A general configuration of the viewer.
@@ -269,9 +270,6 @@ namespace ascension {
 			// kernel.DocumentRollbackListener
 			void documentUndoSequenceStarted(const kernel::Document& document) override;
 			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition) override;
-			// detail.PointCollection<VisualPoint>
-			void addNewPoint(VisualPoint& point) override {points_.insert(&point);}
-			void removePoint(VisualPoint& point) override {points_.erase(&point);}
 
 		protected:
 			/// @name Overridable Widget Events
@@ -391,7 +389,6 @@ namespace ascension {
 			std::shared_ptr<CaretShaper> caretShaper_;
 			std::unique_ptr<TextArea> textArea_;
 			Configuration configuration_;
-			std::set<VisualPoint*> points_;
 			std::weak_ptr<MouseInputStrategy> lockedMouseInputStrategy_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			win32::Handle<HWND>::Type toolTip_;
