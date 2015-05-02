@@ -35,7 +35,7 @@ namespace ascension {
 			namespace {
 				inline bool abortModes(viewer::TextViewer& target) {
 					viewer::utils::closeCompletionProposalsPopup(target);
-					return abortIncrementalSearch(target);
+					return viewer::utils::abortIncrementalSearch(target);
 				}
 			}
 
@@ -233,7 +233,7 @@ namespace ascension {
 			template<typename ProcedureSignature>
 			bool CaretMovementCommand<ProcedureSignature>::perform() {
 				const NumericPrefix n = numericPrefix();
-				endIncrementalSearch(target());
+				viewer::utils::endIncrementalSearch(target());
 				if(n == 0)
 					return true;
 				viewer::Caret& caret = target().caret();
@@ -278,7 +278,7 @@ namespace ascension {
 			 */
 			template<typename ProcedureSignature>
 			bool CaretMovementToDefinedPositionCommand<ProcedureSignature>::perform() {
-				endIncrementalSearch(target());
+				viewer::utils::endIncrementalSearch(target());
 				if(!extends_)
 					target().caret().moveTo((*procedure_)(target().caret()));
 				else
@@ -414,7 +414,7 @@ namespace ascension {
 			 *               copy. Or internal performance of @c CharacterInputCommand failed
 			 */
 			bool CharacterInputFromNextLineCommand::perform() {
-				abortIncrementalSearch(target());
+				viewer::utils::abortIncrementalSearch(target());
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 
 				// TODO: recognizes narrowing.
@@ -545,7 +545,7 @@ namespace ascension {
 			bool CompletionProposalPopupCommand::perform() {
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //				ASCENSION_CHECK_GUI_EDITABILITY();
-				abortIncrementalSearch(target());
+				viewer::utils::abortIncrementalSearch(target());
 				if(contentassist::ContentAssistant* ca = target().contentAssistant()) {
 					ca->showPossibleCompletions();
 					return true;
@@ -565,7 +565,7 @@ namespace ascension {
 			 * @return true
 			 */
 			bool EntireDocumentSelectionCreationCommand::perform() {
-				endIncrementalSearch(target());
+				viewer::utils::endIncrementalSearch(target());
 				target().caret().endRectangleSelection();
 				target().caret().select(target().document().accessibleRegion());
 				return true;
@@ -587,7 +587,7 @@ namespace ascension {
 			bool FindNextCommand::perform() {
 				if(numericPrefix() == 0)
 					return false;
-				endIncrementalSearch(target());
+				viewer::utils::endIncrementalSearch(target());
 				viewer::utils::closeCompletionProposalsPopup(target());
 
 				win32::WaitCursor wc;	// TODO: code depends on Win32.
@@ -673,7 +673,7 @@ namespace ascension {
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //				ASCENSION_CHECK_GUI_EDITABILITY();
 				viewer::TextViewer& viewer = target();
-				endIncrementalSearch(viewer);
+				viewer::utils::endIncrementalSearch(viewer);
 				viewer::utils::closeCompletionProposalsPopup(viewer);
 
 				try {
@@ -751,7 +751,7 @@ namespace ascension {
 			 * @retval false The match bracket was not found
 			 */
 			bool MatchBracketCommand::perform() {
-				endIncrementalSearch(target());
+				viewer::utils::endIncrementalSearch(target());
 				viewer::Caret& caret = target().caret();
 				if(const boost::optional<std::pair<kernel::Position, kernel::Position>> matchBrackets = caret.matchBrackets()) {
 					caret.endRectangleSelection();
@@ -793,7 +793,7 @@ namespace ascension {
 					}
 				}
 
-				if(endIncrementalSearch(viewer) && direction_ == boost::none)
+				if(viewer::utils::endIncrementalSearch(viewer) && direction_ == boost::none)
 					return true;
 
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
@@ -889,7 +889,7 @@ namespace ascension {
 			 */
 			bool ReconversionCommand::perform() {
 				viewer::TextViewer& viewer = target();
-				endIncrementalSearch(viewer);
+				viewer::utils::endIncrementalSearch(viewer);
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //	ASCENSION_CHECK_GUI_EDITABILITY();
 
@@ -1015,7 +1015,7 @@ namespace ascension {
 			template<typename ProcedureSignature>
 			bool RowSelectionExtensionCommand<ProcedureSignature>::perform() {
 				viewer::utils::closeCompletionProposalsPopup(target());
-				endIncrementalSearch(target());
+				viewer::utils::endIncrementalSearch(target());
 			
 				viewer::Caret& caret = target().caret();
 				if(viewer::isSelectionEmpty(caret) && !caret.isSelectionRectangle())
@@ -1054,7 +1054,7 @@ namespace ascension {
 			template<typename ProcedureSignature>
 			bool RowSelectionExtensionToDefinedPositionCommand<ProcedureSignature>::perform() {
 				viewer::utils::closeCompletionProposalsPopup(target());
-				endIncrementalSearch(target());
+				viewer::utils::endIncrementalSearch(target());
 			
 				viewer::Caret& caret = target().caret();
 				if(isSelectionEmpty(caret) && !caret.isSelectionRectangle())
@@ -1161,7 +1161,7 @@ namespace ascension {
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //				ASCENSION_CHECK_GUI_EDITABILITY();
 				viewer::TextViewer& viewer = target();
-				endIncrementalSearch(viewer);
+				viewer::utils::endIncrementalSearch(viewer);
 				viewer::utils::closeCompletionProposalsPopup(viewer);
 
 				viewer::Caret& caret = viewer.caret();
@@ -1234,7 +1234,7 @@ namespace ascension {
 					return true;
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 				viewer::TextViewer& viewer = target();
-				abortIncrementalSearch(viewer);
+				viewer::utils::abortIncrementalSearch(viewer);
 
 				viewer::Caret& caret = viewer.caret();
 				if(/*caret.isAutoCompletionRunning() &&*/ direction_ == Direction::FORWARD)
@@ -1277,7 +1277,7 @@ namespace ascension {
 			 * @return true
 			 */
 			bool WordSelectionCreationCommand::perform() {
-				endIncrementalSearch(target());
+				viewer::utils::endIncrementalSearch(target());
 				target().caret().endRectangleSelection();
 				selectWord(target().caret());
 				return 0;

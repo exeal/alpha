@@ -632,7 +632,7 @@ namespace ascension {
 		void DefaultTextAreaMouseInputStrategy::handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) {
 			Caret& caret = viewer_->caret();
 			utils::closeCompletionProposalsPopup(*viewer_);
-			texteditor::endIncrementalSearch(*viewer_);
+			utils::endIncrementalSearch(*viewer_);
 
 			if(!isStateNeutral())
 				return interruptMouseReaction(false);
@@ -798,7 +798,7 @@ namespace ascension {
 					else if(action == RELEASED)
 						handleLeftButtonReleased(input);
 					else if(action == DOUBLE_CLICKED) {
-						texteditor::abortIncrementalSearch(*viewer_);
+						utils::abortIncrementalSearch(*viewer_);
 						handleLeftButtonDoubleClick(input);
 						if(!input.isConsumed() && isStateNeutral()) {
 							// begin word selection
