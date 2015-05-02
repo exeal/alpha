@@ -197,8 +197,8 @@ namespace ascension {
 			 * block progression direction in user units.
 			 * @param lines The first and second lines
 			 * @return The distance between the two baselines in user units
-			 * @note This method calls LineLayoutVector#at(Index, const LineLayoutVector#UseCalculatedLayoutTag&)
-			 *       which may change the layout
+			 * @note This method calls LineLayoutVector#at(Index, const UseCalculatedLayoutTag&amp;) which may change
+			 *       the layout
 			 */
 			Scalar TextRenderer::baselineDistance(const boost::integer_range<VisualLine>& lines) const {
 				// TODO: This code does not consider 'line-stacking-strategy'.
@@ -388,8 +388,8 @@ namespace ascension {
 			 * @param line The line number
 			 * @param context The graphics context
 			 * @param alignmentPoint The alignment point of the text layout of the line to draw
-			 * @note This method calls LineLayoutVector#at(Index, const LineLayoutVector#UseCalculatedLayoutTag&)
-			 *       which may change the layout
+			 * @note This method calls LineLayoutVector#at(Index, const UseCalculatedLayoutTag&amp;) which may change
+			 *       the layout
 			 */
 			void TextRenderer::paint(Index line, PaintContext& context, const Point& alignmentPoint) const BOOST_NOEXCEPT {
 //				if(!enablesDoubleBuffering_) {

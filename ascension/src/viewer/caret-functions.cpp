@@ -280,7 +280,7 @@ namespace ascension {
 		 * @see #selectedRangeOnLine, VirtualBox#characterRangeInVisualLine
 		 */
 		boost::optional<boost::integer_range<Index>> selectedRangeOnVisualLine(Caret& caret,
-				const graphics::font::VisualLine& line, const graphics::font::LineLayoutVector::UseCalculatedLayoutTag&) {
+				const graphics::font::VisualLine& line, const graphics::font::UseCalculatedLayoutTag&) {
 			return selectedRangeOnVisualLine(caret, line, true);
 		}
 
