@@ -13,10 +13,11 @@
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/detail/scope-guard.hpp>
 #include <ascension/graphics/physical-directions-dimensions.hpp>
-#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
 #include <ascension/graphics/font/text-renderer-observers.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
+#include <ascension/graphics/font/visual-line.hpp>
+#include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/kernel/point.hpp>	// kernel.locations
 #include <ascension/presentation/writing-mode.hpp>
 #include <boost/iterator/iterator_facade.hpp>

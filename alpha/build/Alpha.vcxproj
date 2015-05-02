@@ -419,6 +419,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-run.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport-listener.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\visual-line.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\visual-lines-listener.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\affine-transform.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithm.hpp" />
