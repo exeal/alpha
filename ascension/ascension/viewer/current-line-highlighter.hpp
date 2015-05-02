@@ -9,7 +9,6 @@
 
 #ifndef ASCENSION_CURRENT_LINE_HIGHLIGHTER_HPP
 #define ASCENSION_CURRENT_LINE_HIGHLIGHTER_HPP
-
 #include <ascension/kernel/point.hpp>				// kernel.PointLifeCycleListener
 #include <ascension/graphics/color.hpp>				// graphics.Color
 #include <ascension/presentation/presentation.hpp>	// presentation.TextLineColorSpecifier

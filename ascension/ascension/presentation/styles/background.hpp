@@ -137,7 +137,7 @@ namespace ascension {
 			 * Returns @c true if the given border style has visible style (but may or may not consume place).
 			 * @param style The border style to check
 			 */
-			BOOST_CONSTEXPR bool hasVisibleStyle(BorderStyleEnums style) BOOST_NOEXCEPT {
+			BOOST_CONSTEXPR inline bool hasVisibleStyle(BorderStyleEnums style) BOOST_NOEXCEPT {
 				return style != BorderStyleEnums::NONE && style != BorderStyleEnums::HIDDEN;
 			}
 
@@ -148,7 +148,7 @@ namespace ascension {
 			 * @see Strictly speaking, the used width is needed to check if absent
 			 */
 			template<typename BorderWidthType>
-			BOOST_CONSTEXPR bool isAbsent(const BorderWidthType& width) BOOST_NOEXCEPT {
+			BOOST_CONSTEXPR inline bool isAbsent(const BorderWidthType& width) BOOST_NOEXCEPT {
 				return width == BorderWidthType(0);
 			}
 			/// @}

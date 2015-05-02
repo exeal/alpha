@@ -13,10 +13,10 @@
 #define ASCENSION_FONT_RENDER_CONTEXT_HPP
 
 #include <ascension/graphics/geometry/affine-transform.hpp>
-#include <memory>
 #include <boost/functional/hash.hpp>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
+#include <memory>
 
 namespace ascension {
 	namespace graphics {

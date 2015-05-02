@@ -12,9 +12,9 @@
 #define ASCENSION_PRESENTATION_RECONSTRUCTOR_HPP
 
 #include <ascension/kernel/partition.hpp>	// kernel.ContentType
+#include <boost/config.hpp>	// BOOST_NOEXCEPT
 #include <map>
 #include <memory>
-#include <boost/config.hpp>	// BOOST_NOEXCEPT
 
 namespace ascension {
 	namespace presentation {

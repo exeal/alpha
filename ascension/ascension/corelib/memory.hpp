@@ -11,12 +11,12 @@
 
 #ifndef ASCENSION_MEMORY_HPP
 #define ASCENSION_MEMORY_HPP
-#include <cassert>
+#include <boost/noncopyable.hpp>
 #include <algorithm>	// std.max
-#include <new>			// new[], delete[], std.bad_alloc, std.nothrow
+#include <cassert>
 #include <cstddef>		// std.size_t
 #include <memory>		// std.unique_ptr
-#include <boost/noncopyable.hpp>
+#include <new>			// new[], delete[], std.bad_alloc, std.nothrow
 #undef min
 #undef max
 

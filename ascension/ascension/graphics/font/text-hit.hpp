@@ -10,9 +10,9 @@
 #ifndef ASCENSION_TEXT_HIT_HPP
 #define ASCENSION_TEXT_HIT_HPP
 #include <ascension/corelib/basic-types.hpp>	// Index, SignedIndex, BOOST_NOEXCEPT
+#include <boost/operators.hpp>
 #include <numeric>		// std.numeric_limits
 #include <stdexcept>	// std.overflow_error, std.underflow_error
-#include <boost/operators.hpp>
 
 namespace ascension {
 	namespace graphics {

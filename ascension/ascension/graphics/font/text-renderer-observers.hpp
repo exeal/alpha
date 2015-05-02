@@ -11,7 +11,7 @@
 #ifndef ASCENSION_TEXT_RENDERER_OBSERVERS_HPP
 #define ASCENSION_TEXT_RENDERER_OBSERVERS_HPP
 
-#include <ascension/corelib/basic-types.hpp>		// Index
+#include <ascension/corelib/basic-types.hpp>	// Index
 
 namespace ascension {
 	namespace graphics {
@@ -32,9 +32,8 @@ namespace ascension {
 				 */
 				virtual const InlineObject* endOfLine(Index line) const BOOST_NOEXCEPT = 0;
 				/**
-				 * Returns the object overrides text paint properties for line rendering. For the
-				 * detail semantics of paint override, see the documentation of
-				 * @c TextPaintOverride class.
+				 * Returns the object overrides text paint properties for line rendering.
+				 * For the detail semantics of paint override, see the documentation of @c TextPaintOverride class.
 				 * @param line The line to render
 				 * @return The object overrides text paint properties for line rendering, or @c null
 				 */

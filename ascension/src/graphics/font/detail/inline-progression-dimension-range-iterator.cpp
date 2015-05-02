@@ -7,6 +7,7 @@
 
 #include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
 #include <ascension/corelib/numeric-range-algorithm/overlaps.hpp>
+#include <ascension/graphics/font/actual-text-styles.hpp>
 #include <ascension/graphics/font/detail/inline-progression-dimension-range-iterator.hpp>
 #include <ascension/graphics/font/text-run.hpp>
 

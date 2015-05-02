@@ -11,8 +11,8 @@
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <array>
-#include <memory>	// std.unique_ptr
 #include <locale>	// std.locale, std.codecvt
+#include <memory>	// std.unique_ptr
 #include <vector>
 
 namespace ascension {

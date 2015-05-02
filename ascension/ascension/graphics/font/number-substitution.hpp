@@ -11,13 +11,12 @@
 
 #ifndef ASCENSION_NUMBER_SUBSTITUTION_HPP
 #define ASCENSION_NUMBER_SUBSTITUTION_HPP
-
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
-#include <functional>
-#include <string>
 #include <boost/functional/hash/extensions.hpp>
 #include <boost/functional/hash/hash.hpp>
 #include <boost/operators.hpp>
+#include <functional>
+#include <string>
 
 namespace ascension {
 	namespace graphics {

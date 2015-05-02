@@ -13,15 +13,15 @@
 #include <ascension/corelib/detail/decay-or-refer.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/corelib/numeric-range.hpp>
+#include <boost/functional/hash.hpp>
+#include <boost/operators.hpp>
+#include <boost/parameter.hpp>
 #include <array>
 #include <functional>	// std.hash
 #ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 #	include <iterator>	// std.end
 #endif
 #include <type_traits>	// std.extent
-#include <boost/functional/hash.hpp>
-#include <boost/operators.hpp>
-#include <boost/parameter.hpp>
 
 namespace ascension {
 	namespace presentation {

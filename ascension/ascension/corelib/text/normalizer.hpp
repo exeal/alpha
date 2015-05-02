@@ -12,12 +12,12 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_NORMALIZATION
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 #include <ascension/direction.hpp>
-#include <ascension/corelib/text/character-iterator.hpp>	// CharacterIterator
+#include <ascension/corelib/text/character-iterator.hpp>	// detail.CharacterIterator
 #include <ascension/corelib/text/character.hpp>
+#include <boost/iterator/iterator_facade.hpp>
 #include <memory>		// std.unique_ptr
 #include <stdexcept>	// std.out_of_range
 #include <string>
-#include <boost/iterator/iterator_facade.hpp>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #	error These class definitions and implementations are based on old version of Unicode.
