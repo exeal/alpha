@@ -11,6 +11,8 @@
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/graphics/font/visual-line.hpp>
+#include <ascension/kernel/document.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/sort.hpp>
 #ifdef _DEBUG

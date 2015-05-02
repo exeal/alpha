@@ -9,8 +9,7 @@
 
 #ifndef ASCENSION_VIRTUAL_BOX_HPP
 #define ASCENSION_VIRTUAL_BOX_HPP
-
-#include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/graphics/font/visual-line.hpp>
 #include <array>
 #include <utility>
 

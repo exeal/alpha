@@ -12,8 +12,8 @@
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/signals.hpp>
 #include <ascension/graphics/physical-directions-dimensions.hpp>
-#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-renderer-observers.hpp>
+#include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/presentation/presentation.hpp>
 //#include <ascension/presentation/text-style.hpp>
@@ -27,6 +27,8 @@ namespace ascension {
 		namespace font {
 			class Font;
 			class FontCollection;
+			class LineLayoutVector;
+			class TextLayout;
 			class TextViewport;
 
 			// documentation is text-renderer.cpp
