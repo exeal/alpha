@@ -247,7 +247,7 @@ namespace ascension {
 			inline typename boost::range_iterator<const SinglePassReadableRange>::type
 					searchIsolatedSurrogate(const SinglePassReadableRange& characterSequence) {
 				return searchIsolatedSurrogate(
-					boost::begin(characterSequence), boost::end(characterSequence));
+					boost::const_begin(characterSequence), boost::const_end(characterSequence));
 			}
 		} // namespace surrogates
 

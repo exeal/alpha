@@ -9,7 +9,6 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
 #include <ascension/corelib/detail/scope-guard.hpp>
 #include <ascension/graphics/geometry/geometry.hpp>
-#include <ascension/graphics/rendering-device.hpp>	// graphics.RenderingDevice, ...
 #include <ascension/viewer/widgetapi/widget-proxy.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/widget.h>
@@ -304,113 +303,7 @@ namespace ascension {
 
 			/// Returns the desktop widget.
 			Proxy<Widget> desktop();
-		}	// namespace widgetapi
-#if 0
-		namespace base {
 
-			/**
-			 * Thrown by a window object when the method should be called after the initialization.
-			 * @see Widget
-			 */
-			class WidgetNotInitializedException : public IllegalStateException {
-			public:
-				/// Default constructor.
-				WidgetNotInitializedException() BOOST_NOEXCEPT
-					: IllegalStateException("this widget is not initialized.") {}
-			};
-
-
-			class Widget : protected DropTarget, public graphics::RenderingDevice {
-			public:
-				enum State {
-					NORMAL, MAXIMIZED, MINIMIZED
-				};
-				enum Style {WIDGET = 0};
-				typedef
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-					std::shared_ptr<std::remove_pointer<HWND>::type>
-#endif
-					Identifier;
-			public:
-				// graphics.RenderingDevice
-				std::unique_ptr<graphics::RenderingContext2D> createRenderingContext() const;
-				int depth();
-				std::uint32_t numberOfColors();
-				graphics::geometry::Coordinate<graphics::NativeSize>::Type height() const;
-				graphics::geometry::Coordinate<graphics::NativeSize>::Type heightInMillimeters() const;
-				graphics::geometry::Coordinate<graphics::NativeSize>::Type logicalDpiX() const;
-				graphics::geometry::Coordinate<graphics::NativeSize>::Type logicalDpiY() const;
-				graphics::geometry::Coordinate<graphics::NativeSize>::Type width() const;
-				graphics::geometry::Coordinate<graphics::NativeSize>::Type widthInMillimeters() const;
-				graphics::geometry::Coordinate<graphics::NativeSize>::Type physicalDpiX() const;
-				graphics::geometry::Coordinate<graphics::NativeSize>::Type physicalDpiY() const;
-
-			protected:
-				// DropTarget (default implementations do nothing)
-				virtual void dragEntered(DragEnterInput& input) {}
-				virtual void dragLeft(DragLeaveInput& input) {}
-				virtual void dragMoved(DragMoveInput& input) {}
-				virtual void dropped(DropInput& input) {}
-				// message handlers
-				// TODO: these methods should not be virtual?
-				virtual void aboutToClose(bool& reject);
-				virtual void aboutToLoseFocus();
-				virtual void focusGained();
-				virtual void keyPressed(const base::KeyInput& input);
-				virtual void keyReleased(const base::KeyInput& input);
-				virtual void mouseDoubleClicked(const base::MouseButtonInput& input);
-				virtual void mouseHovered(const base::LocatedUserInput& input);
-				virtual void mouseLeft(const base::LocatedUserInput& input);
-				virtual void mouseMoved(const base::LocatedUserInput& input);
-				virtual void mousePressed(const base::MouseButtonInput& input);
-				virtual void mouseReleased(const base::MouseButtonInput& input);
-				virtual void mouseWheelChanged(const base::MouseWheelInput& input);
-				virtual void moved();
-				virtual void moving();
-				virtual void paint(graphics::PaintContext& context) = 0;
-				virtual void resized(State state, const graphics::NativeSize& newSize);
-				virtual void resizing();
-				virtual void showContextMenu(const base::LocatedUserInput& input, bool byKeyboard);
-				virtual void visibilityChanged(bool visible);
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				virtual LRESULT handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
-#endif
-				// window system specific
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#endif
-			private:
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				// Gtk.Widget
-				virtual void on_drag_leave(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
-				virtual bool on_drag_motion(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
-				virtual bool on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
-				virtual void on_drag_data_received(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, const SelectionData& selection_data, guint info, guint time);
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				// QWidget
-				virtual void dragEnterEvent(QDragEnterEvent* event);
-				virtual void dragLeaveEvent(QDragLeaveEvent* event);
-				virtual void dragMoveEvent(QDragMoveEvent* event);
-				virtual void dropEvent(QDropEvent* event);
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				// IDropTarget
-				virtual STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
-				virtual STDMETHODIMP DragOver(DWORD keyState, POINTL pt, DWORD* effect);
-				virtual STDMETHODIMP DragLeave();
-				virtual STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
-#endif
-
-			private:
-				Identifier identifier_;
-#if !ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				bool acceptsDrops_;
-#endif // !ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-			};
-
-		}	// namespace base
-#endif // 0
-
-		namespace widgetapi {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			template<typename Point>
 			Point mapFromGlobal(Proxy<const Widget> widget, const Point& position,

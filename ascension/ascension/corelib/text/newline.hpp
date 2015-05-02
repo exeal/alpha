@@ -21,9 +21,8 @@
 namespace ascension {
 	namespace text {
 		/**
-		 * Value represents a newline in document. @c #USE_INTRINSIC_VALUE and
-		 * @c #USE_DOCUMENT_INPUT are special values indicate how to interpret newlines during any
-		 * text I/O.
+		 * Value represents a newline in document. @c #USE_INTRINSIC_VALUE and @c #USE_DOCUMENT_INPUT are special
+		 * values indicate how to interpret newlines during any text I/O.
 		 * @see kernel#Document, ASCENSION_DEFAULT_NEWLINE, NEWLINE_CHARACTERS
 		 */
 		class Newline : public FastArenaObject<Newline>, private boost::equality_comparable<Newline> {
@@ -121,19 +120,19 @@ namespace ascension {
 		template<typename ForwardIterator>
 		inline boost::optional<Newline> eatNewline(ForwardIterator first, ForwardIterator last) {
 			switch(*first) {
-			case LINE_FEED:
-				return boost::make_optional(Newline::LINE_FEED);
-			case CARRIAGE_RETURN:
-				return boost::make_optional((++first != last && *first == LINE_FEED) ?
-					Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED : Newline::CARRIAGE_RETURN);
-			case NEXT_LINE:
-				return boost::make_optional(Newline::NEXT_LINE);
-			case LINE_SEPARATOR:
-				return boost::make_optional(Newline::LINE_SEPARATOR);
-			case PARAGRAPH_SEPARATOR:
-				return boost::make_optional(Newline::PARAGRAPH_SEPARATOR);
-			default:
-				return boost::none;
+				case LINE_FEED:
+					return boost::make_optional(Newline::LINE_FEED);
+				case CARRIAGE_RETURN:
+					return boost::make_optional((++first != last && *first == LINE_FEED) ?
+						Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED : Newline::CARRIAGE_RETURN);
+				case NEXT_LINE:
+					return boost::make_optional(Newline::NEXT_LINE);
+				case LINE_SEPARATOR:
+					return boost::make_optional(Newline::LINE_SEPARATOR);
+				case PARAGRAPH_SEPARATOR:
+					return boost::make_optional(Newline::PARAGRAPH_SEPARATOR);
+				default:
+					return boost::none;
 			}
 		}
 	}

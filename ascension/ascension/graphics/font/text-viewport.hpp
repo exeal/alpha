@@ -334,8 +334,8 @@ namespace ascension {
 
 			/**
 			 * Returns the baseline position of the line the iterator addresses.
-			 * @return The point in view-local coordinates. If the writing mode is horizontal,
-			 *         x-coordinate of the point is zero, otherwise y-coordinate is zero
+			 * @return The point in view-local coordinates. If the writing mode is horizontal, x-coordinate of the
+			 *         point is zero, otherwise y-coordinate is zero
 			 */
 			inline const Point& BaselineIterator::positionInViewport() const BOOST_NOEXCEPT {
 				verifyNotDone();
@@ -350,8 +350,8 @@ namespace ascension {
 			}
 
 			/**
-			 * Returns the line the iterator addresses. Unlike @c #line method, this returns a line
-			 * snapped within the viewport.
+			 * Returns the line the iterator addresses. Unlike @c #line method, this returns a line snapped within the
+			 * viewport.
 			 * @see #line
 			 */
 			inline const VisualLine& BaselineIterator::snappedLine() const BOOST_NOEXCEPT {
@@ -367,7 +367,7 @@ namespace ascension {
 
 			// TextHit specializations for kernel.Position ////////////////////////////////////////
 
-			template<> inline TextHit<kernel::Position>&& TextHit<kernel::Position>::beforeOffset(const kernel::Position& offset) BOOST_NOEXCEPT {
+			template<> inline TextHit<kernel::Position> TextHit<kernel::Position>::beforeOffset(const kernel::Position& offset) BOOST_NOEXCEPT {
 				return TextHit<kernel::Position>(kernel::Position(offset.line, offset.offsetInLine - 1), false);
 			}
 
@@ -378,7 +378,7 @@ namespace ascension {
 				return result;
 			}
 
-			template<> inline TextHit<kernel::Position>&& TextHit<kernel::Position>::offsetHit(SignedIndex delta) const {
+			template<> inline TextHit<kernel::Position> TextHit<kernel::Position>::offsetHit(SignedIndex delta) const {
 				if(delta > 0 && static_cast<Index>(delta) > std::numeric_limits<Index>::max() - characterIndex().offsetInLine)
 					throw std::overflow_error("delta");
 				else if(delta < 0 && static_cast<Index>(-delta) > characterIndex().offsetInLine)
@@ -386,7 +386,7 @@ namespace ascension {
 				return TextHit(kernel::Position(characterIndex().line, characterIndex().offsetInLine + delta), isLeadingEdge());
 			}
 
-			template<> inline TextHit<kernel::Position>&& TextHit<kernel::Position>::otherHit() const BOOST_NOEXCEPT {
+			template<> inline TextHit<kernel::Position> TextHit<kernel::Position>::otherHit() const BOOST_NOEXCEPT {
 				kernel::Position p(characterIndex());
 				isLeadingEdge() ? --p.offsetInLine : ++p.offsetInLine;
 				return isLeadingEdge() ? trailing(p) : leading(p);
