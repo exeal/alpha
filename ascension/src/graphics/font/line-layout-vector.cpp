@@ -24,7 +24,7 @@ namespace ascension {
 		namespace font {
 			// LineLayoutVector ///////////////////////////////////////////////////////////////////////////////////////
 
-			const LineLayoutVector::UseCalculatedLayoutTag LineLayoutVector::USE_CALCULATED_LAYOUT;
+			const UseCalculatedLayoutTag LineLayoutVector::USE_CALCULATED_LAYOUT;
 
 			/// Destructor.
 			LineLayoutVector::~LineLayoutVector() BOOST_NOEXCEPT {

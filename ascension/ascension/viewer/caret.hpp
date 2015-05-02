@@ -18,6 +18,7 @@ namespace ascension {
 
 	namespace graphics {
 		namespace font {
+			class UseCalculatedLayoutTag;
 			struct VisualLine;
 		}
 	}
@@ -263,7 +264,7 @@ namespace ascension {
 		boost::optional<boost::integer_range<Index>> selectedRangeOnLine(const Caret& caret, Index line);
 		boost::optional<boost::integer_range<Index>> selectedRangeOnVisualLine(const Caret& caret, const graphics::font::VisualLine& line);
 		boost::optional<boost::integer_range<Index>> selectedRangeOnVisualLine(Caret& caret,
-			const graphics::font::VisualLine& line, const graphics::font::LineLayoutVector::UseCalculatedLayoutTag&);
+			const graphics::font::VisualLine& line, const graphics::font::UseCalculatedLayoutTag&);
 		String selectedString(const Caret& caret, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 		std::basic_ostream<Char>& selectedString(const Caret& caret,
 			std::basic_ostream<Char>& out, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);

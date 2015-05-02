@@ -22,28 +22,19 @@
 namespace ascension {
 	namespace graphics {
 		namespace font {
-			struct VisualLine : private boost::totally_ordered<VisualLine> {
+			/**
+			 * An object of this class specifies that the @c LineLayoutVector should calculates the requested layout if
+			 * the layout was not in cache.
+			 * @see LineLayoutVector#USE_CALCULATED_LAYOUT
+			 */
+			class UseCalculatedLayoutTag : private boost::noncopyable {
 				/// Default constructor.
-				VisualLine() BOOST_NOEXCEPT {}
-				/**
-				 * Constructor takes initial values.
-				 * @param line The logical line number
-				 * @param subline The visual offset in the logical line
-				 */
-				VisualLine(Index line, Index subline) BOOST_NOEXCEPT : line(line), subline(subline) {}
-				Index line;		///< The logical line number.
-				Index subline;	///< The visual offset in the logical line.
+				UseCalculatedLayoutTag() BOOST_NOEXCEPT {}
+				friend class LineLayoutVector;
 			};
-			/// The equality operator.
-			inline bool operator==(const VisualLine& lhs, const VisualLine& rhs) BOOST_NOEXCEPT {
-				return lhs.line == rhs.line && lhs.subline == rhs.subline;
-			}
-			/// The less-than operator.
-			inline bool operator<(const VisualLine& lhs, const VisualLine& rhs) BOOST_NOEXCEPT {
-				return lhs.line < rhs.line || (lhs.line == rhs.line && lhs.subline < rhs.subline);
-			}
 
 			class TextLayout;
+			struct VisualLine;
 
 			/**
 			 * Manages a vector of layout (@c TextLayout) and holds the longest line and the number
@@ -54,10 +45,6 @@ namespace ascension {
 			class LineLayoutVector : public kernel::DocumentListener,
 				public kernel::DocumentPartitioningListener, private boost::noncopyable {
 			public:
-				class UseCalculatedLayoutTag : private boost::noncopyable {
-					UseCalculatedLayoutTag() BOOST_NOEXCEPT {}
-					friend class LineLayoutVector;
-				};
 				static const UseCalculatedLayoutTag USE_CALCULATED_LAYOUT;
 
 			public:
@@ -166,13 +153,12 @@ namespace ascension {
 			 * Constructor.
 			 * @tparam LayoutGenerator The type of @a layoutGenerator
 			 * @param document The document
-			 * @param layoutGenerator The function object generates the layout for the requested
-			 *                        line. This object should be called with one parameter means
-			 *                        the line number and return @c std#auto&lt;TextLayout&gt;
-			 *                        object means the line layout
+			 * @param layoutGenerator The function object generates the layout for the requested line. This object
+			 *                        should be called with one parameter means the line number and return
+			 *                        @c std#auto&lt;TextLayout&gt; object means the line layout
 			 * @param bufferSize The maximum number of lines cached
-			 * @param autoRepair Set @c true to repair disposed layout automatically if the line
-			 *                   number of its line was not changed
+			 * @param autoRepair Set @c true to repair disposed layout automatically if the line number of its line was
+			 *                   not changed
 			 * @throw std#invalid_argument @a bufferSize is zero
 			 */
 			template<typename LayoutGenerator>
@@ -233,8 +219,8 @@ namespace ascension {
 			/**
 			 * Invalidates all layouts @a pred returns @c true.
 			 * @tparam Pred The type of @a pred
-			 * @param pred The predicate which takes a parameter of type @c LineLayout and returns
-			 *             @c true if invalidates the layout
+			 * @param pred The predicate which takes a parameter of type @c LineLayout and returns @c true if
+			 *             invalidates the layout
 			 */
 			template<typename Pred>
 			inline void LineLayoutVector::invalidateIf(Pred pred) {

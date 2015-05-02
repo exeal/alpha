@@ -193,7 +193,7 @@ namespace ascension {
 			 *         layout is horizontal, the y-coordinate is zero. Otherwise if vertical, the x-coordinate is zero
 			 * @throw IndexOutOfBoundsException @a line is invalid
 			 */
-			Point lineStartEdge(TextViewport& viewport, const VisualLine& line, const LineLayoutVector::UseCalculatedLayoutTag&) {
+			Point lineStartEdge(TextViewport& viewport, const VisualLine& line, const UseCalculatedLayoutTag&) {
 				return lineStartEdge(viewport, line, &viewport.textRenderer().layouts().at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT));	// this may throw IndexOutOfBoundsException
 			}
 

@@ -36,6 +36,7 @@ namespace ascension {
 	namespace graphics {
 		namespace font {
 			class TextViewport;
+			class UseCalculatedLayoutTag;
 
 			namespace detail {
 				std::shared_ptr<TextViewport> createTextViewport(TextRenderer& textRenderer);
@@ -235,7 +236,7 @@ namespace ascension {
 			/// @defgroup model_and_view_coordinates_conversions Model and View Coordinates Conversions
 			/// @{
 			Point lineStartEdge(const TextViewport& viewport, const VisualLine& line);
-			Point lineStartEdge(TextViewport& viewport, const VisualLine& line, const LineLayoutVector::UseCalculatedLayoutTag&);
+			Point lineStartEdge(TextViewport& viewport, const VisualLine& line, const UseCalculatedLayoutTag&);
 			VisualLine locateLine(const TextViewport& viewport,
 				const Point& p, bool* snapped = nullptr) BOOST_NOEXCEPT;
 			Point modelToView(const TextViewport& viewport, const TextHit<kernel::Position>& position/*, bool fullSearchBpd*/);
