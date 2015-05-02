@@ -138,6 +138,11 @@ namespace ascension {
 				return seed;
 			}
 
+			class TextRun;
+
+			void paintTextDecoration(PaintContext& context,
+				const TextRun& run, const Point& origin, const ActualTextDecoration& style);
+
 			/**
 			 * "Actual Value"s of text emphasis style properties.
 			 * - The "Actual Value" of 'text-emphasis-style' property.

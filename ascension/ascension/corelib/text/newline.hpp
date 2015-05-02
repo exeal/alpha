@@ -12,6 +12,7 @@
 #define ASCENSION_NEWLINE_HPP
 
 #include <ascension/corelib/basic-exceptions.hpp>
+#include <ascension/corelib/memory.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/character.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable

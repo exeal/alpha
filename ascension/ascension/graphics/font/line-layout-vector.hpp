@@ -8,16 +8,18 @@
 
 #ifndef ASCENSION_LINE_LAYOUT_VECTOR_HPP
 #define ASCENSION_LINE_LAYOUT_VECTOR_HPP
+#include <ascension/corelib/detail/listeners.hpp>
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
-#include <ascension/kernel/document.hpp>
+#include <ascension/kernel/document-observers.hpp>
+#include <ascension/kernel/partition.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/graphics/geometry/common.hpp>
+#include <boost/range/algorithm/find_if.hpp>
 #include <algorithm>	// std.sort
 #include <list>
 #include <memory>		// std.unique_ptr
 #include <utility>		// std.move
 #include <vector>
-#include <boost/range/algorithm/find_if.hpp>
 
 namespace ascension {
 	namespace graphics {
@@ -183,32 +185,6 @@ namespace ascension {
 					return layout.lineNumber == line;
 				});
 				return (cached != boost::end(layouts_)) ? cached->layout.get() : nullptr;
-			}
-
-			/**
-			 * Returns the layout of the specified line.
-			 * @param line The line
-			 * @return The layout
-			 * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
-			 * @see #operator[], #at(Index)
-			 */
-			inline const TextLayout& LineLayoutVector::at(Index line, const UseCalculatedLayoutTag&) {
-				if(line > document().numberOfLines())
-					throw IndexOutOfBoundsException("line");
-				return (*this)[line];
-			}
-
-			/**
-			 * Creates and returns an isolated layout for the specified line. This layout is not inserted into the
-			 * vector and the instances of @c VisualLinesListener are not invoked.
-			 * @param line The line number
-			 * @return The layout
-			 * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
-			 */
-			inline std::unique_ptr<const TextLayout> LineLayoutVector::createIsolatedLayout(Index line) const {
-				if(line > document().numberOfLines())
-					throw IndexOutOfBoundsException("line");
-				return layoutGenerator_->generate(line);
 			}
 
 			/// Returns the document.

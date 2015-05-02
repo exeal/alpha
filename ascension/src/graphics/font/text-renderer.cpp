@@ -9,12 +9,15 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
+#include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>

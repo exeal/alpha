@@ -10,12 +10,15 @@
 #include <ascension/graphics/font/font-collection.hpp>
 
 #if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
+#include <ascension/graphics/font/font-description.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
+#include <boost/math/special_functions/round.hpp>
+#include <boost/mpl/string.hpp>
 #include <boost/range/algorithm/binary_search.hpp>
 #include <boost/range/algorithm/sort.hpp>
 #include <vector>
@@ -67,7 +70,7 @@ namespace ascension {
 
 				LOGFONTW lf;
 				std::memset(&lf, 0, sizeof(decltype(lf)));
-				lf.lfHeight = -font::round(description.pointSize() * dpi / 72.0);
+				lf.lfHeight = -boost::math::lround(description.pointSize() * dpi / 72.0);
 				lf.lfEscapement = lf.lfOrientation = orientation;
 				lf.lfWeight = boost::underlying_cast<LONG>(description.properties().weight);
 				lf.lfItalic = (description.properties().style == font::FontStyle::ITALIC) || (description.properties().style == font::FontStyle::OBLIQUE);
@@ -83,7 +86,7 @@ namespace ascension {
 						const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
 						const int xHeight =
 							(::GetGlyphOutlineW(deviceContext.get(), L'x', GGO_METRICS, &gm, 0, nullptr, nullptr) != GDI_ERROR && gm.gmptGlyphOrigin.y > 0) ?
-								gm.gmptGlyphOrigin.y : font::round(static_cast<double>(tm.tmAscent) * 0.56);
+								gm.gmptGlyphOrigin.y : boost::math::iround(static_cast<double>(tm.tmAscent) * 0.56);
 						const double aspect = static_cast<double>(xHeight) / static_cast<double>(tm.tmHeight - tm.tmInternalLeading);
 						font::FontDescription adjustedDescription(description);
 						adjustedDescription.setPointSize(std::max(description.pointSize() * (boost::get(sizeAdjust) / aspect), 1.0));

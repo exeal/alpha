@@ -14,6 +14,7 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>

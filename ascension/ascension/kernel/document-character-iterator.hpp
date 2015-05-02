@@ -10,13 +10,15 @@
 #ifndef ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
 #define ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
 
-#include <ascension/kernel/document.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>	// text.CharacterIterator
+#include <ascension/kernel/position.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/utility/value_init.hpp>
 
 namespace ascension {
 	namespace kernel {
+		class Document;
+
 		class DocumentCharacterIterator : public boost::iterators::iterator_facade<
 			DocumentCharacterIterator, CodePoint,
 			boost::iterators::bidirectional_traversal_tag, const CodePoint, std::ptrdiff_t
@@ -77,11 +79,6 @@ namespace ascension {
 		/// Returns @c true if the iterator has the previous character.
 		inline bool DocumentCharacterIterator::hasPrevious() const BOOST_NOEXCEPT {
 			return tell() > region().first;
-		}
-		
-		/// Returns the line text string.
-		inline const String& DocumentCharacterIterator::line() const BOOST_NOEXCEPT {
-			return document().line(tell().line);
 		}
 
 		/// Returns the relative position from where the iterator started.

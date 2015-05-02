@@ -18,6 +18,7 @@
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
+#include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
@@ -630,7 +631,7 @@ namespace ascension {
 				class GlyphVectorImpl : public TextRun, public StringPiece {
 				public:
 					GlyphVectorImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-						std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeFontTag scriptTag);
+						std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeLayoutTag scriptTag);
 
 					// GlyphVector
 					void fillGlyphs(PaintContext& context, const Point& origin/*,

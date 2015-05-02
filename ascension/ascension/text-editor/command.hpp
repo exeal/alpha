@@ -8,15 +8,13 @@
 
 #ifndef ASCENSION_COMMAND_HPP
 #define ASCENSION_COMMAND_HPP
-
-#include <ascension/text-editor/session.hpp>
 #include <ascension/kernel/searcher.hpp>
-#include <ascension/viewer/text-viewer.hpp>
 
 namespace ascension {
 
 	namespace viewer {
 		class BlockProgressionDestinationProxy;
+		class TextViewer;
 	}
 
 	namespace texteditor {

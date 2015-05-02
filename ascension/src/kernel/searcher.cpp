@@ -5,8 +5,11 @@
  * @date 2006-2014
  */
 
-#include <ascension/kernel/searcher.hpp>
+#include <ascension/corelib/text/case-folder.hpp>
+#include <ascension/corelib/text/string-character-iterator.hpp>
+#include <ascension/kernel/document.hpp>
 #include <ascension/kernel/point.hpp>
+#include <ascension/kernel/searcher.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <boost/range/algorithm/find.hpp>
 
@@ -146,6 +149,9 @@ namespace ascension {
 
 
 		// TextSearcher ///////////////////////////////////////////////////////////////////////////////////////////////
+
+		const std::size_t TextSearcher::DEFAULT_NUMBER_OF_STORED_STRINGS = 16;
+		const std::size_t TextSearcher::MINIMUM_NUMBER_OF_STORED_STRINGS = 4;
 
 		namespace {
 			inline kernel::DocumentCharacterIterator beginningOfDocument(const kernel::Document& document) BOOST_NOEXCEPT {
@@ -725,6 +731,18 @@ namespace ascension {
 		/// Returns the "whole match" condition.
 		TextSearcher::WholeMatch TextSearcher::wholeMatch() const BOOST_NOEXCEPT {
 			return wholeMatch_;
+		}
+
+
+		// TextSearcher.LastResult ////////////////////////////////////////////////////////////////////////////////////
+
+		inline bool TextSearcher::LastResult::checkDocumentRevision(const kernel::Document& current) const BOOST_NOEXCEPT {
+			return document == &current && documentRevisionNumber == current.revisionNumber();
+		}
+
+		inline void TextSearcher::LastResult::updateDocumentRevision(const kernel::Document& document) BOOST_NOEXCEPT {
+			this->document = &document;
+			documentRevisionNumber = document.revisionNumber();
 		}
 
 

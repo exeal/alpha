@@ -13,7 +13,6 @@
 
 #include <ascension/corelib/future/type-traits.hpp>	// std.integral_constant
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// text.utf.*
 #include <memory>									// std.unique_ptr
@@ -187,7 +186,7 @@ namespace ascension {
 					return (c < 0x10000ul && std::binary_search(std::begin(text::NEWLINE_CHARACTERS),
 						std::end(text::NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? text::LINE_SEPARATOR : c;
 				}
-				char_type translate_nocase(char_type c) const {return text::CaseFolder::fold(translate(c));}
+				char_type translate_nocase(char_type c) const;
 				string_type transform(const char_type* p1, const char_type* p2) const {return collator_->transform(p1, p2);}
 				string_type transform_primary(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
 				char_class_type lookup_classname(const char_type* p1, const char_type* p2) const;
@@ -316,26 +315,7 @@ namespace ascension {
 				return std::unique_ptr<Matcher<CodePointIterator>>(new Matcher<CodePointIterator>(*this, first, last));
 			}
 
-			/**
-			 * Compiles the given regular expression and attempts to match the given input against it.
-			 * An invocation of this convenience method of the form
-			 * @code
-			 * Pattern.matches(regex, input);
-			 * @endcode
-			 * behaves in exactly the same way as the expression
-			 * @code
-			 * Pattern.compile(regex).matcher(input).matches()
-			 * @endcode
-			 * If a pattern is to be used multiple times, compiling it once and reusing it will be
-			 * more efficient than invoking this method each time.
-			 * @param regex the expression to be compiled
-			 * @param input the character sequence to be matched
-			 * @throw PatternSyntaxException the expression's syntax is invalid
-			 */
-			static bool matches(const StringPiece& regex, const StringPiece& input) {
-				return matches(regex,
-					text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.end()));
-			}
+			static bool matches(const StringPiece& regex, const StringPiece& input);
 
 			/**
 			 * Compiles the given regular expression and attempts to match the given input against it.

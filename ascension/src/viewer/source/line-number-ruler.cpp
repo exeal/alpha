@@ -6,9 +6,11 @@
  */
 
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/glyph-metrics.hpp>
+#include <ascension/graphics/font/glyph-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/presentation/presentation.hpp>

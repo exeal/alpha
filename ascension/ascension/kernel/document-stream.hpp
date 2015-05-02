@@ -7,7 +7,8 @@
 
 #ifndef ASCENSION_STREAM_HPP
 #define ASCENSION_STREAM_HPP
-#include <ascension/kernel/document.hpp>
+#include <ascension/corelib/text/newline.hpp>
+#include <ascension/kernel/position.hpp>
 #include <array>
 #include <iostream>		// std.basic_istream, std.basic_istream, std.basic_iostream
 #include <streambuf>	// std.basic_streambuf

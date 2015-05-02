@@ -6,6 +6,7 @@
  * @date 2014-11-23 Separated from document.cpp
  */
 
+#include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 
 
@@ -131,6 +132,11 @@ namespace ascension {
 					&& text::surrogates::isHighSurrogate(lineString[tell().offsetInLine - 1]))
 				++position_.offsetInLine;
 			++offset_;
+		}
+		
+		/// Returns the line text string.
+		const String& DocumentCharacterIterator::line() const BOOST_NOEXCEPT {
+			return document().line(tell().line);
 		}
 
 		/**

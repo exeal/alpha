@@ -7,14 +7,16 @@
  * @date 2011-2015
  */
 
+#include <ascension/corelib/text/identifier-syntax.hpp>
+#include <ascension/kernel/document.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/visual-point.hpp>
-#include <ascension/corelib/text/identifier-syntax.hpp>
 
 namespace ascension {
 	namespace viewer {

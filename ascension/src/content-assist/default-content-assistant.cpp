@@ -8,7 +8,9 @@
  */
 
 #include <ascension/content-assist/default-content-assistant.hpp>
+#include <ascension/kernel/document.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>

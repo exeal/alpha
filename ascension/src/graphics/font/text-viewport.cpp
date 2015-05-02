@@ -9,10 +9,12 @@
  */
 
 #include <ascension/corelib/text/break-iterator.hpp>	// text.GraphemeBreakIterator
+#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>

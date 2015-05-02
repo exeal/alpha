@@ -9,7 +9,10 @@
 
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>

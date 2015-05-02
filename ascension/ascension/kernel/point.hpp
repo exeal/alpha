@@ -6,7 +6,10 @@
 
 #ifndef ASCENSION_POINT_HPP
 #define ASCENSION_POINT_HPP
-#include <ascension/kernel/document.hpp>
+#include <ascension/corelib/detail/listeners.hpp>
+#include <ascension/direction.hpp>
+#include <ascension/kernel/partition.hpp>
+#include <ascension/kernel/position.hpp>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
 
@@ -20,6 +23,8 @@ namespace ascension {
 		public:
 			DocumentDisposedException();
 		};
+
+		class Point;
 
 		/**
 		 * A listener for @c Point.
@@ -49,6 +54,8 @@ namespace ascension {
 			virtual void pointDestroyed() = 0;
 			friend class Point;
 		};
+
+		class Document;
 
 		// documentation is point.cpp
 		class Point : private boost::totally_ordered<Point> {
@@ -165,10 +172,7 @@ namespace ascension {
 			return lhs.position() < rhs.position();
 		}
 
-		/// Returns the content type of the document partition contains the point.
-		inline ContentType contentType(const Point& p) {
-			return p.document().partitioner().contentType(p);
-		}
+		ContentType contentType(const Point& p);
 
 		/// Returns the line number of @a p.
 		inline Index line(const Point& p) BOOST_NOEXCEPT {
@@ -243,11 +247,6 @@ namespace ascension {
 		 */
 		inline void Point::normalize() const {
 			const_cast<Point*>(this)->position_ = normalized();
-		}
-
-		/// Returns the normalized position of the point.
-		inline Position Point::normalized() const {
-			return positions::shrinkToDocumentRegion(document(), position());
 		}
 
 		/// Returns the position.
