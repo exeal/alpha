@@ -536,6 +536,9 @@
     <ClCompile Include="..\..\ascension\ascension\viewer\abstract-mouse-input-strategy.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\string-piece-gtk.cpp">
+      <Filter>ascension\Source Files\corelib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">

@@ -200,26 +200,6 @@ namespace ascension {
 #endif
 				std::shared_ptr<const FontDescription> description_;
 			};
-
-			/**
-			 * Used to represent a group of fonts with the same family, slant, weight, width, but
-			 * varying sizes.
-			 */
-			class FontFace {
-			public:
-				const FontDescription& describe() const;
-				/// Returns the face name.
-				const String& name() const;
-			private:
-				const FontDescription description_;
-				const String name_;
-			};
-
-			class FontFaceIterator {};
-			class FontSizeIterator {};
-
-			FontFaceIterator availableFaces(const FontCollection& collection, const FontFamily& family);
-			FontSizeIterator availablePointSizes(const FontFace& fontFace);
 		}
 	}
 }
