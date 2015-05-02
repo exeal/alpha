@@ -79,9 +79,6 @@ namespace ascension {
 #endif // !ASCENSION_NO_MIGEMO
 		};
 
-		bool abortIncrementalSearch(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
-		bool endIncrementalSearch(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
-
 
 		/// Returns the input sequence checkers.
 		inline std::shared_ptr<InputSequenceCheckers> Session::inputSequenceCheckers() BOOST_NOEXCEPT {

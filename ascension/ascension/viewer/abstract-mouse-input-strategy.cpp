@@ -57,7 +57,7 @@ namespace ascension {
 			if(!isTrackingLocation()) {
 				// cancel other modes
 				utils::closeCompletionProposalsPopup(viewer);
-				texteditor::endIncrementalSearch(viewer);
+				utils::endIncrementalSearch(viewer);
 
 				// begin tracking
 				tracking_.reset(new Tracking);

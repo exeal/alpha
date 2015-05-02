@@ -206,7 +206,7 @@ namespace ascension {
 		/// @see kernel#DocumentListener#documentChanged
 		void TextViewer::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
 			// cancel the active incremental search
-			texteditor::abortIncrementalSearch(*this);	// TODO: should TextViewer handle this? (I.S. would...)
+			utils::abortIncrementalSearch(*this);	// TODO: should TextViewer handle this? (I.S. would...)
 
 //			if(!isFrozen())
 //				rulerPainter_->update();
@@ -252,7 +252,7 @@ namespace ascension {
 			if(!allowsMouseInput() && !byKeyboard)	// however, may be invoked by other than the mouse...
 				return;
 			utils::closeCompletionProposalsPopup(*this);
-			texteditor::abortIncrementalSearch(*this);
+			utils::abortIncrementalSearch(*this);
 
 			graphics::Point location;
 			widgetapi::event::LocatedUserInput::MouseButton buttons;
@@ -360,7 +360,7 @@ namespace ascension {
 			}
 			if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
 				closeCompletionProposalsPopup(*this);
-*/			texteditor::abortIncrementalSearch(*this);
+*/			utils::abortIncrementalSearch(*this);
 			static_cast<detail::InputEventHandler&>(caret()).abortInput();
 //			if(currentWin32WindowMessage().wParam != get()) {
 //				hideCaret();
@@ -1909,13 +1909,13 @@ namespace ascension {
 		}
 	}
 
-	namespace texteditor {
+	namespace utils {
 		/**
 		 * Calls @c IncrementalSearcher#abort from @a viewer.
 		 * @return true if the incremental search was running
 		 */
 		bool abortIncrementalSearch(viewer::TextViewer& viewer) BOOST_NOEXCEPT {
-			if(Session* session = viewer.document().session()) {
+			if(texteditor::Session* session = viewer.document().session()) {
 				if(session->incrementalSearcher().isRunning())
 					return session->incrementalSearcher().abort(), true;
 			}
@@ -1927,7 +1927,7 @@ namespace ascension {
 		 * @return true if the incremental search was running
 		 */
 		bool endIncrementalSearch(viewer::TextViewer& viewer) BOOST_NOEXCEPT {
-			if(Session* session = viewer.document().session()) {
+			if(texteditor::Session* session = viewer.document().session()) {
 				if(session->incrementalSearcher().isRunning())
 					return session->incrementalSearcher().end(), true;
 			}
