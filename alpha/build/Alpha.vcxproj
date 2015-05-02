@@ -189,6 +189,7 @@
     <ClCompile Include="..\..\ascension\src\content-assist\default-completion-proposal.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\default-content-assistant.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\identifiers-proposal-processor.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\string-piece-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\character-iterator.cpp" />
