@@ -11,9 +11,8 @@
 
 #ifndef ASCENSION_PARTITION_PRESENTATION_RECONSTRUCTOR_HPP
 #define ASCENSION_PARTITION_PRESENTATION_RECONSTRUCTOR_HPP
-
-#include <memory>	// std.shared_ptr, std.unique_ptr
 #include <boost/config.hpp>	// BOOST_NOEXCEPT
+#include <memory>	// std.shared_ptr, std.unique_ptr
 
 namespace ascension {
 	namespace kernel {

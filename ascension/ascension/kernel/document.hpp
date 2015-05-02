@@ -7,13 +7,12 @@
 
 #ifndef ASCENSION_DOCUMENT_HPP
 #define ASCENSION_DOCUMENT_HPP
-
 #include <ascension/config.hpp>				// ASCENSION_DEFAULT_NEWLINE
 #include <ascension/direction.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/detail/gap-vector.hpp>	// detail.GapVector
-#include <ascension/corelib/detail/scope-guard.hpp>
 #include <ascension/corelib/detail/listeners.hpp>
+#include <ascension/corelib/detail/scope-guard.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
 #include <ascension/corelib/signals.hpp>
 #include <ascension/corelib/string-piece.hpp>
@@ -354,10 +353,10 @@ namespace ascension {
 			void partitioningChanged(const Region& changedRegion) BOOST_NOEXCEPT;
 			void updatePoints(const DocumentChange& change) BOOST_NOEXCEPT;
 			// detail.SessionElement
-			void setSession(texteditor::Session& session) BOOST_NOEXCEPT {session_ = &session;}
+			void setSession(texteditor::Session& session) override BOOST_NOEXCEPT {session_ = &session;}
 			// detail.PointCollection<Point>
-			void addNewPoint(Point& point) {points_.insert(&point);}
-			void removePoint(Point& point) {points_.erase(&point);}
+			void addNewPoint(Point& point) override {points_.insert(&point);}
+			void removePoint(Point& point) override {points_.erase(&point);}
 
 		private:
 			class UndoManager;

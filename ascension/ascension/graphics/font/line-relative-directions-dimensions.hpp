@@ -12,11 +12,11 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <ascension/corelib/detail/decay-or-refer.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
-#include <array>
-#include <type_traits>
 #include <boost/operators.hpp>
 #include <boost/parameter.hpp>
 //#include <boost/range/irange.hpp>
+#include <array>
+#include <type_traits>
 
 namespace ascension {
 	namespace graphics {

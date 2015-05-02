@@ -66,15 +66,15 @@ namespace ascension {
 			std::uint32_t stride() const;
 			static std::uint32_t stride(std::uint32_t width, Format format);
 			// RenderingDevice
-			std::unique_ptr<RenderingContext2D> createRenderingContext() const;
-			std::uint8_t depth() const;
-			std::uint32_t numberOfColors() const;
-			std::uint32_t height() const;
-			std::uint16_t logicalDpiX() const;
-			std::uint16_t logicalDpiY() const;
-			std::uint32_t width() const;
-			std::uint16_t physicalDpiX() const;
-			std::uint16_t physicalDpiY() const;
+			std::unique_ptr<RenderingContext2D> createRenderingContext() const override;
+			std::uint8_t depth() const override;
+			std::uint32_t numberOfColors() const override;
+			std::uint32_t height() const override;
+			std::uint16_t logicalDpiX() const override;
+			std::uint16_t logicalDpiY() const override;
+			std::uint32_t width() const override;
+			std::uint16_t physicalDpiX() const override;
+			std::uint16_t physicalDpiY() const override;
 
 		private:
 			void initialize(std::unique_ptr<uint8_t[]> data, const geometry::BasicDimension<std::uint32_t>& size, Format format);

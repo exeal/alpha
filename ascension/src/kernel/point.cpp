@@ -4,8 +4,9 @@
  * @date 2003-2014
  */
 
-#include <ascension/kernel/point.hpp>
+#include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/kernel/point.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>	// text.ucd.BinaryProperty
 
@@ -155,6 +156,11 @@ namespace ascension {
 			return *this;
 		}
 
+		/// Returns the normalized position of the point.
+		Position Point::normalized() const {
+			return positions::shrinkToDocumentRegion(document(), position());
+		}
+
 		/**
 		 * Removes the lifecycle listener
 		 * @param listener The listener to be removed
@@ -187,6 +193,14 @@ namespace ascension {
 			const Position newPosition(positions::updatePosition(position(), change, gravity()));
 			if(newPosition != position())
 				moveTo(newPosition);	// TODO: this may throw...
+		}
+
+
+		// free functions /////////////////////////////////////////////////////////////////////////////////////////////
+
+		/// Returns the content type of the document partition contains the point.
+		ContentType contentType(const Point& p) {
+			return p.document().partitioner().contentType(p);
 		}
 
 		/**

@@ -16,7 +16,9 @@
 #include <boost/fusion/algorithm/query/find.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/map/convert.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
+#if 0
+#	include <boost/fusion/container/vector/convert.hpp>
+#endif
 #include <boost/fusion/iterator/next.hpp>
 #include <boost/fusion/sequence/intrinsic/begin.hpp>
 #include <boost/fusion/sequence/intrinsic/end.hpp>
@@ -76,14 +78,14 @@ namespace ascension {
 				template<typename Property>
 				boost::fusion::pair<Property, typename Metafunction<Property>::type> operator()(const Property&) const BOOST_NOEXCEPT;	// only definition
 			};
-
+#if 0
 			template<typename Sequence, typename Converter>
 			struct TransformAsVector : boost::mpl::identity<
 				typename boost::fusion::result_of::as_vector<
 					typename boost::fusion::result_of::transform<Sequence, Converter>::type
 				>::type
 			> {};
-
+#endif
 			template<typename Sequence, typename Converter>
 			struct TransformAsMap : boost::mpl::identity<
 				typename boost::fusion::result_of::as_map<

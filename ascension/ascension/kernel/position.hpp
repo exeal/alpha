@@ -10,12 +10,12 @@
 
 #include <ascension/corelib/basic-types.hpp>	// Index
 #include <ascension/corelib/memory.hpp>			// FastArenaObject
-#include <locale>	// std.use_facet, ...
-#include <sstream>	// std.basic_ostream, std.ostringstream
-#include <utility>	// std.pair
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
+#include <locale>	// std.use_facet, ...
+#include <sstream>	// std.basic_ostream, std.ostringstream
+#include <utility>	// std.pair
 
 namespace ascension {
 	namespace kernel {

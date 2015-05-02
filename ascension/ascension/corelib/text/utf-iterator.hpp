@@ -10,10 +10,10 @@
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/text/character.hpp>
 #include <ascension/corelib/text/utf.hpp>
-#include <array>
-#include <utility>	// std.advance
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/iterator_traits.hpp>
+#include <array>
+#include <utility>	// std.advance
 
 namespace ascension {
 	namespace text {
