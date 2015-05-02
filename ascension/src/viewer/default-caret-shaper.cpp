@@ -7,6 +7,7 @@
  * @date 2013-04-21 separated from caret-shaper.cpp
  */
 
+#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/image.hpp>

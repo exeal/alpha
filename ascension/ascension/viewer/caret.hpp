@@ -9,10 +9,12 @@
 
 #ifndef ASCENSION_CARET_HPP
 #define ASCENSION_CARET_HPP
-#include <ascension/corelib/text/identifier-syntax.hpp>	// text.IdentifierSyntax
+#include <ascension/corelib/signals.hpp>
+#include <ascension/corelib/text/newline.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
+#include <ascension/kernel/document-observers.hpp>
 #include <ascension/viewer/visual-point.hpp>
-#include <ascension/viewer/widgetapi/drag-and-drop.hpp>
+#include <ascension/viewer/widgetapi/drag-and-drop.hpp>	// widgetapi.MimeData, widgetapi.MimeDataFormats
 
 namespace ascension {
 

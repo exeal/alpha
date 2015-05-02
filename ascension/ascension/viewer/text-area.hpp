@@ -9,9 +9,17 @@
 #define ASCENSION_TEXT_AREA_HPP
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
+#include <ascension/graphics/font/visual-lines-listener.hpp>
+#include <ascension/kernel/document-observers.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
 
 namespace ascension {
+	namespace graphics {
+		namespace font {
+			class TextLayout;
+		}
+	}
+
 	namespace viewer {
 		class Caret;
 		class TextAreaMouseInputStrategy;

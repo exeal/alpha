@@ -7,6 +7,8 @@
 #ifndef ASCENSION_NO_REGEX
 #include <ascension/corelib/detail/shared-library.hpp>	// detail.SharedLibrary
 #include <ascension/corelib/regex.hpp>
+#include <ascension/corelib/text/case-folder.hpp>
+#include <ascension/corelib/text/string-character-iterator.hpp>
 #ifndef ASCENSION_NO_MIGEMO
 #	include <ascension/corelib/encoder.hpp>
 #	include "../third-party/migemo.h"
@@ -224,6 +226,28 @@ namespace ascension {
 		
 		/// Destructor.
 		Pattern::~Pattern() BOOST_NOEXCEPT {
+		}
+
+		/**
+		 * Compiles the given regular expression and attempts to match the given input against it.
+		 * An invocation of this convenience method of the form
+		 *
+		 * @code
+		 * Pattern.matches(regex, input);
+		 * @endcode
+		 * behaves in exactly the same way as the expression
+		 * @code
+		 * Pattern.compile(regex).matcher(input).matches()
+		 * @endcode
+		 *
+		 * If a pattern is to be used multiple times, compiling it once and reusing it will be more efficient than
+		 * invoking this method each time.
+		 * @param regex the expression to be compiled
+		 * @param input the character sequence to be matched
+		 * @throw PatternSyntaxException the expression's syntax is invalid
+		 */
+		bool Pattern::matches(const StringPiece& regex, const StringPiece& input) {
+			return matches(regex, text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.end()));
 		}
 
 #ifndef ASCENSION_NO_MIGEMO
@@ -575,6 +599,10 @@ namespace ascension {
 					}
 				}
 				return klass;
+			}
+
+			RegexTraits::char_type RegexTraits::translate_nocase(char_type c) const {
+				return text::CaseFolder::fold(translate(c));
 			}
 		}
 	}

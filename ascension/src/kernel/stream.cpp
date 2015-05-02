@@ -5,6 +5,7 @@
  * @date 2010-2014
  */
 
+#include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-stream.hpp>
 
 

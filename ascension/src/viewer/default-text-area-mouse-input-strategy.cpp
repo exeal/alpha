@@ -11,8 +11,10 @@
 // TODO: This code does not support platforms other than Win32.
 
 #include <ascension/corelib/text/break-iterator.hpp>
+#include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
@@ -20,6 +22,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/presentation/hyperlink/hyperlink.hpp>
+#include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/text-editor/session.hpp>	// texteditor.xxxIncrementalSearch
 #include <ascension/viewer/caret.hpp>

@@ -7,17 +7,23 @@
 
 #ifndef ASCENSION_LINE_NUMBER_RULER_HPP
 #define ASCENSION_LINE_NUMBER_RULER_HPP
-#include <ascension/graphics/font/font.hpp>
-#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/number-substitution.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
+#include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/source/abstract-ruler.hpp>
 #include <boost/optional.hpp>
 
 namespace ascension {
+	namespace graphics {
+		namespace font {
+			class Font;
+			struct VisualLine;
+		}
+	}
+
 	namespace viewer {
 		namespace source {
 			/// A ruler (column) displaying line numbers.

@@ -6,8 +6,10 @@
  * @date 2014-01-13 separated from rules.cpp
  */
 
-#include <ascension/rules/transition-rules.hpp>
+#include <ascension/corelib/text/case-folder.hpp>
+#include <ascension/corelib/text/string-character-iterator.hpp>
 #include <ascension/corelib/ustring.hpp>	// umemcmp
+#include <ascension/rules/transition-rules.hpp>
 
 
 namespace ascension {

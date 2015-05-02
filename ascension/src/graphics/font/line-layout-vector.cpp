@@ -97,6 +97,19 @@ namespace ascension {
 			}
 
 			/**
+			 * Returns the layout of the specified line.
+			 * @param line The line
+			 * @return The layout
+			 * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
+			 * @see #operator[], #at(Index)
+			 */
+			const TextLayout& LineLayoutVector::at(Index line, const UseCalculatedLayoutTag&) {
+				if(line > document().numberOfLines())
+					throw IndexOutOfBoundsException("line");
+				return (*this)[line];
+			}
+
+			/**
 			 * Clears the layout caches of the specified lines. This method calls @c #layoutModified.
 			 * @param lines The range of lines. @a lines.end() is exclusive and will not be cleared
 			 * @param repair Set @c true to recreate layouts for the lines. If @c true, this method calls
@@ -148,6 +161,19 @@ namespace ascension {
 					}
 					fireVisualLinesDeleted(orderedLines, oldSublines += orderedLines.size() - cachedLines);
 				}
+			}
+
+			/**
+			 * Creates and returns an isolated layout for the specified line. This layout is not inserted into the
+			 * vector and the instances of @c VisualLinesListener are not invoked.
+			 * @param line The line number
+			 * @return The layout
+			 * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
+			 */
+			std::unique_ptr<const TextLayout> LineLayoutVector::createIsolatedLayout(Index line) const {
+				if(line > document().numberOfLines())
+					throw IndexOutOfBoundsException("line");
+				return layoutGenerator_->generate(line);
 			}
 
 			/// @see kernel#DocumentListener#documentAboutToBeChanged

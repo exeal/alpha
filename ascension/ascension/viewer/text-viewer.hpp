@@ -8,14 +8,15 @@
 
 #ifndef ASCENSION_TEXT_VIEWER_HPP
 #define ASCENSION_TEXT_VIEWER_HPP
-
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
+#include <ascension/corelib/signals.hpp>
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 #	include <ascension/graphics/physical-directions-dimensions.hpp>
 #endif
 #include <ascension/graphics/physical-directions-dimensions.hpp>
+#include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/detail/weak-reference-for-points.hpp>

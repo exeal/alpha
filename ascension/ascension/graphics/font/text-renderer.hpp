@@ -15,11 +15,16 @@
 #include <ascension/graphics/font/text-renderer-observers.hpp>
 #include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/geometry/point.hpp>
-#include <ascension/presentation/presentation.hpp>
-//#include <ascension/presentation/text-style.hpp>
+#include <ascension/presentation/writing-mode.hpp>	// presentation.BlockFlowDirection
 #include <memory>	// std.shared_ptr, std.unique_ptr
 
 namespace ascension {
+	namespace presentation {
+		struct ComputedStyledTextRunIterator;
+		struct ComputedTextLineStyle;
+		class Presentation;
+	}
+
 	namespace graphics {
 		class PaintContext;
 		class RenderingContext2D;

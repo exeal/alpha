@@ -7,6 +7,7 @@
  * @date 2014-11-16 Separated from scanner.cpp
  */
 
+#include <ascension/kernel/document.hpp>
 #include <ascension/rules/lexical-token-scanner.hpp>
 #include <ascension/rules/token.hpp>
 #include <ascension/rules/token-rules.hpp>

@@ -6,6 +6,7 @@
  */
 
 #include <ascension/corelib/text/case-folder.hpp>
+#include <ascension/corelib/text/string-character-iterator.hpp>
 
 
 namespace ascension {
@@ -73,6 +74,19 @@ namespace ascension {
 		
 				return static_cast<int>(boost::get(c1)) - static_cast<int>(boost::get(c2));
 			}
+		}
+
+		/**
+		 * Compares the two character sequences case-insensitively.
+		 * @param s1 The character sequence
+		 * @param s2 The the other
+		 * @param excludeTurkishI Set @c true to perform "Turkish I mapping"
+		 * @retval &lt;0 The first character sequence is less than the second
+		 * @retval 0 The both sequences are same
+		 * @retval &gt;0 The first character sequence is greater than the second
+		 */
+		int CaseFolder::compare(const String& s1, const String& s2, bool excludeTurkishI /* = false */) {
+			return compare(StringCharacterIterator(s1), StringCharacterIterator(s2), excludeTurkishI);
 		}
 	}
 }

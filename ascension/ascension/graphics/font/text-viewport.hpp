@@ -23,6 +23,7 @@
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/optional.hpp>
+#include <boost/signals2/connection.hpp>
 #include <boost/utility/value_init.hpp>
 
 #undef ASCENSION_PIXELFUL_SCROLL_IN_BPD	// provisional
@@ -247,6 +248,8 @@ namespace ascension {
 				const TextViewport& viewport, const Point& pointInView,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			/// @}
+
+			class TextLayout;
 
 			/// @defgroup additional_model_and_view_coordinates_conversions Additional Model and View Coordinates Conversions
 			/// @{

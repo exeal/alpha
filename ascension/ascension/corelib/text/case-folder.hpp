@@ -10,7 +10,6 @@
 #define ASCENSION_CASE_FOLDER_HPP
 
 #include <ascension/corelib/text/character-iterator.hpp>
-#include <ascension/corelib/text/string-character-iterator.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// utf.CharacterDecodeIterator, utf.checkedEncode
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
@@ -49,18 +48,7 @@ namespace ascension {
 				return compare(detail::CharacterIterator(s1), detail::CharacterIterator(s2), excludeTurkishI);
 			}
 
-			/**
-			 * Compares the two character sequences case-insensitively.
-			 * @param s1 The character sequence
-			 * @param s2 The the other
-			 * @param excludeTurkishI Set @c true to perform "Turkish I mapping"
-			 * @retval &lt;0 The first character sequence is less than the second
-			 * @retval 0 The both sequences are same
-			 * @retval &gt;0 The first character sequence is greater than the second
-			 */
-			static int compare(const String& s1, const String& s2, bool excludeTurkishI = false) {
-				return compare(StringCharacterIterator(s1), StringCharacterIterator(s2), excludeTurkishI);
-			}
+			static int compare(const String& s1, const String& s2, bool excludeTurkishI = false);
 
 			/**
 			 * Folds the case of the specified character. This method performs "simple case
@@ -96,7 +84,7 @@ namespace ascension {
 			 */
 			template<typename SinglePassReadableRange>
 			static String fold(const SinglePassReadableRange& characterSequence, bool excludeTurkishI = false) {
-				return fold(boost::begin(characterSequence), boost::end(characterSequence), excludeTurkishI);
+				return fold(boost::const_begin(characterSequence), boost::const_end(characterSequence), excludeTurkishI);
 			}
 
 		private:

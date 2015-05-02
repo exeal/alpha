@@ -11,9 +11,8 @@
 #define ASCENSION_HYPERLINK_DETECTOR_HPP
 
 #include <ascension/kernel/partition.hpp>	// kernel.ContentType
-#include <ascension/presentation/hyperlink/hyperlink.hpp>
-#include <memory>
 #include <map>
+#include <memory>
 
 namespace ascension {
 	namespace kernel {
@@ -26,6 +25,8 @@ namespace ascension {
 
 	namespace presentation {
 		namespace hyperlink {
+			class Hyperlink;
+
 			/// A @c HyperlinkDetector finds the hyperlinks in the document.
 			class HyperlinkDetector {
 			public:

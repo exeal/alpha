@@ -13,7 +13,9 @@
 #include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/graphics/font/actual-text-styles.hpp>
 #include <ascension/graphics/font/detail/inline-progression-dimension-range-iterator.hpp>
+#include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-run.hpp>

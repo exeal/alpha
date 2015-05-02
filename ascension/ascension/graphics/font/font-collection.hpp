@@ -9,7 +9,11 @@
 #ifndef ASCENSION_FONT_COLLECTION_HPP
 #define ASCENSION_FONT_COLLECTION_HPP
 #include <ascension/graphics/geometry/affine-transform.hpp>
-#include <ascension/graphics/font/font.hpp>
+#include <ascension/graphics/object.hpp>
+//#include <ascension/graphics/font/font.hpp>
+#if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
+#	include <ascension/win32/handle.hpp>
+#endif
 #include <boost/optional.hpp>
 #include <boost/range/iterator.hpp>
 #include <memory>
@@ -18,7 +22,10 @@
 namespace ascension {
 	namespace graphics {
 		namespace font {
+			class Font;
 			class FontDescription;
+			class FontFamily;
+			struct FontProperties;
 
 			/**
 			 * @c FontCollection represents the set of fonts available for a particular graphics

@@ -8,6 +8,8 @@
  */
 
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>

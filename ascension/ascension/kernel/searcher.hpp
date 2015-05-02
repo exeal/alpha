@@ -9,11 +9,15 @@
 #define ASCENSION_SEARCHER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_COLLATION, ASCENSION_NO_REGEX, ...
-#include <ascension/corelib/text/collator.hpp>
+#include <ascension/direction.hpp>
+#ifndef ASCENSION_NO_UNICODE_COLLATION
+#	include <ascension/corelib/text/collator.hpp>
+#endif // !ASCENSION_NO_UNICODE_COLLATION
 #include <ascension/kernel/document-character-iterator.hpp>
 #ifndef ASCENSION_NO_REGEX
 #	include <ascension/corelib/regex.hpp>
 #endif // !ASCENSION_NO_REGEX
+#include <ascension/kernel/document-observers.hpp>
 #include <array>
 #include <list>
 #include <stack>
@@ -221,12 +225,10 @@ namespace ascension {
 				std::size_t documentRevisionNumber;
 				LastResult() BOOST_NOEXCEPT : document(nullptr), direction(Direction::FORWARD) {}
 				~LastResult() BOOST_NOEXCEPT {reset();}
-				bool checkDocumentRevision(const kernel::Document& current) const BOOST_NOEXCEPT {
-					return document == &current && documentRevisionNumber == current.revisionNumber();}
+				bool checkDocumentRevision(const kernel::Document& current) const BOOST_NOEXCEPT;
 				bool matched() const BOOST_NOEXCEPT {return matchedRegion;}
 				void reset() BOOST_NOEXCEPT {matchedRegion = boost::none;}
-				void updateDocumentRevision(const kernel::Document& document) BOOST_NOEXCEPT {
-					this->document = &document; documentRevisionNumber = document.revisionNumber();}
+				void updateDocumentRevision(const kernel::Document& document) BOOST_NOEXCEPT;
 			} lastResult_;
 			Type searchType_;
 			WholeMatch wholeMatch_;
@@ -234,7 +236,7 @@ namespace ascension {
 			std::list<String> storedPatterns_, storedReplacements_;
 			std::size_t maximumNumberOfStoredStrings_;
 			bool abortedInteractiveReplacement_;
-			enum {DEFAULT_NUMBER_OF_STORED_STRINGS = 16, MINIMUM_NUMBER_OF_STORED_STRINGS = 4};
+			static const std::size_t DEFAULT_NUMBER_OF_STORED_STRINGS, MINIMUM_NUMBER_OF_STORED_STRINGS;
 		};
 
 		/**

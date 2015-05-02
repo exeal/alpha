@@ -18,7 +18,6 @@
 #include <ascension/graphics/geometry/geometry.hpp>
 #include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
-#include <boost/flyweight.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/multi/geometries/multi_polygon.hpp>
 #include <boost/operators.hpp>

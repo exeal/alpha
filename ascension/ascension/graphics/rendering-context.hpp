@@ -10,16 +10,17 @@
 #include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/graphics/color.hpp>
-#include <ascension/graphics/font/font.hpp>
+#include <ascension/graphics/font/font-collection.hpp>
+#include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/geometry/affine-transform.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/geometry/rectangle.hpp>
 #include <ascension/graphics/object.hpp>
-#include <memory>
 #include <boost/geometry/algorithms/make.hpp>	// boost.geometry.make_zero
 #include <boost/optional.hpp>
+#include <memory>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <cairomm/context.h>
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
@@ -157,9 +158,7 @@ namespace ascension {
 
 		namespace font {
 			class Font;
-			class FontCollection;
 			template<typename T> class FontMetrics;
-			class FontRenderContext;
 		}
 
 		/**

@@ -7,6 +7,7 @@
  */
 
 #include <ascension/kernel/document.hpp>
+#include <ascension/presentation/hyperlink/hyperlink.hpp>
 #include <ascension/presentation/hyperlink/hyperlink-detector.hpp>
 #include <boost/foreach.hpp>
 

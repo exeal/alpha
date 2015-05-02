@@ -6,6 +6,8 @@
  * @date 2010-2015
  */
 
+#include <ascension/corelib/utility.hpp>	// detail.ValueSaver<>
+#include <ascension/corelib/text/identifier-syntax.hpp>
 #include <ascension/corelib/text/utf.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/image.hpp>

@@ -7,9 +7,8 @@
 
 #include <ascension/graphics/rendering-context.hpp>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-#include <ascension/graphics/font/font-collection.hpp>
+#include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
-#include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/geometry/algorithm.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/paint.hpp>
@@ -25,8 +24,8 @@ namespace ascension {
 		 */
 		RenderingContext2D::RenderingContext2D(win32::Handle<HDC>::Type nativeObject) : nativeObject_(nativeObject), hasCurrentSubpath_(false) {
 			savedStates_.push(State());
-			setFillStyle(std::shared_ptr<Paint>(new SolidColor(Color::OPAQUE_BLACK)));
-			setStrokeStyle(std::shared_ptr<Paint>(new SolidColor(Color::OPAQUE_BLACK)));
+			setFillStyle(std::make_shared<SolidColor>(Color::OPAQUE_BLACK));
+			setStrokeStyle(std::make_shared<SolidColor>(Color::OPAQUE_BLACK));
 
 			win32::Handle<HFONT>::Type fontHandle(static_cast<HFONT>(::GetCurrentObject(nativeObject.get(), OBJ_FONT)), boost::null_deleter());
 			if(fontHandle.get() == nullptr)

@@ -11,6 +11,7 @@
 
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/future/type-traits.hpp>	// std.integral_constant
+#include <boost/mpl/identity.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/iterator.hpp>
 #include <array>

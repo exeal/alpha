@@ -9,10 +9,9 @@
 
 #ifndef ASCENSION_TEXT_RUN_HPP
 #define ASCENSION_TEXT_RUN_HPP
-
-#include <ascension/graphics/font/actual-text-styles.hpp>
 #include <ascension/graphics/font/glyph-vector.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
+#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/optional.hpp>
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
@@ -37,6 +36,8 @@ namespace ascension {
 		class RenderingContext2D;
 
 		namespace font {
+			struct ActualBorderSide;
+
 			/**
 			 * Abstract class represents a minimum text run whose characters can shaped by single font and has single
 			 * text reading direction.
@@ -150,20 +151,7 @@ namespace ascension {
 				}
 				return bounds;
 			}
-			/**
-			 * Returns the 'border-box' of the specified text run in user units.
-			 * @see #contentBox, #marginBox, #paddingBox, TextRun#border
-			 */
-			inline presentation::FlowRelativeFourSides<Scalar> borderBox(const TextRun& textRun) BOOST_NOEXCEPT {
-				presentation::FlowRelativeFourSides<Scalar> bounds(paddingBox(textRun));
-				if(const presentation::FlowRelativeFourSides<ActualBorderSide>* const borders = textRun.border()) {
-					bounds.before() -= borders->before().actualWidth();
-					bounds.after() += borders->after().actualWidth();
-					bounds.start() -= borders->start().actualWidth();
-					bounds.end() += borders->end().actualWidth();
-				}
-				return bounds;
-			}
+			presentation::FlowRelativeFourSides<Scalar> borderBox(const TextRun& textRun) BOOST_NOEXCEPT;
 			/**
 			 * Returns the 'margin-box' of the specified text run in user units.
 			 * @see #borderBox, #contentBox, #paddingBox, TextRun#margin
@@ -196,23 +184,8 @@ namespace ascension {
 			inline Scalar measure(const TextRun& textRun) {
 				return textRun.hitToLogicalPosition(TextHit<>::leading(textRun.characterRange().length()));
 			}
-			/**
-			 * Returns the measure of the 'allocation-rectangle' of the specified text run in user units.
-			 * @see #measure
-			 */
-			inline Scalar allocationMeasure(const TextRun& textRun) {
-				const presentation::FlowRelativeFourSides<ActualBorderSide>* const border = textRun.border();
-				const presentation::FlowRelativeFourSides<Scalar>* const margin = textRun.margin();
-				const presentation::FlowRelativeFourSides<Scalar>* const padding = textRun.padding();
-				return measure(textRun)
-					+ ((border != nullptr) ? border->start().actualWidth() + border->end().actualWidth() : 0)
-					+ ((margin != nullptr) ? margin->start() + margin->end() : 0)
-					+ ((padding != nullptr) ? padding->start() + padding->end() : 0);
-			}
+			Scalar allocationMeasure(const TextRun& textRun);
 			/// @}
-
-			void paintTextDecoration(PaintContext& context,
-				const TextRun& run, const Point& origin, const ActualTextDecoration& style);
 		}
 	}
 }

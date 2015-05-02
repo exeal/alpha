@@ -7,6 +7,7 @@
  */
 
 #include <ascension/graphics/font/font.hpp>
+#include <ascension/graphics/font/font-description.hpp>
 
 namespace ascension {
 	namespace graphics {
