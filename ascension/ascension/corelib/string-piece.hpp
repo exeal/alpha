@@ -20,7 +20,6 @@
 #endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
 #if ASCENSION_SUPPORTS_WINDOW_SYSTEM(GTK) || ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO) || ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
-#	include <glib.h>
 #	include <glibmm/ustring.h>
 #endif
 
@@ -115,13 +114,7 @@ namespace ascension {
 	 * @return The converted @c Glib#ustring
 	 * @throw Glib#Error @c g_utf16_to_utf8 failed
 	 */
-	inline Glib::ustring toGlibUstring(const StringPiece& s) {
-		GError* error;
-		std::shared_ptr<const char> p(::g_utf16_to_utf8(reinterpret_cast<const gunichar2*>(s.cbegin()), s.length(), nullptr, nullptr, &error), &::g_free);
-		if(p.get() == nullptr)
-			Glib::Error::throw_exception(error);
-		return Glib::ustring(p.get());
-	}
+	Glib::ustring toGlibUstring(const StringPiece& s);
 
 	/**
 	 * Converts the given @c Glib#ustring into a @c String.
@@ -129,13 +122,7 @@ namespace ascension {
 	 * @return The converted @c String
 	 * @throw Glib#Error @c g_utf8_to_utf16 failed
 	 */
-	inline String fromGlibUstring(const Glib::ustring& s) {
-		GError* error;
-		std::shared_ptr<const gunichar2> p(::g_utf8_to_utf16(s.data(), s.length(), nullptr, nullptr, &error), &::g_free);
-		if(p.get() == nullptr)
-			Glib::Error::throw_exception(error);
-		return String(reinterpret_cast<const Char*>(p.get()));
-	}
+	String fromGlibUstring(const Glib::ustring& s);
 #endif
 
 } // namespace ascension
