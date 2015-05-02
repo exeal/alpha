@@ -159,7 +159,7 @@ namespace ascension {
 			BOOST_FOREACH(const Partition* partition, partitions_)
 				delete partition;
 			partitions_.clear();
-			partitions_.insert(std::begin(partitions_), new Partition(kernel::DEFAULT_CONTENT_TYPE, kernel::Position(0, 0), kernel::Position(0, 0), 0));
+			partitions_.insert(std::begin(partitions_), new Partition(kernel::DEFAULT_CONTENT_TYPE, kernel::Position::zero(), kernel::Position::zero(), 0));
 			kernel::Region dummy;
 			const kernel::Region entire(document()->region());
 			computePartitioning(entire.first, entire.second, dummy);

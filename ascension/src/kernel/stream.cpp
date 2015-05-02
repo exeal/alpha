@@ -22,7 +22,7 @@ namespace ascension {
 		 * @throw UnknownValueException @a streamMode is invalid
 		 */
 		DocumentBuffer::DocumentBuffer(Document& document,
-				const Position& initialPosition /* = Position(0, 0) */, const text::Newline& newline /* = Newline::USE_INTRINSIC_VALUE */,
+				const Position& initialPosition /* = Position::zero() */, const text::Newline& newline /* = Newline::USE_INTRINSIC_VALUE */,
 				std::ios_base::openmode streamMode /* = std::ios_base::in | std::ios_base::out */) :
 				document_(document), newline_(newline), mode_(streamMode), current_(initialPosition) {
 			if((mode_ & ~(std::ios_base::in | std::ios_base::out)) != 0)
@@ -80,17 +80,17 @@ namespace ascension {
 		// document stream classes ////////////////////////////////////////////////////////////////////////////////////
 
 		/// Constructor.
-		DocumentInputStream::DocumentInputStream(Document& document, const Position& initialPosition /* = Position(0, 0) */,
+		DocumentInputStream::DocumentInputStream(Document& document, const Position& initialPosition /* = Position::zero() */,
 				const text::Newline& newline /* = Newline::USE_INTRINSIC_VALUE */) : std::basic_istream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
 		}
 
 		/// Constructor.
-		DocumentOutputStream::DocumentOutputStream(Document& document, const Position& initialPosition /* = Position(0, 0) */,
+		DocumentOutputStream::DocumentOutputStream(Document& document, const Position& initialPosition /* = Position::zero() */,
 				const text::Newline& newline /* = Newline::USE_INTRINSIC_VALUE */) : std::basic_ostream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
 		}
 
 		/// Constructor.
-		DocumentStream::DocumentStream(Document& document, const Position& initialPosition /* = Position(0, 0) */,
+		DocumentStream::DocumentStream(Document& document, const Position& initialPosition /* = Position::zero() */,
 				const text::Newline& newline /* = Newline::USE_INTRINSIC_VALUE */) : std::basic_iostream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
 		}
 	}

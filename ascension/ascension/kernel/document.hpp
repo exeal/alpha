@@ -631,7 +631,7 @@ namespace ascension {
 		/// Returns the entire region of the document. The returned region is normalized.
 		/// @see #accessibleRegion
 		inline Region Document::region() const BOOST_NOEXCEPT {
-			return Region(Position(0, 0), Position(numberOfLines() - 1, lineLength(numberOfLines() - 1)));
+			return Region(Position::zero(), Position(numberOfLines() - 1, lineLength(numberOfLines() - 1)));
 		}
 		
 		/// Returns the revision number.

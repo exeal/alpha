@@ -833,7 +833,7 @@ namespace ascension {
 			else {
 				widen();
 				BOOST_FOREACH(Point* p, points_)
-					p->moveTo(Position(0, 0));
+					p->moveTo(Position::zero());
 				bookmarker_->clear();
 		
 				fireDocumentAboutToBeChanged();
@@ -1026,7 +1026,7 @@ namespace ascension {
 		// NullPartitioner ////////////////////////////////////////////////////////////////////////////////////////////
 
 		/// Constructor.
-		NullPartitioner::NullPartitioner() BOOST_NOEXCEPT : p_(DEFAULT_CONTENT_TYPE, Region(Position(0, 0), Position(0, 0))), changed_(true) {
+		NullPartitioner::NullPartitioner() BOOST_NOEXCEPT : p_(DEFAULT_CONTENT_TYPE, Region::zero()), changed_(true) {
 		}
 
 		/// @see DocumentPartitioner#documentAboutToBeChanged

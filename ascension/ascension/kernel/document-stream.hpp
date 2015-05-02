@@ -28,7 +28,7 @@ namespace ascension {
 		class DocumentBuffer : public std::basic_streambuf<Char> {
 		public:
 			explicit DocumentBuffer(Document& document,
-				const Position& initialPosition = Position(0, 0),
+				const Position& initialPosition = Position::zero(),
 				const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE,
 				std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
 			~DocumentBuffer() BOOST_NOEXCEPT;
@@ -50,7 +50,7 @@ namespace ascension {
 		class DocumentInputStream : public std::basic_istream<Char> {
 		public:
 			explicit DocumentInputStream(Document& document,
-				const Position& initialPosition = Position(0, 0),
+				const Position& initialPosition = Position::zero(),
 				const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 			DocumentBuffer* rdbuf() const;
 		private:
@@ -61,7 +61,7 @@ namespace ascension {
 		class DocumentOutputStream : public std::basic_ostream<Char> {
 		public:
 			explicit DocumentOutputStream(Document& document,
-				const Position& initialPosition = Position(0, 0),
+				const Position& initialPosition = Position::zero(),
 				const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 			DocumentBuffer* rdbuf() const;
 		private:
@@ -72,7 +72,7 @@ namespace ascension {
 		class DocumentStream : public std::basic_iostream<Char> {
 		public:
 			explicit DocumentStream(Document& document,
-				const Position& initialPosition = Position(0, 0),
+				const Position& initialPosition = Position::zero(),
 				const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 			DocumentBuffer* rdbuf() const;
 		private:
