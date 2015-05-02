@@ -11,61 +11,17 @@
 #define ASCENSION_FONT_PROPERTIES_HPP
 
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
+#include <ascension/graphics/font/open-type-layout-tag.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/operators.hpp>
 #include <cmath>		// std.floor
 #include <cstdint>
 #include <functional>	// std.hash
-#include <iosfwd>		// std.char_traits
 #include <stdexcept>
 
 namespace ascension {
 	namespace graphics {
 		namespace font {
-			/// TrueType/OpenType font tag.
-			typedef std::uint32_t OpenTypeFontTag;
-
-			/**
-			 * Makes an 32-bit integer represents the given TrueType/OpenType font tag.
-			 * @tparam c1, c2, c3, c4 Characters consist of the tag name
-			 * @see makeOpenTypeFontTag
-			 */
-			template<std::uint8_t c1, std::uint8_t c2 = ' ', std::uint8_t c3 = ' ', std::uint8_t c4 = ' '>
-			struct MakeOpenTypeFontTag {
-				static const OpenTypeFontTag value = (c1 << 24) | (c2 << 16) | (c3 << 8) | c4;
-			};
-
-			/**
-			 * Returns an 32-bit integer represents the given TrueType/OpenType font tag.
-			 * @tparam Character The character type of @a name
-			 * @param name The TrueType tag name
-			 * @param validate Set @c true to validate characters in @a name
-			 * @return The 32-bit integral TrueType tag value
-			 * @throw std#length_error The length of @a name is zero or greater four
-			 * @throw std#invalid_argument @a validate is @c true and any character in @a name was invalid
-			 * @see MakeOpenTypeFontTag
-			 */
-			template<typename Character>
-			inline OpenTypeFontTag makeOpenTypeFontTag(const Character name[], bool validate = true) {
-				const std::size_t len = std::char_traits<Character>::length(name);
-				if(len == 0 || len > 4)
-					throw std::length_error("name");
-				OpenTypeFontTag tag = 0;
-				std::size_t i = 0;
-				for(; i < len; ++i) {
-					if(validate && (name[i] < 32 || name[i] > 126))
-						throw std::invalid_argument("name");
-					tag |= name[i] << ((3 - i) * 8);
-				}
-				for(; i < 4; ++i)
-					tag |= ' ' << ((3 - i) * 8);
-				return tag;
-			}
-
-			template<typename T> inline int round(T value) {	// why is this here?
-				return static_cast<int>(std::floor(value + 0.5));
-			}
-
 			/**
 			 * [Copied from CSS3] The Åefont-weightÅf property specifies the weight of glyphs in the font, their degree
 			 * of blackness or stroke thickness.
@@ -160,11 +116,11 @@ namespace ascension {
 			ASCENSION_SCOPED_ENUM_DECLARE_END(FontOrientation)
 #endif
 			struct FontFeatureSetting {
-				OpenTypeFontTag name;
+				OpenTypeLayoutTag featureTag;
 				std::uint32_t value;
 				/// Default constructor does not initialize the data members.
 				FontFeatureSetting() BOOST_NOEXCEPT {}
-				FontFeatureSetting(OpenTypeFontTag name, std::uint32_t value) BOOST_NOEXCEPT : name(name), value(value) {}
+				FontFeatureSetting(OpenTypeLayoutTag featureTag, std::uint32_t value) BOOST_NOEXCEPT : featureTag(featureTag), value(value) {}
 			};
 
 			/**
