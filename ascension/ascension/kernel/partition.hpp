@@ -7,7 +7,7 @@
 #ifndef ASCENSION_PARTITION_HPP
 #define ASCENSION_PARTITION_HPP
 #include <ascension/corelib/basic-types.hpp>
-#include <ascension/kernel/position.hpp>
+#include <ascension/kernel/region.hpp>
 
 namespace ascension {
 

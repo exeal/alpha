@@ -17,6 +17,7 @@
 namespace ascension {
 	namespace kernel {
 		class Document;
+		class Region;
 	}
 
 	namespace text {

@@ -1204,6 +1204,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\detail\weak-reference-for-points.hpp">
       <Filter>ascension\Header Files\viewer\detail</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\region.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

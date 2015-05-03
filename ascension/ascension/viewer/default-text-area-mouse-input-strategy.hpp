@@ -15,7 +15,6 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/timer.hpp>	// Timer
-#include <ascension/kernel/position.hpp>	// kernel.Position
 #include <ascension/viewer/text-area-mouse-input-strategy.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
 #include <boost/optional.hpp>
@@ -33,6 +32,9 @@
 
 
 namespace ascension {
+	namespace kernel {
+		class Position;
+	}
 
 	namespace presentation {
 		namespace hyperlink {

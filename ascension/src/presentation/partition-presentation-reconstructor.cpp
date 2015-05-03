@@ -6,6 +6,7 @@
  * @date 2014-11-18 Separated from presentation.cpp
  */
 
+#include <ascension/kernel/region.hpp>
 #include <ascension/presentation/partition-presentation-reconstructor.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-run-style.hpp>
