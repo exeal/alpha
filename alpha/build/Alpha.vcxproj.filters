@@ -542,6 +542,9 @@
     <ClCompile Include="..\..\ascension\src\corelib\string-piece-gtk.cpp">
       <Filter>ascension\Source Files\corelib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\font-render-context.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">

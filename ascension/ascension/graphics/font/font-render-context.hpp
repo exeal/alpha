@@ -1,5 +1,6 @@
 /**
  * @file font-render-context.hpp
+ * Defines @c FontRenderContext and @c FontAndRenderContext classes.
  * @author exeal
  * @date 2010-11-06 created as font.hpp
  * @date 2010-2012 was font.hpp
@@ -33,37 +34,10 @@ namespace ascension {
 			 */
 			class FontRenderContext : private boost::equality_comparable<FontRenderContext> {
 			public:
-				/**
-				 * Constructs a @c FontRenderContext object from an optional @c AffineTransform and two boolean values
-				 * that determine if the newly constructed object has anti-aliasing or fractional metrics.
-				 * @param tx The transform which is used to scale typographical points to pixels in this
-				 *           @c FontRenderContext. If @c boost#none, an identity transform is used.
-				 * @param isAntiAliased Determines if the newly constructed object has anti-aliasing
-				 * @param usesFractionalMetrics Determines if the newly constructed object has fractional metrics
-				 */
-				FontRenderContext(const boost::optional<geometry::AffineTransform> tx, bool isAntiAliased, bool usesFractionalMetrics) :
-						transform_((!tx && geometry::isIdentity(boost::get(tx))) ? new geometry::AffineTransform(boost::get(tx)) : nullptr),
-						antiAliasingRenderingHint_(), fractionalMetricsHint_(usesFractionalMetrics) {
-				}
-				/**
-				 * Constructs a @c FontRenderContext object from an optional @c AffineTransform and two values that
-				 * determine if the newly constructed object has anti-aliasing or fractional metrics.
-				 * @param tx The transform which is used to scale typographical points to pixels in this
-				 *           @c FontRenderContext
-				 * @param aaHint One of the text antialiasing rendering hint values defined in
-				 *               @c RenderingHints#TextAntiAliasing
-				 * @param fmHint
-				 */
+				FontRenderContext(const boost::optional<geometry::AffineTransform> tx, bool isAntiAliased, bool usesFractionalMetrics);
 				FontRenderContext(const boost::optional<geometry::AffineTransform>& tx,
-						RenderingHints::TextAntiAliasing aaHint, const RenderingHints::FractionalMetrics& fmHint) :
-						transform_((!tx && geometry::isIdentity(boost::get(tx))) ? new geometry::AffineTransform(boost::get(tx)) : nullptr),
-						antiAliasingRenderingHint_(aaHint), fractionalMetricsHint_(fmHint) {
-				}
-				/// Copy-constructor.
-				FontRenderContext(const FontRenderContext& other) :
-						transform_((other.transform_.get() != nullptr) ? new geometry::AffineTransform(*other.transform_) : nullptr),
-						antiAliasingRenderingHint_(other.antiAliasingRenderingHint_), fractionalMetricsHint_(other.fractionalMetricsHint_) {
-				}
+					RenderingHints::TextAntiAliasing aaHint, const RenderingHints::FractionalMetrics& fmHint);
+				FontRenderContext(const FontRenderContext& other);
 				/// Returns @c true if @a other has the same transform, antialiasing, and fractional metrics values as
 				/// this.
 				bool operator==(const FontRenderContext& other) const {
@@ -115,14 +89,9 @@ namespace ascension {
 			/// A pair of a font and render context.
 			class FontAndRenderContext : private boost::equality_comparable<FontAndRenderContext> {
 			public:
-				/**
-				 * Constructor initializes the all data members.
-				 * @param font The font
-				 * @param fontRenderContext The font render context
-				 */
-				FontAndRenderContext(std::shared_ptr<const Font> font,
-					const FontRenderContext& fontRenderContext)
-					: font_(font), fontRenderContext_(fontRenderContext) {}
+				FontAndRenderContext(std::shared_ptr<const Font> font, const FontRenderContext& fontRenderContext);
+				FontAndRenderContext(const FontAndRenderContext& other);
+				~FontAndRenderContext() BOOST_NOEXCEPT;
 				/// Equality operator.
 				bool operator==(const FontAndRenderContext& other) const {
 					return font_ == other.font_ && fontRenderContext_ == other.fontRenderContext_;

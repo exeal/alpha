@@ -209,6 +209,7 @@
     <ClCompile Include="..\..\ascension\src\graphics\font\font-family-other.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\font-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\font-pango.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\font\font-render-context.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\line-layout-vector.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\text-layout-uniscribe.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\text-layout.cpp" />
