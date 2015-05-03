@@ -11,7 +11,7 @@
 #define ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
 
 #include <ascension/corelib/text/character-iterator.hpp>	// text.CharacterIterator
-#include <ascension/kernel/position.hpp>
+#include <ascension/kernel/region.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/utility/value_init.hpp>
 

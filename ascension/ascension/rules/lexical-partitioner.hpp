@@ -12,7 +12,7 @@
 #include <ascension/corelib/detail/gap-vector.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/kernel/partition.hpp>
-#include <ascension/kernel/position.hpp>
+#include <ascension/kernel/region.hpp>
 #include <boost/core/noncopyable.hpp>
 #include <boost/range/algorithm/for_each.hpp>
 #include <forward_list>
