@@ -114,7 +114,7 @@ namespace ascension {
 			void setDefaultDirection(ReadingDirection direction);
 			/// @}
 
-			/// @name Computed Toplevel Styles
+			/// @name Computed Styles
 			/// @{
 			const ComputedTextLineStyle& computedTextLineStyle() const BOOST_NOEXCEPT;
 			const ComputedTextRunStyle& computedTextRunStyle() const BOOST_NOEXCEPT;

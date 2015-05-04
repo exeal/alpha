@@ -11,13 +11,13 @@
 
 #ifndef ASCENSION_STYLES_FONTS_HPP
 #define ASCENSION_STYLES_FONTS_HPP
-
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/font/font-description.hpp>
 #include <ascension/graphics/font/font-family.hpp>
 #include <ascension/presentation/absolute-length.hpp>
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/styles/length.hpp>
+#include <ascension/presentation/styles/percentage.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 //#include <map>
 #include <vector>
