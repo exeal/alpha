@@ -10,11 +10,11 @@
 
 #ifndef ASCENSION_STYLES_BOX_HPP
 #define ASCENSION_STYLES_BOX_HPP
-
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/presentation/absolute-length.hpp>
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/styles/length.hpp>
+#include <ascension/presentation/styles/percentage.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/rational.hpp>
 #include <boost/variant.hpp>

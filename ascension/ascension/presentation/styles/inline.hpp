@@ -11,11 +11,11 @@
 
 #ifndef ASCENSION_STYLES_INLINE_HPP
 #define ASCENSION_STYLES_INLINE_HPP
-
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/styles/length.hpp>
+#include <ascension/presentation/styles/percentage.hpp>
 #include <boost/variant.hpp>
 
 namespace ascension {

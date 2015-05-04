@@ -32,7 +32,6 @@
 
 namespace ascension {
 	namespace graphics {
-
 		class RenderingContext2D;
 
 		namespace font {

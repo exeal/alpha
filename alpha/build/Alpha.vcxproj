@@ -462,6 +462,7 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\inline.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\length.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\numeric-data-types.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\percentage.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\text-decor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\text.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\writing-modes.hpp" />

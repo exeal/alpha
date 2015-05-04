@@ -1210,6 +1210,9 @@
     <ClInclude Include="..\..\ascension\ascension\kernel\region.hpp">
       <Filter>ascension\Header Files\kernel</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\styles\percentage.hpp">
+      <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

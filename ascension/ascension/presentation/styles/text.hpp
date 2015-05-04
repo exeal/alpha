@@ -10,13 +10,12 @@
 
 #ifndef ASCENSION_STYLES_TEXT_HPP
 #define ASCENSION_STYLES_TEXT_HPP
-
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/presentation/absolute-length.hpp>
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/styles/length.hpp>
-#include <tuple>
+#include <ascension/presentation/styles/percentage.hpp>
 #include <boost/functional/hash/extensions.hpp>
 #include <boost/functional/hash/hash.hpp>
 #include <boost/operators.hpp>
@@ -24,6 +23,7 @@
 #include <boost/optional.hpp>
 #endif
 #include <boost/variant.hpp>
+#include <tuple>
 
 namespace ascension {
 	namespace presentation {
