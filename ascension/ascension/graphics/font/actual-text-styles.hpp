@@ -177,7 +177,8 @@ namespace ascension {
 			struct ActualTextRunStyleCore {
 				presentation::styles::ComputedValue<presentation::styles::Color>::type color;
 				presentation::styles::ComputedValue<presentation::styles::BackgroundColor>::type backgroundColor;
-				PhysicalFourSides<ActualBorderSide> borders;
+				presentation::FlowRelativeFourSides<ActualBorderSide> borders;	// not PhysicalFourSides<> because of TextRun' interface
+				presentation::FlowRelativeFourSides<Scalar> margins, paddings;	// not PhysicalFourSides<> because of TextRun' interface
 				ActualTextDecoration textDecoration;
 				ActualTextEmphasis textEmphasis;
 //				ActualTextShadow textShadow;
