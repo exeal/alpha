@@ -46,13 +46,13 @@ namespace ascension {
 				 * @param percentage The percentage value
 				 * @return The resolved value
 				 */
-				virtual Value resolvePercentageForHeight(const Percentage& percentage) BOOST_NOEXCEPT = 0;
+				virtual Value resolvePercentageForHeight(const Percentage& percentage) const BOOST_NOEXCEPT = 0;
 				/**
 				 * Converts the given percentage in horizontal coordinate into the value.
 				 * @param percentage The percentage value
 				 * @return The resolved value
 				 */
-				virtual Value resolvePercentageForWidth(const Percentage& percentage) BOOST_NOEXCEPT = 0;
+				virtual Value resolvePercentageForWidth(const Percentage& percentage) const BOOST_NOEXCEPT = 0;
 			};
 		}
 	}
