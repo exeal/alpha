@@ -334,7 +334,20 @@ namespace ascension {
 				return computedValue;
 			}
 
-			struct HandleAsRoot {};
+			/// An empty tag type used to specify that the element is the root.
+			struct HandleAsRoot : private boost::equality_comparable<HandleAsRoot> {
+				/// Equality operator returns always @c true;
+				BOOST_CONSTEXPR bool operator==(const HandleAsRoot&) const BOOST_NOEXCEPT {
+					return true;
+				}
+			};
+
+			/// Returns a hash value of the @c HandleAsRoot value.
+			BOOST_CONSTEXPR inline std::size_t hash_value(const HandleAsRoot&) BOOST_NOEXCEPT {
+				return 42;
+			}
+
+			/// An instance of an empty tag type @c HandleAsRoot.
 			BOOST_STATIC_CONSTEXPR HandleAsRoot HANDLE_AS_ROOT;
 
 			/**
