@@ -69,7 +69,7 @@ namespace ascension {
 		 * Specialization of @c StyledTextRunIterator class template which returns @c ComputedTextRunStyle.
 		 * @see TextLayout#TextLayout
 		 */
-		struct ComputedStyledTextRunIterator : StyledTextRunIterator<boost::flyweight<ComputedTextRunStyle>> {};
+		struct ComputedStyledTextRunIterator : StyledTextRunIterator<const ComputedTextRunStyle&> {};
 	}
 } // namespace ascension.presentation
 
