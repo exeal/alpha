@@ -7,8 +7,6 @@
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <boost/core/null_deleter.hpp>
-#include <boost/flyweight.hpp>
-#include <boost/fusion/sequence/comparison/equal_to.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -105,72 +103,80 @@ namespace ascension {
 		}
 
 		/**
-		 * Computes @c TextLineStyle.
-		 * @param specifiedValues The "Specified Value"s to compute
-		 * @return The "Computed Value"s
+		 * Computes and creates a @c ComputedTextLineStyle.
+		 * @param specifiedValues The "Specified Value"s of @c TextLineStyle
 		 */
-		boost::flyweight<styles::ComputedValue<TextLineStyle>::type> compute(const styles::SpecifiedValue<TextLineStyle>::type& specifiedValues) {
-			styles::ComputedValue<TextLineStyle>::type computedValues;
-			styles::computeAsSpecified<styles::Direction>(specifiedValues, computedValues);
-//			styles::computeAsSpecified<styles::UnicodeBidi>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::TextOrientation>(specifiedValues, computedValues);
+		ComputedTextLineStyle::ComputedTextLineStyle(const SpecifiedTextLineStyle& specifiedValues) {
+			styles::computeAsSpecified<styles::Direction>(specifiedValues, *this);
+//			styles::computeAsSpecified<styles::UnicodeBidi>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::TextOrientation>(specifiedValues, *this);
 
 			computeLineHeight(
 				boost::fusion::at_key<styles::LineHeight>(specifiedValues),
-				boost::fusion::at_key<styles::LineHeight>(computedValues));
-			styles::computeAsSpecified<styles::LineBoxContain>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::DominantBaseline>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::BaselineShift>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::InlineBoxAlignment>(specifiedValues, computedValues);
+				boost::fusion::at_key<styles::LineHeight>(*this));
+			styles::computeAsSpecified<styles::LineBoxContain>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::DominantBaseline>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::BaselineShift>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::InlineBoxAlignment>(specifiedValues, *this);
 
-			styles::computeAsSpecified<styles::WhiteSpace>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::TabSize>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::LineBreak>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::WordBreak>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::OverflowWrap>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::TextAlignment>(specifiedValues, computedValues);	// TODO: Handle 'match-parent' keyword correctly.
-			styles::computeAsSpecified<styles::TextAlignmentLast>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::TextJustification>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::TextIndent>(specifiedValues, computedValues);
-			styles::computeAsSpecified<styles::HangingPunctuation>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::WhiteSpace>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::TabSize>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::LineBreak>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::WordBreak>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::OverflowWrap>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::TextAlignment>(specifiedValues, *this);	// TODO: Handle 'match-parent' keyword correctly.
+			styles::computeAsSpecified<styles::TextAlignmentLast>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::TextJustification>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::TextIndent>(specifiedValues, *this);
+			styles::computeAsSpecified<styles::HangingPunctuation>(specifiedValues, *this);
 
-//			styles::computeAsSpecified<styles::Measure>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::Measure>(specifiedValues, *this);
 
-			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
+			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, *this);
+		}
 
-			return boost::flyweight<styles::ComputedValue<TextLineStyle>::type>(computedValues);
+		namespace {
+			template<template<typename> class Metafunction>
+			inline std::size_t hashTextLineStyle(const typename Metafunction<TextLineStyle>::type& style) {
+				std::size_t seed = 0;
+
+				boost::hash_combine(seed, boost::fusion::at_key<styles::Direction>(style));
+//				boost::hash_combine(seed, boost::fusion::at_key<styles::UnicodeBidi>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::TextOrientation>(style));
+
+				boost::hash_combine(seed, boost::fusion::at_key<styles::LineHeight>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::LineBoxContain>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::DominantBaseline>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::BaselineShift>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::InlineBoxAlignment>(style));
+
+				boost::hash_combine(seed, boost::fusion::at_key<styles::WhiteSpace>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::TabSize>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::LineBreak>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::WordBreak>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::OverflowWrap>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::TextAlignment>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::TextAlignmentLast>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::TextJustification>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::TextIndent>(style));
+				boost::hash_combine(seed, boost::fusion::at_key<styles::HangingPunctuation>(style));
+
+				boost::hash_combine(seed, boost::fusion::at_key<styles::Measure>(style));
+
+				boost::hash_combine(seed, boost::fusion::at_key<styles::NumberSubstitution>(style));
+
+				return seed;
+			}
 		}
 
 		/// @c boost#hash_value for @c ComputedTextLineStyle.
 		std::size_t hash_value(const styles::ComputedValue<TextLineStyle>::type& style) {
-			std::size_t seed = 0;
+			return hashTextLineStyle<styles::ComputedValue>(style);
+		}
 
-			boost::hash_combine(seed, boost::fusion::at_key<styles::Direction>(style));
-//			boost::hash_combine(seed, boost::fusion::at_key<styles::UnicodeBidi>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::TextOrientation>(style));
-
-			boost::hash_combine(seed, boost::fusion::at_key<styles::LineHeight>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::LineBoxContain>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::DominantBaseline>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::BaselineShift>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::InlineBoxAlignment>(style));
-
-			boost::hash_combine(seed, boost::fusion::at_key<styles::WhiteSpace>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::TabSize>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::LineBreak>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::WordBreak>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::OverflowWrap>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::TextAlignment>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::TextAlignmentLast>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::TextJustification>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::TextIndent>(style));
-			boost::hash_combine(seed, boost::fusion::at_key<styles::HangingPunctuation>(style));
-
-			boost::hash_combine(seed, boost::fusion::at_key<styles::Measure>(style));
-
-			boost::hash_combine(seed, boost::fusion::at_key<styles::NumberSubstitution>(style));
-
-			return seed;
+		/// @c boost#hash_value for @c SpecifiedTextLineStyle.
+		std::size_t hash_value(const styles::SpecifiedValue<TextLineStyle>::type& style) {
+			return hashTextLineStyle<styles::SpecifiedValue>(style);
 		}
 
 		/// Default constructor.

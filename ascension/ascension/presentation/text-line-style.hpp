@@ -11,7 +11,6 @@
 
 #ifndef ASCENSION_TEXT_LINE_STYLE_HPP
 #define ASCENSION_TEXT_LINE_STYLE_HPP
-
 #include <ascension/corelib/memory.hpp>
 #include <ascension/presentation/detail/style-sequence.hpp>
 #include <ascension/presentation/styles/auxiliary.hpp>
@@ -19,9 +18,10 @@
 #include <ascension/presentation/styles/inline.hpp>
 #include <ascension/presentation/styles/text.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
-#include <boost/flyweight/flyweight_fwd.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
+#include <boost/fusion/sequence/comparison/equal_to.hpp>
+#include <boost/operators.hpp>
 #include <memory>
 
 namespace ascension {
@@ -89,14 +89,27 @@ namespace ascension {
 #endif
 
 		/// "Specified Value"s of @c TextLineStyle.
-		struct SpecifiedTextLineStyle : presentation::detail::TransformAsMap<
-			TextLineStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
-		>::type {};
+		struct SpecifiedTextLineStyle :
+			presentation::detail::TransformAsMap<
+				TextLineStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+			>::type,
+			private boost::equality_comparable<SpecifiedTextLineStyle> {
+			BOOST_CONSTEXPR bool operator==(const SpecifiedTextLineStyle& other) const {
+				return boost::fusion::equal_to(*this, other);
+			}
+		};
 
 		/// "Computed Value"s of @c TextLineStyle.
-		struct ComputedTextLineStyle : presentation::detail::TransformAsMap<
-			TextLineStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
-		>::type {};
+		struct ComputedTextLineStyle :
+			presentation::detail::TransformAsMap<
+				TextLineStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
+			>::type,
+			private boost::equality_comparable<ComputedTextLineStyle> {
+			explicit ComputedTextLineStyle(const SpecifiedTextLineStyle& specifiedValues);
+			BOOST_CONSTEXPR bool operator==(const ComputedTextLineStyle& other) const {
+				return boost::fusion::equal_to(*this, other);
+			}
+		};
 
 		namespace styles {
 			template<> class DeclaredValue<TextLineStyle> : public boost::mpl::identity<DeclaredTextLineStyle> {};
@@ -104,8 +117,7 @@ namespace ascension {
 			template<> struct ComputedValue<TextLineStyle> : boost::mpl::identity<ComputedTextLineStyle> {};
 		}
 
-		boost::flyweight<styles::ComputedValue<TextLineStyle>::type> compute(
-			const styles::SpecifiedValue<TextLineStyle>::type& specifiedValues);
+		std::size_t hash_value(const styles::SpecifiedValue<TextLineStyle>::type& style);
 		std::size_t hash_value(const styles::ComputedValue<TextLineStyle>::type& style);
 	}
 } // namespace ascension.presentation

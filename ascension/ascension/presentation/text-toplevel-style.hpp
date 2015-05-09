@@ -11,17 +11,13 @@
 
 #ifndef ASCENSION_TEXT_TOP_LEVEL_STYLE_HPP
 #define ASCENSION_TEXT_TOP_LEVEL_STYLE_HPP
-#ifndef FUSION_MAX_VECTOR_SIZE
-#	define FUSION_MAX_VECTOR_SIZE 40
-#endif
-
 #include <ascension/corelib/memory.hpp>
 #include <ascension/presentation/detail/style-sequence.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
-#include <boost/flyweight/flyweight_fwd.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/container/vector.hpp>
 #include <boost/fusion/sequence/comparison/equal_to.hpp>
+#include <boost/operators.hpp>
 #include <memory>
 
 namespace ascension {
@@ -66,14 +62,27 @@ namespace ascension {
 		};
 
 		/// "Specified Value"s of @c TextToplevelStyle.
-		struct SpecifiedTextToplevelStyle : presentation::detail::TransformAsMap<
-			TextToplevelStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
-		>::type {};
+		struct SpecifiedTextToplevelStyle :
+			presentation::detail::TransformAsMap<
+				TextToplevelStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
+			>::type,
+			private boost::equality_comparable<SpecifiedTextToplevelStyle> {
+			BOOST_CONSTEXPR bool operator==(const SpecifiedTextToplevelStyle& other) const {
+				return boost::fusion::equal_to(*this, other);
+			}
+		};
 
 		/// "Computed Value"s of @c TextToplevelStyle.
-		struct ComputedTextToplevelStyle : presentation::detail::TransformAsMap<
-			TextToplevelStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
-		>::type {};
+		struct ComputedTextToplevelStyle :
+			presentation::detail::TransformAsMap<
+				TextToplevelStyle, presentation::detail::KeyValueConverter<styles::ComputedValue>
+			>::type,
+			private boost::equality_comparable<ComputedTextToplevelStyle> {
+			explicit ComputedTextToplevelStyle(const SpecifiedTextToplevelStyle& specifiedValues);
+			BOOST_CONSTEXPR bool operator==(const ComputedTextToplevelStyle& other) const {
+				return boost::fusion::equal_to(*this, other);
+			}
+		};
 
 		namespace styles {
 			template<> class DeclaredValue<TextToplevelStyle> : public boost::mpl::identity<DeclaredTextToplevelStyle> {};
@@ -81,7 +90,7 @@ namespace ascension {
 			template<> struct ComputedValue<TextToplevelStyle> : boost::mpl::identity<ComputedTextToplevelStyle> {};
 		}
 
-		boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type> compute(const styles::SpecifiedValue<TextToplevelStyle>::type& specifiedValues);
+		std::size_t hash_value(const styles::SpecifiedValue<TextToplevelStyle>::type& style);
 		std::size_t hash_value(const styles::ComputedValue<TextToplevelStyle>::type& style);
 	}
 } // namespace ascension.presentation

@@ -7,10 +7,18 @@
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <boost/core/null_deleter.hpp>
-#include <boost/flyweight.hpp>
+#include <boost/functional/hash/hash.hpp>
 
 namespace ascension {
 	namespace presentation {
+		/**
+		 * Computes and creates a @c ComputedTextToplevelStyle.
+		 * @param specifiedValues The "Specified Value"s of @c TextToplevelStyle properties
+		 */
+		ComputedTextToplevelStyle::ComputedTextToplevelStyle(const SpecifiedTextToplevelStyle& specifiedValues) {
+			styles::computeAsSpecified<styles::WritingMode>(specifiedValues, *this);
+		}
+
 		/**
 		 * Default constructor.
 		 * @post @c *#linesStyle() == @c DeclaredTextLineStyle#unsetInstance()
@@ -37,15 +45,21 @@ namespace ascension {
 			return SINGLETON;
 		}
 
-		boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type> compute(const styles::SpecifiedValue<TextToplevelStyle>::type& specifiedValues) {
-			styles::ComputedValue<TextToplevelStyle>::type computedValues;
-			boost::fusion::at_key<styles::WritingMode>(computedValues) = boost::fusion::at_key<styles::WritingMode>(specifiedValues);
-			return boost::flyweight<styles::ComputedValue<TextToplevelStyle>::type>(computedValues);
+		namespace {
+			template<template<typename> class Metafunction>
+			inline std::size_t hashTextToplevelStyle(const typename Metafunction<TextToplevelStyle>::type& style) {
+				return boost::hash_value(boost::fusion::at_key<styles::WritingMode>(style));
+			}
 		}
 
 		/// @c boost#hash_value for @c styles#ComputedValue&lt;TextToplevelStyle&gt;type.
 		std::size_t hash_value(const styles::ComputedValue<TextToplevelStyle>::type& style) {
-			return boost::hash_value(boost::fusion::at_key<styles::WritingMode>(style));
+			return hashTextToplevelStyle<styles::ComputedValue>(style);
+		}
+
+		/// @c boost#hash_value for @c styles#SpecifiedValue&lt;TextToplevelStyle&gt;type.
+		std::size_t hash_value(const styles::SpecifiedValue<TextToplevelStyle>::type& style) {
+			return hashTextToplevelStyle<styles::SpecifiedValue>(style);
 		}
 	}
 }

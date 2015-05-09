@@ -22,8 +22,9 @@
 #include <ascension/presentation/styles/text.hpp>
 #include <ascension/presentation/styles/text-decor.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
-#include <boost/flyweight/flyweight_fwd.hpp>
 #include <boost/fusion/container/vector.hpp>
+#include <boost/fusion/sequence/comparison/equal_to.hpp>
+#include <boost/operators.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -156,9 +157,30 @@ namespace ascension {
 
 		typedef BasicTextRunStyle<boost::mpl::identity> TextRunStyle;
 		/// "Specified Value"s of @c TextRunStyle.
-		struct SpecifiedTextRunStyle : BasicTextRunStyle<styles::SpecifiedValuesOfParts> {};
+		struct SpecifiedTextRunStyle :
+				BasicTextRunStyle<styles::SpecifiedValuesOfParts>, private boost::equality_comparable<SpecifiedTextRunStyle> {
+			BOOST_CONSTEXPR bool operator==(const SpecifiedTextRunStyle& other) const {
+				return static_cast<const BasicTextRunStyle<styles::SpecifiedValuesOfParts>&>(*this) == other;
+			}
+		};
 		/// "Computed Value"s of @c TextRunStyle.
-		struct ComputedTextRunStyle : BasicTextRunStyle<styles::ComputedValuesOfParts> {};
+		struct ComputedTextRunStyle :
+				BasicTextRunStyle<styles::ComputedValuesOfParts>, private boost::equality_comparable<ComputedTextRunStyle> {
+			/// The parameter list for the constructor.
+			typedef std::tuple<
+				const SpecifiedTextRunStyle*, const styles::ComputedValue<styles::Color>::type*
+			> ConstructionParameters;
+			/// The parameter list for the constructor ("as root" variant).
+			typedef std::tuple<
+				const SpecifiedTextRunStyle*, styles::HandleAsRoot
+			> ConstructionParametersAsRoot;
+//			ComputedTextRunStyle();
+			explicit ComputedTextRunStyle(const ConstructionParameters& parameters);
+			explicit ComputedTextRunStyle(const ConstructionParametersAsRoot& parameters);
+			BOOST_CONSTEXPR bool operator==(const ComputedTextRunStyle& other) const {
+				return static_cast<const BasicTextRunStyle<styles::ComputedValuesOfParts>&>(*this) == other;
+			}
+		};
 
 //		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextRunStyle);
 //		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(SpecifiedTextRunStyle);
@@ -183,11 +205,7 @@ namespace ascension {
 			template<> struct ComputedValue<TextRunStyle> : boost::mpl::identity<ComputedTextRunStyle> {};
 		}
 
-		boost::flyweight<styles::ComputedValue<TextRunStyle>::type> compute(
-			const styles::SpecifiedValue<TextRunStyle>::type& specifiedValues,
-			const styles::ComputedValue<styles::Color>::type& parentComputedColor);
-		boost::flyweight<styles::ComputedValue<TextRunStyle>::type> compute(
-			const styles::SpecifiedValue<TextRunStyle>::type& specifiedValues, styles::HandleAsRoot);
+		std::size_t hash_value(const styles::SpecifiedValue<TextRunStyle>::type& style);
 		std::size_t hash_value(const styles::ComputedValue<TextRunStyle>::type& style);
 	}
 } // namespace ascension.presentation

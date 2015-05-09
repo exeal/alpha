@@ -11,7 +11,6 @@
 
 #ifndef ASCENSION_STYLES_WRITING_MODES_HPP
 #define ASCENSION_STYLES_WRITING_MODES_HPP
-
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 
