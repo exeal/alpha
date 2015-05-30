@@ -174,7 +174,7 @@ namespace ascension {
 			typedef std::tuple<
 				const SpecifiedTextRunStyle*, styles::HandleAsRoot
 			> ConstructionParametersAsRoot;
-//			ComputedTextRunStyle();
+			ComputedTextRunStyle();
 			explicit ComputedTextRunStyle(const ConstructionParameters& parameters);
 			explicit ComputedTextRunStyle(const ConstructionParametersAsRoot& parameters);
 			BOOST_CONSTEXPR bool operator==(const ComputedTextRunStyle& other) const {
