@@ -14,13 +14,13 @@
 
 #ifndef ASCENSION_ACTUAL_TEXT_STYLES_HPP
 #define ASCENSION_ACTUAL_TEXT_STYLES_HPP
-
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/presentation/detail/style-sequence.hpp>
 #include <ascension/presentation/styles/background.hpp>
 #include <ascension/presentation/styles/fonts.hpp>
 #include <ascension/presentation/styles/text-decor.hpp>
 #include <boost/fusion/container/map.hpp>
+#include <boost/fusion/sequence/comparison/equal_to.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -174,7 +174,7 @@ namespace ascension {
 					const PhysicalFourSides<ActualBorderSide>& style, const presentation::WritingMode& writingMode);
 			}
 
-			struct ActualTextRunStyleCore {
+			struct ActualTextRunStyleCore : private boost::equality_comparable<ActualTextRunStyleCore> {
 				presentation::styles::ComputedValue<presentation::styles::Color>::type color;
 				presentation::styles::ComputedValue<presentation::styles::BackgroundColor>::type backgroundColor;
 				presentation::FlowRelativeFourSides<ActualBorderSide> borders;	// not PhysicalFourSides<> because of TextRun' interface
@@ -183,9 +183,29 @@ namespace ascension {
 				ActualTextEmphasis textEmphasis;
 //				ActualTextShadow textShadow;
 
-				explicit ActualTextRunStyleCore(const presentation::ComputedTextRunStyle& computed,
-					const presentation::WritingMode& writingMode, const presentation::styles::Length::Context& context);
+				explicit ActualTextRunStyleCore(
+					const presentation::ComputedTextRunStyle& computed, const presentation::styles::Length::Context& context);
+				bool operator==(const ActualTextRunStyleCore& other) const {
+					return color == other.color && backgroundColor == other.backgroundColor
+						&& borders == other.borders && paddings == other.paddings
+						&& textDecoration == other.textDecoration && textEmphasis == other.textEmphasis
+//						&& textShadow == other.textShadow
+						;
+				}
 			};
+
+			/// Specialization of @c boost#hash_value function template for @c ActualTextRunStyleCore.
+			inline std::size_t hash_value(const ActualTextRunStyleCore& object) BOOST_NOEXCEPT {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, object.color);
+				boost::hash_combine(seed, object.backgroundColor);
+				boost::hash_combine(seed, object.borders);
+				boost::hash_combine(seed, object.paddings);
+				boost::hash_combine(seed, object.textDecoration);
+				boost::hash_combine(seed, object.textEmphasis);
+//				boost::hash_combine(seed, object.textShadow);
+				return seed;
+			}
 		}
 	}
 } // namespace ascension.graphics.font
