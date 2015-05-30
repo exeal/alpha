@@ -343,7 +343,7 @@ namespace ascension {
 		/// Specialization of @c boost#hash_value function template for @c FlowRelativeFourSides.
 		template<typename T>
 		inline std::size_t hash_value(const FlowRelativeFourSides<T>& object) BOOST_NOEXCEPT {
-			return boost::hash_range(object);
+			return boost::hash_range(std::begin(object), std::end(object));
 		}
 		/// @}
 	}
