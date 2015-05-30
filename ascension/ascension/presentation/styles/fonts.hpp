@@ -19,10 +19,10 @@
 #include <ascension/presentation/styles/length.hpp>
 #include <ascension/presentation/styles/percentage.hpp>
 #include <ascension/presentation/writing-mode.hpp>
-//#include <map>
-#include <vector>
 #include <boost/optional.hpp>
 #include <boost/variant.hpp>
+//#include <map>
+#include <vector>
 
 namespace ascension {
 	namespace presentation {
@@ -137,8 +137,64 @@ namespace ascension {
 //				>, Inherited
 //			> FontLanguageOverride;
 
+			class GlobalFontSettings : private boost::noncopyable {
+			public:
+				static GlobalFontSettings& instance() BOOST_NOEXCEPT;
+				/// @name Sizes
+				/// @{
+				/**
+				 * Returns the minimum size of fonts in pixels.
+				 * @see #setMinimumSize
+				 */
+				BOOST_CONSTEXPR const Pixels& minimumSize() const BOOST_NOEXCEPT {
+					return minimumSize_;
+				}
+				/**
+				 * Sets the minimum size of fonts.
+				 * @tparam RepresentationType The first template parameter for @a newMinimumSize
+				 * @tparam ScaleType The second template parameter for @a newMinimumSize
+				 * @param newMinimumSize The new minimum size of fonts
+				 * @throw std#invalid_argument @a newMinimumSize is zero or negative
+				 * @see #minimumSize
+				 */
+				template<typename RepresentationType, typename ScaleType>
+				void setMinimumSize(const AbsoluteLength<RepresentationType, ScaleType>& newMinimumSize) {
+					if(newMinimumSize <= AbsoluteLength<RepresentationType, ScaleType>::zero())
+						throw std::invalid_argument("newMinimumSize");
+					minimumSize_ = Pixels(newMinimumSize);
+				}
+				/**
+				 * Sets the medium size of fonts.
+				 * @tparam RepresentationType The first template parameter for @a newSize
+				 * @tparam ScaleType The second template parameter for @a newSize
+				 * @param newSize The new medium size of fonts
+				 * @throw std#invalid_argument @a newSize is zero or negative
+				 * @see #size
+				 */
+				template<typename RepresentationType, typename ScaleType>
+				void setSize(boost::optional<AbsoluteLength<RepresentationType, ScaleType>> newSize) {
+					if(newSize <= AbsoluteLength<RepresentationType, ScaleType>::zero())
+						throw std::invalid_argument("newSize");
+					size_ = Pixels(newSize);
+				}
+				/**
+				 * Returns the medium size of fonts.
+				 * @see #minimumSize
+				 */
+				BOOST_CONSTEXPR const Pixels& size() const BOOST_NOEXCEPT {
+					return size_;
+				}
+				/// @}
+
+			private:
+				GlobalFontSettings();
+				Pixels size_, minimumSize_;
+			};
+
 			Pixels useFontSize(const ComputedValue<FontSize>::type& computedValue,
-				const Length::Context& context, const Pixels& computedParentFontSize, const Pixels& mediumFontSize);
+				const Length::Context& context, HandleAsRoot, boost::optional<Pixels> mediumFontSize = boost::none);
+			Pixels useFontSize(const ComputedValue<FontSize>::type& computedValue,
+				const Length::Context& context, const Pixels& computedParentFontSize, boost::optional<Pixels> mediumFontSize = boost::none);
 			/// @}
 		}
 	}
