@@ -315,39 +315,63 @@ namespace ascension {
 		}
 
 		namespace styles {
-			/**
-			 * Converts the "Computed Value" of @c FontSize into "Used Value".
-			 * @param computedValue The "Computed Value"
-			 * @param computedParentFontSize The "Computed Value" of the parent element
-			 * @param mediumFontSize The pixel size for 'medium' value
-			 * @return The "Used Value" in pixels
-			 */
-			Pixels useFontSize(const ComputedValue<FontSize>::type& computedValue,
-				const Length::Context& context, const Pixels& computedParentFontSize, const Pixels& mediumFontSize) {
+			/// Returns the singleton instance.
+			GlobalFontSettings& GlobalFontSettings::instance() BOOST_NOEXCEPT {
+				static GlobalFontSettings singleton;
+				return singleton;
+			}
+
+			inline Pixels _useFontSize(const ComputedValue<FontSize>::type& computedValue,
+					const Length::Context& context, boost::optional<Pixels> computedParentFontSize, boost::optional<Pixels> mediumFontSize) {
+				const Pixels medium(boost::get_optional_value_or(mediumFontSize, GlobalFontSettings::instance().size()));
 				if(const AbsoluteFontSize* const absoluteFontSize = boost::get<AbsoluteFontSize>(&computedValue)) {
 					// TODO: AbsoluteFontSize should be double constant, not enum?
 					static const std::array<Number, AbsoluteFontSize::XX_LARGE - AbsoluteFontSize::XX_SMALL + 1>
 						ABSOLUTE_SIZE_RATIOS = {3.f / 5.f, 3.f / 4.f, 8.f / 9.f, 1.f, 6.f / 5.f, 3.f / 2.f, 2.f / 1.f};
 					static_assert(AbsoluteFontSize::XX_SMALL == 0, "");
-					if(*absoluteFontSize >= AbsoluteFontSize::XX_SMALL && *absoluteFontSize <= AbsoluteFontSize::XX_LARGE) {
-						return mediumFontSize * ABSOLUTE_SIZE_RATIOS[boost::underlying_cast<std::size_t>(*absoluteFontSize)];
-					}
+					if(*absoluteFontSize >= AbsoluteFontSize::XX_SMALL && *absoluteFontSize <= AbsoluteFontSize::XX_LARGE)
+						return medium * ABSOLUTE_SIZE_RATIOS[boost::underlying_cast<std::size_t>(*absoluteFontSize)];
 				} else if(const RelativeFontSize* const relativeFontSize = boost::get<RelativeFontSize>(&computedValue)) {
 					static const Number RELATIVE_FACTOR = 1.2f;	// TODO: Is this right ?
 					switch(boost::native_value(*relativeFontSize)) {
 						case RelativeFontSize::LARGER:
-							return computedParentFontSize * RELATIVE_FACTOR;
+							return boost::get_optional_value_or(computedParentFontSize, medium) * RELATIVE_FACTOR;
 						case RelativeFontSize::SMALLER:
-							return computedParentFontSize / RELATIVE_FACTOR;
+							return boost::get_optional_value_or(computedParentFontSize, medium) / RELATIVE_FACTOR;
 					}
 				} else if(const Length* const length = boost::get<Length>(&computedValue)) {
 					if(length->valueInSpecifiedUnits() >= 0.0)
 						return Pixels(length->value(context));
 				} else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue)) {
 					if(*percentage >= 0)	// [CSS3-FONTS] does not disallow negative value, but...
-						return computedParentFontSize * boost::rational_cast<Number>(*percentage);
+						return boost::get_optional_value_or(computedParentFontSize, medium) * boost::rational_cast<Number>(*percentage);
 				}
-				return mediumFontSize;
+				return medium;
+			}
+
+			/**
+			 * Converts the "Computed Value" of @c FontSize into "Used Value", as root element.
+			 * @param computedValue The "Computed Value"
+			 * @param mediumFontSize The pixel size for 'medium' value. If this is @c boost#none, @c GlobalFontSettings
+			 *                       is used
+			 * @return The "Used Value" in pixels
+			 */
+			Pixels useFontSize(const ComputedValue<FontSize>::type& computedValue,
+					const Length::Context& context, HandleAsRoot, boost::optional<Pixels> mediumFontSize /* = boost::none */) {
+				return _useFontSize(computedValue, context, boost::none, mediumFontSize);
+			}
+
+			/**
+			 * Converts the "Computed Value" of @c FontSize into "Used Value".
+			 * @param computedValue The "Computed Value"
+			 * @param computedParentFontSize The "Computed Value" of the parent element
+			 * @param mediumFontSize The pixel size for 'medium' value. If this is @c boost#none, @c GlobalFontSettings
+			 *                       is used
+			 * @return The "Used Value" in pixels
+			 */
+			Pixels useFontSize(const ComputedValue<FontSize>::type& computedValue,
+					const Length::Context& context, const Pixels& computedParentFontSize, boost::optional<Pixels> mediumFontSize /* = boost::none */) {
+				return _useFontSize(computedValue, context, boost::make_optional(computedParentFontSize), mediumFontSize);
 			}
 		}
 	}
