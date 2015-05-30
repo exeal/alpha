@@ -218,6 +218,10 @@ namespace ascension {
 			}
 		}
 
+		/// Default constructor initializes the all members with their default constructors.
+		ComputedTextRunStyle::ComputedTextRunStyle() {
+		}
+
 		/**
 		 * Computes and creates a @c ComputedTextRunStyle.
 		 * @param parameters The first element is the "Specified Value"s of @c TextRunStyle properties. The second
