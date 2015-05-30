@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_TEXT_LAYOUT_HPP
 #define ASCENSION_TEXT_LAYOUT_HPP
-
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <ascension/direction.hpp>
@@ -26,7 +25,6 @@
 #include <vector>
 
 namespace ascension {
-
 	namespace presentation {
 		struct ComputedStyledTextRunIterator;
 		struct ComputedTextLineStyle;
@@ -42,6 +40,10 @@ namespace ascension {
 		namespace font {
 			class TextLayout;
 
+			/// @defgroup writing_modes_of_text_layout Writing Modes of @c TextLayout
+			/// @{
+			BOOST_CONSTEXPR bool isLeftToRight(const TextLayout& layout) BOOST_NOEXCEPT;
+			bool isVertical(const TextLayout& layout) BOOST_NOEXCEPT;
 			presentation::WritingMode writingMode(const TextLayout& textLayout) BOOST_NOEXCEPT;
 
 			/**
@@ -449,6 +451,16 @@ namespace ascension {
 			/// Returns the line number of the current line.
 			inline Index TextLayout::LineMetricsIterator::line() const BOOST_NOEXCEPT {
 				return line_;
+			}
+
+			/**
+			 * Returns @c true if the given @c TextLayout has a left-to-right base direction or @c false if it has a
+			 * right-to-left base direction.
+			 * @param layout The @c TextLayout object
+			 * @return @c true if the base direction of @a layout is left-to-right; @c false otherwise
+			 */
+			inline BOOST_CONSTEXPR bool isLeftToRight(const TextLayout& layout) BOOST_NOEXCEPT {
+				return layout.characterLevel() % 2 == 0;
 			}
 		}
 	}
