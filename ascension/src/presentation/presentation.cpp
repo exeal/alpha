@@ -16,8 +16,10 @@
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/flyweight.hpp>
+#include <boost/flyweight/key_value.hpp>
 #include <boost/foreach.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/range/algorithm/find.hpp>
 
 
 namespace ascension {
@@ -44,10 +46,63 @@ namespace ascension {
 
 		// Presentation ///////////////////////////////////////////////////////////////////////////////////////////////
 
+		namespace {
+			template<typename CacheList>
+			inline void bringToFrontInCacheList(CacheList& list, typename CacheList::iterator i) {
+				list.splice(std::begin(list), list, i);
+			}
+
+			template<typename CacheList, typename T>
+			inline void pushToCacheList(CacheList& list, boost::flyweight<T> object, typename CacheList::size_type maximumSize) {
+				const auto found(boost::find(list, object));
+				if(found != boost::const_end(list))
+					return bringToFrontInCacheList(list, found);
+				list.push_front(object);
+				const auto newSize = list.size();
+				if(newSize == maximumSize + 1)
+					list.pop_back();
+				else if(newSize > maximumSize + 1)
+					list.resize(maximumSize);
+			}
+
+			typedef boost::flyweight<
+				boost::flyweights::key_value<
+					styles::SpecifiedValue<TextToplevelStyle>::type,
+					styles::ComputedValue<TextToplevelStyle>::type
+				>
+			> CachedComputedTextToplevelStyle;
+
+			typedef boost::flyweight<
+				boost::flyweights::key_value<
+					styles::SpecifiedValue<TextLineStyle>::type,
+					styles::ComputedValue<TextLineStyle>::type
+				>
+			> CachedComputedTextLineStyle;
+
+			typedef boost::flyweight<
+				boost::flyweights::key_value<
+					ComputedTextRunStyle::ConstructionParameters,
+					styles::ComputedValue<TextRunStyle>::type
+				>
+			> CachedComputedTextRunStyle;
+
+			typedef boost::flyweight<
+				boost::flyweights::key_value<
+					ComputedTextRunStyle::ConstructionParametersAsRoot,
+					styles::ComputedValue<TextRunStyle>::type
+				>
+			> CachedComputedTextRunStyleAsRoot;
+
+			const std::size_t MAXIMUM_COMPUTED_TEXT_RUNS_CACHE_SIZE = 1000;
+			const std::size_t MAXIMUM_COMPUTED_TEXT_LINES_CACHE_SIZE = 100;
+		}
+
 		struct Presentation::ComputedStyles {
-			boost::flyweight<ComputedTextRunStyle> forRuns;
-			boost::flyweight<ComputedTextLineStyle> forLines;
-			boost::flyweight<ComputedTextToplevelStyle> forToplevel;
+			CachedComputedTextRunStyleAsRoot forRuns;
+			CachedComputedTextLineStyle forLines;
+			CachedComputedTextToplevelStyle forToplevel;
+			std::list<CachedComputedTextRunStyle> cacheForRuns;
+			std::list<CachedComputedTextLineStyle> cacheForLines;
 		};
 
 		struct Presentation::Hyperlinks {
@@ -208,7 +263,7 @@ namespace ascension {
 		 * @throw BadPositionException @a line is outside of the document
 		 * @throw NullPointerException Internal @c Length#value call may throw this exception
 		 */
-		void Presentation::computeTextLineStyle(Index line, ComputedTextLineStyle& result) const {
+		const ComputedTextLineStyle& Presentation::computeTextLineStyle(Index line) const {
 			if(line >= document_.numberOfLines())
 				throw kernel::BadPositionException(kernel::Position(line, 0));
 
@@ -216,14 +271,90 @@ namespace ascension {
 			const std::shared_ptr<const DeclaredTextLineStyle> cascaded(*styles::cascade(boost::make_iterator_range_n(&declared, 1)));
 			SpecifiedTextLineStyle specified;
 			specifiedValuesFromCascadedValues(*cascaded, computedTextLineStyle(), specified);
+			const CachedComputedTextLineStyle computed(specified);
+			pushToCacheList(computedStyles_->cacheForLines, computed, MAXIMUM_COMPUTED_TEXT_LINES_CACHE_SIZE);
+			return computedStyles_->cacheForLines.front();
+		}
+
+		namespace {
+			template<typename DataMemberType>
+			inline styles::HandleAsRoot extractTextRunStyle(const styles::HandleAsRoot&, DataMemberType) {
+				return styles::HANDLE_AS_ROOT;
+			}
+
+			template<typename DataMemberType>
+			inline auto extractTextRunStyle(const styles::ComputedValue<TextRunStyle>::type& computed, DataMemberType pointer) -> decltype(computed.*pointer) {
+				return computed.*pointer;
+			}
+
+			inline CachedComputedTextRunStyle convertSpecifiedTextRunStylesToComputed(
+					styles::SpecifiedValue<TextRunStyle>::type& specifiedValues, const styles::ComputedValue<TextRunStyle>::type& parentComputedValues) {
+				return CachedComputedTextRunStyle(std::make_tuple(&specifiedValues, &boost::fusion::at_key<styles::Color>(parentComputedValues.colors)));
+			}
+
+			inline CachedComputedTextRunStyleAsRoot convertSpecifiedTextRunStylesToComputed(
+					styles::SpecifiedValue<TextRunStyle>::type& specifiedValues, const styles::HandleAsRoot&) {
+				return CachedComputedTextRunStyleAsRoot(std::make_tuple(&specifiedValues, styles::HANDLE_AS_ROOT));
+			}
+
+			template<typename ComputedValuesOrHandleAsRoot>
+			inline typename std::conditional<
+				std::is_same<typename std::decay<ComputedValuesOrHandleAsRoot>::type, styles::HandleAsRoot>::value,
+				CachedComputedTextRunStyleAsRoot, CachedComputedTextRunStyle
+			>::type computeTextRunStyle(const styles::DeclaredValue<TextRunStyle>::type& declared, const ComputedValuesOrHandleAsRoot& parentComputed) {
+				// get the "Cascaded Value"s
+				const DeclaredTextRunStyle& cascaded = *styles::cascade(boost::make_iterator_range_n(&declared, 1));
+
+				// ("Cascaded Value"s for the line) + ("Computed Value"s for the toplevel (as parent)) => "Specified Value"s
+				styles::SpecifiedValue<TextRunStyle>::type specified;
+				// TODO: Wow, ugly code...
+				specifiedValuesFromCascadedValues(cascaded.colors,
+					extractTextRunStyle(parentComputed, &ComputedTextRunStyle::colors), specified.colors);
+				specifiedValuesFromCascadedValues(cascaded.backgroundsAndBorders,
+					extractTextRunStyle(parentComputed, &ComputedTextRunStyle::backgroundsAndBorders), specified.backgroundsAndBorders);
+				specifiedValuesFromCascadedValues(cascaded.basicBoxModel,
+					extractTextRunStyle(parentComputed, &ComputedTextRunStyle::basicBoxModel), specified.basicBoxModel);
+				specifiedValuesFromCascadedValues(cascaded.fonts,
+					extractTextRunStyle(parentComputed, &ComputedTextRunStyle::fonts), specified.fonts);
+				specifiedValuesFromCascadedValues(cascaded.inlineLayout,
+					extractTextRunStyle(parentComputed, &ComputedTextRunStyle::inlineLayout), specified.inlineLayout);
+				specifiedValuesFromCascadedValues(cascaded.text,
+					extractTextRunStyle(parentComputed, &ComputedTextRunStyle::text), specified.text);
+				specifiedValuesFromCascadedValues(cascaded.textDecoration,
+					extractTextRunStyle(parentComputed, &ComputedTextRunStyle::textDecoration), specified.textDecoration);
+				specifiedValuesFromCascadedValues(cascaded.writingModes,
+					extractTextRunStyle(parentComputed, &ComputedTextRunStyle::writingModes), specified.writingModes);
+				specifiedValuesFromCascadedValues(cascaded.auxiliary,
+					extractTextRunStyle(parentComputed, &ComputedTextRunStyle::auxiliary), specified.auxiliary);
+
+				// "Specified Value"s => "Computed Value"s
+				return convertSpecifiedTextRunStylesToComputed(specified, parentComputed);
+			}
+		}
+
+		/**
+		 * Computes and returns the text run style of the specified text line.
+		 * @param line The line number
+		 * @return The computed text run style
+		 * @throw BadPositionException @a line is outside of the document
+		 */
+		const ComputedTextRunStyle& Presentation::computeTextRunStyleForLine(Index line) const {
+			if(line >= document_.numberOfLines())
+				throw kernel::BadPositionException(kernel::Position(line, 0));
+
+			const CachedComputedTextRunStyle computed(computeTextRunStyle(*declaredTextLineStyle(line)->runsStyle(), computedTextRunStyle()));
+			pushToCacheList(computedStyles_->cacheForRuns, computed, MAXIMUM_COMPUTED_TEXT_RUNS_CACHE_SIZE);
+			return computedStyles_->cacheForRuns.front().get();
 		}
 
 		namespace {		
 			class ComputedStyledTextRunIteratorImpl : public ComputedStyledTextRunIterator {
 			public:
 				ComputedStyledTextRunIteratorImpl(
-						std::unique_ptr<DeclaredStyledTextRunIterator> declaration, const styles::ComputedValue<TextRunStyle>::type& computedParentStyles)
-						: declaration_(std::move(declaration)), computedParentStyles_(computedParentStyles) {
+						std::unique_ptr<DeclaredStyledTextRunIterator> declaration,
+						const styles::ComputedValue<TextRunStyle>::type& computedParentStyles,
+						std::list<CachedComputedTextRunStyle>& cacheList)
+						: declaration_(std::move(declaration)), computedParentStyles_(computedParentStyles), cacheList_(cacheList) {
 				}
 				// ComputedStyledTextRunIterator
 				bool isDone() const override BOOST_NOEXCEPT {
@@ -235,25 +366,16 @@ namespace ascension {
 				kernel::Position position() const override {
 					return declaration_->position();
 				}
-				boost::flyweight<ComputedTextRunStyle> style() const override {
-					const std::shared_ptr<const DeclaredTextRunStyle> declared(declaration_->style());
-					const std::shared_ptr<const DeclaredTextRunStyle> cascaded(*styles::cascade(boost::make_iterator_range_n(&declared, 1)));
-					styles::SpecifiedValue<TextRunStyle>::type specified;
-					specifiedValuesFromCascadedValues(cascaded->colors, computedParentStyles_.colors, specified.colors);
-					specifiedValuesFromCascadedValues(cascaded->backgroundsAndBorders, computedParentStyles_.backgroundsAndBorders, specified.backgroundsAndBorders);
-					specifiedValuesFromCascadedValues(cascaded->basicBoxModel, computedParentStyles_.basicBoxModel, specified.basicBoxModel);
-					specifiedValuesFromCascadedValues(cascaded->fonts, computedParentStyles_.fonts, specified.fonts);
-					specifiedValuesFromCascadedValues(cascaded->inlineLayout, computedParentStyles_.inlineLayout, specified.inlineLayout);
-					specifiedValuesFromCascadedValues(cascaded->text, computedParentStyles_.text, specified.text);
-					specifiedValuesFromCascadedValues(cascaded->textDecoration, computedParentStyles_.textDecoration, specified.textDecoration);
-					specifiedValuesFromCascadedValues(cascaded->writingModes, computedParentStyles_.writingModes, specified.writingModes);
-					specifiedValuesFromCascadedValues(cascaded->auxiliary, computedParentStyles_.auxiliary, specified.auxiliary);
-					return compute(specified, boost::fusion::at_key<styles::Color>(computedParentStyles_.colors));
+				const ComputedTextRunStyle& style() const override {
+					const CachedComputedTextRunStyle computed(computeTextRunStyle(*declaration_->style(), computedParentStyles_));
+					pushToCacheList(cacheList_, computed, MAXIMUM_COMPUTED_TEXT_RUNS_CACHE_SIZE);
+					return cacheList_.front().get();
 				}
 
 			private:
 				std::unique_ptr<DeclaredStyledTextRunIterator> declaration_;
 				const styles::ComputedValue<TextRunStyle>::type& computedParentStyles_;
+				std::list<CachedComputedTextRunStyle>& cacheList_;
 			};
 		}
 
@@ -269,29 +391,9 @@ namespace ascension {
 				throw kernel::BadPositionException(kernel::Position(line, 0));
 			if(textRunStyleDeclarator_.get() != nullptr) {
 				std::unique_ptr<DeclaredStyledTextRunIterator> declaredRunStyles(textRunStyleDeclarator_->declareTextRunStyle(line));
-				if(declaredRunStyles.get() != nullptr) {
-					// compute parent's styles
-					const std::shared_ptr<const DeclaredTextLineStyle> declaredLineStyles(declaredTextLineStyle(line));
-					const std::shared_ptr<const DeclaredTextRunStyle> declaredParentStyles(declaredLineStyles->runsStyle());
-					assert(declaredParentStyles.get() != nullptr);
-//					styles::cascade(declaredParentStyles);
-					// TODO: Wow, ugly code...
-					styles::SpecifiedValue<TextRunStyle>::type specifiedParentStyles;
-					const styles::ComputedValue<TextRunStyle>::type& computedToplevelStyles = computedTextRunStyle();
-					specifiedValuesFromCascadedValues(declaredParentStyles->colors, computedToplevelStyles.colors, specifiedParentStyles.colors);
-					specifiedValuesFromCascadedValues(declaredParentStyles->backgroundsAndBorders, computedToplevelStyles.backgroundsAndBorders, specifiedParentStyles.backgroundsAndBorders);
-					specifiedValuesFromCascadedValues(declaredParentStyles->basicBoxModel, computedToplevelStyles.basicBoxModel, specifiedParentStyles.basicBoxModel);
-					specifiedValuesFromCascadedValues(declaredParentStyles->fonts, computedToplevelStyles.fonts, specifiedParentStyles.fonts);
-					specifiedValuesFromCascadedValues(declaredParentStyles->inlineLayout, computedToplevelStyles.inlineLayout, specifiedParentStyles.inlineLayout);
-					specifiedValuesFromCascadedValues(declaredParentStyles->text, computedToplevelStyles.text, specifiedParentStyles.text);
-					specifiedValuesFromCascadedValues(declaredParentStyles->textDecoration, computedToplevelStyles.textDecoration, specifiedParentStyles.textDecoration);
-					specifiedValuesFromCascadedValues(declaredParentStyles->writingModes, computedToplevelStyles.writingModes, specifiedParentStyles.writingModes);
-					specifiedValuesFromCascadedValues(declaredParentStyles->auxiliary, computedToplevelStyles.auxiliary, specifiedParentStyles.auxiliary);
-					const boost::flyweight<styles::ComputedValue<TextRunStyle>::type> computedParentStyles(
-						compute(specifiedParentStyles, boost::fusion::at_key<styles::Color>(computedToplevelStyles.colors)));
+				if(declaredRunStyles.get() != nullptr)
 					return std::unique_ptr<ComputedStyledTextRunIterator>(
-						new ComputedStyledTextRunIteratorImpl(std::move(declaredRunStyles), computedParentStyles));
-				}
+						new ComputedStyledTextRunIteratorImpl(std::move(declaredRunStyles), computeTextRunStyleForLine(line), computedStyles_->cacheForRuns));
 			}
 			return std::unique_ptr<ComputedStyledTextRunIterator>();	// TODO: Is this ok?
 		}
@@ -516,7 +618,7 @@ namespace ascension {
 #endif
 			styles::SpecifiedValue<TextToplevelStyle>::type newlySpecifiedToplevelStyles;
 			specifiedValuesFromCascadedValues(newlyCascadedToplevelStyles, styles::HANDLE_AS_ROOT, newlySpecifiedToplevelStyles);
-			boost::flyweight<ComputedTextToplevelStyle> newlyComputedToplevelStyles(compute(newlySpecifiedToplevelStyles));
+			CachedComputedTextToplevelStyle newlyComputedToplevelStyles(newlySpecifiedToplevelStyles);
 
 			// compute TextLineStyle
 #if 0
@@ -526,25 +628,11 @@ namespace ascension {
 #endif
 			styles::SpecifiedValue<TextLineStyle>::type newlySpecifiedLineStyles;
 			specifiedValuesFromCascadedValues(newlyCascadedLineStyles, styles::HANDLE_AS_ROOT, newlySpecifiedLineStyles);
-			boost::flyweight<styles::ComputedValue<TextLineStyle>::type> newlyComputedLineStyles(compute(newlySpecifiedLineStyles));
+			CachedComputedTextLineStyle newlyComputedLineStyles(newlySpecifiedLineStyles);
 
 			// compute TextRunStyle
-#if 0
-			const DeclaredTextRunStyle& newlyCascadedRunStyles = styles::cascade(newlyDeclaredToplevelStyles->linesStyle()->runsStyle());
-#else
-			const DeclaredTextRunStyle& newlyCascadedRunStyles = *newlyDeclaredToplevelStyles->linesStyle()->runsStyle();
-#endif
-			styles::SpecifiedValue<TextRunStyle>::type newlySpecifiedRunStyles;
-			specifiedValuesFromCascadedValues(newlyCascadedRunStyles.colors, styles::HANDLE_AS_ROOT, newlySpecifiedRunStyles.colors);
-			specifiedValuesFromCascadedValues(newlyCascadedRunStyles.backgroundsAndBorders, styles::HANDLE_AS_ROOT, newlySpecifiedRunStyles.backgroundsAndBorders);
-			specifiedValuesFromCascadedValues(newlyCascadedRunStyles.basicBoxModel, styles::HANDLE_AS_ROOT, newlySpecifiedRunStyles.basicBoxModel);
-			specifiedValuesFromCascadedValues(newlyCascadedRunStyles.fonts, styles::HANDLE_AS_ROOT, newlySpecifiedRunStyles.fonts);
-			specifiedValuesFromCascadedValues(newlyCascadedRunStyles.inlineLayout, styles::HANDLE_AS_ROOT, newlySpecifiedRunStyles.inlineLayout);
-			specifiedValuesFromCascadedValues(newlyCascadedRunStyles.text, styles::HANDLE_AS_ROOT, newlySpecifiedRunStyles.text);
-			specifiedValuesFromCascadedValues(newlyCascadedRunStyles.textDecoration, styles::HANDLE_AS_ROOT, newlySpecifiedRunStyles.textDecoration);
-			specifiedValuesFromCascadedValues(newlyCascadedRunStyles.writingModes, styles::HANDLE_AS_ROOT, newlySpecifiedRunStyles.writingModes);
-			specifiedValuesFromCascadedValues(newlyCascadedRunStyles.auxiliary, styles::HANDLE_AS_ROOT, newlySpecifiedRunStyles.auxiliary);
-			boost::flyweight<styles::ComputedValue<TextRunStyle>::type> newlyComputedRunStyles(compute(newlySpecifiedRunStyles, styles::HANDLE_AS_ROOT));
+			CachedComputedTextRunStyleAsRoot newlyComputedRunStyles(
+				computeTextRunStyle(*newlyDeclaredToplevelStyles->linesStyle()->runsStyle(), styles::HANDLE_AS_ROOT));
 
 			// commit
 			std::shared_ptr<const DeclaredTextToplevelStyle> previouslyDeclared(declaredTextToplevelStyle_);
