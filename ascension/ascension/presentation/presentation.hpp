@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_PRESENTATION_HPP
 #define ASCENSION_PRESENTATION_HPP
-
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/corelib/signals.hpp>
 #include <ascension/kernel/document.hpp>
@@ -18,7 +17,6 @@
 #include <boost/range/irange.hpp>
 
 namespace ascension {
-
 	namespace graphics {
 		class Color;
 	}
@@ -127,7 +125,8 @@ namespace ascension {
 
 			/// @name Styles Computation
 			/// @{
-			void computeTextLineStyle(Index line, ComputedTextLineStyle& result) const;
+			const ComputedTextLineStyle& computeTextLineStyle(Index line) const;
+			const ComputedTextRunStyle& computeTextRunStyleForLine(Index line) const;
 			std::unique_ptr<ComputedStyledTextRunIterator> computeTextRunStyles(Index line) const;
 			WritingMode computeWritingMode(boost::optional<Index> line = boost::none) const;
 			/// @}
