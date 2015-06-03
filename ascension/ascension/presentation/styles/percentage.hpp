@@ -32,7 +32,7 @@ namespace ascension {
 				boost::hash_combine(seed, percentage.denominator());
 				return seed;
 			}
-
+#if 0
 			/**
 			 * Converts a percentage into a scalar value.
 			 * @tparam Value The type of the return values
@@ -54,6 +54,7 @@ namespace ascension {
 				 */
 				virtual Value resolvePercentageForWidth(const Percentage& percentage) const BOOST_NOEXCEPT = 0;
 			};
+#endif
 		}
 	}
 }
