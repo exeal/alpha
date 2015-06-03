@@ -111,10 +111,10 @@ namespace ascension {
 				/// @}
 
 			protected:
-				void buildLineLayoutConstructionParameters(
-					Index line, const RenderingContext2D& graphics2D,
-					presentation::ComputedTextLineStyle& lineStyle,
-					std::unique_ptr<presentation::ComputedStyledTextRunIterator>& runStyles) const;
+				std::pair<
+					const presentation::ComputedTextLineStyle&,
+					std::unique_ptr<presentation::ComputedStyledTextRunIterator>
+				> buildLineLayoutConstructionParameters(Index line, const RenderingContext2D& graphics2D) const;
 				const FontCollection& fontCollection() const BOOST_NOEXCEPT;
 
 			private:
