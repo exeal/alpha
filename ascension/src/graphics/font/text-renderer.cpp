@@ -227,20 +227,21 @@ namespace ascension {
 
 			/**
 			 * Builds construction parameters for @c TextLayout object.
-			 * @param[in] line The line number
-			 * @param[in] graphics2D The rendering context to pass to @c presentation#Length#Context object
-			 * @param[out] lineStyle
-			 * @param[out] runStyles
+			 * @param line The line number
+			 * @param graphics2D The rendering context to pass to @c presentation#Length#Context object
+			 * @return The pair of the computed styles
 			 * @see #createLineLayout
 			 */
-			void TextRenderer::buildLineLayoutConstructionParameters(
-					Index line, const RenderingContext2D& graphics2D,
-					presentation::styles::ComputedValue<presentation::TextLineStyle>::type& lineStyle,
-					std::unique_ptr<presentation::ComputedStyledTextRunIterator>& runStyles) const {
+			std::pair<
+				const presentation::ComputedTextLineStyle&,
+				std::unique_ptr<presentation::ComputedStyledTextRunIterator>
+			> TextRenderer::buildLineLayoutConstructionParameters(Index line, const RenderingContext2D& graphics2D) const {
 				const Dimension viewportSize(geometry::size(viewport()->boundsInView()));
-				const presentation::styles::Length::Context lengthContext(&graphics2D, &viewportSize);
-				presentation().computeTextLineStyle(line, lineStyle);
-				runStyles = presentation().computeTextRunStyles(line/*, lengthContext*/);
+				const presentation::styles::Length::Context lengthContext(graphics2D, viewportSize);
+				return std::pair<
+					const presentation::ComputedTextLineStyle&,
+					std::unique_ptr<presentation::ComputedStyledTextRunIterator>
+				>(presentation().computeTextLineStyle(line), presentation().computeTextRunStyles(line/*, lengthContext*/));
 			}
 
 			/// Returns the computed block-flow-direction.
