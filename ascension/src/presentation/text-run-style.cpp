@@ -7,6 +7,14 @@
 #include <ascension/presentation/text-run-style.hpp>
 #include <boost/flyweight.hpp>
 
+namespace boost {
+	template<typename T>
+	inline void hash_combine(std::size_t& seed, const boost::optional<T>& value) {
+		if(value != boost::none)
+			hash_combine(seed, get(value));
+	}
+}
+
 namespace ascension {
 	namespace presentation {
 #ifdef BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
@@ -229,7 +237,9 @@ namespace ascension {
 		 *                   property
 		 */
 		ComputedTextRunStyle::ComputedTextRunStyle(const ConstructionParameters& parameters) {
-			compute(std::get<0>(parameters), std::get<1>(parameters), *this);
+			if(std::get<0>(parameters) == nullptr || std::get<1>(parameters) == nullptr)
+				throw NullPointerException("parameters");
+			compute(*std::get<0>(parameters), *std::get<1>(parameters), *this);
 		}
 
 		/**
@@ -238,10 +248,26 @@ namespace ascension {
 		 *                   element should be @c styles#HANDLE_AS_ROOT
 		 */
 		ComputedTextRunStyle::ComputedTextRunStyle(const ConstructionParametersAsRoot& parameters) {
-			compute(std::get<0>(parameters), boost::get(styles::Color::initialValue()), *this);
+			if(std::get<0>(parameters) == nullptr)
+				throw NullPointerException("parameters");
+			compute(*std::get<0>(parameters), boost::get(styles::Color::initialValue()), *this);
 		}
 
 		namespace {
+			inline void combineHashedTextEmphasisStyle(std::size_t& seed, const styles::ComputedValue<styles::TextEmphasisStyle>::type& style) {
+				if(style != boost::none)
+					boost::hash_combine(seed, boost::get(style));
+			}
+
+			inline void combineHashedTextEmphasisStyle(std::size_t& seed, const styles::SpecifiedValue<styles::TextEmphasisStyle>::type& style) {
+				if(const styles::TextEmphasisStyleEnums* const enums = boost::get<styles::TextEmphasisStyleEnums>(&style))
+					boost::hash_combine(seed, *enums);
+				else if(const CodePoint* const codePoint = boost::get<CodePoint>(&style))
+					boost::hash_combine(seed, *codePoint);
+				else
+					boost::hash_combine(seed, std::make_tuple());
+			}
+
 			template<template<typename> class Metafunction>
 			inline std::size_t hashTextRunStyle(const typename Metafunction<TextRunStyle>::type& style) {
 				std::size_t seed = 0;
@@ -291,10 +317,7 @@ namespace ascension {
 				boost::hash_combine(seed, boost::fusion::at_key<styles::TextDecorationStyle>(style.textDecoration));
 				boost::hash_combine(seed, boost::fusion::at_key<styles::TextDecorationSkip>(style.textDecoration));
 				boost::hash_combine(seed, boost::fusion::at_key<styles::TextUnderlinePosition>(style.textDecoration));
-				if(const auto& textEmphasisStyle = boost::fusion::at_key<styles::TextEmphasisStyle>(style.textDecoration))
-					boost::hash_combine(seed, boost::get(textEmphasisStyle));
-				else
-					boost::hash_combine(seed, std::make_tuple());
+				combineHashedTextEmphasisStyle(seed, boost::fusion::at_key<styles::TextEmphasisStyle>(style.textDecoration));
 				boost::hash_combine(seed, boost::fusion::at_key<styles::TextEmphasisColor>(style.textDecoration));
 				boost::hash_combine(seed, boost::fusion::at_key<styles::TextEmphasisPosition>(style.textDecoration));
 //				boost::hash_combine(seed, boost::fusion::at_key<styles::TextShadow>(style.textDecoration));
