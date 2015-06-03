@@ -163,14 +163,34 @@ namespace ascension {
 					/// The size of the viewport in user units used to resolve viewport-relative values.
 					/// Can be @c null if @c Length#unitType() is not viewport-relative.
 					const graphics::Dimension* viewport;
+					/// Creates @c Context with @c null values.
+					Context() BOOST_NOEXCEPT : graphics2D(nullptr), viewport(nullptr) {}
+					/**
+					 * Creates @c Context with the given rendering context.
+					 * @param graphics2D The initial value of @c #graphics2D member
+					 */
+					explicit Context(const graphics::RenderingContext2D& graphics2D) BOOST_NOEXCEPT
+						: graphics2D(&graphics2D), viewport(nullptr) {}
+					/**
+					 * Creates @c Context with the given viewport dimension.
+					 * @param viewport The initial value of @c #viewport member
+					 */
+					explicit Context(const graphics::Dimension& viewport) BOOST_NOEXCEPT
+						: graphics2D(nullptr), viewport(&viewport) {}
 					/**
 					 * Creates @c Context with the given parameters.
 					 * @param graphics2D The initial value of @c #graphics2D member
 					 * @param viewport The initial value of @c #viewport member
 					 */
-					Context(const graphics::RenderingContext2D* graphics2D,
-						const graphics::Dimension* viewport) BOOST_NOEXCEPT
-						: graphics2D(graphics2D), viewport(viewport) {}
+					Context(const graphics::RenderingContext2D& graphics2D, const graphics::Dimension& viewport) BOOST_NOEXCEPT
+						: graphics2D(&graphics2D), viewport(&viewport) {}
+					/**
+					 * Creates @c Context with the given parameters.
+					 * @param viewport The initial value of @c #viewport member
+					 * @param graphics2D The initial value of @c #graphics2D member
+					 */
+					Context(const graphics::Dimension& viewport, const graphics::RenderingContext2D& graphics2D) BOOST_NOEXCEPT
+						: graphics2D(&graphics2D), viewport(&viewport) {}
 				};
 
 			public:

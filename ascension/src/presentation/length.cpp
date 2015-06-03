@@ -7,6 +7,7 @@
 
 #include <ascension/corelib/basic-exceptions.hpp>	// NullPointerException
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/geometry/algorithm.hpp>
 #include <ascension/presentation/absolute-length.hpp>
