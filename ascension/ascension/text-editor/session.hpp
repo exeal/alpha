@@ -1,12 +1,11 @@
 /**
  * @file session.hpp
  * @author exeal
- * @date 2006-2013
+ * @date 2006-2015
  */
 
 #ifndef ASCENSION_SESSION_HPP
 #define ASCENSION_SESSION_HPP
-
 #include <ascension/config.hpp>				// ASCENSION_NO_MIGEMO
 #include <ascension/corelib/text/character.hpp>
 #include <ascension/text-editor/kill-ring.hpp>
@@ -25,10 +24,6 @@ namespace ascension {
 	namespace searcher {
 		class IncrementalSearcher;
 		class TextSearcher;
-	}
-
-	namespace viewer {
-		class TextViewer;
 	}
 
 	namespace texteditor {
@@ -78,6 +73,9 @@ namespace ascension {
 			boost::filesystem::path migemoDictionaryPathName_, migemoLibraryPathName_;
 #endif // !ASCENSION_NO_MIGEMO
 		};
+
+		bool abortIncrementalSearch(kernel::Document& document) BOOST_NOEXCEPT;
+		bool endIncrementalSearch(kernel::Document& document) BOOST_NOEXCEPT;
 
 
 		/// Returns the input sequence checkers.

@@ -1,7 +1,7 @@
 /**
  * @file session.cpp
  * @author exeal
- * @date 2006-2014
+ * @date 2006-2015
  */
 
 #include <ascension/text-editor/input-sequence-checker.hpp>
@@ -133,6 +133,34 @@ namespace ascension {
 			if(textSearcher_.get() == nullptr)
 				const_cast<Session*>(this)->textSearcher_.reset(new searcher::TextSearcher());
 			return *textSearcher_;
+		}
+
+		/**
+		 * Calls @c IncrementalSearcher#abort from the specified document.
+		 * @param document The document. If this does not have the session, this method does nothing
+		 * @return true if the incremental search was running
+		 * @see endIncrementalSearch, searcher#IncrementalSearcher
+		 */
+		bool abortIncrementalSearch(kernel::Document& document) BOOST_NOEXCEPT {
+			if(Session* const session = document.session()) {
+				if(session->incrementalSearcher().isRunning())
+					return session->incrementalSearcher().abort(), true;
+			}
+			return false;
+		}
+
+		/**
+		 * Calls @c IncrementalSearcher#end from the specified document.
+		 * @param document The document. If this does not have the session, this method does nothing
+		 * @return true if the incremental search was running
+		 * @see abortIncrementalSearch, searcher#IncrementalSearcher
+		 */
+		bool endIncrementalSearch(kernel::Document& document) BOOST_NOEXCEPT {
+			if(Session* const session = document.session()) {
+				if(session->incrementalSearcher().isRunning())
+					return session->incrementalSearcher().end(), true;
+			}
+			return false;
 		}
 	}
 }
