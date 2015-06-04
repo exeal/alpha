@@ -153,18 +153,18 @@ namespace ascension {
 			const Configuration& configuration() const BOOST_NOEXCEPT;
 			kernel::Document& document() BOOST_NOEXCEPT;
 			const kernel::Document& document() const BOOST_NOEXCEPT;
-			presentation::Presentation& presentation() BOOST_NOEXCEPT;
-			const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR presentation::Presentation& presentation() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
 			unsigned long scrollRate(bool horizontal) const BOOST_NOEXCEPT;
 			void setConfiguration(const Configuration& newConfiguration, bool synchronizeUI);
-			TextArea& textArea() BOOST_NOEXCEPT;
-			const TextArea& textArea() const BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR TextArea& textArea() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR const TextArea& textArea() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Caret
 			/// @{
-			Caret& caret() BOOST_NOEXCEPT;
-			const Caret& caret() const BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR Caret& caret() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR const Caret& caret() const BOOST_NOEXCEPT;
 			void hideCaret() BOOST_NOEXCEPT;
 			bool hidesCaret() const BOOST_NOEXCEPT;
 			void setCaretShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
@@ -490,10 +490,10 @@ namespace ascension {
 		inline void TextViewer::beep() BOOST_NOEXCEPT {doBeep();}
 		
 		/// Returns the caret.
-		inline Caret& TextViewer::caret() BOOST_NOEXCEPT {return *caret_;}
+		inline BOOST_CONSTEXPR Caret& TextViewer::caret() BOOST_NOEXCEPT {return *caret_;}
 		
 		/// Returns the caret.
-		inline const Caret& TextViewer::caret() const BOOST_NOEXCEPT {return *caret_;}
+		inline BOOST_CONSTEXPR const Caret& TextViewer::caret() const BOOST_NOEXCEPT {return *caret_;}
 
 		/**
 		 * Returns the general configuration.
@@ -555,12 +555,12 @@ namespace ascension {
 		}
 		
 		/// Returns the presentation object. 
-		inline presentation::Presentation& TextViewer::presentation() BOOST_NOEXCEPT {
+		inline BOOST_CONSTEXPR presentation::Presentation& TextViewer::presentation() BOOST_NOEXCEPT {
 			return presentation_;
 		}
 		
 		/// Returns the presentation object. 
-		inline const presentation::Presentation& TextViewer::presentation() const BOOST_NOEXCEPT {
+		inline BOOST_CONSTEXPR const presentation::Presentation& TextViewer::presentation() const BOOST_NOEXCEPT {
 			return presentation_;
 		}
 		
@@ -571,6 +571,16 @@ namespace ascension {
 		 */
 		inline unsigned long TextViewer::scrollRate(bool horizontal) const BOOST_NOEXCEPT {
 			return 1/*horizontal ? scrollInfo_.horizontal.rate : scrollInfo_.vertical.rate*/;
+		}
+
+		/// Returns the @c TextArea of this text viewer.
+		inline BOOST_CONSTEXPR TextArea& TextViewer::textArea() BOOST_NOEXCEPT {
+			return *textArea_;
+		}
+
+		/// Returns the @c TextArea of this text viewer.
+		inline BOOST_CONSTEXPR const TextArea& TextViewer::textArea() const BOOST_NOEXCEPT {
+			return *textArea_;
 		}
 	}
 } // namespace ascension.viewer
