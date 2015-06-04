@@ -30,9 +30,7 @@ namespace ascension {
 
 		/// Provides the utility stuffs for viewers.
 		namespace utils {
-			bool abortIncrementalSearch(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
 			void closeCompletionProposalsPopup(TextViewer& viewer) BOOST_NOEXCEPT;
-			bool endIncrementalSearch(viewer::TextViewer& viewer) BOOST_NOEXCEPT;
 			const presentation::hyperlink::Hyperlink* getPointedHyperlink(const TextViewer& viewer, const kernel::Position& at);
 			boost::optional<kernel::Region> getPointedIdentifier(const TextViewer& viewer);
 			boost::optional<kernel::Region> getNearestIdentifier(
