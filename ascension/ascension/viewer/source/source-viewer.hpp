@@ -22,15 +22,19 @@ namespace ascension {
 
 			class SourceViewer : public TextViewer, private RulerAllocationWidthSink {
 			public:
+				explicit SourceViewer(presentation::Presentation& presentation);
+				SourceViewer(const SourceViewer& other);
+				// TextViewer
 				virtual const TextViewerComponent* hitTest(const graphics::Point& location) const BOOST_NOEXCEPT override;
 
 				/// @name Ruler
 				/// @{
-				std::shared_ptr<source::Ruler>& ruler() const BOOST_NOEXCEPT;
+				std::unique_ptr<Ruler>& ruler() BOOST_NOEXCEPT;
+				const std::unique_ptr<Ruler>& ruler() const BOOST_NOEXCEPT;
 				graphics::font::TextAlignment rulerAbstractAlignment() const BOOST_NOEXCEPT;
 				graphics::PhysicalDirection rulerPhysicalAlignment() const BOOST_NOEXCEPT;
-				void setRuler(std::unique_ptr<source::Ruler> ruler);
-				void setRuler(std::unique_ptr<source::CompositeRuler> ruler);
+				void setRuler(std::unique_ptr<Ruler> ruler);
+				void setRuler(std::unique_ptr<CompositeRuler> ruler);
 				void setRulerAlignment(graphics::font::TextAlignment alignment);
 				/// @}
 
@@ -55,6 +59,38 @@ namespace ascension {
 				graphics::font::TextAlignment rulerAbstractAlignment_;
 				graphics::PhysicalDirection rulerPhysicalAlignment_;
 			};
+
+			/**
+			 * Returns the ruler.
+			 * @see #setRuler
+			 */
+			inline std::unique_ptr<Ruler>& SourceViewer::ruler() BOOST_NOEXCEPT {
+				return ruler_;
+			}
+
+			/**
+			 * Returns the ruler.
+			 * @see #setRuler
+			 */
+			inline const std::unique_ptr<Ruler>& SourceViewer::ruler() const BOOST_NOEXCEPT {
+				return ruler_;
+			}
+
+			/**
+			 * Returns the ruler's abstract alignment.
+			 * @see #rulerPhysicalAlignment, #setRulerAlignment
+			 */
+			inline graphics::font::TextAlignment SourceViewer::rulerAbstractAlignment() const BOOST_NOEXCEPT {
+				return rulerAbstractAlignment_;
+			}
+
+			/**
+			 * Returns the ruler's physical alignment.
+			 * @see #rulerAbstractAlignment, #setRulerAlignment
+			 */
+			inline graphics::PhysicalDirection SourceViewer::rulerPhysicalAlignment() const BOOST_NOEXCEPT {
+				return rulerPhysicalAlignment_;
+			}
 		}
 	}
 }
