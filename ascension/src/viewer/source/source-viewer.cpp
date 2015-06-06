@@ -19,6 +19,14 @@
 namespace ascension {
 	namespace viewer {
 		namespace source {
+			/**
+			 * Constructor.
+			 * @param presentation The presentation object
+			 */
+			SourceViewer::SourceViewer(presentation::Presentation& presentation) : TextViewer(presentation) {
+				setRulerAlignment(graphics::font::TextAlignment::START);
+			}
+
 			/// @see TextViewer#hitTest
 			const TextViewerComponent* SourceViewer::hitTest(const graphics::Point& location) const BOOST_NOEXCEPT {
 				if(ruler().get() != nullptr) {
