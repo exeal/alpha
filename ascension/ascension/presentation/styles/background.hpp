@@ -114,13 +114,18 @@ namespace ascension {
 
 			/// Defines &lt;line-width&gt; keywords.
 			namespace linewidthkeywords {
-				const Length THIN(0.05f, Length::EM_HEIGHT);
-				const Length MEDIUM(0.10f, Length::EM_HEIGHT);
-				const Length THICK(0.20f, Length::EM_HEIGHT);
+				/// The ‘thin’ value.
+				BOOST_CONSTEXPR_OR_CONST Length THIN(0.05f, Length::EM_HEIGHT);
+				/// The ‘medium’ value.
+				BOOST_CONSTEXPR_OR_CONST Length MEDIUM(0.10f, Length::EM_HEIGHT);
+				/// The ‘thick’ value.
+				BOOST_CONSTEXPR_OR_CONST Length THICK(0.20f, Length::EM_HEIGHT);
 			}
 
 			namespace detail {
-				Length makeMediumBorderWidth();
+				BOOST_CONSTEXPR inline Length makeMediumBorderWidth() {
+					return linewidthkeywords::MEDIUM;
+				}
 			}
 
 			/**
