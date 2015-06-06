@@ -250,6 +250,11 @@ namespace ascension {
 				}
 			}
 
+			/// @see graphics#font#TextViewportListener#viewportBoundsInViewChanged
+			void LineNumberRuler::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
+				invalidate();
+			}
+
 			/// @see graphics#font#TextViewportListener#viewportScrollPositionChanged
 			void LineNumberRuler::viewportScrollPositionChanged(
 					const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
