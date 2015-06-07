@@ -182,7 +182,6 @@ namespace ascension {
 		public:
 			/// Returns the word component to search.
 			Component component() const BOOST_NOEXCEPT {return component_;}
-			void next(std::ptrdiff_t amount) override;
 			void setComponent(Component component);
 		protected:
 			template<typename CharacterIterator>
