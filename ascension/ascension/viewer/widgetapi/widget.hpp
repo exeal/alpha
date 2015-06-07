@@ -30,14 +30,23 @@ namespace ascension {
 
 	namespace viewer {
 		namespace widgetapi {
+			/// @defgroup widgetapi_free_functions Free Functions of WidgetAPI
+			/// @{
 			/**
 			 * Returns the window of the widget.
 			 * @param widget The widget
 			 * @return The window or @c null
 			 */
 			Proxy<Window> window(Proxy<Widget> widget);
+			/**
+			 * Returns the window of the widget.
+			 * @param widget The widget
+			 * @return The window or @c null
+			 */
 			Proxy<const Window> cwindow(Proxy<const Widget> widget);
 
+			/// @defgroup window_geometries Window Geometries
+			/// @{
 			/**
 			 * Returns a bounds of the widget relative to its parent and including/excluding the
 			 * window frame.
@@ -137,8 +146,10 @@ namespace ascension {
 //			 *              any window frame
 //			 */
 //			void setShape(Proxy<Widget> widget, const graphics::Region& shape);
+			/// @}
 
-			// visibilities
+			/// @defgroup visibilities Visibilities
+			/// @{
 			/**
 			 * Closes the widget.
 			 * @param widget
@@ -191,13 +202,15 @@ namespace ascension {
 			 * @see #close, #hide, #isVisible
 			 */
 			void show(Proxy<Widget> widget);
+			/// @}
 
 			enum State {
 				NORMAL, MAXIMIZED, MINIMIZED
 			};
 			enum Style {WIDGET = 0};
 
-			// paints
+			/// @defgroup paints Paint
+			/// @{
 			void forcePaint(Proxy<Widget> widget, const graphics::Rectangle& bounds);
 			void redrawScheduledRegion(Proxy<Widget> widget);
 			void scheduleRedraw(Proxy<Widget> widget, bool eraseBackground);
@@ -205,19 +218,50 @@ namespace ascension {
 			void scrollPixels(Proxy<Window> window, const graphics::geometry::BasicDimension<int>& delta);
 			void scrollPixels(Proxy<Window> window,
 				const graphics::Rectangle& rect, const graphics::geometry::BasicDimension<int>& delta);
+			/// @}
 
-			// rendering context
+			/// @defgroup rendering_context Rendering Context
+			/// @{
+			/**
+			 * Creates and returns a new @c RenderingContext object for the given widget.
+			 * @param widget The widget
+			 * @return The new @c RenderingContext object
+			 */
 			std::unique_ptr<graphics::RenderingContext2D> createRenderingContext(Proxy<const Widget> widget);
+			/// @}
 
-			// focus/input
+			/// @defgroup focus_input Focus and Input
+			/// @{
 			ascension::detail::ScopeGuard grabInput(Proxy<Widget> widget);
 			bool hasFocus(Proxy<const Widget> widget);
 			bool isActive(Proxy<const Widget> widget);
 			void releaseInput(Proxy<Widget> widget);
 			void setFocus(Proxy<Widget> widget);
 			void unsetFocus(Proxy<Widget> widget);
+			/// @}
 
-			// top-level windows
+			class Cursor;
+
+			/// @defgroup window_cursor Window Cursor
+			/// @{
+#if 0
+			/**
+			 * Returns the cursor of the given window.
+			 * @param window The window
+			 * @return The cursor
+			 */
+			Cursor cursor(Proxy<const Window> window);
+#endif
+			/**
+			 * Sets the cursor for the given window.
+			 * @param window The window
+			 * @param cursor The cursor to set
+			 */
+			void setCursor(Proxy<Window> window, const Cursor& cursor);
+			/// @}
+
+			/// @defgroup toplevel_windows Top-level Windows
+			/// @{
 			/**
 			 * Returns @c true if the window is maximized.
 			 * @param window The window
@@ -250,8 +294,10 @@ namespace ascension {
 			 * @see #isMaximized, #isMinimized, #showMaximized, #showMinimized
 			 */
 			void showNormal(Proxy<Window> window);
+			/// @}
 
-			// hierarchy
+			/// @defgroup hierarchy Hierarchy
+			/// @{
 			/**
 			 * Returns the parent of the widget.
 			 * @param widget The widget
@@ -284,8 +330,10 @@ namespace ascension {
 			Proxy<Window> rootWindow(Proxy<Widget> widget);
 			/***/
 			Proxy<const Window> rootWindow(Proxy<const Widget>);
+			/// @}
 
-			// drag and drop
+			/// @defgroup drag_and_drop Drag And Drop
+			/// @{
 			/**
 			 * Enables or disables drop events for the widget.
 			 * @param widget The widget
@@ -300,6 +348,7 @@ namespace ascension {
 			 * @see #acceptDrops
 			 */
 			bool acceptsDrops(Proxy<const Widget> widget);
+			/// @}
 
 			/// Returns the desktop widget.
 			Proxy<Widget> desktop();
@@ -352,6 +401,7 @@ namespace ascension {
 #else
 			ASCENSION_CANT_DETECT_PLATFORM();
 #endif
+			/// @}
 		}
 	}
 

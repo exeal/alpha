@@ -90,7 +90,6 @@ namespace ascension {
 			virtual void handleRightButton(Action action, widgetapi::event::MouseButtonInput& input);
 			virtual void handleX1Button(Action action, widgetapi::event::MouseButtonInput& input);
 			virtual void handleX2Button(Action action, widgetapi::event::MouseButtonInput& input);
-			static void showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor);
 		private:
 			bool endAutoScroll();
 			void continueSelectionExtension(const kernel::Position& to);

@@ -10,6 +10,7 @@
 #	include <ascension/graphics/color.hpp>
 #	include <ascension/graphics/native-conversion.hpp>
 #	include <ascension/graphics/rendering-context.hpp>
+#	include <ascension/viewer/widgetapi/cursor.hpp>
 #	include <boost/core/null_deleter.hpp>
 #	include <gtkmm/button.h>
 #	include <gtkmm/menu.h>
@@ -123,6 +124,10 @@ namespace ascension {
 
 			void setBounds(Proxy<Widget> widget, const graphics::Rectangle& bounds) {
 				widget->set_allocation(graphics::toNative<Gtk::Allocation>(bounds));
+			}
+
+			void setCursor(Proxy<Window> window, const Cursor& cursor) {
+				window->set_cursor(const_cast<widgetapi::Cursor&>(cursor).asNativeObject());
 			}
 
 			void setFocus(Proxy<Widget> widget) {
