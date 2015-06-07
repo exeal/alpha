@@ -98,6 +98,11 @@ namespace ascension {
 			}
 		}
 
+		/// @see kernel#DocumentListener#documentAboutToBeChanged
+		void TextArea::documentAboutToBeChanged(const kernel::Document&) {
+			// does nothing
+		}
+
 		/// @see kernel#DocumentListener#documentChanged
 		void TextArea::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
 			if(viewer_ != nullptr) {
