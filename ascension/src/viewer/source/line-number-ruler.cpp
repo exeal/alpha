@@ -252,6 +252,7 @@ namespace ascension {
 
 			/// @see graphics#font#TextViewportListener#viewportBoundsInViewChanged
 			void LineNumberRuler::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
+				// TODO: This implementation is adhoc.
 				invalidate();
 			}
 
@@ -263,6 +264,13 @@ namespace ascension {
 //					widgetapi::scrollPixels(*sourceViewer);
 					widgetapi::redrawScheduledRegion(*sourceViewer);
 				}
+			}
+
+			/// @see graphics#font#TextViewportListener#viewportScrollPropertiesChanged
+			void LineNumberRuler::viewportScrollPropertiesChanged(
+					const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
+				// TODO: This implementation is adhoc.
+				invalidate();
 			}
 
 			/// @see graphics#font#VisualLinesListener#visualLinesDeleted
