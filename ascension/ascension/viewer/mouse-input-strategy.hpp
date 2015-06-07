@@ -146,7 +146,7 @@ namespace ascension {
 			/// @name
 			/// @{
 			bool showArrowCursor(TextViewer& viewer);
-			bool showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor);
+			static bool showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor);
 			/// @}
 			static const boost::chrono::milliseconds SELECTION_EXPANSION_INTERVAL;	// TODO: Replace with std.chrono.
 			static const boost::chrono::milliseconds DRAGGING_TRACK_INTERVAL;	// TODO: Replace with std.chrono.

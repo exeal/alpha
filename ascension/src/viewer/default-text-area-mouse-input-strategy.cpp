@@ -981,7 +981,7 @@ namespace ascension {
 
 			if(builtinShape != boost::none) {
 				const widgetapi::Cursor cursor(*builtinShape);
-				showCursor(*viewer_, cursor);
+				AbstractMouseInputStrategy::showCursor(*viewer_, cursor);
 				return true;
 			}
 			if(newlyHoveredHyperlink != nullptr) {
@@ -1029,11 +1029,11 @@ namespace ascension {
 						timer.start(interval, *this);
 						const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(
 							(graphics::geometry::dy(scrollOffsets) > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD);
-						showCursor(*viewer_, cursor);
+						AbstractMouseInputStrategy::showCursor(*viewer_, cursor);
 					} else {
 						timer.start(boost::chrono::milliseconds(300), *this);
 						const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL);
-						showCursor(*viewer_, cursor);
+						AbstractMouseInputStrategy::showCursor(*viewer_, cursor);
 					}
 #if 0
 				} else if(self.dnd_.enabled && (self.state_ & DND_MASK) == DND_MASK) {	// scroll automatically during dragging
