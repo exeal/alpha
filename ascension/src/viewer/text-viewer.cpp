@@ -1759,6 +1759,14 @@ namespace ascension {
 #endif
 		}
 
+		/**
+		 * Updates the 'allocation-rectangle' of the @c TextArea.
+		 * The subclass should call this method when changed the layout of the @c TextArea.
+		 */
+		void TextViewer::updateTextAreaAllocationRectangle() {
+			static_cast<TextViewerComponent&>(textArea()).relocated();
+		}
+
 		/// @see TextViewportListener#viewportBoundsInViewChanged
 		void TextViewer::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
 			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
