@@ -7,10 +7,10 @@
 #ifndef ASCENSION_STYLE_SEQUENCE_HPP
 #define ASCENSION_STYLE_SEQUENCE_HPP
 #ifndef FUSION_MAX_MAP_SIZE
-#	define FUSION_MAX_MAP_SIZE 40
+#	define FUSION_MAX_MAP_SIZE 20
 #endif
 #ifndef FUSION_MAX_VECTOR_SIZE
-#	define FUSION_MAX_VECTOR_SIZE 40
+#	define FUSION_MAX_VECTOR_SIZE 20
 #endif
 
 #include <boost/fusion/algorithm/query/find.hpp>
