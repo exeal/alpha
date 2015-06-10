@@ -342,6 +342,11 @@ namespace ascension {
 		}
 
 		namespace styles {
+			/// Private default constructor.
+			GlobalFontSettings::GlobalFontSettings() : size_(12), minimumSize_(9) {
+				// TODO: Initial values are adhoc.
+			}
+
 			/// Returns the singleton instance.
 			GlobalFontSettings& GlobalFontSettings::instance() BOOST_NOEXCEPT {
 				static GlobalFontSettings singleton;
