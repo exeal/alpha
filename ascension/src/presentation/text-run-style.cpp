@@ -48,7 +48,7 @@ namespace ascension {
 				auto& computedColors = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderColor>>(computedValues.backgroundsAndBorders);
 				auto& computedStyles = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderStyle>>(computedValues.backgroundsAndBorders);
 				auto& computedWidths = boost::fusion::at_key<FlowRelativeFourSides<styles::BorderWidth>>(computedValues.backgroundsAndBorders);
-				for(std::size_t i = 0; specifiedColors.size(); ++i) {
+				for(std::size_t i = 0; i < specifiedColors.size(); ++i) {
 					computedColors[i] = boost::get_optional_value_or(specifiedColors[i], foregroundColor);
 					computedStyles[i] = specifiedStyles[i];
 #if 0
