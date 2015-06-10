@@ -30,7 +30,7 @@ namespace ascension {
 		 * A text line style collection.
 		 * @note @c TextLineStyle does not have style properties for text runs, but see @c DeclaredTextLineStyle.
 		 * @see DeclaredTextLineStyle, SpecifiedTextLineStyle, ComputedTextLineStyle
-		 * @see TextRunStyle1, TextRunStyle2, TextToplevelStyle, TextLineStyleDirector
+		 * @see BasicTextRunStyle, TextRunStyleParts, TextToplevelStyle, TextLineStyleDirector
 		 */
 		typedef boost::fusion::vector<
 			// Writing Modes
