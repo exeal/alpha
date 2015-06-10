@@ -66,17 +66,16 @@ namespace ascension {
 			 * These values are used by constructors of @c StyleProperty class template.
 			 * @{
 			 */
-			struct DefaultingKeyword {};
-			struct InitialTag : DefaultingKeyword {};
-			struct InheritTag : DefaultingKeyword {};
-			struct UnsetTag : DefaultingKeyword {};
+			struct InitialTag : std::integral_constant<int, 0> {typedef int isDefaultingKeyword;};
+			struct InheritTag : std::integral_constant<int, 1> {typedef int isDefaultingKeyword;};
+			struct UnsetTag : std::integral_constant<int, 2> {typedef int isDefaultingKeyword;};
 
 			/// Represents 'initial' keyword.
-			BOOST_CONSTEXPR_OR_CONST InitialTag INITIAL;
+			BOOST_STATIC_CONSTEXPR InitialTag INITIAL;
 			/// Represents 'inherit' keyword.
-			BOOST_CONSTEXPR_OR_CONST InheritTag INHERIT;
+			BOOST_STATIC_CONSTEXPR InheritTag INHERIT;
 			/// Represents 'unset' keyword.
-			BOOST_CONSTEXPR_OR_CONST UnsetTag UNSET;
+			BOOST_STATIC_CONSTEXPR UnsetTag UNSET;
 			/// @}
 
 			/// @defgroup style_properties_metafunctions Style Properties Metafunctions
@@ -184,28 +183,21 @@ namespace ascension {
 				static_assert(!std::is_same<typename std::remove_cv<type>::type, boost::mpl::void_>::value, "");
 				typedef typename Property::value_type value_type;	///< The type of the contributed value.
 			public:
-#if 0
-				/**
-				 * Default constructor does the following:
-				 * - If this property is 'inherited', set the inherit flag to @c true.
-				 * - Otherwise, initializes the property value with the initial value.
-				 */
-				DeclaredValue() : value_(initialValue()), defaultingKeyword_(INHERITED ? &INHERIT : nullptr) {}
-#else
 				/// Default constructor sets 'unset' keyword.
-				DeclaredValue() : defaultingKeyword_(&UNSET) {}
-#endif
+				DeclaredValue() : defaultingKeyword_(UnsetTag::value) {}
 				/**
 				 * Constructor initializes the property value with the given value, ignores property's initial value
 				 * and 'inherited' attribute.
 				 */
-				DeclaredValue(const value_type& value) : value_(value), defaultingKeyword_(nullptr) {}
-				/// Constructor sets 'initial' keyword.
-				DeclaredValue(const InitialTag&) : defaultingKeyword_(&INITIAL) {}
-				/// Constructor sets 'inherit' keyword.
-				DeclaredValue(const InheritTag&) : defaultingKeyword_(&INHERIT) {}
-				/// Constructor sets 'unset' keyword.
-				DeclaredValue(const UnsetTag&) : defaultingKeyword_(&UNSET) {}
+				DeclaredValue(const value_type& value) : value_(value) {}
+				/**
+				 * Constructor sets defaulting keyword.
+				 * @tparam DefaultingKeyword The type of @a defaultingKeyword
+				 * @param defaultingKeyword The defaulting keyword to set
+				 */
+				template<typename DefaultingKeyword>
+				DeclaredValue(const DefaultingKeyword&,
+					typename DefaultingKeyword::isDefaultingKeyword* = nullptr) : defaultingKeyword_(DefaultingKeyword::value) {}
 
 				/**
 				 * Copy-assignment operator resets with the given "Specified Value" or "Computed Value".
@@ -248,6 +240,12 @@ namespace ascension {
 						return false;
 					return get() == other.get();
 				}
+#if 1
+				template<typename DefaultingKeyword>
+				typename std::enable_if<std::is_same<typename DefaultingKeyword::isDefaultingKeyword, int>::value, bool>::type operator==(const DefaultingKeyword&) const BOOST_NOEXCEPT {
+					return isDefaultingKeyword() && defaultingKeyword_ == DefaultingKeyword::value;
+				}
+#else
 				/// Equality operator returns @c true if this specifies 'initial' keyword.
 				bool operator==(const InitialTag&) const BOOST_NOEXCEPT {
 					return defaultingKeyword_ == &INITIAL;
@@ -260,6 +258,7 @@ namespace ascension {
 				bool operator==(const UnsetTag&) const BOOST_NOEXCEPT {
 					return defaultingKeyword_ == &UNSET;
 				}
+#endif
 
 				/**
 				 * Returns the contributed value.
@@ -293,12 +292,12 @@ namespace ascension {
 				}
 				/// Returns @c true if this is defaulting keyword.
 				bool isDefaultingKeyword() const BOOST_NOEXCEPT {
-					return defaultingKeyword_ != nullptr;
+					return value_ == boost::none;
 				}
 
 			private:
 				boost::optional<value_type> value_;
-				const DefaultingKeyword* defaultingKeyword_;
+				int defaultingKeyword_;
 			};
 
 			template<typename Property>
