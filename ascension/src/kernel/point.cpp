@@ -46,27 +46,29 @@ namespace ascension {
 		 * @see Position, Document, locations, viewer#VisualPoint, viewer#Caret
 		 */
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 		/**
-		 * Constructor.
-		 * @param document The document to which the point attaches
-		 * @param listener The listener. Can be @c null if not needed
+		 * @typedef ascension::kernel::Point::DestructionSignal
+		 * The signal which gets emitted when the point was destructed.
+		 * @param point A pointer to the destructed point. Don't access the point by this pointer
+		 * @see Point#destructionSignal, MotionSignal
 		 */
-		Point::Point(Document& document, PointListener* listener /* = nullptr */) :
-				document_(&document), position_(), adapting_(true), gravity_(Direction::FORWARD), listener_(listener) {
-			static_cast<detail::PointCollection<Point>&>(document).addNewPoint(*this);
-		}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
+
+		/**
+		 * @typedef ascension::kernel::Point::MotionSignal
+		 * The signal which gets emitted when the point was moved.
+		 * @param self The point
+		 * @param oldPosition The position from which the point moved
+		 * @see Point#motionSignal, DestructionSignal
+		 */
 
 		/**
 		 * Constructor.
 		 * @param document The document to which the point attaches
 		 * @param position The initial position of the point
-		 * @param listener The listener. Can be @c null if not needed
 		 * @throw BadPositionException @a position is outside of the document
 		 */
-		Point::Point(Document& document, const Position& position, PointListener* listener /* = nullptr */) :
-				document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD), listener_(listener) {
+		Point::Point(Document& document, const Position& position) :
+				document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD) {
 			if(!document.region().includes(position))
 				throw BadPositionException(position);
 			static_cast<detail::PointCollection<Point>&>(document).addNewPoint(*this);
@@ -78,7 +80,7 @@ namespace ascension {
 		 * @throw DocumentDisposedException The document to which @a other belongs had been disposed
 		 */
 		Point::Point(const Point& other) : document_(other.document_), position_(other.position_),
-				adapting_(other.adapting_), gravity_(other.gravity_), listener_(other.listener_) {
+				adapting_(other.adapting_), gravity_(other.gravity_) {
 			if(document_ == nullptr)
 				throw DocumentDisposedException();
 			static_cast<detail::PointCollection<Point>*>(document_)->addNewPoint(*this);
@@ -86,18 +88,9 @@ namespace ascension {
 
 		/// Destructor.
 		Point::~Point() BOOST_NOEXCEPT {
-			lifeCycleListeners_.notify(&PointLifeCycleListener::pointDestroyed);
+			destructionSignal_(this);
 			if(document_ != nullptr)
 				static_cast<detail::PointCollection<Point>*>(document_)->removePoint(*this);
-		}
-
-		/**
-		 * Registers the lifecycle listener.
-		 * @param listener The listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		void Point::addLifeCycleListener(PointLifeCycleListener& listener) {
-			lifeCycleListeners_.add(listener);
 		}
 
 		/**
@@ -116,6 +109,16 @@ namespace ascension {
 		 * @see #moved, #moveTo, #moveToNowhere
 		 */
 		void Point::aboutToMove(Position& to) {
+		}
+
+		/// Returns the @c DestructionSignal signal connector.
+		SignalConnector<Point::DestructionSignal> Point::destructionSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(destructionSignal_);
+		}
+
+		/// Returns the @c MotionSignal signal connector.
+		SignalConnector<Point::MotionSignal> Point::motionSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(motionSignal_);
 		}
 
 		/**
@@ -151,23 +154,14 @@ namespace ascension {
 			const Position from(position());
 			position_ = destination;
 			moved(from);
-			if(listener_ != nullptr && destination != from)
-				listener_->pointMoved(*this, from);
+			if(destination != from)
+				motionSignal_(*this, from);
 			return *this;
 		}
 
 		/// Returns the normalized position of the point.
 		Position Point::normalized() const {
 			return positions::shrinkToDocumentRegion(document(), position());
-		}
-
-		/**
-		 * Removes the lifecycle listener
-		 * @param listener The listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		void Point::removeLifeCycleListener(PointLifeCycleListener& listener) {
-			lifeCycleListeners_.remove(listener);
 		}
 
 		/**

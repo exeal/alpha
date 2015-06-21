@@ -63,8 +63,7 @@ namespace ascension {
 
 		// documentation is caret.cpp
 		class Caret : public VisualPoint, public detail::InputEventHandler,
-			public kernel::PointListener, public kernel::DocumentListener,
-			public graphics::font::TextViewportListener {
+			public kernel::DocumentListener, public graphics::font::TextViewportListener {
 		public:
 			/// Mode of tracking match brackets.
 			enum MatchBracketsTrackingMode {
@@ -170,8 +169,8 @@ namespace ascension {
 			void update(const kernel::DocumentChange& change);
 			void updateVisualAttributes();
 			// VisualPoint
-			void aboutToMove(kernel::Position& to);
-			void moved(const kernel::Position& from) BOOST_NOEXCEPT;
+			void aboutToMove(kernel::Position& to) override;
+			void moved(const kernel::Position& from) override BOOST_NOEXCEPT;
 			// detail.InputEventHandler
 			void abortInput() override;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -180,8 +179,8 @@ namespace ascension {
 			void onImeComposition(WPARAM wp, LPARAM lp, bool& consumed);
 			LRESULT onImeRequest(WPARAM command, LPARAM lp, bool& consumed);
 #endif
-			// kernel.PointListener
-			void pointMoved(const kernel::Point& self, const kernel::Position& oldPosition) override;
+			// kernel.Point.MotionSignal
+			void pointMoved(const kernel::Point& self, const kernel::Position& oldPosition);
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
@@ -218,6 +217,7 @@ namespace ascension {
 			MatchBracketsChangedSignal matchBracketsChangedSignal_;
 			MotionSignal motionSignal_;
 			SelectionShapeChangedSignal selectionShapeChangedSignal_;
+			boost::signals2::connection anchorMotionSignalConnection_;
 			bool overtypeMode_;
 			bool autoShow_;		// true if show itself when movements
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;

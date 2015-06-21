@@ -108,29 +108,14 @@ namespace ascension {
 
 		// VisualPoint ////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-		/**
-		 * Constructor.
-		 * @param viewer The viewer
-		 * @param listener The listener. can be @c null
-		 * @throw BadPositionException @a position is outside of the document
-		 */
-		VisualPoint::VisualPoint(TextViewer& viewer, PointListener* listener /* = nullptr */) :
-				Point(viewer.document(), listener), viewer_(&viewer), crossingLines_(false) {
-			static_cast<detail::PointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
-			viewer_->textRenderer().layouts().addVisualLinesListener(*this);
-		}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
 		/**
 		 * Constructor.
 		 * @param viewer The viewer
 		 * @param position The initial position of the point
-		 * @param listener The listener. can be @c null
 		 * @throw BadPositionException @a position is outside of the document
 		 */
-		VisualPoint::VisualPoint(TextViewer& viewer, const kernel::Position& position, kernel::PointListener* listener /* = nullptr */) :
-				Point(viewer.document(), position, listener), viewerProxy_(viewer.referByPoint()), crossingLines_(false) {
+		VisualPoint::VisualPoint(TextViewer& viewer, const kernel::Position& position) :
+				Point(viewer.document(), position), viewerProxy_(viewer.referByPoint()), crossingLines_(false) {
 			textViewer().textArea().textRenderer().layouts().addVisualLinesListener(*this);
 		}
 

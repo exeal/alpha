@@ -1,12 +1,12 @@
 /**
  * @file point.hpp
  * @author exeal
- * @date 2003-2014
+ * @date 2003-2015
  */
 
 #ifndef ASCENSION_POINT_HPP
 #define ASCENSION_POINT_HPP
-#include <ascension/corelib/detail/listeners.hpp>
+#include <ascension/corelib/signals.hpp>
 #include <ascension/direction.hpp>
 #include <ascension/kernel/partition.hpp>
 #include <ascension/kernel/position.hpp>
@@ -24,47 +24,13 @@ namespace ascension {
 			DocumentDisposedException();
 		};
 
-		class Point;
-
-		/**
-		 * A listener for @c Point.
-		 * @see PointLifeCycleListener, viewer#CaretListener, Point#Point
-		 */
-		class PointListener {
-		private:
-			/**
-			 * The point was moved.
-			 * @param self The point
-			 * @param oldPosition The position from which the point moved
-			 */
-			virtual void pointMoved(const Point& self, const Position& oldPosition) = 0;
-			friend class Point;
-		};
-
-		/**
-		 * Interface for objects which are interested in lifecycle of the point.
-		 * @see Point#addLifeCycleListener, Point#removeLifeCycleListener, PointListener
-		 */
-		class PointLifeCycleListener {
-		protected:
-			/// Destructor.
-			virtual ~PointLifeCycleListener() BOOST_NOEXCEPT {}
-		private:
-			/// The point was destroyed. After this, don't call @c Point#addLifeCycleListener.
-			virtual void pointDestroyed() = 0;
-			friend class Point;
-		};
-
 		class Document;
 
 		// documentation is point.cpp
 		class Point : private boost::totally_ordered<Point> {
 		public:
 			// constructors
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			explicit Point(Document& document, PointListener* listener = nullptr);
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-			Point(Document& document, const Position& position, PointListener* listener = nullptr);
+			Point(Document& document, const Position& position);
 			Point(const Point& other);
 			virtual ~Point() BOOST_NOEXCEPT;
 			operator Position() const BOOST_NOEXCEPT;
@@ -86,10 +52,12 @@ namespace ascension {
 			Point& setGravity(Direction gravity) BOOST_NOEXCEPT;
 			/// @}
 
-			/// @name Listeners
+			/// @name Signals
 			/// @{
-			void addLifeCycleListener(PointLifeCycleListener& listener);
-			void removeLifeCycleListener(PointLifeCycleListener& listener);
+			typedef boost::signals2::signal<void(const Point*)> DestructionSignal;
+			SignalConnector<DestructionSignal> destructionSignal() BOOST_NOEXCEPT;
+			typedef boost::signals2::signal<void(const Point&, const Position&)> MotionSignal;
+			SignalConnector<MotionSignal> motionSignal() BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Operations
@@ -109,8 +77,8 @@ namespace ascension {
 			Position position_;
 			bool adapting_;
 			Direction gravity_;
-			PointListener* listener_;
-			ascension::detail::Listeners<PointLifeCycleListener> lifeCycleListeners_;
+			DestructionSignal destructionSignal_;
+			MotionSignal motionSignal_;
 			friend class Document;
 		};
 
