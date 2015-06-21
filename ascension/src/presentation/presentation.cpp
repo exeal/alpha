@@ -103,7 +103,16 @@ namespace ascension {
 			CachedComputedTextToplevelStyle forToplevel;
 			std::list<CachedComputedTextRunStyle> cacheForRuns;
 			std::list<CachedComputedTextLineStyle> cacheForLines;
+
+			ComputedStyles() :
+				forRuns(ComputedTextRunStyle::ConstructionParametersAsRoot(&INITIAL_SPECIFIED_TEXT_RUN_STYLE_, styles::HANDLE_AS_ROOT)),
+				forLines(styles::SpecifiedValue<TextLineStyle>::type()),
+				forToplevel(styles::SpecifiedValue<TextToplevelStyle>::type()) {}
+
+		private:
+			static const SpecifiedTextRunStyle INITIAL_SPECIFIED_TEXT_RUN_STYLE_;
 		};
+		const SpecifiedTextRunStyle Presentation::ComputedStyles::INITIAL_SPECIFIED_TEXT_RUN_STYLE_;
 
 		struct Presentation::Hyperlinks {
 			Index lineNumber;
@@ -139,7 +148,8 @@ namespace ascension {
 		 * Constructor.
 		 * @param document The target document
 		 */
-		Presentation::Presentation(kernel::Document& document) BOOST_NOEXCEPT : document_(document), defaultDirection_(ASCENSION_DEFAULT_TEXT_READING_DIRECTION) {
+		Presentation::Presentation(kernel::Document& document) BOOST_NOEXCEPT : document_(document),
+				defaultDirection_(ASCENSION_DEFAULT_TEXT_READING_DIRECTION), computedStyles_(new ComputedStyles) {
 			setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle>());
 			document_.addListener(*this);
 		}
