@@ -214,8 +214,7 @@ namespace boost {
 					return *boost::const_begin(ascension::graphics::geometry::crange<dimension>(box));
 				}
 				static void set(ascension::graphics::geometry::BasicRectangle<Coordinate>& box, const CoordinateType& value) {
-//					*boost::begin(ascension::graphics::geometry::range<dimension>(box)) = value;
-					ascension::graphics::geometry::range<dimension>(box).front() = value;
+					*boost::begin(ascension::graphics::geometry::range<dimension>(box)) = value;
 				}
 			};
 
