@@ -46,8 +46,8 @@ namespace ascension {
 				: caret_(&caret), foreground_(foreground), background_(background) {
 			std::shared_ptr<presentation::TextLineColorSpecifier> temp(this);
 			caret.textViewer().presentation().addTextLineColorSpecifier(temp);
+			caretDestructionConnection_ = caret.destructionSignal().connect(std::bind(&CurrentLineHighlighter::caretDestructed, this));
 			caretMotionConnection_ = caret.motionSignal().connect(std::bind(&CurrentLineHighlighter::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
-			caret.addLifeCycleListener(*this);
 		}
 
 		/// Destructor.
@@ -61,6 +61,13 @@ namespace ascension {
 		/// Returns the background color.
 		const boost::optional<graphics::Color>& CurrentLineHighlighter::background() const BOOST_NOEXCEPT {
 			return background_;
+		}
+
+		/// @see Point#DestructionSignal
+		void CurrentLineHighlighter::caretDestructed() {
+//			caret_->removeListener(*this);
+//			caret_->removeStateListener(*this);
+			caret_ = nullptr;
 		}
 
 		/// @see CaretListener#caretMoved
@@ -78,13 +85,6 @@ namespace ascension {
 		/// Returns the foreground color.
 		const boost::optional<graphics::Color>& CurrentLineHighlighter::foreground() const BOOST_NOEXCEPT {
 			return foreground_;
-		}
-
-		/// @see PointLifeCycleListener#pointDestroyed
-		void CurrentLineHighlighter::pointDestroyed() {
-//			caret_->removeListener(*this);
-//			caret_->removeStateListener(*this);
-			caret_ = nullptr;
 		}
 
 		/// @see TextLineColorSpecifier#specifyTextLineColors

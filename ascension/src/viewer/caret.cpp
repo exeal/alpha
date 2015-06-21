@@ -124,14 +124,16 @@ namespace ascension {
 		 * @param position The initial position of the point
 		 * @throw BadPositionException @a position is outside of the document
 		 */
-		Caret::Caret(TextViewer& viewer, const kernel::Position& position /* = kernel::Position::zero() */) BOOST_NOEXCEPT : VisualPoint(viewer, position, nullptr),
-				anchor_(new SelectionAnchor(viewer, position)),
+		Caret::Caret(TextViewer& viewer, const kernel::Position& position /* = kernel::Position::zero() */) BOOST_NOEXCEPT :
+				VisualPoint(viewer, position), anchor_(new SelectionAnchor(viewer, position)),
 #ifdef BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
 				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
 			document().addListener(*this);
 			textViewer().textArea().textRenderer().viewport()->addListener(*this);
+			anchorMotionSignalConnection_ = anchor_->motionSignal().connect(
+				std::bind(&Caret::pointMoved, this, std::placeholders::_1, std::placeholders::_2));
 		}
 
 		/// Destructor.
@@ -140,6 +142,7 @@ namespace ascension {
 				document().removeListener(*this);
 			if(!isTextViewerDisposed())
 				textViewer().textArea().textRenderer().viewport()->removeListener(*this);
+			anchorMotionSignalConnection_.disconnect();
 		}
 
 		/// @see VisualPoint#aboutToMove
@@ -488,7 +491,7 @@ namespace ascension {
 				updateVisualAttributes();
 		}
 
-		/// @see PointListener#pointMoved
+		/// @see Point#MotionSignal
 		void Caret::pointMoved(const Point& self, const kernel::Position& oldPosition) {
 			assert(&self == &*anchor_);
 			context_.yanking = false;

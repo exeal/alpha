@@ -98,14 +98,11 @@ namespace ascension {
 	namespace viewer {
 		/**
 		 * Extension of @c kernel#Point class for viewer and layout.
-		 * @see kernel#Point, kernel#PointListener, kernel#DisposedViewException
+		 * @see kernel#Point, kernel#DisposedViewException
 		 */
 		class VisualPoint : public kernel::Point, public graphics::font::VisualLinesListener {
 		public:
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			explicit VisualPoint(TextViewer& viewer, kernel::PointListener* listener = nullptr);
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-			VisualPoint(TextViewer& viewer, const kernel::Position& position, kernel::PointListener* listener = nullptr);
+			VisualPoint(TextViewer& viewer, const kernel::Position& position);
 			VisualPoint(const VisualPoint& other);
 			virtual ~VisualPoint() BOOST_NOEXCEPT;
 			/// @name Attributes
@@ -130,15 +127,16 @@ namespace ascension {
 
 		protected:
 			// kernel.Point
-			virtual void aboutToMove(kernel::Position& to);
-			virtual void moved(const kernel::Position& from) BOOST_NOEXCEPT;
+			virtual void aboutToMove(kernel::Position& to) override;
+			virtual void moved(const kernel::Position& from) override BOOST_NOEXCEPT;
 		private:
 			void rememberPositionInVisualLine();
 			// layout.VisualLinesListener
-			void visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT;
-			void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT;
+			void visualLinesDeleted(const boost::integer_range<Index>& lines,
+				Index sublines, bool longestLineChanged) override BOOST_NOEXCEPT;
+			void visualLinesInserted(const boost::integer_range<Index>& lines) override BOOST_NOEXCEPT;
 			void visualLinesModified(const boost::integer_range<Index>& lines,
-				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT;
+				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) override BOOST_NOEXCEPT;
 
 		private:
 			std::shared_ptr<const detail::WeakReferenceForPoints<TextViewer>::Proxy> viewerProxy_;

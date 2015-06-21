@@ -19,8 +19,7 @@ namespace ascension {
 		class Caret;
 
 		/// Highlights the line on which the caret is put.
-		class CurrentLineHighlighter : public presentation::TextLineColorSpecifier,
-			public kernel::PointLifeCycleListener, private boost::noncopyable {
+		class CurrentLineHighlighter : public presentation::TextLineColorSpecifier, private boost::noncopyable {
 		public:
 			// constant
 			static const presentation::TextLineColorSpecifier::Priority LINE_COLOR_PRIORITY;
@@ -41,12 +40,12 @@ namespace ascension {
 				boost::optional<graphics::Color>& background) const;
 			// Caret.MotionSignal
 			void caretMoved(const Caret& self, const kernel::Region& oldRegion);
-			// kernel.PointLifeCycleListener
-			void pointDestroyed();
+			// kernel.Point.DestructionSignal
+			void caretDestructed();
 		private:
 			Caret* caret_;
 			boost::optional<graphics::Color> foreground_, background_;
-			boost::signals2::scoped_connection caretMotionConnection_;
+			boost::signals2::scoped_connection caretDestructionConnection_, caretMotionConnection_;
 		};
 	}
 }
