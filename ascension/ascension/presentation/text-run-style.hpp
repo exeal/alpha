@@ -171,15 +171,25 @@ namespace ascension {
 				const SpecifiedTextRunStyle*, const styles::ComputedValue<styles::Color>::type*
 			> ConstructionParameters;
 			/// The parameter list for the constructor ("as root" variant).
-			typedef std::tuple<
-				const SpecifiedTextRunStyle*, styles::HandleAsRoot
-			> ConstructionParametersAsRoot;
+#if 0
+			struct ConstructionParametersAsRoot : std::tuple<const SpecifiedTextRunStyle*, styles::HandleAsRoot> {
+				ConstructionParametersAsRoot();
+				ConstructionParametersAsRoot(const SpecifiedTextRunStyle* specifiedValue);
+				ConstructionParametersAsRoot(const SpecifiedTextRunStyle* specifiedValue, styles::HandleAsRoot);
+			};
+#else
+			typedef std::tuple<const SpecifiedTextRunStyle*, styles::HandleAsRoot> ConstructionParametersAsRoot;
+#endif
 			ComputedTextRunStyle();
 			explicit ComputedTextRunStyle(const ConstructionParameters& parameters);
 			explicit ComputedTextRunStyle(const ConstructionParametersAsRoot& parameters);
 			BOOST_CONSTEXPR bool operator==(const ComputedTextRunStyle& other) const {
 				return static_cast<const BasicTextRunStyle<styles::ComputedValuesOfParts>&>(*this) == other;
 			}
+#if 0
+		private:
+			static const SpecifiedTextRunStyle specifiedInstance_;
+#endif
 		};
 
 //		ASCENSION_ASSERT_STYLE_SEQUECE_UNIQUE(TextRunStyle);
