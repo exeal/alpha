@@ -225,7 +225,9 @@ namespace ascension {
 				styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues.auxiliary, computedValues.auxiliary);
 			}
 		}
-
+#if 0
+		const SpecifiedTextRunStyle ComputedTextRunStyle::specifiedInstance_;
+#endif
 		/// Default constructor initializes the all members with their default constructors.
 		ComputedTextRunStyle::ComputedTextRunStyle() {
 		}
@@ -252,7 +254,15 @@ namespace ascension {
 				throw NullPointerException("parameters");
 			compute(*std::get<0>(parameters), boost::get(styles::Color::initialValue()), *this);
 		}
-
+#if 0		
+		ComputedTextRunStyle::ConstructionParametersAsRoot::ConstructionParametersAsRoot()
+				: std::tuple<const SpecifiedTextRunStyle*, styles::HandleAsRoot>(&specifiedInstance_, styles::HANDLE_AS_ROOT) {
+		}
+		
+		ComputedTextRunStyle::ConstructionParametersAsRoot::ConstructionParametersAsRoot(const SpecifiedTextRunStyle* specifiedValue, styles::HandleAsRoot)
+				: std::tuple<const SpecifiedTextRunStyle*, styles::HandleAsRoot>(specifiedValue, styles::HANDLE_AS_ROOT) {
+		}
+#endif
 		namespace {
 			inline void combineHashedTextEmphasisStyle(std::size_t& seed, const styles::ComputedValue<styles::TextEmphasisStyle>::type& style) {
 				if(style != boost::none)

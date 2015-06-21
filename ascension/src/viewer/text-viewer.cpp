@@ -808,6 +808,7 @@ namespace ascension {
 
 		/// @internal
 		void TextViewer::initializeGraphics() {
+			textArea_.reset(new TextArea());
 			caret_.reset(new Caret(*this));
 			initializeNativeObjects();
 		}
