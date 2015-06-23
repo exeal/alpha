@@ -60,8 +60,8 @@ namespace ascension {
 				presentation::FlowRelativeTwoAxes<boost::optional<graphics::font::TextViewportScrollOffset>> to;	// scroll destination
 
 				// scroll if the point is outside of 'before-edge' or 'after-edge'
-				to.bpd() = std::min(p.visualLine(), viewport->scrollPositions().bpd());
-				to.bpd() = std::max(p.visualLine() - static_cast<graphics::font::TextViewportScrollOffset>(visibleLines) + 1, *to.bpd());
+				to.bpd() = std::min(p.visualLine().line, viewport->scrollPositions().bpd());
+				to.bpd() = std::max(p.visualLine().line - static_cast<graphics::font::TextViewportScrollOffset>(visibleLines) + 1, *to.bpd());
 
 				// scroll if the point is outside of 'start-edge' or 'end-edge'
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -145,15 +145,30 @@ namespace ascension {
 			Point::aboutToMove(to);
 		}
 
+		/// @internal Resets @c lineNumberCaches_ data member.
+		void VisualPoint::buildVisualLineCache() {
+			if(lineNumberCaches_ == boost::none) {
+				const kernel::Position p(normalized());
+				const graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
+				Index line = renderer.layouts().mapLogicalLineToVisualLine(p.line), subline;
+				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(p.line))
+					subline = layout->lineAt(p.offsetInLine);
+				else
+					subline = 0;
+				line += subline;
+				lineNumberCaches_ = graphics::font::VisualLine(line, subline);
+			}
+		}
+
 		/// @see Point#moved
 		void VisualPoint::moved(const kernel::Position& from) {
 			if(isTextViewerDisposed())
 				return;
-			if(from.line == kernel::line(*this) && lineNumberCaches_) {
+			if(from.line == kernel::line(*this) && lineNumberCaches_ != boost::none) {
 				const graphics::font::TextLayout* const layout = textViewer().textArea().textRenderer().layouts().at(kernel::line(*this));
-				lineNumberCaches_->visualLine -= lineNumberCaches_->visualSubline;
-				lineNumberCaches_->visualSubline = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(*this)) : 0;
-				lineNumberCaches_->visualLine += lineNumberCaches_->visualSubline;
+				lineNumberCaches_->line -= lineNumberCaches_->subline;
+				lineNumberCaches_->subline = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(*this)) : 0;
+				lineNumberCaches_->line += lineNumberCaches_->subline;
 			} else
 				lineNumberCaches_ = boost::none;
 			Point::moved(from);
@@ -266,22 +281,6 @@ namespace ascension {
 			}
 		}
 
-		/// Returns the visual line number.
-		Index VisualPoint::visualLine() const {
-			if(lineNumberCaches_) {
-				VisualPoint& self = const_cast<VisualPoint&>(*this);
-				const kernel::Position p(normalized());
-				const graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
-				self.lineNumberCaches_->visualLine = renderer.layouts().mapLogicalLineToVisualLine(p.line);
-				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(p.line))
-					self.lineNumberCaches_->visualSubline = layout->lineAt(p.offsetInLine);
-				else
-					self.lineNumberCaches_->visualSubline = 0;
-				self.lineNumberCaches_->visualLine += lineNumberCaches_->visualSubline;
-			}
-			return lineNumberCaches_->visualLine;
-		}
-
 		/// @see VisualLinesListener#visualLinesDeleted
 		void VisualPoint::visualLinesDeleted(const boost::integer_range<Index>& lines, Index, bool) BOOST_NOEXCEPT {
 			if(!adaptsToDocument() && includes(lines, kernel::line(*this)))
@@ -296,16 +295,16 @@ namespace ascension {
 
 		/// @see VisualLinesListener#visualLinesModified
 		void VisualPoint::visualLinesModified(const boost::integer_range<Index>& lines, SignedIndex sublineDifference, bool, bool) BOOST_NOEXCEPT {
-			if(lineNumberCaches_) {
+			if(lineNumberCaches_ != boost::none) {
 				// adjust visualLine_ and visualSubine_ according to the visual lines modification
 				if(*lines.end() <= kernel::line(*this))
-					lineNumberCaches_->visualLine += sublineDifference;
+					lineNumberCaches_->line += sublineDifference;
 				else if(*lines.begin() == kernel::line(*this)) {
 					if(const graphics::font::TextLayout* const layout = textViewer().textArea().textRenderer().layouts().at(kernel::line(*this))) {
-						lineNumberCaches_->visualLine -= lineNumberCaches_->visualSubline;
-						lineNumberCaches_->visualSubline =
+						lineNumberCaches_->line -= lineNumberCaches_->subline;
+						lineNumberCaches_->subline =
 							layout->lineAt(std::min(kernel::offsetInLine(*this), document().lineLength(kernel::line(*this))));
-						lineNumberCaches_->visualLine += lineNumberCaches_->visualSubline;
+						lineNumberCaches_->line += lineNumberCaches_->subline;
 					} else
 						lineNumberCaches_ = boost::none;
 				} else if(*lines.begin() < kernel::line(*this))
