@@ -6,12 +6,13 @@
  * @date 2008 separated from point.hpp
  * @date 2009-2011 was caret.hpp
  * @date 2011-10-02 separated from caret.hpp
- * @date 2011-2014
+ * @date 2011-2015
  */
 
 #ifndef ASCENSION_VISUAL_POINT_HPP
 #define ASCENSION_VISUAL_POINT_HPP
 #include <ascension/kernel/point.hpp>
+#include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/viewer/detail/weak-reference-for-points.hpp>
 
@@ -115,8 +116,7 @@ namespace ascension {
 			/// @name Visual Positions
 			/// @{
 			Index offsetInVisualLine() const;
-			Index visualLine() const;
-			Index visualSubline() const;
+			const graphics::font::VisualLine& visualLine() const;
 			/// @}
 
 			/// @name Movement
@@ -130,6 +130,7 @@ namespace ascension {
 			virtual void aboutToMove(kernel::Position& to) override;
 			virtual void moved(const kernel::Position& from) override BOOST_NOEXCEPT;
 		private:
+			void buildVisualLineCache();
 			void rememberPositionInVisualLine();
 			// layout.VisualLinesListener
 			void visualLinesDeleted(const boost::integer_range<Index>& lines,
@@ -142,10 +143,7 @@ namespace ascension {
 			std::shared_ptr<const detail::WeakReferenceForPoints<TextViewer>::Proxy> viewerProxy_;
 			boost::optional<graphics::Scalar> positionInVisualLine_;	// see rememberPositionInVisualLine
 			bool crossingLines_;	// true only when the point is moving across the different lines
-			struct LineNumberCaches {
-				Index visualLine, visualSubline;
-			};
-			boost::optional<LineNumberCaches> lineNumberCaches_;	// caches
+			boost::optional<graphics::font::VisualLine> lineNumberCaches_;	// caches
 			friend class TextViewer;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			friend VisualDestinationProxy kernel::locations::backwardVisualLine(const VisualPoint& p, Index lines);
@@ -186,11 +184,11 @@ namespace ascension {
 			return *viewerProxy_->get();
 		}
 
-		/// Returns the visual subline number.
-		inline Index VisualPoint::visualSubline() const {
-			if(!lineNumberCaches_)
-				visualLine();
-			return lineNumberCaches_->visualSubline;
+		/// Returns the visual line numbers.
+		inline const graphics::font::VisualLine& VisualPoint::visualLine() const {
+			if(lineNumberCaches_ == boost::none)
+				const_cast<VisualPoint*>(this)->buildVisualLineCache();
+			return boost::get(lineNumberCaches_);
 		}
 
 	} // namespace viewer
