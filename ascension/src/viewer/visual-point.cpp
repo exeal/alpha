@@ -144,10 +144,10 @@ namespace ascension {
 		 */
 
 		/**
-		 * Constructor.
+		 * Creates a @c VisualPoint object but does not install on @c TextViewer.
 		 * @param document The document
 		 * @param position The initial position of the point
-		 * @throw kernel#BadPositionException @a position is outside of the document
+		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 * @post @c #isInstalled() returns @c false.
 		 * @post @c #isTextViewerDisposed() throws @c #NotInstalledException exception.
 		 * @post @c #isFullyAvailable() returns @c false.
@@ -157,10 +157,10 @@ namespace ascension {
 		}
 
 		/**
-		 * Constructor.
+		 * Creates a @c VisualPoint object and installs on the specified @c TextViewer.
 		 * @param viewer The viewer
 		 * @param position The initial position of the point
-		 * @throw kernel#BadPositionException @a position is outside of the document
+		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 * @post @c #isInstalled() returns @c true.
 		 * @post @c #isTextViewerDisposed() returns @c false.
 		 * @post @c #isFullyAvailable() returns @c true.
@@ -171,9 +171,9 @@ namespace ascension {
 		}
 
 		/**
-		 * Constructor takes a @c kernel#Point.
+		 * Creates a @c VisualPoint object but does not install on @c TextViewer.
 		 * @param other The point used to initialize kernel part of the new object
-		 * @throw kernel#DocumentDisposedException The copy-constructor of @c kernel#Point threw this exception
+		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 * @post @c #isInstalled() returns @c false.
 		 * @post @c #isTextViewerDisposed() throws @c #NotInstalledException exception.
 		 * @post @c #isFullyAvailable() returns @c false.
