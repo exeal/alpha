@@ -119,30 +119,70 @@ namespace ascension {
 		 */
 
 		/**
-		 * Constructor.
+		 * Creates a @c Caret object but does not install on @c TextViewer.
+		 * @param document The document
+		 * @param position The initial position of the caret
+		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
+		 */
+		Caret::Caret(kernel::Document& document, const kernel::Position& position /* = kernel::Position::zero() */) :
+				VisualPoint(document, position), anchor_(new SelectionAnchor(document, position)),
+#ifdef BOOST_OS_WINDOWS
+				clipboardLocale_(::GetUserDefaultLCID()),
+#endif // BOOST_OS_WINDOWS
+				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
+			document.addListener(*this);
+		}
+
+		/**
+		 * Creates a @c Caret object but does not install on @c TextViewer.
+		 * @param other The point used to initialize kernel part of the new object
+		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
+		 */
+		Caret::Caret(const kernel::Point& other) :
+				VisualPoint(other), anchor_(new SelectionAnchor(other)),
+#ifdef BOOST_OS_WINDOWS
+				clipboardLocale_(::GetUserDefaultLCID()),
+#endif // BOOST_OS_WINDOWS
+				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
+			document().addListener(*this);
+		}
+
+		/**
+		 * Creates a @c Caret object but does not install on @c TextViewer.
+		 * @param other The point used to initialize kernel part of the new object
+		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
+		 */
+		Caret::Caret(const VisualPoint& other) :
+				VisualPoint(other), anchor_(new SelectionAnchor(other)),
+#ifdef BOOST_OS_WINDOWS
+				clipboardLocale_(::GetUserDefaultLCID()),
+#endif // BOOST_OS_WINDOWS
+				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
+			document().addListener(*this);
+		}
+
+		/**
+		 * Creates a @c Caret object and installs on the specified @c TextViewer.
 		 * @param viewer The text viewer
 		 * @param position The initial position of the point
-		 * @throw BadPositionException @a position is outside of the document
+		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 */
-		Caret::Caret(TextViewer& viewer, const kernel::Position& position /* = kernel::Position::zero() */) BOOST_NOEXCEPT :
+		Caret::Caret(TextViewer& viewer, const kernel::Position& position /* = kernel::Position::zero() */) :
 				VisualPoint(viewer, position), anchor_(new SelectionAnchor(viewer, position)),
 #ifdef BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
 				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
 			document().addListener(*this);
-			textViewer().textArea().textRenderer().viewport()->addListener(*this);
-			anchorMotionSignalConnection_ = anchor_->motionSignal().connect(
-				std::bind(&Caret::pointMoved, this, std::placeholders::_1, std::placeholders::_2));
+			install(viewer);
 		}
 
 		/// Destructor.
 		Caret::~Caret() BOOST_NOEXCEPT {
+			if(isInstalled())
+				uninstall();
 			if(!isDocumentDisposed())
 				document().removeListener(*this);
-			if(!isTextViewerDisposed())
-				textViewer().textArea().textRenderer().viewport()->removeListener(*this);
-			anchorMotionSignalConnection_.disconnect();
 		}
 
 		/// @see VisualPoint#aboutToMove
@@ -465,6 +505,18 @@ namespace ascension {
 			return makeSignalConnector(inputModeChangedSignal_);
 		}
 
+		/// @see VisualPoint#install
+		void Caret::install(TextViewer& viewer) {
+			const bool installed = isInstalled();
+			VisualPoint::install(viewer);
+			if(!installed) {
+				textViewer().textArea().textRenderer().viewport()->addListener(*this);
+				anchor_->install(viewer);
+				anchorMotionSignalConnection_ = anchor_->motionSignal().connect(
+					std::bind(&Caret::pointMoved, this, std::placeholders::_1, std::placeholders::_2));
+			}
+		}
+
 		/// Returns the @c MatchBracketsChangedSignal signal connector.
 		SignalConnector<Caret::MatchBracketsChangedSignal> Caret::matchBracketsChangedSignal() BOOST_NOEXCEPT {
 			return makeSignalConnector(matchBracketsChangedSignal_);
@@ -638,6 +690,21 @@ namespace ascension {
 			return *this;
 		}
 
+		/// @see VisualPoint#uninstall
+		void Caret::uninstall() BOOST_NOEXCEPT {
+			try {
+				if(!isTextViewerDisposed())
+					textViewer().textArea().textRenderer().viewport()->removeListener(*this);
+				anchor_->uninstall();
+				anchorMotionSignalConnection_.disconnect();
+				shapeCache_.image.reset();
+				context_.Context::Context();
+			} catch(...) {
+				// ignore the error
+			}
+			VisualPoint::uninstall();
+		}
+
 		/// @see Point#update
 		void Caret::update(const kernel::DocumentChange& change) {
 			// notify the movement of the anchor and the caret concurrently when the document was changed
@@ -713,6 +780,45 @@ namespace ascension {
 
 		/// @see TextViewportListener#viewportScrollPropertiesChanged
 		void Caret::viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
+		}
+
+
+		Caret::SelectionAnchor::SelectionAnchor(kernel::Document& document, const kernel::Position& position) : VisualPoint(document, position) {
+			adaptToDocument(false);
+		}
+
+		Caret::SelectionAnchor::SelectionAnchor(const kernel::Point& other) : VisualPoint(other) {
+			adaptToDocument(false);
+		}
+
+		Caret::SelectionAnchor::SelectionAnchor(const VisualPoint& other) : VisualPoint(other) {
+			adaptToDocument(false);
+		}
+		
+		Caret::SelectionAnchor::SelectionAnchor(TextViewer& viewer, const kernel::Position& position) : VisualPoint(viewer, position) {
+			adaptToDocument(false);
+		}
+		
+		inline void Caret::SelectionAnchor::beginInternalUpdate(const kernel::DocumentChange& change) BOOST_NOEXCEPT {
+			assert(!isInternalUpdating());
+			positionBeforeUpdate_ = position();
+			adaptToDocument(true);
+			update(change);
+			adaptToDocument(false);
+		}
+
+		inline void Caret::SelectionAnchor::endInternalUpdate() BOOST_NOEXCEPT {
+			assert(isInternalUpdating());
+			positionBeforeUpdate_ = boost::none;
+		}
+
+		inline bool Caret::SelectionAnchor::isInternalUpdating() const BOOST_NOEXCEPT {
+			return positionBeforeUpdate_;
+		}
+
+		inline const kernel::Position& Caret::SelectionAnchor::positionBeforeInternalUpdate() const BOOST_NOEXCEPT {
+			assert(isInternalUpdating());
+			return *positionBeforeUpdate_;
 		}
 	}
 }

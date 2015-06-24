@@ -73,8 +73,17 @@ namespace ascension {
 			};
 
 		public:
+			explicit Caret(kernel::Document& document, const kernel::Position& position = kernel::Position::zero());
+			explicit Caret(const kernel::Point& other);
+			explicit Caret(const VisualPoint& other);
 			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position::zero());
 			~Caret();
+
+			/// @name Installation
+			/// @{
+			void install(TextViewer& viewer) override;
+			void uninstall() BOOST_NOEXCEPT override;
+			/// @}
 
 			/// @name The Anchor and The Caret
 			/// @{
@@ -194,16 +203,14 @@ namespace ascension {
 		private:
 			class SelectionAnchor : public VisualPoint {
 			public:
-				SelectionAnchor(TextViewer& viewer, const kernel::Position& position) BOOST_NOEXCEPT :
-					VisualPoint(viewer, position), positionBeforeUpdate_() {adaptToDocument(false);}
-				void beginInternalUpdate(const kernel::DocumentChange& change) BOOST_NOEXCEPT {
-					assert(!isInternalUpdating()); positionBeforeUpdate_ = position();
-					adaptToDocument(true); update(change); adaptToDocument(false);}
-				void endInternalUpdate() BOOST_NOEXCEPT {
-					assert(isInternalUpdating()); positionBeforeUpdate_ = boost::none;}
-				bool isInternalUpdating() const BOOST_NOEXCEPT {return positionBeforeUpdate_;}
-				const kernel::Position& positionBeforeInternalUpdate() const BOOST_NOEXCEPT {
-					assert(isInternalUpdating()); return *positionBeforeUpdate_;}
+				SelectionAnchor(kernel::Document& document, const kernel::Position& position);
+				explicit SelectionAnchor(const kernel::Point& other);
+				explicit SelectionAnchor(const VisualPoint& other);
+				SelectionAnchor(TextViewer& viewer, const kernel::Position& position);
+				void beginInternalUpdate(const kernel::DocumentChange& change) BOOST_NOEXCEPT;
+				void endInternalUpdate() BOOST_NOEXCEPT;
+				bool isInternalUpdating() const BOOST_NOEXCEPT;
+				const kernel::Position& positionBeforeInternalUpdate() const BOOST_NOEXCEPT;
 			private:
 				using kernel::Point::adaptToDocument;
 				boost::optional<kernel::Position> positionBeforeUpdate_;
