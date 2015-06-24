@@ -25,15 +25,6 @@ namespace ascension {
 		class TextViewer;
 		class VisualPoint;
 
-		/**
-		 * The text viewer the object connecting to had been disposed.
-		 * @see kernel#DocumentDisposedException, VisualPoint
-		 */
-		class TextViewerDisposedException : public std::logic_error {
-		public:
-			TextViewerDisposedException();
-		};
-
 		/// See the documentation of @c kernel#locations namespace.
 		class VisualDestinationProxy : private kernel::Position {
 		public:
@@ -97,18 +88,41 @@ namespace ascension {
 	} // namespace kernel
 
 	namespace viewer {
-		/**
-		 * Extension of @c kernel#Point class for viewer and layout.
-		 * @see kernel#Point, kernel#DisposedViewException
-		 */
+		// documentation is visual-point.cpp
 		class VisualPoint : public kernel::Point, public graphics::font::VisualLinesListener {
 		public:
-			VisualPoint(TextViewer& viewer, const kernel::Position& position);
+			/**
+			 * The @c VisualPoint is not installed by a @c TextViewer.
+			 * @see VisualPoint#install, TextViewerDisposedException
+			 */
+			struct NotInstalledException : IllegalStateException {
+				NotInstalledException();
+			};
+			/**
+			 * The @c VisualPoint had been installed by the @c TextViewer, but the viewer has been disposed.
+			 * @see kernel#DocumentDisposedException, VisualPoint
+			 */
+			struct TextViewerDisposedException : IllegalStateException {
+				TextViewerDisposedException();
+			};
+
+			explicit VisualPoint(kernel::Document& document, const kernel::Position& position = kernel::Position::zero());
+			explicit VisualPoint(TextViewer& viewer, const kernel::Position& position = kernel::Position::zero());
+			explicit VisualPoint(const kernel::Point& other);
 			VisualPoint(const VisualPoint& other);
 			virtual ~VisualPoint() BOOST_NOEXCEPT;
-			/// @name Attributes
+
+			/// @name Installation
 			/// @{
-			bool isTextViewerDisposed() const BOOST_NOEXCEPT;
+			virtual void install(TextViewer& viewer);
+			bool isInstalled() const BOOST_NOEXCEPT;
+			virtual void uninstall() BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Text Viewer
+			/// @{
+			bool isFullyAvailable() const BOOST_NOEXCEPT;
+			bool isTextViewerDisposed() const;
 			TextViewer& textViewer();
 			const TextViewer& textViewer() const;
 			/// @}
@@ -127,11 +141,11 @@ namespace ascension {
 
 		protected:
 			// kernel.Point
-			virtual void aboutToMove(kernel::Position& to) override;
 			virtual void moved(const kernel::Position& from) override BOOST_NOEXCEPT;
 		private:
 			void buildVisualLineCache();
 			void rememberPositionInVisualLine();
+			void throwIfNotFullyAvailable() const;
 			// layout.VisualLinesListener
 			void visualLinesDeleted(const boost::integer_range<Index>& lines,
 				Index sublines, bool longestLineChanged) override BOOST_NOEXCEPT;
@@ -163,29 +177,68 @@ namespace ascension {
 		}
 
 
-		/// Returns @c true if the text viewer the point connecting to has been disposed.
-		inline bool VisualPoint::isTextViewerDisposed() const BOOST_NOEXCEPT {
-			return viewerProxy_.get() == nullptr && viewerProxy_->get() != nullptr;
+		/**
+		 * Returns @c true if the point has been installed and the @c TextViewer is not disposed.
+		 * @note This method does not check if the document has been disposed.
+		 * @see #isInstalled, #isTextViewerDisposed
+		 */
+		inline bool VisualPoint::isFullyAvailable() const BOOST_NOEXCEPT {
+			return viewerProxy_.get() != nullptr && viewerProxy_->get() != nullptr;
 		}
 
-		/// Returns the text viewer or throw @c TextViewerDisposedException if the text viewer the
-		/// point connecting to has been disposed.
+		/**
+		 * Returns @c true if the point has been installed by the @c TextViewer.
+		 * @see #install, #isFullyAvailable, #isTextViewerDisposed, #uninstall
+		 */
+		inline bool VisualPoint::isInstalled() const BOOST_NOEXCEPT {
+			return viewerProxy_.get() != nullptr;
+		}
+
+		/**
+		 * Returns @c true if the text viewer which had installed the point has been disposed.
+		 * @throw NotInstalledException The point is not installed
+		 * @see #isFullyAvailable, #isInstalled
+		 */
+		inline bool VisualPoint::isTextViewerDisposed() const {
+			if(!isInstalled())
+				throw NotInstalledException();
+			return viewerProxy_->get() == nullptr;
+		}
+
+		/**
+		 * Returns the text viewer which has installed this @c VisualPoint.
+		 * @throw NotInstalledException
+		 * @throw TextViewerDisposedException
+		 */
 		inline TextViewer& VisualPoint::textViewer() {
-			if(isTextViewerDisposed())
-				throw TextViewerDisposedException();
+			throwIfNotFullyAvailable();
 			return *viewerProxy_->get();
 		}
 
-		/// Returns the text viewer or throw @c TextViewerDisposedException if the text viewer the
-		/// point connecting to has been disposed.
+		/**
+		 * Returns the text viewer which has installed this @c VisualPoint.
+		 * @throw NotInstalledException
+		 * @throw TextViewerDisposedException
+		 */
 		inline const TextViewer& VisualPoint::textViewer() const {
-			if(isTextViewerDisposed())
-				throw TextViewerDisposedException();
+			throwIfNotFullyAvailable();
 			return *viewerProxy_->get();
 		}
 
-		/// Returns the visual line numbers.
+		/// @internal
+		inline void VisualPoint::throwIfNotFullyAvailable() const {
+			if(isTextViewerDisposed())	// may throw
+				throw TextViewerDisposedException();
+		}
+
+		/**
+		 * Returns the visual line numbers.
+		 * @throw kernel#DocumentDisposedException
+		 * @throw NotInstalledException
+		 * @throw TextViewerDisposedException
+		 */
 		inline const graphics::font::VisualLine& VisualPoint::visualLine() const {
+			throwIfNotFullyAvailable();
 			if(lineNumberCaches_ == boost::none)
 				const_cast<VisualPoint*>(this)->buildVisualLineCache();
 			return boost::get(lineNumberCaches_);

@@ -67,7 +67,7 @@ namespace ascension {
 		 * @param position The initial position of the point
 		 * @throw BadPositionException @a position is outside of the document
 		 */
-		Point::Point(Document& document, const Position& position) :
+		Point::Point(Document& document, const Position& position /* = kernel::Position::zero() */) :
 				document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD) {
 			if(!document.region().includes(position))
 				throw BadPositionException(position);
