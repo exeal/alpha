@@ -30,7 +30,7 @@ namespace ascension {
 		class Point : private boost::totally_ordered<Point> {
 		public:
 			// constructors
-			Point(Document& document, const Position& position);
+			explicit Point(Document& document, const Position& position = kernel::Position::zero());
 			Point(const Point& other);
 			virtual ~Point() BOOST_NOEXCEPT;
 			operator Position() const BOOST_NOEXCEPT;

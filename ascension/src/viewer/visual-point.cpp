@@ -99,56 +99,115 @@ namespace ascension {
 		}	// namespace utils
 
 
-		// TextViewerDisposedException ////////////////////////////////////////////////////////////////////////////////
-
-		TextViewerDisposedException::TextViewerDisposedException() :
-				logic_error("The text viewer the object connecting to has been disposed.") {
-		}
-
-
 		// VisualPoint ////////////////////////////////////////////////////////////////////////////////////////////////
+
+		/**
+		 * @class ascension::viewer::VisualPoint
+		 * Extension of @c kernel#Point class for viewer and layout.
+		 *
+		 * A @c VisualPoint has the following three states:
+		 * <dl>
+		 *   <dt>State 1 : Constructed but not installed by @c TextViewer</dt>
+		 *   <dd>
+		 *     - The @c VisualPoint has been just constructed with the document, but not be installed by a
+		 *       @c TextViewer.
+		 *     - The all features only as @c kernel#Point are available. The other methods throw
+		 *       @c VisualPoint#NotInstalledException exception.
+		 *     - @c VisualPoint#isInstalled() returns @c false.
+		 *     - @c VisualPoint#isTextViewerDisposed() throws @c VisualPoint#NotInstalledException exception.
+		 *     - @c VisualPoint#isFullyAvailable() returns @c false.
+		 *     - Constructed by the constructor which takes a document and a position.
+		 *   </dd>
+		 *   <dt>State 2 : Installed by @c TextViewer</dt>
+		 *   <dd>
+		 *     - The @c VisualPoint has been installed by the @c TextViewer.
+		 *     - The all features are available.
+		 *     - @c VisualPoint#isInstalled() returns @c true.
+		 *     - @c VisualPoint#isTextViewerDisposed() returns @c false.
+		 *     - @c VisualPoint#isFullyAvailable() returns @c true.
+		 *     - Constructed by the constructor which takes a text viewer and a position.
+		 *     - You can revert the @c VisualPoint to the state 1 by calling @c VisualPoint#uninstall method.
+		 *   </dd>
+		 *   <dt>State 3 : Installed @c TextViewer was disposed</dt>
+		 *   <dd>
+		 *     - The @c TextViewer which installed the @c VisualPoint has already disposed.
+		 *     - The all features only as @c kernel#Point are available. The other methods throw
+		 *       @c VisualPoint#TextViewerDisposedException exception.
+		 *     - @c VisualPoint#isInstalled() returns @c true.
+		 *     - @c VisualPoint#isTextViewerDisposed() returns @c true.
+		 *     - @c VisualPoint#isFullyAvailable() returns @c false.
+		 *     - You can revert the @c VisualPoint to the state 1 by calling @c VisualPoint#uninstall method.
+		 *   </dd>
+		 * </dl>
+		 *
+		 * @see kernel#Point, TextViewer
+		 */
+
+		/**
+		 * Constructor.
+		 * @param document The document
+		 * @param position The initial position of the point
+		 * @throw kernel#BadPositionException @a position is outside of the document
+		 * @post @c #isInstalled() returns @c false.
+		 * @post @c #isTextViewerDisposed() throws @c #NotInstalledException exception.
+		 * @post @c #isFullyAvailable() returns @c false.
+		 */
+		VisualPoint::VisualPoint(kernel::Document& document,
+				const kernel::Position& position /* = kernel::Position::zero() */) : Point(document, position), crossingLines_(false) {
+		}
 
 		/**
 		 * Constructor.
 		 * @param viewer The viewer
 		 * @param position The initial position of the point
-		 * @throw BadPositionException @a position is outside of the document
+		 * @throw kernel#BadPositionException @a position is outside of the document
+		 * @post @c #isInstalled() returns @c true.
+		 * @post @c #isTextViewerDisposed() returns @c false.
+		 * @post @c #isFullyAvailable() returns @c true.
 		 */
-		VisualPoint::VisualPoint(TextViewer& viewer, const kernel::Position& position) :
-				Point(viewer.document(), position), viewerProxy_(viewer.referByPoint()), crossingLines_(false) {
-			textViewer().textArea().textRenderer().layouts().addVisualLinesListener(*this);
+		VisualPoint::VisualPoint(TextViewer& viewer,
+				const kernel::Position& position /* = kernel::Position::zero() */) : Point(viewer.document(), position), crossingLines_(false) {
+			install(viewer);
+		}
+
+		/**
+		 * Constructor takes a @c kernel#Point.
+		 * @param other The point used to initialize kernel part of the new object
+		 * @throw kernel#DocumentDisposedException The copy-constructor of @c kernel#Point threw this exception
+		 * @post @c #isInstalled() returns @c false.
+		 * @post @c #isTextViewerDisposed() throws @c #NotInstalledException exception.
+		 * @post @c #isFullyAvailable() returns @c false.
+		 */
+		VisualPoint::VisualPoint(const kernel::Point& other) : Point(other), crossingLines_(false) {
 		}
 
 		/**
 		 * Copy-constructor.
-		 * @param other The source object
-		 * @throw DocumentDisposedException The document to which @a other belongs had been disposed
-		 * @throw TextViewerDisposedException The text viewer to which @a other belongs had been disposed
+		 * @param other The source object. If this has been installed, the new point is also installed
+		 * @throw kernel#DocumentDisposedException The copy-constructor of @c kernel#Point threw this exception
+		 * @throw TextViewerDisposedException @c other.isTextViewerDisposed() returned @c true
 		 */
-		VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), viewerProxy_(other.viewerProxy_),
-				positionInVisualLine_(other.positionInVisualLine_), crossingLines_(false), lineNumberCaches_(other.lineNumberCaches_) {
-			if(isTextViewerDisposed())
-				throw TextViewerDisposedException();
-			textViewer().textArea().textRenderer().layouts().addVisualLinesListener(*this);
+		VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), crossingLines_(false) {
+			if(other.isInstalled()) {
+				if(other.isTextViewerDisposed())
+					throw TextViewerDisposedException();
+				install(const_cast<TextViewer&>(other.textViewer()));
+				positionInVisualLine_ = other.positionInVisualLine_;
+				crossingLines_ = false;
+				lineNumberCaches_ = other.lineNumberCaches_;
+			}
 		}
 
 		/// Destructor.
 		VisualPoint::~VisualPoint() BOOST_NOEXCEPT {
-			if(!isTextViewerDisposed())
-				textViewer().textArea().textRenderer().layouts().removeVisualLinesListener(*this);
+			uninstall();
 		}
 
-		/// @see Point#aboutToMove
-		void VisualPoint::aboutToMove(kernel::Position& to) {
-			if(isTextViewerDisposed())
-				throw TextViewerDisposedException();
-			Point::aboutToMove(to);
-		}
-
-		/// @internal Resets @c lineNumberCaches_ data member.
+		/// @internal Resets @c #lineNumberCaches_ data member.
 		void VisualPoint::buildVisualLineCache() {
+			assert(isFullyAvailable());
 			if(lineNumberCaches_ == boost::none) {
-				const kernel::Position p(normalized());
+				const kernel::Position p(normalized());	// may throw kernel.DocumentDisposedException
 				const graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
 				Index line = renderer.layouts().mapLogicalLineToVisualLine(p.line), subline;
 				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(p.line))
@@ -160,19 +219,43 @@ namespace ascension {
 			}
 		}
 
+		/**
+		 * Installs this @c VisualPoint on the specified @c TextViewer.
+		 * @param viewer The @c TextViewer by which this point is installed
+		 * @throw kernel#DocumentDisposedException @c #isDocumentDisposed() returned @c true
+		 * @throw std#invalid_argument @a viewer does not belong to the document of this point
+		 * @note If @c #isInstalled() returned @c true, this method does nothing.
+		 * @see #isInstalled, #uninstall
+		 */
+		void VisualPoint::install(TextViewer& viewer) {
+			if(!isInstalled()) {
+				if(&viewer.document() != &document())	// may throw kernel.DocumentDisposedException
+					throw std::invalid_argument("The specified viewer does not belong to the document of this point.");
+
+				viewerProxy_ = viewer.referByPoint();
+				assert(isFullyAvailable());
+				positionInVisualLine_ = boost::none;
+				crossingLines_ = false;
+				lineNumberCaches_ = boost::none;
+				textViewer().textArea().textRenderer().layouts().addVisualLinesListener(*this);
+			}
+		}
+
 		/// @see Point#moved
 		void VisualPoint::moved(const kernel::Position& from) {
-			if(isTextViewerDisposed())
-				return;
-			if(from.line == kernel::line(*this) && lineNumberCaches_ != boost::none) {
-				const graphics::font::TextLayout* const layout = textViewer().textArea().textRenderer().layouts().at(kernel::line(*this));
-				lineNumberCaches_->line -= lineNumberCaches_->subline;
-				lineNumberCaches_->subline = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(*this)) : 0;
-				lineNumberCaches_->line += lineNumberCaches_->subline;
-			} else
-				lineNumberCaches_ = boost::none;
+			assert(!isDocumentDisposed());
+			const bool fullyAvailable = isFullyAvailable();
+			if(fullyAvailable) {
+				if(from.line == kernel::line(*this) && lineNumberCaches_ != boost::none) {
+					const graphics::font::TextLayout* const layout = textViewer().textArea().textRenderer().layouts().at(kernel::line(*this));
+					lineNumberCaches_->line -= lineNumberCaches_->subline;
+					lineNumberCaches_->subline = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(*this)) : 0;
+					lineNumberCaches_->line += lineNumberCaches_->subline;
+				} else
+					lineNumberCaches_ = boost::none;
+			}
 			Point::moved(from);
-			if(!crossingLines_)
+			if(fullyAvailable && !crossingLines_)
 				positionInVisualLine_ = boost::none;
 		}
 #if 0
@@ -234,13 +317,15 @@ namespace ascension {
 			}
 		}
 #endif
-		/// @internal @c Point#moveTo for @c BlockProgressionDestinationProxy.
+		/// @internal @c Point#moveTo for @c VisualDestinationProxy.
 		void VisualPoint::moveTo(const VisualDestinationProxy& to) {
+			document();	// may throw kernel.DocumentDisposedException
+			throwIfNotFullyAvailable();
 			if(!to.crossesVisualLines()) {
 				moveTo(to.position());
 				return;
 			}
-			if(!positionInVisualLine_)
+			if(positionInVisualLine_ == boost::none)
 				rememberPositionInVisualLine();
 			crossingLines_ = true;
 			try {
@@ -252,25 +337,29 @@ namespace ascension {
 			crossingLines_ = false;
 		}
 
-		/// Returns the offset of the point in the visual line.
+		/**
+		 * Returns the offset of the point in the visual line.
+		 * @throw NotInstalledException
+		 * @throw TextViewerDisposedException
+		 */
 		Index VisualPoint::offsetInVisualLine() const {
-			if(!positionInVisualLine_)
+			throwIfNotFullyAvailable();
+			if(positionInVisualLine_ == boost::none)
 				const_cast<VisualPoint*>(this)->rememberPositionInVisualLine();
 			const TextViewer::Configuration& c = textViewer().configuration();
 			const graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
 //	if(resolveTextAlignment(c.alignment, c.readingDirection) != ALIGN_RIGHT)
-				return static_cast<Index>(*positionInVisualLine_
+				return static_cast<Index>(boost::get(positionInVisualLine_)
 					/ widgetapi::createRenderingContext(textViewer())->fontMetrics(renderer.defaultFont())->averageCharacterWidth());
 //	else
 //		return (renderer.width() - positionInVisualLine_) / renderer.averageCharacterWidth();
 		}
 
-		/// Updates @c positionInVisualLine_ with the current position.
+		/// @internal Updates @c positionInVisualLine_ with the current position.
 		inline void VisualPoint::rememberPositionInVisualLine() {
 			// positionInVisualLine_ is distance from left/top-edge of content-area to the point
 			assert(!crossingLines_);
-			if(isTextViewerDisposed())
-				throw TextViewerDisposedException();
+			throwIfNotFullyAvailable();
 			if(!isDocumentDisposed()) {
 				graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
 				const graphics::font::TextLayout& layout =
@@ -278,6 +367,24 @@ namespace ascension {
 				positionInVisualLine_ =
 					graphics::font::lineStartEdge(layout, renderer.viewport()->contentMeasure())
 					+ layout.hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(*this))).ipd();
+			}
+		}
+
+		/**
+		 * Uninstalls this @c VisualPoint.
+		 * @note If @c #isInstalled() returned @c false, this method does nothing.
+		 * @see #install, #isInstalled
+		 */
+		void VisualPoint::uninstall() BOOST_NOEXCEPT {
+			if(isInstalled()) {
+				if(!isTextViewerDisposed()) {
+					try {
+						textViewer().textArea().textRenderer().layouts().removeVisualLinesListener(*this);
+					} catch(...) {
+						// ignore the error
+					}
+				}
+				viewerProxy_.reset();
 			}
 		}
 
@@ -295,7 +402,7 @@ namespace ascension {
 
 		/// @see VisualLinesListener#visualLinesModified
 		void VisualPoint::visualLinesModified(const boost::integer_range<Index>& lines, SignedIndex sublineDifference, bool, bool) BOOST_NOEXCEPT {
-			if(lineNumberCaches_ != boost::none) {
+			if(isFullyAvailable() && lineNumberCaches_ != boost::none) {
 				// adjust visualLine_ and visualSubine_ according to the visual lines modification
 				if(*lines.end() <= kernel::line(*this))
 					lineNumberCaches_->line += sublineDifference;
@@ -310,6 +417,16 @@ namespace ascension {
 				} else if(*lines.begin() < kernel::line(*this))
 					lineNumberCaches_ = boost::none;
 			}
+		}
+
+		/// Default constructor.
+		VisualPoint::NotInstalledException::NotInstalledException() :
+				IllegalStateException("The VisualPoint is not installed by a TextViewer.") {
+		}
+
+		/// Default constructor.
+		VisualPoint::TextViewerDisposedException::TextViewerDisposedException() :
+				IllegalStateException("The TextViewer which had installed the VisualPoint has been disposed.") {
 		}
 	}
 
