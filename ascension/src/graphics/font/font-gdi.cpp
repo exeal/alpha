@@ -305,6 +305,7 @@ namespace ascension {
 			}
 
 			FontCollection::FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT : deviceContext_(deviceContext) {
+				assert(::GetCurrentObject(deviceContext_.get(), OBJ_FONT) != nullptr);
 			}
 
 			std::shared_ptr<const Font> FontCollection::get(const FontDescription& description, const AffineTransform& transform, boost::optional<Scalar> sizeAdjust) const {
