@@ -21,8 +21,6 @@
 #include <ascension/graphics/font/text-run.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
-#include <ascension/presentation/text-line-style.hpp>	// presentation.ComputedTextLineStyle
-#include <ascension/presentation/text-toplevel-style.hpp>	// presentation.ComputedTextToplevelStyle
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/sort.hpp>
@@ -169,22 +167,8 @@ namespace ascension {
 				}
 			}
 
-			/// Returns the writing modes of the given @c TextLayout object.
-			presentation::WritingMode writingMode(const TextLayout& textLayout) BOOST_NOEXCEPT {
-				namespace styles = presentation::styles;
-				return presentation::WritingMode(
-					boost::fusion::at_key<styles::Direction>(textLayout.style()),
-					boost::fusion::at_key<styles::WritingMode>(textLayout.parentStyle()),
-					boost::fusion::at_key<styles::TextOrientation>(textLayout.style()));
-			}
-
 
 			// TextLayout /////////////////////////////////////////////////////////////////////////////////////////////
-
-			struct TextLayout::Styles {
-				boost::flyweight<presentation::styles::ComputedValue<presentation::TextToplevelStyle>::type> forToplevel;
-				boost::flyweight<presentation::styles::ComputedValue<presentation::TextLineStyle>::type> forLine;
-			};
 
 			namespace {
 				// Returns distance from line-left edge of allocation-rectangle to one of content-rectangle.
@@ -360,7 +344,8 @@ namespace ascension {
 						const StringPiece effectiveCharacterRange(textString_.data() + orderedCharacterRange.front(), orderedCharacterRange.size());
 						BOOST_FOREACH(Index line, partiallyCoveredLines) {
 							const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line));
-							const auto direction(boost::fusion::at_key<presentation::styles::Direction>(style()));
+							const presentation::ReadingDirection direction =
+								isLeftToRight(*this) ? presentation::LEFT_TO_RIGHT : presentation::RIGHT_TO_LEFT;
 
 							// find 'start-edge'
 							detail::InlineProgressionDimensionRangeIterator i(
@@ -380,12 +365,6 @@ namespace ascension {
 				return presentation::FlowRelativeFourSides<Scalar>(
 					presentation::_blockStart = before, presentation::_blockEnd = after,
 					presentation::_inlineStart = start, presentation::_inlineEnd = end);
-			}
-
-			/// Returns the base bidirectional embedding level of this @c TextLayout.
-			std::uint8_t TextLayout::characterLevel() const BOOST_NOEXCEPT {
-				const auto direction(boost::fusion::at_key<presentation::styles::Direction>(style()));
-				return (direction == presentation::RIGHT_TO_LEFT) ? 1 : 0;
 			}
 
 			/**
@@ -573,11 +552,21 @@ namespace ascension {
 #endif
 
 			/**
+			 * @fn ascension::graphics::font::TextLayout::initialize
+			 * @internal Initializes the layout.
+			 * @param textRunStyles The computed text runs styles
+			 * @param lengthContext
+			 * @param percentageResolver
+			 * @param fontCollection The font collection
+			 * @param fontRenderContext Information about a graphics device which is needed to measure the text correctly
+			 */
+
+			/**
 			 * Returns if the line contains right-to-left run.
 			 * @note This method's semantics seems to be strange. Is containning RTL run means bidi?
 			 */
 			bool TextLayout::isBidirectional() const BOOST_NOEXCEPT {
-				if(boost::fusion::at_key<presentation::styles::Direction>(style()) == presentation::RIGHT_TO_LEFT)
+				if(!isLeftToRight(*this))
 					return true;
 				BOOST_FOREACH(const std::unique_ptr<const TextRun>& run, runs_) {
 					if(run->direction() == presentation::RIGHT_TO_LEFT)
@@ -599,8 +588,8 @@ namespace ascension {
 			 * @return
 			 */
 			Point TextLayout::lineLeft(Index line) const {
-				if(isHorizontal(boost::fusion::at_key<presentation::styles::WritingMode>(parentStyle()))) {
-					if(boost::fusion::at_key<presentation::styles::Direction>(style()) == presentation::LEFT_TO_RIGHT)
+				if(!isVertical(*this)) {
+					if(isLeftToRight(*this))
 						return Point(geometry::_x = lineStartEdge(line), geometry::_y = 0.0f);
 					else
 						return Point(geometry::_x = -lineStartEdge(line) - measure(line), geometry::_y = 0.0f);
@@ -882,7 +871,7 @@ namespace ascension {
 				if(hits.back().characterIndex() == numberOfCharacters()) {	// handle EOL
 					assert(hits.back().isLeadingEdge());
 					hits.pop_back();
-					if(boost::fusion::at_key<presentation::styles::Direction>(style()) == presentation::LEFT_TO_RIGHT)
+					if(isLeftToRight(*this))
 						hits.push_back(TextHit<>::beforeOffset(numberOfCharacters()));
 					else {
 						const std::unique_ptr<const TextRun>& firstRunInLastLine = runsForLine(numberOfLines() - 1).front();
@@ -1028,12 +1017,7 @@ namespace ascension {
 				else
 					return right ? x + (x - longestLineWidth()) % tabWidth : x - (tabWidth - (x - longestLineWidth()) % tabWidth);
 			}
-#endif
-			/// Returns the "Computed Value" of @c presentation#TextToplevelStyle of this layout.
-			const presentation::ComputedTextToplevelStyle& TextLayout::parentStyle() const BOOST_NOEXCEPT {
-				return styles_->forToplevel.get();
-			}
-#if 0
+
 			/**
 			 * Returns the computed reading direction of the line.
 			 * @see #alignment
@@ -1083,12 +1067,14 @@ namespace ascension {
 			 * Stacks the line boxes and compute the line metrics.
 			 * @param context
 			 * @param lineHeight
-			 * @param lineStackingStrategy
+			 * @param lengthContext
+			 * @param lineBoxContain
 			 * @param nominalFont
 			 */
-			void TextLayout::stackLines(const RenderingContext2D& context, boost::optional<Scalar> lineHeight, LineBoxContain lineBoxContain, const Font& nominalFont) {
+			void TextLayout::stackLines(const RenderingContext2D& context, const presentation::styles::Length& lineHeight,
+					const presentation::styles::Length::Context& lengthContext, LineBoxContain lineBoxContain, const Font& nominalFont) {
 				// TODO: this code is temporary. should rewrite later.
-				assert(numberOfLines() > 1);
+				assert(numberOfLines() > 0);
 				std::unique_ptr<LineMetrics[]> newLineMetrics(new LineMetrics[numberOfLines()]);
 				// calculate allocation-rectangle of the lines according to line-stacking-strategy
 				const std::unique_ptr<const FontMetrics<Scalar>> nominalFontMetrics(context.fontMetrics(nominalFont.shared_from_this()));
@@ -1141,11 +1127,6 @@ namespace ascension {
 					std::swap(newLineMetrics, lineMetrics_);
 				}
 			}
-
-			/// Returns the "Computed Value" of @c presentation#TextLineStyle of this layout.
-			const presentation::ComputedTextLineStyle& TextLayout::style() const BOOST_NOEXCEPT {
-				return styles_->forLine.get();
-			}
 #if 0
 			/**
 			 * Returns the styled text run containing the specified offset in the line.
@@ -1194,28 +1175,6 @@ namespace ascension {
 				if(line > layout.numberOfLines())
 					throw IndexOutOfBoundsException("line");
 				resetBaselineOffset();
-			}
-
-			/// Returns the baseline of the current line.
-			DominantBaseline TextLayout::LineMetricsIterator::baseline() const {
-				return boost::fusion::at_key<presentation::styles::DominantBaseline>(layout_->style());
-			}
-
-			/**
-			 */
-			Point TextLayout::LineMetricsIterator::baselineOffsetInPhysicalCoordinates() const {
-				if(layout_ == nullptr)
-					throw NoSuchElementException();
-				switch(boost::fusion::at_key<presentation::styles::WritingMode>(layout_->parentStyle())) {
-					case presentation::HORIZONTAL_TB:
-						return Point(geometry::_x = 0.0f, geometry::_y = baselineOffset());
-					case presentation::VERTICAL_RL:
-			 			return Point(geometry::_x = -baselineOffset(), geometry::_y = 0.0f);
-					case presentation::VERTICAL_LR:
-			 			return Point(geometry::_x = +baselineOffset(), geometry::_y = 0.0f);
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
 			}
 
 			/// Implements decrement operators.
