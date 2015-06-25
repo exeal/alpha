@@ -54,6 +54,7 @@ namespace ascension {
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				graphics::Scalar width() const BOOST_NOEXCEPT;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
+
 			private:
 				TextViewer& viewer_;
 				bool displaysShapingControls_;
@@ -113,6 +114,7 @@ namespace ascension {
 			void viewportScrollPositionChanged(
 				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
 				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
+			void viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) override;
 			// graphics.font.VisualLinesListener
 			void visualLinesDeleted(const boost::integer_range<Index>& lines,
 				Index sublines, bool longestLineChanged) BOOST_NOEXCEPT override;
