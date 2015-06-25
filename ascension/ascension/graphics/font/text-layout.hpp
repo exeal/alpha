@@ -21,19 +21,18 @@
 #include <boost/geometry/multi/geometries/multi_polygon.hpp>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
-#include <memory>	// std.unique_ptr
 #include <vector>
 
 namespace ascension {
 	namespace presentation {
 		struct ComputedStyledTextRunIterator;
 		struct ComputedTextLineStyle;
+		struct ComputedTextRunStyle;
 		struct ComputedTextToplevelStyle;
 		class Presentation;
 	}
 
 	namespace graphics {
-
 		class Paint;
 		class PaintContext;
 
@@ -45,6 +44,7 @@ namespace ascension {
 			BOOST_CONSTEXPR bool isLeftToRight(const TextLayout& layout) BOOST_NOEXCEPT;
 			bool isVertical(const TextLayout& layout) BOOST_NOEXCEPT;
 			presentation::WritingMode writingMode(const TextLayout& textLayout) BOOST_NOEXCEPT;
+			/// @}
 
 			/**
 			 * The @c InlineObject represents an inline object in @c TextLayout.
@@ -135,6 +135,9 @@ namespace ascension {
 				TextLayout(const String& textString, const presentation::ComputedTextToplevelStyle& toplevelStyle,
 					const presentation::ComputedTextLineStyle& lineStyle,
 					std::unique_ptr<presentation::ComputedStyledTextRunIterator> textRunStyles,
+					const presentation::ComputedTextRunStyle& defaultRunStyle,
+					const presentation::styles::Length::Context& lengthContext,
+					const Dimension& parentContentArea,
 					const FontCollection& fontCollection, const FontRenderContext& fontRenderContext);
 				~TextLayout() BOOST_NOEXCEPT;
 
@@ -145,6 +148,11 @@ namespace ascension {
 				std::uint8_t characterLevel(Index offset) const;
 				bool isBidirectional() const BOOST_NOEXCEPT;
 				Index numberOfCharacters() const BOOST_NOEXCEPT;
+				/// @}
+
+				/// @name Computed Styles
+				/// @{
+				const presentation::ComputedTextRunStyle& defaultRunStyle() const BOOST_NOEXCEPT;
 				const presentation::ComputedTextToplevelStyle& parentStyle() const BOOST_NOEXCEPT;
 				const presentation::ComputedTextLineStyle& style() const BOOST_NOEXCEPT;
 				/// @}
@@ -234,11 +242,15 @@ namespace ascension {
 				TextHit<> internalHitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const;
 //				void buildLineMetrics(Index line);
-				void expandTabsWithoutWrapping(const TabExpander<>& tabExpander) BOOST_NOEXCEPT;
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
 				RunVector::const_iterator runForPosition(Index offset) const BOOST_NOEXCEPT;
 				boost::iterator_range<RunVector::const_iterator> runsForLine(Index line) const;
 				RunVector::const_iterator firstRunInLine(Index line) const BOOST_NOEXCEPT;
+				void initialize(
+					std::unique_ptr<presentation::ComputedStyledTextRunIterator> textRunStyles,
+					const presentation::styles::Length::Context& lengthContext,
+					const Dimension& parentContentArea,
+					const FontCollection& fontCollection, const FontRenderContext& fontRenderContext);
 				bool isEmpty() const BOOST_NOEXCEPT {return runs_.empty();}
 				void justify(Scalar lineMeasure, TextJustification method) BOOST_NOEXCEPT;
 				Point lineLeft(Index line) const;
@@ -251,12 +263,23 @@ namespace ascension {
 				void reorder();
 //				void rewrap();
 				void stackLines(const RenderingContext2D& context,
-					boost::optional<Scalar> lineHeight, LineBoxContain lineBoxContain, const Font& nominalFont);
-				void wrap(Scalar measure, const TabExpander<>& tabExpander) BOOST_NOEXCEPT;
+					const presentation::styles::Length& lineHeight, const presentation::styles::Length::Context& lengthContext,
+					LineBoxContain lineBoxContain, const Font& nominalFont);
+				class TabSize;
+				void wrap(const RenderingContext2D& context, const TabSize& tabSize,
+					const presentation::styles::Length::Context& lengthContext, Scalar measure) BOOST_NOEXCEPT;
 			private:
 				const String& textString_;
-				struct Styles;
-				std::unique_ptr<Styles> styles_;
+				struct Styles {
+					const presentation::ComputedTextToplevelStyle& forToplevel;
+					const presentation::ComputedTextLineStyle& forLine;
+					const presentation::ComputedTextRunStyle& forRun;
+					Styles(
+						const presentation::ComputedTextToplevelStyle& forToplevel,
+						const presentation::ComputedTextLineStyle& forLine,
+						const presentation::ComputedTextRunStyle& forRun)
+						: forToplevel(forToplevel), forLine(forLine), forRun(forRun) BOOST_NOEXCEPT {}
+				} styles_;
 				RunVector runs_;
 				Index numberOfLines_;	// TODO: The following 3 std.unique_ptr<T[]> members can be packed for compaction.
 				std::unique_ptr<RunVector::const_iterator[]> firstRunsInLines_;	// size is numberOfLines_, or null if not wrapped

@@ -56,10 +56,10 @@ namespace ascension {
 					std::unique_ptr<presentation::ComputedStyledTextRunIterator> textRunStyles,
 					const presentation::ComputedTextRunStyle& defaultRunStyle,
 					const presentation::styles::Length::Context& lengthContext,
-					const presentation::styles::PercentageResolver<Scalar>& percentageResolver,
+					const Dimension& parentContentArea,
 					const FontCollection& fontCollection, const FontRenderContext& fontRenderContext)
 					: textString_(textString), styles_(toplevelStyle, lineStyle, defaultRunStyle), numberOfLines_(0) {
-				initialize(std::move(textRunStyles), lengthContext, percentageResolver, fontCollection, fontRenderContext);
+				initialize(std::move(textRunStyles), lengthContext, parentContentArea, fontCollection, fontRenderContext);
 			}
 
 			/// Returns the base bidirectional embedding level of this @c TextLayout.

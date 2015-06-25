@@ -18,6 +18,7 @@
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
+#include <ascension/graphics/font/actual-text-styles.hpp>
 #include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
@@ -30,17 +31,22 @@
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
+#include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
+#include <boost/core/null_deleter.hpp>
+#include <boost/flyweight.hpp>
+#include <boost/flyweight/key_value.hpp>
+#include <boost/foreach.hpp>
+#ifdef _DEBUG
+#	include <boost/log/trivial.hpp>
+#endif
+#include <boost/range/algorithm/find.hpp>
+#include <boost/range/numeric.hpp>	// boost.accumulate
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
 #include <tuple>
-#include <boost/flyweight.hpp>
-#include <boost/foreach.hpp>
-#include <boost/range/algorithm/find.hpp>
-#include <boost/range/numeric.hpp>	// boost.accumulate
 #include <usp10.h>
 #ifdef _DEBUG
-#	include <boost/log/trivial.hpp>
 //#	define ASCENSION_TRACE_LAYOUT_CACHES
 //#	define ASCENSION_DIAGNOSE_INHERENT_DRAWING
 #endif
@@ -560,6 +566,12 @@ namespace ascension {
 						throw std::invalid_argument(parameterName);
 				}
 
+				template<typename Range, typename Iterator>
+				BOOST_CONSTEXPR inline bool rangeIncludes(const Range& range, Iterator i) {
+					return i >= boost::const_begin(range) && i < boost::const_end(range);
+				}
+
+				/// @internal A character range with the @a Attribute.
 				template<typename Attribute>
 				struct AttributedCharacterRange {
 					StringPiece::const_iterator position;
@@ -672,7 +684,9 @@ namespace ascension {
 					// layout
 					std::unique_ptr<GlyphVectorImpl> breakAt(StringPiece::const_iterator at);
 					std::unique_ptr<GlyphVectorImpl> breakIfTooLong();
-					bool expandTabCharacters(const TabExpander<>& tabExpander,
+					bool expandTabCharacters(const RenderingContext2D& context,
+						const presentation::styles::ComputedValue<presentation::styles::TabSize>::type& tabSize,
+						const presentation::styles::Length::Context& lengthContext,
 						const String& layoutString, Scalar ipd, boost::optional<Scalar> maximumMeasure);
 					HRESULT justify(int width);
 					void shape(win32::Handle<HDC>::Type dc);
@@ -687,7 +701,7 @@ namespace ascension {
 					struct RawGlyphVector /*: public StringPiece*/ : private boost::noncopyable {
 						StringPiece::const_iterator position;
 						boost::flyweight<FontAndRenderContext> font;
-						OpenTypeFontTag scriptTag;	// as OPENTYPE_TAG
+						OpenTypeLayoutTag scriptTag;	// as OPENTYPE_TAG
 						mutable SCRIPT_CACHE fontCache;
 						std::size_t numberOfGlyphs;
 						// only 'clusters' is character-base. others are glyph-base
@@ -696,7 +710,7 @@ namespace ascension {
 						std::unique_ptr<int[]> advances, justifiedAdvances;
 						std::unique_ptr<GOFFSET[]> offsets;
 						RawGlyphVector(StringPiece::const_iterator position, std::shared_ptr<const Font> font, const FontRenderContext& frc,
-								OpenTypeFontTag scriptTag) : position(position), font(font, frc), scriptTag(scriptTag), fontCache(nullptr) {
+								OpenTypeLayoutTag scriptTag) : position(position), font(font, frc), scriptTag(scriptTag), fontCache(nullptr) {
 							raiseIfNull(position, "position");
 							raiseIfNull(font.get(), "font");
 						}
@@ -830,7 +844,7 @@ namespace ascension {
 				 * @note This constructor is called by only @c #breakIfTooLong.
 				 */
 				GlyphVectorImpl::GlyphVectorImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-						std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeFontTag scriptTag)
+						std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeLayoutTag scriptTag)
 						: StringPiece(characterRange), analysis_(script),
 						glyphs_(new RawGlyphVector(characterRange.cbegin(), font, frc, scriptTag)) {	// may throw NullPointerException for 'font'
 					raiseIfNullOrEmpty(characterRange, "characterRange");
@@ -868,7 +882,7 @@ namespace ascension {
 					if(leading.glyphs_.get() == nullptr)
 						throw std::invalid_argument("'leading' has not been shaped");
 					raiseIfNull(beginningOfNewRun, "beginningOfNewRun");
-					if(!includes(leading.characterRange(), beginningOfNewRun))
+					if(rangeIncludes(leading.characterRange(), beginningOfNewRun))
 						throw std::out_of_range("beginningOfNewRun");
 
 					// compute 'glyphRange_'
@@ -888,7 +902,7 @@ namespace ascension {
 				 */
 				std::unique_ptr<GlyphVectorImpl> GlyphVectorImpl::breakAt(StringPiece::const_iterator at) {
 					raiseIfNull(at, "at");
-					if(!includes(*this, at))
+					if(!rangeIncludes(*this, at))
 						throw std::out_of_range("at");
 					else if(glyphs_->clusters[at - begin()] == glyphs_->clusters[at - begin() - 1])
 						throw std::invalid_argument("at");
@@ -1024,23 +1038,46 @@ namespace ascension {
 					return c;
 				}
 
+				namespace {
+					typedef boost::flyweight<boost::flyweights::key_value<Scalar, FixedWidthTabExpander<Scalar>>> FlyweightTabExpander;
+					FlyweightTabExpander makeFixedWidthTabExpander(
+							const presentation::styles::ComputedValue<presentation::styles::TabSize>::type& computedValue,
+							const FontMetrics<Scalar>& fontMetrics, const presentation::styles::Length::Context& lengthContext) {
+						Scalar tabWidth;
+						if(const presentation::styles::Integer* const integer = boost::get<presentation::styles::Integer>(&computedValue))
+							tabWidth = fontMetrics.averageCharacterWidth() * *integer;
+						else if(const presentation::styles::Length* const length = boost::get<presentation::styles::Length>(&computedValue))
+							tabWidth = length->value(lengthContext);
+						else
+							ASCENSION_ASSERT_NOT_REACHED();
+						return FlyweightTabExpander(tabWidth);
+					}
+				}
+
 				/**
 				 * Expands tab characters in this vector and modifies the measure (advance).
-				 * @param tabExpander The tab expander
+				 * @param context The rendering context
+				 * @param tabSize The computed value of 'tab-size' style property
+				 * @param lengthContext The @c Length#Context used to calculate @a tabSize
 				 * @param layoutString The text string for the layout to which this text run belongs
 				 * @param ipd The position in writing direction this text run begins, in pixels
 				 * @param maximumMeasure The maximum measure this text run can take place, in pixels
 				 * @return @c true if expanded tab characters
 				 * @throw std#invalid_argument @a maximumMeasure &lt;= 0
 				 */
-				inline bool GlyphVectorImpl::expandTabCharacters(const TabExpander<>& tabExpander,
+				inline bool GlyphVectorImpl::expandTabCharacters(const RenderingContext2D& context,
+						const presentation::styles::ComputedValue<presentation::styles::TabSize>::type& tabSize,
+						const presentation::styles::Length::Context& lengthContext,
 						const String& layoutString, Scalar ipd, boost::optional<Scalar> maximumMeasure) {
 					if(maximumMeasure != boost::none && boost::get(maximumMeasure) <= 0)
 						throw std::invalid_argument("maximumMeasure");
 					if(front() != '\t')
 						return false;
 					assert(length() == 1 && glyphs_.unique());
-					glyphs_->advances[0] = static_cast<int>(tabExpander.nextTabStop(ipd, begin() - layoutString.data()));
+
+					const std::unique_ptr<const FontMetrics<Scalar>> fontMetrics(context.fontMetrics(glyphs_->font.get().font()));
+					const auto tabExpander(makeFixedWidthTabExpander(tabSize, *fontMetrics, lengthContext));
+					glyphs_->advances[0] = static_cast<int>(tabExpander.get().nextTabStop(ipd, begin() - layoutString.data()));
 					if(maximumMeasure != boost::none)
 						glyphs_->advances[0] = std::min(glyphs_->advances[0], static_cast<int>(boost::get(maximumMeasure)));
 					glyphs_->justifiedAdvances.reset();
@@ -1897,13 +1934,13 @@ namespace ascension {
 							// process IVSes in a glyph run
 							if(run.analysis_.eScript != SCRIPT_UNDEFINED && run.length() > 3
 									&& text::surrogates::isHighSurrogate(run[0]) && text::surrogates::isLowSurrogate(run[1])) {
-								for(text::StringCharacterIterator i(run, run.begin() + 2); i.hasNext(); i.next()) {
-									const CodePoint variationSelector = i.current();
+								for(text::StringCharacterIterator i(run, run.begin() + 2); i.hasNext(); ++i) {
+									const CodePoint variationSelector = *i;
 									if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 										text::StringCharacterIterator baseCharacter(i);
-										baseCharacter.previous();
+										--baseCharacter;
 										if(run.font()->ivsGlyph(
-												baseCharacter.current(), variationSelector,
+												*baseCharacter, variationSelector,
 												run.glyphs_->indices[run.glyphs_->clusters[baseCharacter.tell() - run.begin()]])) {
 											run.glyphs_->vanish(*run.font(), i.tell());
 											run.glyphs_->vanish(*run.font(), i.tell() + 1);
@@ -1960,12 +1997,13 @@ namespace ascension {
 				public:
 					TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
 						std::shared_ptr<const Font> font, const FontRenderContext& frc,
-						OpenTypeFontTag scriptTag, const ActualTextRunStyleCore& coreStyle);
+						OpenTypeLayoutTag scriptTag, const ActualTextRunStyleCore& coreStyle);
 					static void generate(const StringPiece& textString,
 						const presentation::styles::ComputedValue<presentation::TextLineStyle>::type& lineStyle,
 						std::unique_ptr<presentation::ComputedStyledTextRunIterator> textRunStyles,
+						const presentation::styles::Length::Context& lengthContext,
 						const FontCollection& fontCollection, const FontRenderContext& frc,
-						std::vector<TextRunImpl*>& textRuns,
+						const presentation::Pixels& parentFontSize, std::vector<TextRunImpl*>& textRuns,
 						std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>>& calculatedStyles);
 					// TextRun
 					const presentation::FlowRelativeFourSides<ActualBorderSide>* border() const BOOST_NOEXCEPT override {return &coreStyle_.get().borders;}
@@ -1973,8 +2011,8 @@ namespace ascension {
 					boost::optional<Index> characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT;
 					Index characterHasClosestLeadingEdge(float ipd) const;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT override {return &coreStyle_.get().margin;}
-					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT override {return &coreStyle_.get().padding;}
+					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT override {return &coreStyle_.get().margins;}
+					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT override {return &coreStyle_.get().paddings;}
 					// attributes
 					const ActualTextRunStyleCore& style() const BOOST_NOEXCEPT {return coreStyle_;}
 					// layout
@@ -2016,7 +2054,7 @@ namespace ascension {
 				 * @note This constructor is called by only @c #breakIfTooLong.
 				 */
 				TextRunImpl::TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-						std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeFontTag scriptTag, const ActualTextRunStyleCore& coreStyle)
+						std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeLayoutTag scriptTag, const ActualTextRunStyleCore& coreStyle)
 						: GlyphVectorImpl(characterRange, script, font, frc, scriptTag), coreStyle_(coreStyle) {	// may throw NullPointerException for 'font'
 				}
 
@@ -2085,12 +2123,31 @@ namespace ascension {
 				}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 
+				namespace {
+					template<typename ComputedFontSpecification>
+					inline void buildActualFontSpecification(const ComputedFontSpecification& computed,
+							const presentation::styles::Length::Context& context, const presentation::Pixels& computedParentSize, ActualFontSpecification& actual) {
+						boost::fusion::at_key<presentation::styles::FontFamily>(actual) = boost::fusion::at_key<presentation::styles::FontFamily>(computed);
+						boost::fusion::at_key<presentation::styles::FontSize>(actual) =
+							presentation::styles::useFontSize(
+								boost::fusion::at_key<presentation::styles::FontSize>(computed), context, computedParentSize).value();
+						boost::fusion::at_key<void>(actual) = FontProperties(
+							boost::fusion::at_key<presentation::styles::FontWeight>(computed),
+							boost::fusion::at_key<presentation::styles::FontStretch>(computed),
+							boost::fusion::at_key<presentation::styles::FontStyle>(computed));
+						boost::fusion::at_key<presentation::styles::FontSizeAdjust>(actual) =
+							boost::fusion::at_key<presentation::styles::FontSizeAdjust>(computed);
+					}
+				}
+
 				/**
 				 * @param textString
 				 * @param lineStyle
 				 * @param textRunStyles
+				 * @param lengthContext
 				 * @param fontCollection
 				 * @param frc
+				 * @param parentFontSize
 				 * @param[out] textRuns
 				 * @param[out] calculatedStyles
 				 * @throw NullPointerException @a textRunStyles is @c null
@@ -2098,7 +2155,8 @@ namespace ascension {
 				void TextRunImpl::generate(const StringPiece& textString,
 						const presentation::styles::ComputedValue<presentation::TextLineStyle>::type& lineStyle,
 						std::unique_ptr<presentation::ComputedStyledTextRunIterator> textRunStyles,
-						const FontCollection& fontCollection, const FontRenderContext& frc,
+						const presentation::styles::Length::Context& lengthContext,
+						const FontCollection& fontCollection, const FontRenderContext& frc, const presentation::Pixels& parentFontSize,
 						std::vector<TextRunImpl*>& textRuns, std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>>& calculatedStyles) {
 					raiseIfNullOrEmpty(textString, "textString");
 					raiseIfNull(textRunStyles.get(), "textRunStyles");
@@ -2113,12 +2171,14 @@ namespace ascension {
 					// 1-1. configure Uniscribe's itemize
 					win32::AutoZero<SCRIPT_CONTROL> control;
 					win32::AutoZero<SCRIPT_STATE> initialState;
-					initialState.uBidiLevel = (*boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::Direction>::type>(lineStyle) == presentation::RIGHT_TO_LEFT) ? 1 : 0;
+					initialState.uBidiLevel = (boost::fusion::at_key<presentation::styles::Direction>(lineStyle) == presentation::RIGHT_TO_LEFT) ? 1 : 0;
 //					initialState.fOverrideDirection = 1;
-					initialState.fInhibitSymSwap = *boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::SymmetricSwappingInhibited>::type>(lineStyle);
-					initialState.fDisplayZWG = 0/**boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::DeprecatedFormatCharactersDisabled>::type(lineStyle)*/;
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+					initialState.fInhibitSymSwap = boost::fusion::at_key<presentation::styles::SymmetricSwappingInhibited>(lineStyle);
+					initialState.fDisplayZWG = boost::fusion::at_key<presentation::styles::DeprecatedFormatCharactersDisabled>(lineStyle);
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 					SCRIPT_DIGITSUBSTITUTE sds;
-					convertNumberSubstitutionToUniscribe(*boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::NumberSubstitution>::type>(lineStyle), sds);
+					convertNumberSubstitutionToUniscribe(boost::fusion::at_key<presentation::styles::NumberSubstitution>(lineStyle), sds);
 					hr = ::ScriptApplyDigitSubstitution(&sds, &control, &initialState);
 					if(FAILED(hr))
 						throw makePlatformError(hr);
@@ -2173,6 +2233,7 @@ namespace ascension {
 							nextStyleRun.position = textString.cend();
 						styleRuns.push_back(AttributedCharacterRange<presentation::ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
 
+						ActualFontSpecification fontSpecification;
 						do {
 							const StringPiece::const_iterator next = std::min(nextScriptRun.position, nextStyleRun.position);
 							const bool advanceScriptRun = next == nextScriptRun.position;
@@ -2181,10 +2242,11 @@ namespace ascension {
 							if(advanceScriptRun) {
 								const StringPiece subRange(scriptRun.position, next - scriptRun.position);
 								assert(glyphRuns.empty() || subRange.cbegin() == lastGlyphRunEnd);
+								buildActualFontSpecification(styleRun.attribute.fonts, lengthContext, parentFontSize, fontSpecification);
 								glyphRuns.push_back(
 									std::unique_ptr<RawGlyphVector>(
 										new RawGlyphVector(subRange.cbegin(),
-											selectFont(subRange, fontCollection, styleRun.attribute.font),
+											selectFont(subRange, fontCollection, fontSpecification),
 											frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
 								scriptPointers.push_back(&scriptRuns[scriptRun.attribute - scriptRuns.get()].a);
 								assert(nextScriptRun.position < textString.cend());
@@ -2197,10 +2259,11 @@ namespace ascension {
 							if(advanceStyleRun) {
 								if(!advanceScriptRun) {
 									const StringPiece subRange(makeStringPiece(!glyphRuns.empty() ? lastGlyphRunEnd : textString.cbegin(), next));
+									buildActualFontSpecification(styleRun.attribute.fonts, lengthContext, parentFontSize, fontSpecification);
 									glyphRuns.push_back(
 										std::unique_ptr<RawGlyphVector>(
 											new RawGlyphVector(subRange.cbegin(),
-												selectFont(subRange, fontCollection, styleRun.attribute.font),
+												selectFont(subRange, fontCollection, fontSpecification),
 												frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
 								}
 								assert(nextStyleRun.position < textString.cend());
@@ -2236,7 +2299,8 @@ namespace ascension {
 
 							mergedTextRuns.push_back(new TextRunImpl(
 								makeStringPiece(previousPosition, nextPosition),
-								*scriptPointers[glyphRuns.size() - (lastGlyphRun - glyphRun)], std::move(*glyphRun), ActualTextRunStyleCore(styleRun->attribute)));
+								*scriptPointers[glyphRuns.size() - (lastGlyphRun - glyphRun)], std::move(*glyphRun),
+								ActualTextRunStyleCore(styleRun->attribute, lengthContext)));
 							if(nextPosition == nextGlyphRunPosition)
 								++glyphRun;
 							if(nextPosition == nextStyleRunPosition)
@@ -2516,124 +2580,6 @@ namespace ascension {
 			}
 
 			/**
-			 * Constructor.
-			 * @param textString The text string to display
-			 * @param toplevelStyle The computed text toplevel style
-			 * @param lineStyle The computed text line style
-			 * @param textRunStyles The computed text runs styles
-			 * @param fontCollection The font collection
-			 * @param fontRenderContext Information about a graphics device which is needed to measure the text correctly
-			 */
-			TextLayout::TextLayout(const String& textString, 
-					boost::flyweight<presentation::styles::ComputedValue<presentation::TextToplevelStyle>::type> toplevelStyle,
-					boost::flyweight<presentation::styles::ComputedValue<presentation::TextLineStyle>::type> lineStyle,
-					std::unique_ptr<presentation::ComputedStyledTextRunIterator> textRunStyles,
-					const FontCollection& fontCollection, const FontRenderContext& fontRenderContext)
-					: textString_(textString), toplevelStyle_(toplevelStyle), lineStyle_(lineStyle), numberOfLines_(0) {
-#if 0
-				// calculate the wrapping width
-				if(layoutInformation.layoutSettings().lineWrap.wraps()) {
-					wrapWidth_ = layoutInformation.width();
-					if(ISpecialCharacterRenderer* scr = layoutInformation.specialCharacterRenderer()) {
-						ISpecialCharacterRenderer::LayoutContext lc(context);
-						lc.readingDirection = readingDirection();
-						wrapWidth_ -= scr->getLineWrappingMarkWidth(lc);
-					}
-				}
-#endif
-				// split the text line into text runs as following steps:
-				// 1. split the text into script runs (SCRIPT_ITEMs) by Uniscribe
-				// 2. split each script runs into atomically-shapable runs (TextRuns) with StyledRunIterator
-				// 3. generate glyphs for each text runs
-				// 4. position glyphs for each text runs
-				// 5. position each text runs
-				// 6. justify each text runs if specified
-				// 7. stack the lines
-
-				const bool emptyLine = textString_.empty();
-				if(emptyLine) {	// handle logically empty line
-					numberOfLines_ = 1;
-					maximumMeasure_ = 0.0f;
-					assert(isEmpty());
-				}
-
-				// 2. split each script runs into text runs with StyledRunIterator
-				std::vector<TextRunImpl*> textRuns;
-				std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>> calculatedStyles;
-				if(!emptyLine) {
-					TextRunImpl::generate(textString_, lineStyle_, std::move(textRunStyles), fontCollection, fontRenderContext, textRuns, calculatedStyles);
-//					runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
-//					std::copy(textRuns.begin(), textRuns.end(), runs_.get());
-//					shrinkToFit(styledRanges_);
-				}
-
-				// 3. generate glyphs for each text runs
-				const RenderingContext2D context(win32::detail::screenDC());
-				if(!emptyLine) {
-					BOOST_FOREACH(TextRunImpl* run, textRuns)
-						run->shape(context.native());
-					TextRunImpl::substituteGlyphs(boost::make_iterator_range(textRuns));
-
-					// 4. position glyphs for each text runs
-					for(auto run(std::begin(textRuns)), b(std::begin(textRuns)), e(std::end(textRuns)); run != e; ++run)
-						(*run)->positionGlyphs(context.native(), calculatedStyles[run - b].attribute);
-				}
-
-				// 5. position each text runs
-				std::shared_ptr<const Font> nominalFont;
-				if(!lineStyle.nominalFont.families.empty()) {
-					const FontDescription nominalFontDescription(lineStyle.nominalFont.families.front(),
-						lineStyle.nominalFont.pointSize, lineStyle.nominalFont.properties);
-					nominalFont = fontCollection.get(nominalFontDescription,
-						fontRotationForWritingMode(*boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::WritingMode>::type>(toplevelStyle.get())),
-						lineStyle.nominalFont.sizeAdjust);
-				} else
-					nominalFont = fontCollection.lastResortFallback(lineStyle.nominalFont.pointSize,
-						lineStyle.nominalFont.properties, geometry::makeIdentityTransform(), lineStyle.nominalFont.sizeAdjust);
-				if(!emptyLine) {
-					const auto tabSize(*boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::TabSize>::type>(lineStyle.get()));
-					Scalar tabWidth;
-					if(const presentation::styles::Integer* const integer = boost::get<presentation::styles::Integer>(&tabSize))
-						tabWidth = context.fontMetrics(nominalFont)->averageCharacterWidth() * *integer;
-					else if(const presentation::Pixels* const pixels = boost::get<presentation::Pixels>(&tabSize))
-						tabWidth = pixels->value();
-					else
-						ASCENSION_ASSERT_NOT_REACHED();
-					const FixedWidthTabExpander<Scalar> tabExpander(tabWidth);
-
-					// wrap into visual lines and reorder runs in each lines
-					if(runs_.empty() || !wrapsText(*boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::WhiteSpace>::type>(lineStyle.get()))) {
-						numberOfLines_ = 1;
-						assert(firstRunsInLines_.get() == nullptr);
-						// 5-1. expand horizontal tabs (with logical ordered runs)
-						expandTabsWithoutWrapping(tabExpander);
-						// 5-2. reorder each text runs
-						reorder();
-						// 5-3. reexpand horizontal tabs
-//						expandTabsWithoutWrapping();
-					} else {
-						const auto measure(*boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::Measure>::type>(lineStyle.get()));
-
-						// 5-1. expand horizontal tabs and wrap into lines
-						wrap(measure, tabExpander);
-						// 5-2. reorder each text runs
-						reorder();
-						// 5-3. reexpand horizontal tabs
-						// TODO: not implemented.
-						// 6. justify each text runs if specified
-						const auto textJustification(*boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::TextJustification>::type>(lineStyle.get()));
-						if(textJustification != TextJustification::NONE)
-							justify(measure, textJustification);
-					}
-				}
-
-				// 7. stack the lines
-				stackLines(context,
-					*boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::LineHeight>::type>(lineStyle.get()),
-					*boost::fusion::find<presentation::styles::ComputedValue<presentation::styles::LineBoxContain>::type>(lineStyle.get()), *nominalFont);
-			}
-
-			/**
 			 * Returns the black box bounds of the characters in the specified range. The black box bounds is
 			 * an area consisting of the union of the bounding boxes of the all of the characters in the range.
 			 * The result region can be disjoint.
@@ -2672,9 +2618,9 @@ namespace ascension {
 						const boost::integer_range<Index> runRange = boost::irange<Index>(
 							(*run)->characterRange().begin() - textString_.data(), (*run)->characterRange().end() - textString_.data());
 						const auto intersection = ascension::intersection(runRange, characterRange);
-						if(!boost::empty(intersection)) {
+						if(intersection != boost::none) {
 							const std::ptrdiff_t beginningOfRun = (*run)->characterRange().begin() - textString_.data();
-							const boost::integer_range<Index> offsetsInRun = boost::irange(*intersection.begin() - beginningOfRun, *intersection.end() - beginningOfRun);
+							const boost::integer_range<Index> offsetsInRun = boost::irange(*intersection->begin() - beginningOfRun, *intersection->end() - beginningOfRun);
 							std::vector<graphics::Rectangle> runBlackBoxBounds(static_cast<const TextRunImpl&>(**run).charactersBounds(offsetsInRun));
 							AffineTransform typographicalToPhysicalMapping(geometry::makeTranslationTransform(
 								geometry::_tx = geometry::x(runTypographicOrigin), geometry::_ty = geometry::y(runTypographicOrigin)));
@@ -2861,8 +2807,14 @@ namespace ascension {
 								geometry::range<0>(allocationRectangle) = boost::irange(geometry::x(p), geometry::x(q));
 							else
 								geometry::range<1>(allocationRectangle) = boost::irange(geometry::y(p), geometry::y(q));
-							context.setFillStyle(lineStyle_.get().background);
-							context.fillRectangle(allocationRectangle);
+							{
+								const auto background(boost::fusion::at_key<presentation::styles::BackgroundColor>(defaultRunStyle().backgroundsAndBorders));
+								if(!background.isFullyTransparent()) {
+									const SolidColor backgroundColor(background);
+									context.setFillStyle(std::shared_ptr<const SolidColor>(&backgroundColor, boost::null_deleter()));
+									context.fillRectangle(allocationRectangle);
+								}
+							}
 
 							// 2-2. compute 'content-rectangle'
 							const presentation::FlowRelativeFourSides<Scalar> abstractContentBox(contentBox(*run)), abstractAllocationBox(allocationBox(*run));
@@ -2903,19 +2855,20 @@ namespace ascension {
 							const auto& runStyle = static_cast<const TextRunImpl&>(*run).style();
 							const Point& alignmentPoint = (wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ? p : q;
 							graphics::Rectangle borderRectangle;
-							if(runStyle.background || borderShouldBePainted(runStyle.border))
+							if(!runStyle.backgroundColor.isFullyTransparent() || borderShouldBePainted(runStyle.borders))
 								borderRectangle = geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(wm, borderBox(*run)) + PhysicalTwoAxes<Scalar>(alignmentPoint));
 
 							// 2-3. paint background
-							if(runStyle.background) {
-								context.setFillStyle(runStyle.background);
+							if(!runStyle.backgroundColor.isFullyTransparent()) {
+								const SolidColor fill(runStyle.backgroundColor);
+								context.setFillStyle(std::shared_ptr<const Paint>(&fill, boost::null_deleter()));
 								context.fillRectangle(borderRectangle);
 							}
 
 							// 2-4. paint borders
 							PhysicalFourSides<const ActualBorderSide*> physicalBorders;
 							for(auto border(std::begin(runStyle.borders)), e(std::end(runStyle.borders)); border != e; ++border) {
-								const presentation::FlowRelativeDirection direction = static_cast<presentation::FlowRelativeDirection>(border - std::begin(runStyle.border));
+								const presentation::FlowRelativeDirection direction = static_cast<presentation::FlowRelativeDirection>(border - std::begin(runStyle.borders));
 								physicalBorders[mapFlowRelativeToPhysical(writingMode(*this), direction)] = &*border;
 							}
 							for(auto border(std::begin(physicalBorders)), e(std::end(physicalBorders)); border != e; ++border) {
@@ -3055,18 +3008,6 @@ namespace ascension {
 				context.restore();
 			}
 
-			/// Expands the all tabs and resolves each width.
-			inline void TextLayout::expandTabsWithoutWrapping(const TabExpander<>& tabExpander) BOOST_NOEXCEPT {
-				Scalar ipd = 0;
-				// for each runs... (at this time, 'runs_' is in logical order)
-				BOOST_FOREACH(RunVector::const_reference p, runs_) {
-					TextRunImpl& run = *const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(p.get()));
-					run.expandTabCharacters(tabExpander, textString_, ipd, boost::none);
-					ipd += allocationMeasure(run);
-				}
-				maximumMeasure_ = ipd;
-			}
-
 			/**
 			 * Returns the space string added to the end of the specified line to reach the specified virtual
 			 * point. If the end of the line is over @a virtualX, the result is an empty string.
@@ -3115,6 +3056,163 @@ namespace ascension {
 #endif
 			}
 
+			class TextLayout::TabSize {
+			public:
+				typedef presentation::styles::ComputedValue<presentation::styles::TabSize>::type Object;
+				explicit TabSize(const Object& object) BOOST_NOEXCEPT : object_(object) {}
+				BOOST_CONSTEXPR const Object& get() const BOOST_NOEXCEPT {return object_;}
+			private:
+				const Object& object_;
+			};
+
+			void TextLayout::initialize(
+					std::unique_ptr<presentation::ComputedStyledTextRunIterator> textRunStyles,
+					const presentation::styles::Length::Context& lengthContext,
+					const Dimension& parentContentArea,
+					const FontCollection& fontCollection, const FontRenderContext& fontRenderContext) {
+#if 0
+				// calculate the wrapping width
+				if(layoutInformation.layoutSettings().lineWrap.wraps()) {
+					wrapWidth_ = layoutInformation.width();
+					if(ISpecialCharacterRenderer* scr = layoutInformation.specialCharacterRenderer()) {
+						ISpecialCharacterRenderer::LayoutContext lc(context);
+						lc.readingDirection = readingDirection();
+						wrapWidth_ -= scr->getLineWrappingMarkWidth(lc);
+					}
+				}
+#endif
+				// calculate the nominal font
+				std::shared_ptr<const Font> nominalFont;
+				presentation::Pixels nominalFontSize;
+				{
+					const auto& nominalFontStyles = defaultRunStyle().fonts;
+					const auto& nominalFontFamilies(boost::fusion::at_key<presentation::styles::FontFamily>(nominalFontStyles));
+					const FontProperties nominalFontProperties(
+						boost::fusion::at_key<presentation::styles::FontWeight>(nominalFontStyles),
+						boost::fusion::at_key<presentation::styles::FontStretch>(nominalFontStyles),
+						boost::fusion::at_key<presentation::styles::FontStyle>(nominalFontStyles));
+					nominalFontSize = presentation::Pixels(
+						presentation::styles::useFontSize(boost::fusion::at_key<presentation::styles::FontSize>(nominalFontStyles), lengthContext,
+							presentation::styles::useFontSize(boost::fusion::at_key<presentation::styles::FontSize>(defaultRunStyle().fonts),
+								lengthContext, presentation::styles::HANDLE_AS_ROOT)));
+					if(!nominalFontFamilies.empty()) {
+						const FontDescription nominalFontDescription(FontFamily(nominalFontFamilies.front()), nominalFontSize.value(), nominalFontProperties);
+						nominalFont = fontCollection.get(nominalFontDescription,
+							fontRotationForWritingMode(boost::fusion::at_key<presentation::styles::WritingMode>(parentStyle())),
+							boost::fusion::at_key<presentation::styles::FontSizeAdjust>(nominalFontStyles));
+					} else
+						nominalFont = fontCollection.lastResortFallback(nominalFontSize.value(),
+							nominalFontProperties, geometry::makeIdentityTransform(), boost::fusion::at_key<presentation::styles::FontSizeAdjust>(nominalFontStyles));
+				}
+				assert(nominalFont.get() != nullptr);
+
+				// split the text line into text runs as following steps:
+				// 1. split the text into script runs (SCRIPT_ITEMs) by Uniscribe
+				// 2. split each script runs into atomically-shapable runs (TextRuns) with StyledRunIterator
+				// 3. generate glyphs for each text runs
+				// 4. position glyphs for each text runs
+				// 5. position each text runs
+				// 6. justify each text runs if specified
+				// 7. stack the lines
+
+				const bool emptyLine = textString_.empty();
+				if(emptyLine) {	// handle logically empty line
+					numberOfLines_ = 1;
+					maximumMeasure_ = 0.0f;
+					assert(isEmpty());
+				}
+
+				// 2. split each script runs into text runs with StyledRunIterator
+				std::vector<TextRunImpl*> textRuns;
+				std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>> calculatedStyles;
+				if(!emptyLine) {
+					TextRunImpl::generate(textString_, style(), std::move(textRunStyles),
+						lengthContext, fontCollection, fontRenderContext, nominalFontSize, textRuns, calculatedStyles);
+//					runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
+//					std::copy(textRuns.begin(), textRuns.end(), runs_.get());
+//					shrinkToFit(styledRanges_);
+				}
+
+				// 3. generate glyphs for each text runs
+				const RenderingContext2D context(win32::detail::screenDC());
+				if(!emptyLine) {
+					BOOST_FOREACH(TextRunImpl* run, textRuns)
+						run->shape(context.native());
+					TextRunImpl::substituteGlyphs(boost::make_iterator_range(textRuns));
+
+					// 4. position glyphs for each text runs
+					for(auto run(std::begin(textRuns)), b(std::begin(textRuns)), e(std::end(textRuns)); run != e; ++run)
+						(*run)->positionGlyphs(context.native(), calculatedStyles[run - b].attribute);
+				}
+
+				// 5. position each text runs
+				if(!emptyLine) {
+					const auto tabSize(boost::fusion::at_key<presentation::styles::TabSize>(style()));
+
+					// wrap into visual lines and reorder runs in each lines
+					if(runs_.empty() || !wrapsText(boost::fusion::at_key<presentation::styles::WhiteSpace>(style()))) {
+						numberOfLines_ = 1;
+						assert(firstRunsInLines_.get() == nullptr);
+						// 5-1. expand horizontal tabs (with logical ordered runs)
+						{
+							Scalar ipd = 0;
+							// for each runs... (at this time, 'runs_' is in logical order)
+							BOOST_FOREACH(RunVector::const_reference p, runs_) {
+								TextRunImpl& run = *const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(p.get()));
+								run.expandTabCharacters(context, tabSize, lengthContext, textString_, ipd, boost::none);
+								ipd += allocationMeasure(run);
+							}
+							maximumMeasure_ = ipd;
+						}
+						// 5-2. reorder each text runs
+						reorder();
+						// 5-3. reexpand horizontal tabs
+//						expandTabsWithoutWrapping();
+					} else {
+						const auto computedMeasure(boost::fusion::at_key<presentation::styles::Measure>(style()));
+						Scalar actualMeasure;
+						if(const presentation::styles::Length* const length = boost::get<presentation::styles::Length>(&computedMeasure))
+							actualMeasure = length->value(lengthContext);
+						else {
+							presentation::styles::Percentage percentage;
+							if(const presentation::styles::Percentage* const computed = boost::get<presentation::styles::Percentage>(&computedMeasure))
+								percentage = *computed;
+							else
+								percentage = 1;	// 100% as default
+							if(presentation::isHorizontal(boost::fusion::at_key<presentation::styles::WritingMode>(parentStyle())))
+								actualMeasure = geometry::dx(parentContentArea) * boost::rational_cast<Scalar>(percentage);
+							else
+								actualMeasure = geometry::dy(parentContentArea) * boost::rational_cast<Scalar>(percentage);
+						}
+
+						// 5-1. expand horizontal tabs and wrap into lines
+						wrap(context, TabSize(tabSize), lengthContext, actualMeasure);
+						// 5-2. reorder each text runs
+						reorder();
+						// 5-3. reexpand horizontal tabs
+						// TODO: not implemented.
+						// 6. justify each text runs if specified
+						const auto textJustification(boost::fusion::at_key<presentation::styles::TextJustification>(style()));
+						if(textJustification != TextJustification::NONE)
+							justify(actualMeasure, textJustification);
+					}
+				}
+
+				// 7. stack the lines
+				const auto& computedLineHeight = boost::fusion::at_key<presentation::styles::LineHeight>(style());
+				presentation::styles::Length lineHeight;
+				if(const presentation::styles::Number* number = boost::get<presentation::styles::Number>(&computedLineHeight))
+					lineHeight.newValueSpecifiedUnits(presentation::styles::Length::EM_HEIGHT, *number);
+				else if(const presentation::styles::Length* length = boost::get<presentation::styles::Length>(&computedLineHeight))
+					lineHeight = *length;
+				else if(const presentation::styles::Percentage* percentage = boost::get<presentation::styles::Percentage>(&computedLineHeight))
+					lineHeight.newValueSpecifiedUnits(presentation::styles::Length::EM_HEIGHT, boost::rational_cast<presentation::styles::Number>(*percentage));
+				else
+					lineHeight.newValueSpecifiedUnits(presentation::styles::Length::EM_HEIGHT, 1.2f);
+				stackLines(context, lineHeight, lengthContext,
+					boost::fusion::at_key<presentation::styles::LineBoxContain>(style()), *nominalFont);
+			}
+
 			/// Justifies the wrapped visual lines.
 			inline void TextLayout::justify(Scalar lineMeasure, TextJustification) BOOST_NOEXCEPT {
 				for(Index line = 0; line < numberOfLines(); ++line) {
@@ -3155,10 +3253,13 @@ namespace ascension {
 
 			/**
 			 * @internal Locates the wrap points and resolves tab expansions.
+			 * @param context
+			 * @param tabSize
+			 * @param lengthContext
 			 * @param measure
-			 * @param tabExpander
 			 */
-			void TextLayout::wrap(Scalar measure, const TabExpander<>& tabExpander) BOOST_NOEXCEPT {
+			void TextLayout::wrap(const RenderingContext2D& context, const TabSize& tabSize,
+					const presentation::styles::Length::Context& lengthContext, Scalar measure) BOOST_NOEXCEPT {
 				assert(!isEmpty());
 				assert(numberOfLines_ == 0 && firstRunsInLines_.get() == nullptr);
 
@@ -3176,8 +3277,8 @@ namespace ascension {
 					TextRunImpl* run = const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(p.get()));
 
 					// if the run is a tab, expand and calculate actual width
-					if(run->expandTabCharacters(tabExpander, textString_,
-							(ipd1 < measure) ? ipd1 : 0, measure - (ipd1 < measure) ? ipd1 : 0)) {
+					if(run->expandTabCharacters(context, tabSize.get(), lengthContext,
+							textString_, (ipd1 < measure) ? ipd1 : 0, measure - (ipd1 < measure) ? ipd1 : 0)) {
 						if(ipd1 < measure) {
 							ipd1 += allocationMeasure(*run);
 							runs.push_back(run);
