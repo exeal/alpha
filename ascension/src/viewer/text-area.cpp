@@ -230,6 +230,11 @@ namespace ascension {
 			}
 		}
 
+		/// @see TextViewerComponent#mouseInputStrategy
+		std::weak_ptr<MouseInputStrategy> TextArea::mouseInputStrategy() const {
+			return std::weak_ptr<MouseInputStrategy>(mouseInputStrategy_);
+		}
+
 		/// @see TextViewerComponent#paint
 		void TextArea::paint(graphics::PaintContext& context) {
 //			Timer tm(L"TextViewer.paint");
@@ -517,6 +522,9 @@ namespace ascension {
 			widgetapi::redrawScheduledRegion(*viewer_);
 		}
 
+		void TextArea::viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) {
+		}
+
 		/// @see VisualLinesListener#visualLinesDeleted
 		void TextArea::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
 			const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer().viewport());
@@ -602,13 +610,14 @@ namespace ascension {
 		/// @see graphics#font#TextRenderer#createLineLayout
 		std::unique_ptr<const graphics::font::TextLayout> TextArea::Renderer::createLineLayout(Index line) const {
 			const std::unique_ptr<graphics::RenderingContext2D> renderingContext(widgetapi::createRenderingContext(viewer_));
-			presentation::styles::ComputedValue<presentation::TextLineStyle>::type lineStyle;
-			std::unique_ptr<presentation::ComputedStyledTextRunIterator> runStyles;
-			buildLineLayoutConstructionParameters(line, *renderingContext, lineStyle, runStyles);
+			auto styles(buildLineLayoutConstructionParameters(line, *renderingContext));
 			return std::unique_ptr<const graphics::font::TextLayout>(
 				new graphics::font::TextLayout(
-					viewer_.document().line(line), presentation().computedTextToplevelStyle(),
-					lineStyle, std::move(runStyles), fontCollection(), renderingContext->fontRenderContext()));
+					viewer_.document().line(line),
+					presentation().computedTextToplevelStyle(), styles.first, std::move(styles.second),
+					presentation().computeTextRunStyleForLine(line),
+					presentation::styles::Length::Context(*renderingContext, graphics::geometry::size(viewer_.textAreaAllocationRectangle())),
+					graphics::geometry::size(viewer_.textAreaContentRectangle()), fontCollection(), renderingContext->fontRenderContext()));
 		}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
