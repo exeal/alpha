@@ -8,10 +8,10 @@
 
 #ifndef ASCENSION_TEXT_RENDERER_HPP
 #define ASCENSION_TEXT_RENDERER_HPP
-
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/signals.hpp>
 #include <ascension/graphics/physical-directions-dimensions.hpp>
+#include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/text-renderer-observers.hpp>
 #include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/geometry/point.hpp>
@@ -31,7 +31,6 @@ namespace ascension {
 
 		namespace font {
 			class Font;
-			class FontCollection;
 			class LineLayoutVector;
 			class TextLayout;
 			class TextViewport;
@@ -126,7 +125,7 @@ namespace ascension {
 				Scalar textWrappingMeasureInPixels_;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				std::unique_ptr<LineLayoutVector> layouts_;
-				const FontCollection& fontCollection_;
+				const FontCollection fontCollection_;
 				std::shared_ptr<const Font> defaultFont_;
 				std::shared_ptr<const LineRenderingOptions> lineRenderingOptions_;
 				std::shared_ptr<TextViewport> viewport_;
