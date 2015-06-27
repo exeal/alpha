@@ -40,6 +40,14 @@
 #	include <Dlgs.h>
 #endif
 
+#ifdef _DEBUG
+#	include <boost/log/core.hpp>
+#	include <boost/log/expressions.hpp>
+#	include <boost/log/sinks.hpp>
+#	include <boost/log/sinks/debug_output_backend.hpp>
+#	include <boost/make_shared.hpp>
+#endif
+
 
 #ifdef BOOST_OS_WINDOWS
 namespace alpha {
@@ -53,6 +61,21 @@ namespace alpha {
 
 /// The entry point.
 int main(int argc, char* argv[]) {
+#ifdef _DEBUG
+	{
+		auto loggingBackend(boost::make_shared<boost::log::sinks::debug_output_backend>());
+		auto loggingSink(boost::make_shared<boost::log::sinks::synchronous_sink<boost::log::sinks::debug_output_backend>>(loggingBackend));
+		loggingSink->set_formatter(
+			boost::log::expressions::format("%1%(%2%) : %3% in %4%")
+			% boost::log::expressions::attr<std::string>("file")
+			% boost::log::expressions::attr<int>("line")
+			% boost::log::expressions::message
+			% boost::log::expressions::attr<std::string>("function"));
+//		boost::log::add_common_attributes();
+		boost::log::core::get()->add_sink(loggingSink);
+	}
+#endif // _DEBUG
+
 	int	exitCode = 0/*EXIT_SUCCESS*/;
 
 #ifdef BOOST_OS_WINDOWS

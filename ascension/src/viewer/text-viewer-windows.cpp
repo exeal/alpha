@@ -14,6 +14,7 @@
 
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/log.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/text-editor/command.hpp>
@@ -32,10 +33,6 @@
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
 #	include <ascension/presentation/presentation-reconstructor.hpp>
-#endif
-
-#ifdef _DEBUG
-#	include <boost/log/trivial.hpp>
 #endif
 
 using namespace ascension;
@@ -540,13 +537,13 @@ STDMETHODIMP TextViewer::DragEnter(IDataObject* data, DWORD keyState, POINTL loc
 		if(SUCCEEDED(hr = data->EnumFormatEtc(DATADIR_GET, formats.initialize()))) {
 			FORMATETC format;
 			ULONG fetched;
-			BOOST_LOG_TRIVIAL(debug) << L"DragEnter received a data object exposes the following formats.\n";
+			ASCENSION_LOG_TRIVIAL(debug) << L"DragEnter received a data object exposes the following formats.\n";
 			for(formats->Reset(); formats->Next(1, &format, &fetched) == S_OK; ) {
 				std::array<WCHAR, 256> name;
 				if(::GetClipboardFormatNameW(format.cfFormat, name.data(), name.size() - 1) != 0)
-					BOOST_LOG_TRIVIAL(debug) << L"\t" << name.data() << L"\n";
+					ASCENSION_LOG_TRIVIAL(debug) << L"\t" << name.data() << L"\n";
 				else
-					BOOST_LOG_TRIVIAL(debug) << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
+					ASCENSION_LOG_TRIVIAL(debug) << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
 				if(format.ptd != nullptr)
 					::CoTaskMemFree(format.ptd);
 			}
@@ -637,7 +634,7 @@ STDMETHODIMP TextViewer::Drop(IDataObject* data, DWORD keyState, POINTL location
 	STGMEDIUM stg;
 	data->GetData(&fe, &stg);
 	const char* bytes = static_cast<char*>(::GlobalLock(stg.hGlobal));
-	BOOST_LOG_TRIVIAL(debug) << bytes;
+	ASCENSION_LOG_TRIVIAL(debug) << bytes;
 	::GlobalUnlock(stg.hGlobal);
 	::ReleaseStgMedium(&stg);
 */

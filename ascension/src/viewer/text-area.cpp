@@ -14,6 +14,7 @@
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document.hpp>
+#include <ascension/log.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
@@ -293,7 +294,7 @@ namespace ascension {
 				return;
 
 #if defined(_DEBUG) && defined(ASCENSION_DIAGNOSE_INHERENT_DRAWING)
-			BOOST_LOG_TRIVIAL(debug)
+			ASCENSION_LOG_TRIVIAL(debug)
 				<< L"@TextViewer.redrawLines invalidates lines ["
 				<< static_cast<unsigned long>(*lines.begin())
 				<< L".." << static_cast<unsigned long>(*lines.end()) << L"]\n";

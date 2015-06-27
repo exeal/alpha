@@ -548,6 +548,9 @@
     <ClCompile Include="..\..\ascension\src\graphics\font\text-layout-styles.cpp">
       <Filter>ascension\Source Files\graphics\font</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\log.cpp">
+      <Filter>ascension\Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1215,6 +1218,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\percentage.hpp">
       <Filter>ascension\Header Files\presentation\styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\log.hpp">
+      <Filter>ascension\Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
