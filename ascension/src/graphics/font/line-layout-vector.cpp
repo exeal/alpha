@@ -13,11 +13,9 @@
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/kernel/document.hpp>
+#include <ascension/log.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/sort.hpp>
-#ifdef _DEBUG
-#	include <boost/log/trivial.hpp>
-#endif
 
 namespace ascension {
 	namespace graphics {
@@ -42,7 +40,7 @@ namespace ascension {
 			 */
 			const TextLayout& LineLayoutVector::operator[](Index line) {
 #if defined(ASCENSION_TRACE_LAYOUT_CACHES) && defined(_DEBUG)
-				BOOST_LOG_TRIVIAL(debug) << "finding layout for line " << line;
+				ASCENSION_LOG_TRIVIAL(debug) << "finding layout for line " << line;
 #endif
 				LineLayoutVector& self = *const_cast<LineLayoutVector*>(this);
 				auto i(std::begin(self.layouts_));
@@ -53,7 +51,7 @@ namespace ascension {
 
 				if(i != end(layouts_)) {
 #if defined(ASCENSION_TRACE_LAYOUT_CACHES) && defined(_DEBUG)
-					BOOST_LOG_TRIVIAL(debug) << "... cache found\n";
+					ASCENSION_LOG_TRIVIAL(debug) << "... cache found\n";
 #endif
 					if(i->layout != layouts_.front().layout) {
 						// bring to the top

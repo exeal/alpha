@@ -10,12 +10,10 @@
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/log.hpp>
 #include <ascension/rules/lexical-partitioner.hpp>
 #include <ascension/rules/transition-rules.hpp>
 #include <boost/foreach.hpp>
-#if defined(_DEBUG)
-#	include <boost/log/trivial.hpp>
-#endif
 
 
 namespace ascension {
@@ -168,9 +166,9 @@ namespace ascension {
 		/// Dumps the partitions information.
 		void LexicalPartitioner::dump() const {
 #if defined(_DEBUG)
-			BOOST_LOG_TRIVIAL(debug) << "LexicalPartitioner dump start:\n";
+			ASCENSION_LOG_TRIVIAL(debug) << "LexicalPartitioner dump start:\n";
 			BOOST_FOREACH(auto i, partitions_)
-				BOOST_LOG_TRIVIAL(debug)
+				ASCENSION_LOG_TRIVIAL(debug)
 					<< "\t" << i->contentType << " = ("
 					<< static_cast<std::uint32_t>(i->start.line) << ", "
 					<< static_cast<std::uint32_t>(i->start.offsetInLine) << ")\n";

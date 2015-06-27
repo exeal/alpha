@@ -224,6 +224,7 @@
     <ClCompile Include="..\..\ascension\src\graphics\paint-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\document-character-iterator.cpp" />
+    <ClCompile Include="..\..\ascension\src\log.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\hyperlink\composite-hyperlink-detector.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\hyperlink\uri-hyperlink-detector.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\length.cpp" />
@@ -445,6 +446,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\region.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\log.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\absolute-length.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\detail\style-sequence.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\flow-relative-directions-dimensions.hpp" />

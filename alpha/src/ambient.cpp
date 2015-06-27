@@ -5,6 +5,7 @@
 #include "ambient.hpp"
 #include "application.hpp"
 //#include "../resource/messages.h"
+#include <ascension/log.hpp>
 //#include <boost/foreach.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -13,9 +14,6 @@
 #include <glibmm/ustring.h>
 #include <gtkmm/messagedialog.h>
 #include <codecvt>
-#ifdef _DEBUG
-#	include <boost/log/trivial.hpp>
-#endif // _DEBUG
 
 namespace alpha {
 	namespace ambient {
@@ -258,7 +256,7 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 							boost::python::xdecref(traceback);
 							type = value = traceback = nullptr;
 							::PyErr_Fetch(&type, &value, &traceback);
-							BOOST_LOG_TRIVIAL(debug) << static_cast<std::string>(boost::python::extract<std::string>(value));
+							ASCENSION_LOG_TRIVIAL(debug) << static_cast<std::string>(boost::python::extract<std::string>(value));
 						}
 #endif // _DEBUG
 					}

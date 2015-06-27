@@ -28,6 +28,7 @@
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-paint-override.hpp>
 #include <ascension/graphics/font/text-run.hpp>
+#include <ascension/log.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
@@ -37,9 +38,6 @@
 #include <boost/flyweight.hpp>
 #include <boost/flyweight/key_value.hpp>
 #include <boost/foreach.hpp>
-#ifdef _DEBUG
-#	include <boost/log/trivial.hpp>
-#endif
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/numeric.hpp>	// boost.accumulate
 #include <limits>	// std.numeric_limits
@@ -1170,7 +1168,7 @@ namespace ascension {
 					if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(dc.get(), OBJ_FONT))) {
 						LOGFONTW lf;
 						if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0)
-							BOOST_LOG_TRIVIAL(debug) << L"[TextLayout.TextRun.generateGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
+							ASCENSION_LOG_TRIVIAL(debug) << L"[TextLayout.TextRun.generateGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
 					}
 #endif
 
@@ -2679,7 +2677,7 @@ namespace ascension {
 					const InlineObject* endOfLine/* = nullptr */, const InlineObject* lineWrappingMark /* = nullptr */) const {
 
 #if defined(_DEBUG) && defined(ASCENSION_DIAGNOSE_INHERENT_DRAWING)
-				BOOST_LOG_TRIVIAL(debug) << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
+				ASCENSION_LOG_TRIVIAL(debug) << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
 #endif
 
 				if(isEmpty() || geometry::dy(context.boundsToPaint()) == 0)
@@ -3336,14 +3334,14 @@ namespace ascension {
 							if(lastBreakable == run->begin()) {
 								assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
 								firstRunsInLines.push_back(runs.size());
-//BOOST_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run start.\n";
+//								ASCENSION_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run start.\n";
 							}
 							// case 2: break at the end of the run
 							else if(lastBreakable == run->end()) {
 								if(lastBreakable < textString_.data() + numberOfCharacters()) {
 									assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
 									firstRunsInLines.push_back(runs.size() + 1);
-//BOOST_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run end.\n";
+//									ASCENSION_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run end.\n";
 								}
 								break;
 							}
@@ -3353,7 +3351,7 @@ namespace ascension {
 								runs.push_back(run);
 								assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
 								firstRunsInLines.push_back(runs.size());
-//BOOST_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run meddle.\n";
+//								ASCENSION_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run meddle.\n";
 								createdRuns.push_back(std::move(followingRun));	// C2668 if included <boost/log/trivial.hpp> without 'std::' ???
 								run = createdRuns.back().get();	// continue the process about this run
 							}
@@ -3368,7 +3366,7 @@ namespace ascension {
 					runs.push_back(run);
 					ipd1 += measureInThisRun;
 				}
-//BOOST_LOG_TRIVIAL(debug) << L"...broke the all lines.\n";
+//				ASCENSION_LOG_TRIVIAL(debug) << L"...broke the all lines.\n";
 #if 0
 				if(runs.empty())
 					runs.push_back(nullptr);
