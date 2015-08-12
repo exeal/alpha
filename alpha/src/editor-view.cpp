@@ -13,6 +13,7 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/log.hpp>
 #include <ascension/text-editor/command.hpp>	// ascension.texteditor.commands.IncrementalSearchCommand
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>
@@ -22,7 +23,10 @@
 namespace alpha {
 	/// Constructor.
 	EditorView::EditorView(ascension::presentation::Presentation& presentation) :
-			Glib::ObjectBase("alpha.EditorView"), ascension::viewer::TextViewer(presentation), visualColumnStartValue_(1) {
+#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+			Glib::ObjectBase("alpha.EditorView"),
+#endif
+			ascension::viewer::TextViewer(presentation), visualColumnStartValue_(1) {
 		document().bookmarker().addListener(*this);
 //		caretObject_.reset(new CaretProxy(caret()));
 	}
@@ -148,6 +152,14 @@ namespace alpha {
 	/// @see Caret#MatchBracketsChangedSignal
 	void EditorView::matchBracketsChanged(const ascension::viewer::Caret& self, const boost::optional<std::pair<ascension::kernel::Position, ascension::kernel::Position>>& previouslyMatchedBrackets, bool outsideOfView) {
 		// TODO: indicate if the pair is outside of the viewer.
+	}
+#endif
+
+#ifdef _DEBUG
+	bool EditorView::on_event(GdkEvent* event) {
+		if(event != nullptr)
+			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
+		return ascension::viewer::TextViewer::on_event(event);
 	}
 #endif
 

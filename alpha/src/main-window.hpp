@@ -21,7 +21,7 @@ namespace alpha {
 //		class SearchDialog;
 //		class BookmarkDialog;
 
-		class MainWindow : public Gtk::ApplicationWindow {
+		class MainWindow : public Gtk::/*Application*/Window {
 		public:
 			MainWindow();
 
@@ -38,6 +38,7 @@ namespace alpha {
 #ifdef _DEBUG
 			bool on_event(GdkEvent* event) override;
 #endif
+			bool on_focus_in_event(GdkEventFocus* event) override;
 		private:
 			Gtk::VBox vbox_;
 			EditorPanes editorPanes_;

@@ -156,7 +156,9 @@ namespace ascension {
 		 */
 		TextViewer::TextViewer(presentation::Presentation& presentation) :
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 				Glib::ObjectBase("ascension.viewer.TextViewer"),
+#	endif
 #endif
 				presentation_(presentation) {
 			initialize(nullptr);
@@ -170,7 +172,7 @@ namespace ascension {
 		 */
 		TextViewer::TextViewer(const TextViewer& other) :
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Glib::ObjectBase("ascension.viewer.TextViewer"),
+//				Glib::ObjectBase("ascension.viewer.TextViewer"),
 #endif
 				presentation_(other.presentation_) {
 			initialize(&other);
@@ -525,6 +527,7 @@ namespace ascension {
 					const boost::optional<boost::integer_range<widgetapi::NativeScrollPosition>>& range, const boost::optional<widgetapi::NativeScrollPosition>& pageSize) {
 				assert(coordinate <= 1);
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 				Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
 				if(range) {
 					adjustment->set_lower(*range->begin());
@@ -537,6 +540,7 @@ namespace ascension {
 				}
 				if(position != boost::none)
 					adjustment->set_value(*position);
+#endif
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QScrollBar* const scrollBar = (coordinate == 0) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
 				if(range != boost::none)
@@ -602,7 +606,10 @@ namespace ascension {
 		void TextViewer::initialize(const TextViewer* other) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			assert(GTK_IS_WIDGET(static_cast<Gtk::Widget&>(*this).gobj()));
+#	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 			assert(GTK_IS_SCROLLABLE(static_cast<Gtk::Scrollable&>(*this).gobj()));
+#	endif
+			set_can_focus(true);
 			set_has_window(true);
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			document().addListener(*this);
@@ -1780,6 +1787,7 @@ namespace ascension {
 					std::size_t coordinate, widgetapi::NativeScrollPosition* position,
 					boost::integer_range<widgetapi::NativeScrollPosition>* range, widgetapi::NativeScrollPosition* pageSize) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 				const Glib::RefPtr<const Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
 				if(range != nullptr)
 					*range = boost::irange(adjustment->get_lower(), adjustment->get_upper());
@@ -1788,6 +1796,7 @@ namespace ascension {
 //					*pageSize = adjustment->get_page_size();
 				if(position != nullptr)
 					*position = adjustment->get_value();
+#	endif
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				const QScrollBar* const scrollBar = (coordinate == geometry::X_COORDINATE) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
 				if(range != nullptr)

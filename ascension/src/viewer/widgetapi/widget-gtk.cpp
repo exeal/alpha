@@ -131,8 +131,8 @@ namespace ascension {
 			}
 
 			void setFocus(Proxy<Widget> widget) {
-//				widget->grab_focus();
-				widget->set_state_flags(Gtk::STATE_FLAG_FOCUSED);
+				widget->grab_focus();
+				widget->set_state_flags(Gtk::STATE_FLAG_FOCUSED, false);
 			}
 
 			void setParentWidget(Proxy<Widget> widget, Proxy<Widget> newParent) {

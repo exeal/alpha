@@ -87,6 +87,8 @@ namespace alpha {
 		void bufferAdded(BufferList& buffers, Buffer& buffer);
 		// EditorView signals
 		bool viewFocused(GdkEventFocus* event);
+		// Gtk.Widget
+		bool on_focus_in_event(GdkEventFocus* event) override;
 #ifdef _DEBUG
 		bool on_event(GdkEvent* event) override;
 		void on_realize() override;

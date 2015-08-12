@@ -12,6 +12,7 @@
 #include "editor-panes.hpp"
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
+#include <ascension/log.hpp>
 #include <boost/foreach.hpp>
 //#include <boost/range/algorithm/find.hpp>
 
@@ -32,7 +33,8 @@ namespace alpha {
 		bufferAddedConnection_ =
 			bufferList.bufferAddedSignal().connect(
 				std::bind(&EditorPanes::bufferAdded, this, std::placeholders::_1, std::placeholders::_2));
-		add1(*Gtk::manage(new EditorPane()));
+		add1(*Gtk::manage(activePane_ = new EditorPane()));
+		BufferList::instance().addNew();
 		show_all_children();
 	}
 
@@ -121,13 +123,26 @@ namespace alpha {
 		}
 		return nullptr;
 	}
+	
+	bool EditorPanes::on_focus_in_event(GdkEventFocus*) {
+		EditorPane& pane = activePane();
+		if(pane.get_realized())
+			set_focus_child(pane);
+		return true;
+	}
 
 #ifdef _DEBUG
 	bool EditorPanes::on_event(GdkEvent* event) {
+		ASCENSION_LOG_TRIVIAL(debug)
+			<< "allocation = " << get_allocated_width() << "x" << get_allocated_height() << std::endl;
+		if(event != nullptr)
+			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
 		return Gtk::Paned::on_event(event);
 	}
 
 	void EditorPanes::on_realize() {
+		const Gdk::EventMask oldMask = get_events();
+		set_events(oldMask | Gdk::FOCUS_CHANGE_MASK);
 		return Gtk::Paned::on_realize();
 	}
 #endif
