@@ -11,6 +11,7 @@
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/log.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
@@ -26,23 +27,33 @@ namespace ascension {
 		}
 
 		/// Implements @c Gtk#Widget#get_preferred_height_for_width_vfunc.
-		void TextViewer::get_preferred_height_for_width_vfunc(int, int& minimumHeight, int& naturalHeight) const {
+		void TextViewer::get_preferred_height_for_width_vfunc(int width, int& minimumHeight, int& naturalHeight) const {
+#if 0
 			return get_preferred_height_vfunc(minimumHeight, naturalHeight);
+#else
+			return Gtk::Widget::get_preferred_height_for_width_vfunc(width, minimumHeight, naturalHeight);
+#endif
 		}
 
 		/// Implements @c Gtk#Widget#get_preferred_height_vfunc.
 		void TextViewer::get_preferred_height_vfunc(int& minimumHeight, int& naturalHeight) const {
 			// TODO: Not implemented.
+			return Gtk::Widget::get_preferred_height_vfunc(minimumHeight, naturalHeight);
 		}
 
 		/// Implements @c Gtk#Widget#get_preferred_width_for_height_vfunc.
-		void TextViewer::get_preferred_width_for_height_vfunc(int, int& minimumWidth, int& naturalWidth) const {
+		void TextViewer::get_preferred_width_for_height_vfunc(int height, int& minimumWidth, int& naturalWidth) const {
+#if 0
 			return get_preferred_width_vfunc(minimumWidth, naturalWidth);
+#else
+			return Gtk::Widget::get_preferred_width_for_height_vfunc(height, minimumWidth, naturalWidth);
+#endif
 		}
 
 		/// Implements @c Gtk#Widget#get_preferred_width_vfunc.
 		void TextViewer::get_preferred_width_vfunc(int& minimumWidth, int& naturalWidth) const {
 			// TODO: Not implemented.
+			return Gtk::Widget::get_preferred_width_vfunc(minimumWidth, naturalWidth);
 		}
 
 		/// Implements @c Gtk#Widget#get_request_mode_vfunc.
@@ -55,28 +66,34 @@ namespace ascension {
 		}
 
 		void TextViewer::initializeNativeObjects() {
-			set_can_focus(true);
 			set_redraw_on_allocate(false);
 //			drag_dest_set_target_list();
 
-			get_hadjustment()->signal_value_changed().connect([this]() {
-				if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
-					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
-						graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(
-							this->property_hadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.x()),
-						graphics::_y = 0));
-//				this->scrollPositionsBeforeChanged_.x() = this->get_hadjustment()->get_value();
-//				this->scrollPositionsBeforeChanged_.y() = this->get_vadjustment()->get_value();
-			});
-			get_vadjustment()->signal_value_changed().connect([this]() {
-				if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
-					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
-						graphics::_x = 0,
-						graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(
-							this->property_vadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.y())));
-//				this->scrollPositionsBeforeChanged_.x() = this->get_hadjustment()->get_value();
-//				this->scrollPositionsBeforeChanged_.y() = this->get_vadjustment()->get_value();
-			});
+#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+			if(const Glib::RefPtr<Gtk::Adjustment> hadjustment = get_hadjustment()) {
+				hadjustment->signal_value_changed().connect([this]() {
+					if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
+						viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
+							graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(
+								this->property_hadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.x()),
+							graphics::_y = 0));
+//					this->scrollPositionsBeforeChanged_.x() = this->get_hadjustment()->get_value();
+//					this->scrollPositionsBeforeChanged_.y() = this->get_vadjustment()->get_value();
+				});
+			}
+
+			if(const Glib::RefPtr<Gtk::Adjustment> vadjustment = get_vadjustment()) {
+				vadjustment->signal_value_changed().connect([this]() {
+					if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
+						viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
+							graphics::_x = 0,
+							graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(
+								this->property_vadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.y())));
+//					this->scrollPositionsBeforeChanged_.x() = this->get_hadjustment()->get_value();
+//					this->scrollPositionsBeforeChanged_.y() = this->get_vadjustment()->get_value();
+				});
+			}
+#endif // ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 		}
 
 		namespace {
@@ -113,7 +130,14 @@ namespace ascension {
 		 * @see Widget#on_button_press_event
 		 */
 		bool TextViewer::on_button_press_event(GdkEventButton* event) {
+			assert(get_window()->get_accept_focus());
+			assert(get_window()->get_events() & Gdk::FOCUS_CHANGE_MASK);
+			assert(get_can_focus());
 			widgetapi::setFocus(*this);
+			const Gtk::StateFlags state = get_state_flags();
+			assert(get_visible());
+			assert(is_visible());
+			assert(has_visible_focus());
 			if(::gdk_event_triggers_context_menu(reinterpret_cast<GdkEvent*>(event)) != 0) {
 				doShowContextMenu(event);
 				return true;
@@ -211,6 +235,32 @@ namespace ascension {
 			return true;
 		}
 
+#ifdef _DEBUG
+	bool TextViewer::on_event(GdkEvent* event) {
+		ASCENSION_LOG_TRIVIAL(debug)
+			<< "allocation = " << get_allocated_width() << "x" << get_allocated_height() << std::endl;
+		ASCENSION_LOG_TRIVIAL(debug)
+			<< "get_can_focus = " << get_can_focus() << std::endl
+			<< "has_focus = " << has_focus() << std::endl
+			<< "is_focus = " << is_focus() << std::endl
+			<< "has_visible_focus = " << has_visible_focus() << std::endl
+			<< "get_can_default = " << get_can_default() << std::endl
+			<< "has_default = " << has_default() << std::endl
+			<< "get_receives_default = " << get_receives_default() << std::endl
+			<< "has_grab = " << has_grab() << std::endl
+			<< "get_state_flags = " << std::hex << get_state_flags() << std::endl
+			<< "get_sensitive = " << get_sensitive() << std::endl
+			<< "is_sensitive = " << is_sensitive() << std::endl
+			<< "get_visible = " << get_visible() << std::endl
+			<< "is_visible = " << is_visible() << std::endl
+			<< "get_is_drawable = " << get_is_drawable() << std::endl
+			<< "get_events = " << std::hex << get_events() << std::dec << std::endl;
+		if(event != nullptr)
+			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
+		return Gtk::Widget::on_event(event);
+	}
+#endif
+
 		/**
 		 * Invokes @c #focusGained method.
 		 * @see Gtk#Widget#on_focus_in_event
@@ -233,6 +283,7 @@ namespace ascension {
 
 		void TextViewer::on_grab_focus() {
 			// TODO: Not implemented.
+			return Gtk::Widget::on_grab_focus();
 		}
 
 		/**
@@ -295,6 +346,9 @@ namespace ascension {
 #else
 			window_->set_user_data(Gtk::Widget::gobj());
 #endif
+			attributes.event_mask = get_events();
+			add_events(Gdk::FOCUS_CHANGE_MASK);
+			attributes.event_mask = get_events();
 			initializeGraphics();
 		}
 

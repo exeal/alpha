@@ -6,7 +6,9 @@
  */
 
 #include "buffer-list.hpp"
+#include "editor-view.hpp"
 #include "main-window.hpp"
+#include <ascension/log.hpp>
 #include <glibmm/i18n.h>
 
 namespace alpha {
@@ -19,16 +21,31 @@ namespace alpha {
 
 			add(vbox_);
 			vbox_.pack_start(editorPanes());
-			vbox_.pack_start(statusBar(), Gtk::PACK_SHRINK);
+//			vbox_.pack_start(statusBar(), Gtk::PACK_SHRINK);
 //			vbox_.show_all_children();
 			show_all_children();
 		}
 
 #ifdef _DEBUG
 		bool MainWindow::on_event(GdkEvent* event) {
-			return Gtk::ApplicationWindow::on_event(event);
+			ASCENSION_LOG_TRIVIAL(debug)
+				<< "allocation = " << get_allocated_width() << "x" << get_allocated_height() << std::endl;
+			if(event != nullptr)
+				ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
+			ASCENSION_LOG_TRIVIAL(debug) << get_focus() << std::endl;
+			return Gtk::/*Application*/Window::on_event(event);
 		}
 #endif
+
+		bool MainWindow::on_focus_in_event(GdkEventFocus* e) {
+#if 0
+			if(editorPanes().get_realized())
+				set_focus_child(editorPanes().activePane().selectedView());
+			return true;
+#else
+			return Gtk::Window::on_focus_in_event(e);
+#endif
+		}
 
 		/// Updates the text string of the title bar.
 		void MainWindow::updateTitle() {

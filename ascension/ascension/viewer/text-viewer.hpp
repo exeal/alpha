@@ -32,6 +32,7 @@
 #include <set>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <glibmm/property.h>
+#	define ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/com/smart-pointer.hpp>
 #	include <ascension/win32/com/unknown-impl.hpp>
@@ -101,7 +102,10 @@ namespace ascension {
 				// QPlainTextEdit and QTextEdit inherit QAbstractScrollArea.
 				// NSTextView inherits NSText (which inherits NSView).
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				public Gtk::Scrollable, public Gtk::Widget,
+#	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+				public Gtk::Scrollable,
+#	endif
+				public Gtk::Widget,
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				public QAbstractScrollArea,
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
@@ -309,6 +313,9 @@ namespace ascension {
 			virtual bool on_drag_motion(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) override;
 			virtual bool on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) override;
 			virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& context) override;
+#ifdef _DEBUG
+			virtual bool on_event(GdkEvent* event) override;
+#endif
 			virtual bool on_focus_in_event(GdkEventFocus* event) override;
 			virtual bool on_focus_out_event(GdkEventFocus* event) override;
 //			virtual bool on_grab_broken_event(GdkEventGrabBroken* event) override;

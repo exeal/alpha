@@ -62,7 +62,8 @@ namespace alpha {
 	public:
 		/// @name Instance
 		/// @{
-		static Glib::RefPtr<Application> create();
+		static Glib::RefPtr<Application> create(Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
+		static Glib::RefPtr<Application> create(int& argc, char**& argv, Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
 		static Glib::RefPtr<Application> instance();
 		/// @}
 
@@ -73,7 +74,8 @@ namespace alpha {
 		bool teardown(bool callHook = true);
 
 	private:
-		Application();
+		explicit Application(Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
+		Application(int& argc, char**& argv, Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
 		void changeFont();
 //		bool	handleKeyDown(command::VirtualKey key, command::KeyModifier modifiers);
 		bool initInstance(int showCommand);

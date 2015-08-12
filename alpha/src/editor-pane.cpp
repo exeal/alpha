@@ -12,9 +12,11 @@
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/log.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <boost/core/addressof.hpp>
 #include <boost/foreach.hpp>
+
 
 namespace alpha {
 	/**
@@ -60,7 +62,6 @@ namespace alpha {
 		std::unique_ptr<Gtk::ScrolledWindow> scroller(new Gtk::ScrolledWindow());
 //		std::unique_ptr<ModeLine> modeLine(new ModeLine());
 
-
 		children_.push_back(Child());
 		Child& newChild = children_.back();
 		try {
@@ -72,16 +73,20 @@ namespace alpha {
 			children_.pop_back();
 			throw;
 		}
-		Gtk::Stack::add(*box, name);
-		std::get<0>(newChild) = Gtk::manage(box.release());
-		if(children_.size() == 1)
-			this->select(*std::get<2>(children_.front()));
-		std::get<0>(newChild)->show_all_children();
-		std::get<0>(newChild)->show();
+		std::get<0>(newChild) = box.get();
+		Gtk::Stack::add(*Gtk::manage(box.release()), name);
+//		if(children_.size() == 1)
+//			this->select(*std::get<2>(children_.front()));
+		/*std::get<0>(newChild)->*/show_all_children();
+		/*std::get<0>(newChild)->*/show();
 	}
 
 #ifdef _DEBUG
 	bool EditorPane::on_event(GdkEvent* event) {
+		ASCENSION_LOG_TRIVIAL(debug)
+			<< "allocation = " << get_allocated_width() << "x" << get_allocated_height() << std::endl;
+		if(event != nullptr)
+			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
 		return Gtk::Stack::on_event(event);
 	}
 
