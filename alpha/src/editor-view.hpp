@@ -7,10 +7,12 @@
 
 #ifndef ALPHA_EDITOR_VIEW_HPP
 #define ALPHA_EDITOR_VIEW_HPP
-#include "ambient.hpp"
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/kernel/searcher.hpp>	// ascension.searcher.IncrementalSearchCallback
+#ifndef ALPHA_NO_AMBIENT
+#	include <boost/python.hpp>
+#endif
 
 namespace alpha {
 	class Buffer;
@@ -24,8 +26,10 @@ namespace alpha {
 		EditorView(const EditorView& rhs);
 		~EditorView();
 		// attributes
+#ifndef ALPHA_NO_AMBIENT
 		boost::python::object asCaret() const;
 		boost::python::object asTextEditor() const;
+#endif
 		const wchar_t* currentPositionString() const;
 		Buffer& document() BOOST_NOEXCEPT;
 		const Buffer& document() const BOOST_NOEXCEPT;
@@ -62,11 +66,14 @@ namespace alpha {
 		void bookmarkChanged(ascension::Index line);
 		void bookmarkCleared();
 	private:
+#ifndef ALPHA_NO_AMBIENT
 		mutable boost::python::object asCaret_, asTextEditor_;
+#endif
 		ascension::Index visualColumnStartValue_;
 	};
 
 
+#ifndef ALPHA_NO_AMBIENT
 	/// Returns the script object corresponding to the text editor.
 	inline boost::python::object EditorView::asCaret() const {
 		if(asCaret_ == boost::python::object())
@@ -80,6 +87,7 @@ namespace alpha {
 			asTextEditor_ = boost::python::object(boost::python::ptr(this));
 		return asTextEditor_;
 	}
+#endif
 
 	/// @see ascension#viewer#TextViewer#document
 	inline Buffer& EditorView::document() BOOST_NOEXCEPT {

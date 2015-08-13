@@ -53,10 +53,6 @@
 
 
 namespace alpha {
-	namespace ambient {
-		class ScriptSystem;
-	};
-
 	/// The application class of Alpha.
 	class Application : public Gtk::Application {
 	public:

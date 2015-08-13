@@ -7,12 +7,11 @@
 
 #ifndef ALPHA_BUFFER_LIST_HPP
 #define ALPHA_BUFFER_LIST_HPP
-
-#include "ambient.hpp"
 #include "buffer.hpp"
 #include <ascension/kernel/fileio.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/text-editor/session.hpp>
+#include <boost/python.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/ui/menu.hpp>

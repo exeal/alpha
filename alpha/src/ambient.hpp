@@ -2,12 +2,11 @@
  * @file ambient.hpp
  */
 
-#ifndef ALPHA_AMBIENT_HPP
+#if !defined(ALPHA_AMBIENT_HPP) && !(ALPHA_NO_AMBIENT)
 #define ALPHA_AMBIENT_HPP
 #include <ascension/corelib/basic-types.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/optional.hpp>
-#define BOOST_PYTHON_STATIC_LIB
 #include <boost/python.hpp>
 #include <list>
 #include <map>
@@ -105,4 +104,4 @@ namespace alpha {
 
 
 
-#endif // !ALPHA_AMBIENT_HPP
+#endif // !ALPHA_AMBIENT_HPP && !ALPHA_NO_AMBIENT

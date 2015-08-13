@@ -14,6 +14,7 @@
 #include <ascension/viewer/text-viewer-utility.hpp>
 
 namespace alpha {
+#ifndef ALPHA_NO_AMBIENT
 	namespace {	// helpers
 		inline EditorView& activeViewer() {
 			return EditorPanes::instance().activePane().selectedView();
@@ -519,4 +520,5 @@ namespace alpha {
 
 //		boost::python::def("unindent", &unindent);
 	ALPHA_EXPOSE_EPILOGUE()
+#endif // !ALPHA_NO_AMBIENT
 }

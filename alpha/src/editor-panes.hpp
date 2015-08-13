@@ -8,7 +8,6 @@
 
 #ifndef ALPHA_EDITOR_PANES_HPP
 #define ALPHA_EDITOR_PANES_HPP
-#include "ambient.hpp"
 #include "editor-pane.hpp"
 #include <ascension/corelib/signals.hpp>
 #include <boost/iterator/iterator_facade.hpp>

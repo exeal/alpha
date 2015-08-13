@@ -305,12 +305,14 @@ wstring KeyStroke::format(py::object keys) {
 			if(::PyCallable_Check(definition.ptr()) != 0) {
 				cancelIncompleteKeyStrokes();
 				bool typed = false;
+#ifndef ALPHA_NO_AMBIENT
 				if(inputTypedCharacterCommand_.is_none())
 					inputTypedCharacterCommand_ = ambient::Interpreter::instance().module("intrinsics").attr("input_typed_character");
 				if(definition == inputTypedCharacterCommand_)
 					typed = true;
 				if(!typed)
 					ambient::Interpreter::instance().executeCommand(definition);
+#endif // !ALPHA_NO_AMBIENT
 				return !typed;
 			} else {
 				// make human-readable text string for the incomplete (or undefined) key stroke(s)
@@ -493,7 +495,7 @@ bool InputManager::input(const MSG& message) {
 			modalMappingScheme_ = scheme;
 		}
 
-
+#ifndef ALPHA_NO_AMBIENT
 		ALPHA_EXPOSE_PROLOGUE(ambient::Interpreter::LOWEST_INSTALLATION_ORDER)
 			ambient::Interpreter& interpreter = ambient::Interpreter::instance();
 			boost::python::scope scope(interpreter.module("bindings"));
@@ -540,5 +542,6 @@ bool InputManager::input(const MSG& message) {
 				}),
 				(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
 		ALPHA_EXPOSE_EPILOGUE()
+#endif // !ALPHA_NO_AMBIENT
 	}
 }
