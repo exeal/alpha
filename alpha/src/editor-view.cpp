@@ -163,6 +163,7 @@ namespace alpha {
 	}
 #endif
 
+#ifndef ALPHA_NO_AMBIENT
 	namespace {
 		void extendSelection(ascension::viewer::Caret& caret, boost::python::object to) {
 			if(boost::python::extract<const ascension::kernel::Position&>(to).check())
@@ -359,4 +360,5 @@ namespace alpha {
 				editor.textArea().textRenderer().viewport()->unlockScroll();
 			}));
 	ALPHA_EXPOSE_EPILOGUE()
+#endif // !ALPHA_NO_AMBIENT
 }

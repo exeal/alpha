@@ -116,8 +116,10 @@ int main(int argc, char* argv[]) {
 		ascension::win32::ui::initCommonControls(ICC_COOL_CLASSES | ICC_PAGESCROLLER_CLASS | ICC_WIN95_CLASSES);
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #endif
+#ifndef ALPHA_NO_AMBIENT
 		alpha::ambient::Interpreter::instance().install();
 		alpha::ambient::Interpreter::instance().toplevelPackage();
+#endif
 
 		const Glib::RefPtr<alpha::Application> application(alpha::Application::create(argc, argv));
 		exitCode = application->run(application->window());
@@ -355,6 +357,7 @@ void Application::setFont(const ascension::graphics::font::FontDescription& font
 }
 
 	bool Application::teardown(bool callHook /* = true */) {
+#ifndef ALPHA_NO_AMBIENT
 		if(callHook) {
 			boost::python::object toplevel(ambient::Interpreter::instance().toplevelPackage());
 			if(::PyObject_HasAttrString(toplevel.ptr(), "about_to_be_killed_hook") != 0) {
@@ -366,6 +369,7 @@ void Application::setFont(const ascension::graphics::font::FontDescription& font
 				}
 			}
 		}
+#endif
 		saveSettings();
 		quit();
 //		::PostQuitMessage(0);
@@ -373,6 +377,7 @@ void Application::setFont(const ascension::graphics::font::FontDescription& font
 	}
 
 
+#ifndef ALPHA_NO_AMBIENT
 	ALPHA_EXPOSE_PROLOGUE(ambient::Interpreter::LOWEST_INSTALLATION_ORDER)
 		ambient::Interpreter& interpreter = ambient::Interpreter::instance();
 		boost::python::scope scope(interpreter.toplevelPackage());
@@ -383,4 +388,5 @@ void Application::setFont(const ascension::graphics::font::FontDescription& font
 			}),
 			boost::python::arg("call_hook") = true);
 	ALPHA_EXPOSE_EPILOGUE()
+#endif
 }

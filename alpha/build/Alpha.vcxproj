@@ -128,7 +128,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\ascension;$(ProjectDir)..\..;$(ProjectDir)..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_RESULT_OF_USE_DECLTYPE;ASCENSION_WINDOW_SYSTEM_GTK;ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI;ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_STATIC_LIB;BOOST_PYTHON_STATIC_LINK;BOOST_RESULT_OF_USE_DECLTYPE;ASCENSION_WINDOW_SYSTEM_GTK;ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI;ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS;ALPHA_NO_AMBIENT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <SmallerTypeCheck>true</SmallerTypeCheck>

@@ -2,6 +2,7 @@
  * @file ambient.cpp
  */
 
+#ifndef ALPHA_NO_AMBIENT
 #include "ambient.hpp"
 #include "application.hpp"
 //#include "../resource/messages.h"
@@ -348,3 +349,5 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 		}
 	}
 }
+
+#endif // !ALPHA_NO_AMBIENT

@@ -34,7 +34,9 @@ namespace alpha {
 			bufferList.bufferAddedSignal().connect(
 				std::bind(&EditorPanes::bufferAdded, this, std::placeholders::_1, std::placeholders::_2));
 		add1(*Gtk::manage(activePane_ = new EditorPane()));
+#ifdef ALPHA_NO_AMBIENT
 		BufferList::instance().addNew();
+#endif
 		show_all_children();
 	}
 
@@ -236,7 +238,7 @@ namespace alpha {
 			end_ = true;
 	}
 
-
+#ifndef ALPHA_NO_AMBIENT
 	namespace {
 		Buffer& currentBuffer(boost::python::object o) {
 			EditorPane* pane = boost::python::extract<EditorPane*>(o);
@@ -302,4 +304,5 @@ namespace alpha {
 			}),
 			boost::python::return_value_policy<boost::python::reference_existing_object>()));
 	ALPHA_EXPOSE_EPILOGUE()
+#endif // !ALPHA_NO_AMBIENT
 }

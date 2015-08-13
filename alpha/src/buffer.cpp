@@ -105,6 +105,7 @@ namespace alpha {
 		nameChangedSignal_(*this);
 	}
 
+#ifndef ALPHA_NO_AMBIENT
 	namespace {
 		class RegexTransitionRuleAdapter : public ascension::rules::RegexTransitionRule {
 		public:
@@ -390,4 +391,5 @@ namespace alpha {
 		boost::python::class_<LexicalPartitionerProxy, boost::python::bases<DocumentPartitionerProxy>,
 			boost::noncopyable>("LexicalPartitioner", boost::python::init<boost::python::object>());
 */	ALPHA_EXPOSE_EPILOGUE()
+#endif // !ALPHA_NO_AMBIENT
 }

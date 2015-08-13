@@ -571,7 +571,9 @@ namespace alpha {
 			const boost::python::object result(f(getConcreteDocument(document), context));
 			return ::PyObject_IsTrue(result.ptr()) == 1;
 		} catch(boost::python::error_already_set&) {
+#ifndef ALPHA_NO_AMBIENT
 			ambient::Interpreter::instance().handleException();
+#endif
 			return false;
 		}
 	}
@@ -881,6 +883,7 @@ namespace alpha {
 		return *this;
 	}
 
+#ifndef ALPHA_NO_AMBIENT
 	ALPHA_EXPOSE_PROLOGUE(2)
 		ambient::Interpreter& interpreter = ambient::Interpreter::instance();
 		boost::python::scope temp(interpreter.toplevelPackage());
@@ -920,4 +923,5 @@ namespace alpha {
 			&BufferList::instance,
 			boost::python::return_value_policy<boost::python::reference_existing_object>()));
 	ALPHA_EXPOSE_EPILOGUE()
+#endif
 }
