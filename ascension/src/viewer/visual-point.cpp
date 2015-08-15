@@ -50,8 +50,8 @@ namespace ascension {
 			 * @throw TextViewerDisposedException 
 			 */
 			void show(VisualPoint& p) {
-				TextViewer& viewer = p.textViewer();
-				graphics::font::TextRenderer& renderer = viewer.textArea().textRenderer();
+				TextArea& textArea = p.textArea();
+				graphics::font::TextRenderer& renderer = textArea.textRenderer();
 				const std::shared_ptr<graphics::font::TextViewport> viewport(renderer.viewport());
 				const kernel::Position np(p.normalized());
 				const graphics::font::TextLayout& layout = renderer.layouts().at(
@@ -158,16 +158,16 @@ namespace ascension {
 
 		/**
 		 * Creates a @c VisualPoint object and installs on the specified @c TextViewer.
-		 * @param viewer The viewer
+		 * @param textArea The text area
 		 * @param position The initial position of the point
 		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 * @post @c #isInstalled() returns @c true.
 		 * @post @c #isTextViewerDisposed() returns @c false.
 		 * @post @c #isFullyAvailable() returns @c true.
 		 */
-		VisualPoint::VisualPoint(TextViewer& viewer,
-				const kernel::Position& position /* = kernel::Position::zero() */) : Point(viewer.document(), position), crossingLines_(false) {
-			install(viewer);
+		VisualPoint::VisualPoint(TextArea& textArea, const kernel::Position& position /* = kernel::Position::zero() */)
+				: Point(textArea.textViewer().document(), position), crossingLines_(false) {
+			install(textArea);
 		}
 
 		/**
@@ -189,9 +189,9 @@ namespace ascension {
 		 */
 		VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), crossingLines_(false) {
 			if(other.isInstalled()) {
-				if(other.isTextViewerDisposed())
-					throw TextViewerDisposedException();
-				install(const_cast<TextViewer&>(other.textViewer()));
+				if(other.isTextAreaDisposed())
+					throw TextAreaDisposedException();
+				install(const_cast<TextArea&>(other.textArea()));
 				positionInVisualLine_ = other.positionInVisualLine_;
 				crossingLines_ = false;
 				lineNumberCaches_ = other.lineNumberCaches_;
@@ -208,7 +208,7 @@ namespace ascension {
 			assert(isFullyAvailable());
 			if(lineNumberCaches_ == boost::none) {
 				const kernel::Position p(normalized());	// may throw kernel.DocumentDisposedException
-				const graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
+				const graphics::font::TextRenderer& renderer = textArea().textRenderer();
 				Index line = renderer.layouts().mapLogicalLineToVisualLine(p.line), subline;
 				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(p.line))
 					subline = layout->lineAt(p.offsetInLine);
@@ -220,24 +220,24 @@ namespace ascension {
 		}
 
 		/**
-		 * Installs this @c VisualPoint on the specified @c TextViewer.
-		 * @param viewer The @c TextViewer by which this point is installed
+		 * Installs this @c VisualPoint on the specified @c TextArea.
+		 * @param textArea The @c TextArea by which this point is installed
 		 * @throw kernel#DocumentDisposedException @c #isDocumentDisposed() returned @c true
-		 * @throw std#invalid_argument @a viewer does not belong to the document of this point
+		 * @throw std#invalid_argument @a textArea does not belong to the document of this point
 		 * @note If @c #isInstalled() returned @c true, this method does nothing.
 		 * @see #isInstalled, #uninstall
 		 */
-		void VisualPoint::install(TextViewer& viewer) {
+		void VisualPoint::install(TextArea& textArea) {
 			if(!isInstalled()) {
-				if(&viewer.document() != &document())	// may throw kernel.DocumentDisposedException
+				if(&textArea.textViewer().document() != &document())	// may throw kernel.DocumentDisposedException
 					throw std::invalid_argument("The specified viewer does not belong to the document of this point.");
 
-				viewerProxy_ = viewer.referByPoint();
+				textAreaProxy_ = textArea.referByPoint();
 				assert(isFullyAvailable());
 				positionInVisualLine_ = boost::none;
 				crossingLines_ = false;
 				lineNumberCaches_ = boost::none;
-				textViewer().textArea().textRenderer().layouts().addVisualLinesListener(*this);
+				textArea.textRenderer().layouts().addVisualLinesListener(*this);
 			}
 		}
 
@@ -247,7 +247,7 @@ namespace ascension {
 			const bool fullyAvailable = isFullyAvailable();
 			if(fullyAvailable) {
 				if(from.line == kernel::line(*this) && lineNumberCaches_ != boost::none) {
-					const graphics::font::TextLayout* const layout = textViewer().textArea().textRenderer().layouts().at(kernel::line(*this));
+					const graphics::font::TextLayout* const layout = textArea().textRenderer().layouts().at(kernel::line(*this));
 					lineNumberCaches_->line -= lineNumberCaches_->subline;
 					lineNumberCaches_->subline = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(*this)) : 0;
 					lineNumberCaches_->line += lineNumberCaches_->subline;
@@ -346,13 +346,13 @@ namespace ascension {
 			throwIfNotFullyAvailable();
 			if(positionInVisualLine_ == boost::none)
 				const_cast<VisualPoint*>(this)->rememberPositionInVisualLine();
-			const TextViewer::Configuration& c = textViewer().configuration();
-			const graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
-//	if(resolveTextAlignment(c.alignment, c.readingDirection) != ALIGN_RIGHT)
+//			const TextViewer::Configuration& c = textViewer().configuration();
+			const graphics::font::TextRenderer& renderer = textArea().textRenderer();
+//			if(resolveTextAlignment(c.alignment, c.readingDirection) != ALIGN_RIGHT)
 				return static_cast<Index>(boost::get(positionInVisualLine_)
-					/ widgetapi::createRenderingContext(textViewer())->fontMetrics(renderer.defaultFont())->averageCharacterWidth());
-//	else
-//		return (renderer.width() - positionInVisualLine_) / renderer.averageCharacterWidth();
+					/ widgetapi::createRenderingContext(textArea().textViewer())->fontMetrics(renderer.defaultFont())->averageCharacterWidth());
+//			else
+//				return (renderer.width() - positionInVisualLine_) / renderer.averageCharacterWidth();
 		}
 
 		/// @internal Updates @c positionInVisualLine_ with the current position.
@@ -361,7 +361,7 @@ namespace ascension {
 			assert(!crossingLines_);
 			throwIfNotFullyAvailable();
 			if(!isDocumentDisposed()) {
-				graphics::font::TextRenderer& renderer = textViewer().textArea().textRenderer();
+				graphics::font::TextRenderer& renderer = textArea().textRenderer();
 				const graphics::font::TextLayout& layout =
 					renderer.layouts().at(kernel::line(*this), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);
 				positionInVisualLine_ =
@@ -377,14 +377,14 @@ namespace ascension {
 		 */
 		void VisualPoint::uninstall() BOOST_NOEXCEPT {
 			if(isInstalled()) {
-				if(!isTextViewerDisposed()) {
+				if(!isTextAreaDisposed()) {
 					try {
-						textViewer().textArea().textRenderer().layouts().removeVisualLinesListener(*this);
+						textArea().textRenderer().layouts().removeVisualLinesListener(*this);
 					} catch(...) {
 						// ignore the error
 					}
 				}
-				viewerProxy_.reset();
+				textAreaProxy_.reset();
 			}
 		}
 
@@ -407,7 +407,7 @@ namespace ascension {
 				if(*lines.end() <= kernel::line(*this))
 					lineNumberCaches_->line += sublineDifference;
 				else if(*lines.begin() == kernel::line(*this)) {
-					if(const graphics::font::TextLayout* const layout = textViewer().textArea().textRenderer().layouts().at(kernel::line(*this))) {
+					if(const graphics::font::TextLayout* const layout = textArea().textRenderer().layouts().at(kernel::line(*this))) {
 						lineNumberCaches_->line -= lineNumberCaches_->subline;
 						lineNumberCaches_->subline =
 							layout->lineAt(std::min(kernel::offsetInLine(*this), document().lineLength(kernel::line(*this))));
@@ -425,8 +425,8 @@ namespace ascension {
 		}
 
 		/// Default constructor.
-		VisualPoint::TextViewerDisposedException::TextViewerDisposedException() :
-				IllegalStateException("The TextViewer which had installed the VisualPoint has been disposed.") {
+		VisualPoint::TextAreaDisposedException::TextAreaDisposedException() :
+				IllegalStateException("The TextArea which had installed the VisualPoint has been disposed.") {
 		}
 	}
 
@@ -487,7 +487,7 @@ namespace ascension {
 			 */
 			Position beginningOfVisualLine(const viewer::VisualPoint& p) {
 				const Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textViewer().textArea().textRenderer().layouts().at(np.line))
+				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(np.line))
 					return Position(np.line, layout->lineOffset(layout->lineAt(np.offsetInLine)));
 				return beginningOfLine(p);
 			}
@@ -541,7 +541,7 @@ namespace ascension {
 			 */
 			Position locations::endOfVisualLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textViewer().textArea().textRenderer().layouts().at(np.line)) {
+				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(np.line)) {
 					const Index subline = layout->lineAt(np.offsetInLine);
 					np.offsetInLine = (subline < layout->numberOfLines() - 1) ?
 						layout->lineOffset(subline + 1) : p.document().lineLength(np.line);
@@ -575,7 +575,7 @@ namespace ascension {
 			Position firstPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
 				const String& s = p.document().line(np.line);
-				if(const graphics::font::TextLayout* const layout = p.textViewer().textArea().textRenderer().layouts().at(np.line)) {
+				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(np.line)) {
 					const Index subline = layout->lineAt(np.offsetInLine);
 					np.offsetInLine = detail::identifierSyntax(p).eatWhiteSpaces(
 						s.begin() + layout->lineOffset(subline),
@@ -642,7 +642,7 @@ namespace ascension {
 				if(isBeginningOfLine(p))	// this considers narrowing
 					return true;
 				const Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textViewer().textArea().textRenderer().layouts().at(np.line))
+				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(np.line))
 					return np.offsetInLine == layout->lineOffset(layout->lineAt(np.offsetInLine));
 				return isBeginningOfLine(p);
 			}
@@ -657,7 +657,7 @@ namespace ascension {
 				if(isEndOfLine(p))	// this considers narrowing
 					return true;
 				const Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textViewer().textArea().textRenderer().layouts().at(np.line)) {
+				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(np.line)) {
 					const Index subline = layout->lineAt(np.offsetInLine);
 					return np.offsetInLine == layout->lineOffset(subline) + layout->lineLength(subline);
 				}
@@ -805,7 +805,7 @@ namespace ascension {
 			 */
 			viewer::VisualDestinationProxy nextPage(const viewer::VisualPoint& p, Direction direction, Index pages /* = 1 */) {
 				Index lines = 0;
-				const std::shared_ptr<const graphics::font::TextViewport> viewport(p.textViewer().textArea().textRenderer().viewport());
+				const std::shared_ptr<const graphics::font::TextViewport> viewport(p.textArea().textRenderer().viewport());
 				// TODO: calculate exact number of visual lines.
 				lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
 
@@ -822,7 +822,7 @@ namespace ascension {
 			viewer::VisualDestinationProxy nextVisualLine(const viewer::VisualPoint& p, Direction direction, Index lines /* = 1 */) {
 				// ISSUE: LineLayoutVector.offsetVisualLine(VisualLine&, SignedIndex) does not use calculated layouts.
 				Position np(p.normalized());
-				const graphics::font::TextRenderer& renderer = p.textViewer().textArea().textRenderer();
+				const graphics::font::TextRenderer& renderer = p.textArea().textRenderer();
 				const graphics::font::TextLayout* layout = renderer.layouts().at(np.line);
 				Index subline = (layout != nullptr) ? layout->lineAt(np.offsetInLine) : 0;
 				if(direction == Direction::FORWARD) {

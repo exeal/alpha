@@ -21,11 +21,11 @@ namespace ascension {
 
 		/**
 		 * Constructor.
-		 * @param viewer The viewer
+		 * @param textArea The text area
 		 * @param region The region consists the rectangle
 		 */
-		VirtualBox::VirtualBox(const TextViewer& viewer, const kernel::Region& region) BOOST_NOEXCEPT
-				: viewer_(viewer), lines_(graphics::font::VisualLine(), graphics::font::VisualLine()), ipds_(0, 0) {
+		VirtualBox::VirtualBox(const TextArea& textArea, const kernel::Region& region) BOOST_NOEXCEPT
+				: textArea_(textArea), lines_(graphics::font::VisualLine(), graphics::font::VisualLine()), ipds_(0, 0) {
 			update(region);
 		}
 
@@ -50,7 +50,7 @@ namespace ascension {
 			if(line < *lines_.begin() || line > *lines_.end())
 				return boost::none;	// out of the region
 
-			const graphics::font::TextRenderer& renderer = viewer_.textArea().textRenderer();
+			const graphics::font::TextRenderer& renderer = textArea_.textRenderer();
 			const graphics::font::TextLayout* layout = renderer.layouts().at(line.line);
 			std::unique_ptr<const graphics::font::TextLayout> isolatedLayout;
 			if(layout == nullptr)
@@ -87,10 +87,10 @@ namespace ascension {
 			using graphics::font::TextRenderer;
 			// TODO: This code can't handle vertical writing-mode.
 //			assert(viewer_.isWindow());
-			if(viewer_.hitTest(p) != &viewer_.textArea())
+			if(textArea_.textViewer().hitTest(p) != &textArea_)
 				return false;	// ignore if not in text area
 
-			const graphics::font::TextRenderer& renderer = viewer_.textArea().textRenderer();
+			const graphics::font::TextRenderer& renderer = textArea_.textRenderer();
 			const std::shared_ptr<const graphics::font::TextViewport> viewport(renderer.viewport());
 
 			// compute inline-progression-dimension in the TextRenderer for 'p'
@@ -141,7 +141,7 @@ namespace ascension {
 		void VirtualBox::update(const kernel::Region& region) BOOST_NOEXCEPT {
 			std::pair<graphics::font::VisualLine, graphics::font::VisualLine> lines;	// components correspond to 'region'
 			std::pair<graphics::Scalar, graphics::Scalar> ipds;
-			const graphics::font::TextRenderer& renderer = viewer_.textArea().textRenderer();
+			const graphics::font::TextRenderer& renderer = textArea_.textRenderer();
 
 			// first
 			const graphics::font::TextLayout* layout = renderer.layouts().at(lines.first.line = region.first.line);

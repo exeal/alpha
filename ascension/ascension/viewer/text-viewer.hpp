@@ -19,7 +19,6 @@
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
-#include <ascension/viewer/detail/weak-reference-for-points.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
 #include <ascension/viewer/widgetapi/event/key-input.hpp>
@@ -119,7 +118,7 @@ namespace ascension {
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				public graphics::font::TextViewportListener, protected TextViewerComponent::Locator,
 				protected MouseInputStrategy::TargetLocker,
-				private detail::MouseVanish<TextViewer>, public detail::WeakReferenceForPoints<TextViewer> {
+				private detail::MouseVanish<TextViewer> {
 		public:
 			/**
 			 * A general configuration of the viewer.
@@ -250,6 +249,7 @@ namespace ascension {
 			void initialize(const TextViewer* other);
 			void initializeGraphics();
 			void initializeNativeObjects();
+			void initializeNativeWidget();
 			void updateScrollBars(
 				const presentation::FlowRelativeTwoAxes<bool>& positions,
 				const presentation::FlowRelativeTwoAxes<bool>& properties);
@@ -264,11 +264,6 @@ namespace ascension {
 			/// @}
 
 		private:
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			// base.Widget
-			void provideClassInformation(ClassInformation& classInformation) const;
-			std::basic_string<WCHAR> provideClassName() const;
-#endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
@@ -377,6 +372,20 @@ namespace ascension {
 				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
 			void viewportScrollPropertiesChanged(
 				const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
+
+			// window system-related private methods
+		private:
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			// GtkIMContext
+			static void handleInputMethodContextCommitSignal(GtkIMContext* context, gchar* text, gpointer userData);
+			static gboolean handleInputMethodContextDeleteSurroundingSignal(GtkIMContext* context, gint offset, gint nchars, gpointer userData);
+			static void handleInputMethodContextPreeditChangedSignal(GtkIMContext* context, gpointer userData);
+			static gboolean handleInputMethodContextRetrieveSurroundingSignal(GtkIMContext* context, gpointer userData);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			// base.Widget
+			void provideClassInformation(ClassInformation& classInformation) const;
+			std::basic_string<WCHAR> provideClassName() const;
+#endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 			// enumerations
 		private:

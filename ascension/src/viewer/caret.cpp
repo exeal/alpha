@@ -162,19 +162,19 @@ namespace ascension {
 		}
 
 		/**
-		 * Creates a @c Caret object and installs on the specified @c TextViewer.
-		 * @param viewer The text viewer
+		 * Creates a @c Caret object and installs on the specified @c TextArea.
+		 * @param textArea The text area
 		 * @param position The initial position of the point
 		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 */
-		Caret::Caret(TextViewer& viewer, const kernel::Position& position /* = kernel::Position::zero() */) :
-				VisualPoint(viewer, position), anchor_(new SelectionAnchor(viewer, position)),
+		Caret::Caret(TextArea& textArea, const kernel::Position& position /* = kernel::Position::zero() */) :
+				VisualPoint(textArea, position), anchor_(new SelectionAnchor(textArea, position)),
 #ifdef BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
 				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
 			document().addListener(*this);
-			install(viewer);
+			install(textArea);
 		}
 
 		/// Destructor.
@@ -198,7 +198,7 @@ namespace ascension {
 		 */
 		void Caret::beginRectangleSelection() {
 			if(context_.selectedRectangle.get() == nullptr) {
-				context_.selectedRectangle.reset(new VirtualBox(textViewer(), selectedRegion()));
+				context_.selectedRectangle.reset(new VirtualBox(textArea(), selectedRegion()));
 				selectionShapeChangedSignal_(*this);
 			}
 		}
@@ -269,8 +269,8 @@ namespace ascension {
 		 * @see #beginRectangleSelection, #isSelectionRectangle
 		 */
 		void Caret::endRectangleSelection() {
-			if(isTextViewerDisposed())
-				throw TextViewerDisposedException();
+			if(isTextAreaDisposed())
+				throw TextAreaDisposedException();
 			if(context_.selectedRectangle.get() != nullptr) {
 				context_.selectedRectangle.reset();
 				selectionShapeChangedSignal_(*this);
@@ -506,12 +506,12 @@ namespace ascension {
 		}
 
 		/// @see VisualPoint#install
-		void Caret::install(TextViewer& viewer) {
+		void Caret::install(TextArea& textArea) {
 			const bool installed = isInstalled();
-			VisualPoint::install(viewer);
+			VisualPoint::install(textArea);
 			if(!installed) {
-				textViewer().textArea().textRenderer().viewport()->addListener(*this);
-				anchor_->install(viewer);
+				textArea.textRenderer().viewport()->addListener(*this);
+				anchor_->install(textArea);
 				anchorMotionSignalConnection_ = anchor_->motionSignal().connect(
 					std::bind(&Caret::pointMoved, this, std::placeholders::_1, std::placeholders::_2));
 			}
@@ -643,8 +643,8 @@ namespace ascension {
 		 * @throw BadPositionException @a anchor or @a caret is outside of the document
 		 */
 		void Caret::select(const kernel::Position& anchor, const kernel::Position& caret) {
-			if(isTextViewerDisposed())
-				throw TextViewerDisposedException();
+			if(isTextAreaDisposed())
+				throw TextAreaDisposedException();
 			else if(kernel::positions::isOutsideOfDocumentRegion(document(), anchor))
 				throw kernel::BadPositionException(anchor);
 			else if(kernel::positions::isOutsideOfDocumentRegion(document(), caret))
@@ -693,8 +693,8 @@ namespace ascension {
 		/// @see VisualPoint#uninstall
 		void Caret::uninstall() BOOST_NOEXCEPT {
 			try {
-				if(!isTextViewerDisposed())
-					textViewer().textArea().textRenderer().viewport()->removeListener(*this);
+				if(!isTextAreaDisposed())
+					textArea().textRenderer().viewport()->removeListener(*this);
 				anchor_->uninstall();
 				anchorMotionSignalConnection_.disconnect();
 				shapeCache_.image.reset();
@@ -795,7 +795,7 @@ namespace ascension {
 			adaptToDocument(false);
 		}
 		
-		Caret::SelectionAnchor::SelectionAnchor(TextViewer& viewer, const kernel::Position& position) : VisualPoint(viewer, position) {
+		Caret::SelectionAnchor::SelectionAnchor(TextArea& textArea, const kernel::Position& position) : VisualPoint(textArea, position) {
 			adaptToDocument(false);
 		}
 		

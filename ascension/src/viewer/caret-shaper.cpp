@@ -27,7 +27,7 @@ namespace ascension {
 		 * @retval boost#none The layout of the line the given caret addresses is not calculated
 		 */
 		boost::optional<graphics::Rectangle> currentCharacterLogicalBounds(const Caret& caret) {
-			const graphics::font::TextRenderer& textRenderer = caret.textViewer().textArea().textRenderer();
+			const graphics::font::TextRenderer& textRenderer = caret.textArea().textRenderer();
 			if(const graphics::font::TextLayout* const layout = textRenderer.layouts().at(kernel::line(caret))) {
 				const Index subline = layout->lineAt(kernel::offsetInLine(caret));
 				NumericRange<graphics::Scalar> extent(layout->extent(boost::irange(subline, subline + 1)));

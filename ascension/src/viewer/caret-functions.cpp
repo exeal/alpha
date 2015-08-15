@@ -195,11 +195,12 @@ namespace ascension {
 			if(!isSelectionEmpty(caret)) {
 				if(caret.isSelectionRectangle())
 					return caret.boxForRectangleSelection().includes(p);
-				const TextViewer& textViewer = caret.textViewer();
-				if(caret.textViewer().hitTest(p) == &textViewer.textArea()) {	// ignore if on the margin
+				const TextArea& textArea = caret.textArea();
+				const TextViewer& textViewer = textArea.textViewer();
+				if(textViewer.hitTest(p) == &textArea) {	// ignore if on the margin
 					const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer, false));
 					if(graphics::geometry::x(p) <= graphics::geometry::right(viewerBounds) && graphics::geometry::y(p) <= graphics::geometry::bottom(viewerBounds)) {
-						const std::shared_ptr<const graphics::font::TextViewport> viewport(textViewer.textArea().textRenderer().viewport());
+						const std::shared_ptr<const graphics::font::TextViewport> viewport(textArea.textRenderer().viewport());
 						const boost::optional<graphics::font::TextHit<kernel::Position>> hit(viewToModelInBounds(*viewport, p));
 						return hit != boost::none && hit->characterIndex() >= caret.beginning() && hit->characterIndex() <= caret.end();
 					}
@@ -238,8 +239,8 @@ namespace ascension {
 					if(!range)
 						return boost::none;
 					const graphics::font::TextLayout* const layout = useCalculatedLayout ?
-						&const_cast<Caret&>(caret).textViewer().textArea().textRenderer().layouts().at(line.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)
-						: caret.textViewer().textArea().textRenderer().layouts().at(line.line);
+						&const_cast<Caret&>(caret).textArea().textRenderer().layouts().at(line.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)
+						: caret.textArea().textRenderer().layouts().at(line.line);
 					const Index sublineOffset = (layout != nullptr) ? layout->lineOffset(line.subline) : 0;
 					Index maximumEnd;
 					if(layout != nullptr)

@@ -98,7 +98,7 @@ namespace ascension {
 		CaretShaper::Shape DefaultCaretShaper::createSolidShape(const Caret& caret,
 				const boost::optional<graphics::Color>& color, const boost::optional<std::uint32_t>& measure) const {
 			const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
-			const graphics::font::TextRenderer& renderer = caret.textViewer().textArea().textRenderer();
+			const graphics::font::TextRenderer& renderer = caret.textArea().textRenderer();
 			graphics::geometry::BasicRectangle<std::int32_t> bounds;
 
 			if(const graphics::font::TextLayout* const layout = renderer.layouts().at(kernel::line(caret))) {
@@ -249,7 +249,7 @@ namespace ascension {
 		CaretShaper::Shape LocaleSensitiveCaretShaper::shape(const Caret& caret, const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			const bool inputMethodIsOpen = static_cast<Glib::ustring>(
-				const_cast<TextViewer&>(caret.textViewer()).get_settings()->property_gtk_im_module()) != nullptr;
+				const_cast<TextViewer&>(caret.textArea().textViewer()).get_settings()->property_gtk_im_module()) != nullptr;
 #elif ASCENSION_WINDOW_SYSTEM(WIN32)
 			win32::Handle<HIMC>::Type imc(win32::inputMethod(caret.textViewer()));
 			const bool inputMethodIsOpen = win32::boole(::ImmGetOpenStatus(imc.get()));

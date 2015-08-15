@@ -11,6 +11,7 @@
 #include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/kernel/document-observers.hpp>
+#include <ascension/viewer/detail/weak-reference-for-points.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
 
 namespace ascension {
@@ -30,16 +31,22 @@ namespace ascension {
 
 		class TextArea : public TextViewerComponent,
 			public graphics::font::TextViewportListener, public graphics::font::VisualLinesListener,
-			public kernel::DocumentListener {
+			public kernel::DocumentListener, public detail::WeakReferenceForPoints<TextArea> {
 		public:
 			TextArea();
 			~TextArea() BOOST_NOEXCEPT;
+
+			/// @name Text Viewer
+			/// @{
+			BOOST_CONSTEXPR TextViewer& textViewer() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR const TextViewer& textViewer() const BOOST_NOEXCEPT;
+			/// @}
 
 			/**
 			 * @name Implementation of @c graphics#font#TextRenderer
 			 * @{
 			 */
-			/// Implementation of @c graphics#font#TextRenderer for @c TextViewer.
+			/// Implementation of @c graphics#font#TextRenderer for @c TextArea.
 			class Renderer : public graphics::font::TextRenderer {
 			public:
 				explicit Renderer(TextViewer& viewer);
@@ -59,8 +66,8 @@ namespace ascension {
 				TextViewer& viewer_;
 				bool displaysShapingControls_;
 			};
-			Renderer& textRenderer() BOOST_NOEXCEPT;
-			const Renderer& textRenderer() const BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR Renderer& textRenderer() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR const Renderer& textRenderer() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Redraw
@@ -144,6 +151,16 @@ namespace ascension {
 		/// Returns the text renderer.
 		inline const TextArea::Renderer& TextArea::textRenderer() const BOOST_NOEXCEPT {
 			return *renderer_;
+		}
+		
+		/// Returns the text viewer.
+		inline TextViewer& TextArea::textViewer() BOOST_NOEXCEPT {
+			return *viewer_;
+		}
+		
+		/// Returns the text viewer.
+		inline const TextViewer& TextArea::textViewer() const BOOST_NOEXCEPT {
+			return *viewer_;
 		}
 	}
 }

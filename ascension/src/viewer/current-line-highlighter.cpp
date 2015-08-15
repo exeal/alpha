@@ -45,7 +45,7 @@ namespace ascension {
 				const boost::optional<graphics::Color>& foreground, const boost::optional<graphics::Color>& background)
 				: caret_(&caret), foreground_(foreground), background_(background) {
 			std::shared_ptr<presentation::TextLineColorSpecifier> temp(this);
-			caret.textViewer().presentation().addTextLineColorSpecifier(temp);
+			caret.textArea().textViewer().presentation().addTextLineColorSpecifier(temp);
 			caretDestructionConnection_ = caret.destructionSignal().connect(std::bind(&CurrentLineHighlighter::caretDestructed, this));
 			caretMotionConnection_ = caret.motionSignal().connect(std::bind(&CurrentLineHighlighter::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
 		}
@@ -54,7 +54,7 @@ namespace ascension {
 		CurrentLineHighlighter::~CurrentLineHighlighter() BOOST_NOEXCEPT {
 			if(caret_ != nullptr) {
 //				caretMotionConnection_.disconnect();
-				caret_->textViewer().presentation().removeTextLineColorSpecifier(*this);
+				caret_->textArea().textViewer().presentation().removeTextLineColorSpecifier(*this);
 			}
 		}
 
@@ -74,11 +74,11 @@ namespace ascension {
 		void CurrentLineHighlighter::caretMoved(const Caret&, const kernel::Region& oldRegion) {
 			if(oldRegion.isEmpty()) {
 				if(!isSelectionEmpty(*caret_) || kernel::line(*caret_) != oldRegion.first.line)
-					caret_->textViewer().textArea().redrawLine(oldRegion.first.line, false);
+					caret_->textArea().redrawLine(oldRegion.first.line, false);
 			}
 			if(isSelectionEmpty(*caret_)) {
 				if(!oldRegion.isEmpty() || kernel::line(*caret_) != oldRegion.first.line)
-					caret_->textViewer().textArea().redrawLine(kernel::line(*caret_), false);
+					caret_->textArea().redrawLine(kernel::line(*caret_), false);
 			}
 		}
 
@@ -90,7 +90,7 @@ namespace ascension {
 		/// @see TextLineColorSpecifier#specifyTextLineColors
 		presentation::TextLineColorSpecifier::Priority CurrentLineHighlighter::specifyTextLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const {
-			if(caret_ != nullptr && isSelectionEmpty(*caret_) && kernel::line(*caret_) == line && widgetapi::hasFocus(caret_->textViewer())) {
+			if(caret_ != nullptr && isSelectionEmpty(*caret_) && kernel::line(*caret_) == line && widgetapi::hasFocus(caret_->textArea().textViewer())) {
 				foreground = foreground_;
 				background = background_;
 				return LINE_COLOR_PRIORITY;
