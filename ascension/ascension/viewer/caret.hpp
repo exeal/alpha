@@ -76,12 +76,12 @@ namespace ascension {
 			explicit Caret(kernel::Document& document, const kernel::Position& position = kernel::Position::zero());
 			explicit Caret(const kernel::Point& other);
 			explicit Caret(const VisualPoint& other);
-			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position::zero());
+			explicit Caret(TextArea& textArea, const kernel::Position& position = kernel::Position::zero());
 			~Caret();
 
 			/// @name Installation
 			/// @{
-			void install(TextViewer& viewer) override;
+			void install(TextArea& textArea) override;
 			void uninstall() BOOST_NOEXCEPT override;
 			/// @}
 
@@ -206,7 +206,7 @@ namespace ascension {
 				SelectionAnchor(kernel::Document& document, const kernel::Position& position);
 				explicit SelectionAnchor(const kernel::Point& other);
 				explicit SelectionAnchor(const VisualPoint& other);
-				SelectionAnchor(TextViewer& viewer, const kernel::Position& position);
+				SelectionAnchor(TextArea& textArea, const kernel::Position& position);
 				void beginInternalUpdate(const kernel::DocumentChange& change) BOOST_NOEXCEPT;
 				void endInternalUpdate() BOOST_NOEXCEPT;
 				bool isInternalUpdating() const BOOST_NOEXCEPT;

@@ -16,22 +16,22 @@
 
 namespace ascension {
 	namespace viewer {
-		class TextViewer;
+		class TextArea;
 
 		/**
-		 * A virtual rectangle placed in the viewer.
+		 * A virtual rectangle placed in the text area.
 		 * @note This feature is not fully available on bidirectional texts.
 		 * @see Caret#boxForRectangleSelection
 		 */
 		class VirtualBox {
 		public:
-			VirtualBox(const TextViewer& viewer, const kernel::Region& region) BOOST_NOEXCEPT;
+			VirtualBox(const TextArea& textArea, const kernel::Region& region) BOOST_NOEXCEPT;
 			boost::optional<boost::integer_range<Index>>
 				characterRangeInVisualLine(const graphics::font::VisualLine& line) const BOOST_NOEXCEPT;
 			bool includes(const graphics::Point& p) const BOOST_NOEXCEPT;
 			void update(const kernel::Region& region) BOOST_NOEXCEPT;
 		private:
-			const TextViewer& viewer_;
+			const TextArea& textArea_;
 			boost::integer_range<graphics::font::VisualLine> lines_;
 			NumericRange<graphics::Scalar> ipds_;	// inline-progression-dimension in TextRenderer coordinates
 		};

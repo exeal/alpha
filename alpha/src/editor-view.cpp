@@ -145,8 +145,11 @@ namespace alpha {
 
 	/// @see TextViewer#keyPressed
 	void EditorView::keyPressed(ascension::viewer::widgetapi::event::KeyInput& input) {
+#ifndef ALPHA_NO_AMBIENT
 		// disable default keyboard bindings
-//		return ascension::viewer::TextViewer::keyPressed(input);
+#else
+		return ascension::viewer::TextViewer::keyPressed(input);
+#endif
 	}
 #if 0
 	/// @see Caret#MatchBracketsChangedSignal

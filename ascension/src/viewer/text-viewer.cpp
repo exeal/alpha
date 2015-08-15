@@ -604,14 +604,8 @@ namespace ascension {
 
 		/// @internal Called by constructors.
 		void TextViewer::initialize(const TextViewer* other) {
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			assert(GTK_IS_WIDGET(static_cast<Gtk::Widget&>(*this).gobj()));
-#	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
-			assert(GTK_IS_SCROLLABLE(static_cast<Gtk::Scrollable&>(*this).gobj()));
-#	endif
-			set_can_focus(true);
-			set_has_window(true);
-#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			initializeNativeWidget();
+
 			document().addListener(*this);
 			document().addRollbackListener(*this);
 
@@ -818,7 +812,7 @@ namespace ascension {
 			textArea_.reset(new TextArea());
 			caret_.reset(new Caret(document()));
 			static_cast<TextViewerComponent*>(textArea_.get())->install(*this, *this);
-			caret().install(*this);
+			caret().install(textArea());
 			initializeNativeObjects();
 		}
 #if 0

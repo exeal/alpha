@@ -61,6 +61,33 @@ namespace ascension {
 			return Gtk::Widget::get_request_mode_vfunc();
 		}
 
+		/// @internal Handles "commit" signal of @c GtkIMContext.
+		void TextViewer::handleInputMethodContextCommitSignal(GtkIMContext* context, gchar* text, gpointer userData) {
+		}
+
+		/// @internal Handles "preedit-changed" signal of @c GtkIMContext.
+		void TextViewer::handleInputMethodContextPreeditChangedSignal(GtkIMContext* context, gpointer userData) {
+			TextViewer& self = *static_cast<TextViewer*>(userData);
+			assert(context == self.inputMethodContext_.get());
+
+			gchar* text;
+			PangoAttrList* attributes;
+			gint cursorPosition;
+			::gtk_im_context_get_preedit_string(context, &text, &attributes, &cursorPosition);
+			::g_free(text);
+			::pango_attr_list_unref(attributes);
+		}
+
+		/// @internal Handles "delete-surrounding" signal of @c GtkIMContext.
+		gboolean TextViewer::handleInputMethodContextDeleteSurroundingSignal(GtkIMContext* context, gint offset, gint nchars, gpointer userData) {
+			return false;
+		}
+
+		/// @internal Handles "retrieve-surrounding" signal of @c GtkIMContext.
+		gboolean TextViewer::handleInputMethodContextRetrieveSurroundingSignal(GtkIMContext* context, gpointer userData) {
+			return false;
+		}
+
 		void TextViewer::hideToolTip() {
 			// TODO: Not implemented.
 		}
@@ -94,6 +121,25 @@ namespace ascension {
 				});
 			}
 #endif // ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+		}
+
+		void TextViewer::initializeNativeWidget() {
+			assert(GTK_IS_WIDGET(static_cast<Gtk::Widget&>(*this).gobj()));
+#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+			assert(GTK_IS_SCROLLABLE(static_cast<Gtk::Scrollable&>(*this).gobj()));
+#endif
+			set_can_focus(true);
+			set_has_window(true);
+
+			inputMethodContext_.reset(::gtk_im_multicontext_new(), &::g_object_unref);
+			::g_signal_connect(inputMethodContext_.get(), "commit",
+				G_CALLBACK(TextViewer::handleInputMethodContextCommitSignal), this);
+			::g_signal_connect(inputMethodContext_.get(), "delete-surrounding",
+				G_CALLBACK(TextViewer::handleInputMethodContextDeleteSurroundingSignal), this);
+			::g_signal_connect(inputMethodContext_.get(), "preedit-changed",
+				G_CALLBACK(TextViewer::handleInputMethodContextPreeditChangedSignal), this);
+			::g_signal_connect(inputMethodContext_.get(), "retrieve-surrounding",
+				G_CALLBACK(TextViewer::handleInputMethodContextRetrieveSurroundingSignal), this);
 		}
 
 		namespace {
@@ -265,20 +311,22 @@ namespace ascension {
 		 * Invokes @c #focusGained method.
 		 * @see Gtk#Widget#on_focus_in_event
 		 */
-		bool TextViewer::on_focus_in_event(GdkEventFocus*) {
+		bool TextViewer::on_focus_in_event(GdkEventFocus* event) {
 			widgetapi::event::Event e;
 			focusGained(e);
-			return e.isConsumed();
+			::gtk_im_context_focus_in(inputMethodContext_.get());
+			return e.isConsumed() || Gtk::Widget::on_focus_in_event(event);
 		}
 
 		/**
 		 * Invokes @c #focusAboutToBeLost method.
 		 * @see Gtk#Widget#on_focus_out_event
 		 */
-		bool TextViewer::on_focus_out_event(GdkEventFocus*) {
+		bool TextViewer::on_focus_out_event(GdkEventFocus* event) {
 			widgetapi::event::Event e;
 			focusAboutToBeLost(e);
-			return e.isConsumed();
+			::gtk_im_context_focus_out(inputMethodContext_.get());
+			return e.isConsumed() || Gtk::Widget::on_focus_out_event(event);
 		}
 
 		void TextViewer::on_grab_focus() {
@@ -291,9 +339,11 @@ namespace ascension {
 		 * @see Gtk#Widget#on_key_press_event
 		 */
 		bool TextViewer::on_key_press_event(GdkEventKey* event) {
+			if(::gtk_im_context_filter_keypress(inputMethodContext_.get(), event))
+				return true;
 			widgetapi::event::KeyInput input(event->keyval, static_cast<widgetapi::event::UserInput::KeyboardModifier>(event->state));
 			keyPressed(input);
-			return input.isConsumed();
+			return input.isConsumed() || Gtk::Widget::on_key_press_event(event);
 		}
 
 		/**
@@ -301,9 +351,11 @@ namespace ascension {
 		 * @see Gtk#Widget#on_key_release_event
 		 */
 		bool TextViewer::on_key_release_event(GdkEventKey* event) {
+			if(::gtk_im_context_filter_keypress(inputMethodContext_.get(), event))
+				return true;
 			widgetapi::event::KeyInput input(event->keyval, static_cast<widgetapi::event::UserInput::KeyboardModifier>(event->state));
 			keyReleased(input);
-			return input.isConsumed();
+			return input.isConsumed() || Gtk::Widget::on_key_release_event(event);
 		}
 
 		/**
@@ -346,9 +398,7 @@ namespace ascension {
 #else
 			window_->set_user_data(Gtk::Widget::gobj());
 #endif
-			attributes.event_mask = get_events();
-			add_events(Gdk::FOCUS_CHANGE_MASK);
-			attributes.event_mask = get_events();
+			::gtk_im_context_set_client_window(inputMethodContext_.get(), window_->gobj());
 			initializeGraphics();
 		}
 
@@ -413,6 +463,7 @@ namespace ascension {
 
 		/// @see Gtk#Widget#on_unrealize
 		void TextViewer::on_unrealize() {
+			::gtk_im_context_set_client_window(inputMethodContext_.get(), nullptr);
 			window_.reset();
 			Gtk::Widget::on_unrealize();
 		}
