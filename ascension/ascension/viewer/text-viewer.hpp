@@ -164,16 +164,6 @@ namespace ascension {
 			BOOST_CONSTEXPR const TextArea& textArea() const BOOST_NOEXCEPT;
 			/// @}
 
-			/// @name Caret
-			/// @{
-			BOOST_CONSTEXPR Caret& caret() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR const Caret& caret() const BOOST_NOEXCEPT;
-			void hideCaret() BOOST_NOEXCEPT;
-			bool hidesCaret() const BOOST_NOEXCEPT;
-			void setCaretShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
-			void showCaret() BOOST_NOEXCEPT;
-			/// @}
-
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 			/// @name Global IME (Only Windows)
 			/// @{
@@ -402,8 +392,6 @@ namespace ascension {
 			Glib::RefPtr<Gdk::Window> window_;
 #endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			presentation::Presentation& presentation_;
-			std::unique_ptr<Caret> caret_;
-			std::shared_ptr<CaretShaper> caretShaper_;
 			std::unique_ptr<TextArea> textArea_;
 			Configuration configuration_;
 			std::weak_ptr<MouseInputStrategy> lockedMouseInputStrategy_;
@@ -446,23 +434,7 @@ namespace ascension {
 			// freeze information
 			boost::value_initialized<std::size_t> frozenCount_;
 
-			class CaretBlinker : private HasTimer<> {
-			public:
-				explicit CaretBlinker(TextViewer& viewer) BOOST_NOEXCEPT;
-				bool isVisible() const BOOST_NOEXCEPT;
-				void pend();
-				void stop();
-				void update();
-			private:
-				void setVisible(bool visible);
-				void timeElapsed(Timer<>& timer);
-				TextViewer& viewer_;
-				Timer<> timer_;
-				bool visible_;
-			};
-
 			// input state
-			std::unique_ptr<CaretBlinker> caretBlinker_;	// null when the caret is set to invisible
 			boost::value_initialized<std::size_t> mouseInputDisabledCount_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			std::shared_ptr<GtkIMContext> inputMethodContext_;
@@ -504,12 +476,6 @@ namespace ascension {
 
 		/// Informs the end user of <strong>safe</strong> error.
 		inline void TextViewer::beep() BOOST_NOEXCEPT {doBeep();}
-		
-		/// Returns the caret.
-		inline BOOST_CONSTEXPR Caret& TextViewer::caret() BOOST_NOEXCEPT {return *caret_;}
-		
-		/// Returns the caret.
-		inline BOOST_CONSTEXPR const Caret& TextViewer::caret() const BOOST_NOEXCEPT {return *caret_;}
 
 		/**
 		 * Returns the general configuration.
@@ -548,14 +514,6 @@ namespace ascension {
 		inline void TextViewer::enableMouseInput(bool enable) {
 			if(boost::get(mouseInputDisabledCount_) != 0 || !enable)
 				mouseInputDisabledCount_ += !enable ? 1 : -1;
-		}
-
-		/**
-		 * Returns @c true if the caret is hidden.
-		 * @see #hideCaret, showCaret
-		 */
-		inline bool TextViewer::hidesCaret() const BOOST_NOEXCEPT {
-			return caretBlinker_.get() == nullptr;
 		}
 		
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)

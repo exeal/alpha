@@ -104,8 +104,8 @@ namespace ascension {
 			void mouseMoved(widgetapi::event::LocatedUserInput& input, TargetLocker& targetLocker) override;
 			void mouseWheelRotated(widgetapi::event::MouseWheelInput& input, TargetLocker& targetLocker) override;
 			bool showCursor(const graphics::Point& position) override;
-			// TextViewerMouseInputStrategy
-			void install(TextViewer& viewer) override;
+			// TextAreaMouseInputStrategy
+			void install(TextArea& viewer) override;
 			void uninstall() override;
 			// HasTimer<DefaultTextAreaMouseInputStrategy>
 			void timeElapsed(Timer<DefaultTextAreaMouseInputStrategy>& timer) override;
@@ -120,7 +120,7 @@ namespace ascension {
 			STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) override;
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		private:
-			TextViewer* viewer_;
+			TextArea* textArea_;
 			std::unique_ptr<SelectionExtender> selectionExtender_;	// not null only if selecting text
 			struct AutoScroll {
 				enum State {APPROACHING, SCROLLING_WITH_DRAG, SCROLLING_WITHOUT_DRAG} state;

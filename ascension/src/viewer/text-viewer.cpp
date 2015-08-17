@@ -21,7 +21,6 @@
 #include <ascension/text-editor/command.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/default-caret-shaper.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
@@ -225,7 +224,7 @@ namespace ascension {
 			unfreeze();	// TODO: replace with AutoFreeze.
 			if(/*resultPosition != kernel::Position() &&*/ widgetapi::hasFocus(*this)) {
 				utils::closeCompletionProposalsPopup(*this);
-				caret_->moveTo(resultPosition);
+				textArea().caret().moveTo(resultPosition);	// TODO: Why does a TextViewer operate the caret here?
 			}
 		}
 
@@ -265,7 +264,7 @@ namespace ascension {
 			if(byKeyboard) {
 				// MSDN says "the application should display the context menu at the location of the current selection."
 				location = graphics::font::modelToView(
-					*textArea().textRenderer().viewport(), graphics::font::TextHit<kernel::Position>::leading(caret()));
+					*textArea().textRenderer().viewport(), graphics::font::TextHit<kernel::Position>::leading(textArea().caret()));
 				// TODO: Support RTL and vertical window layout.
 				graphics::geometry::y(location) +=
 					widgetapi::createRenderingContext(*this)->fontMetrics(textArea().textRenderer().defaultFont())->cellHeight() + 1;
@@ -364,7 +363,7 @@ namespace ascension {
 			if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
 				closeCompletionProposalsPopup(*this);
 */			texteditor::abortIncrementalSearch(document());
-			static_cast<detail::InputEventHandler&>(caret()).abortInput();
+			static_cast<detail::InputEventHandler&>(textArea().caret()).abortInput();
 //			if(currentWin32WindowMessage().wParam != get()) {
 //				hideCaret();
 //				::DestroyCaret();
@@ -568,17 +567,6 @@ namespace ascension {
 				}
 				::SetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si, true);
 #endif
-			}
-		}
-
-		/**
-		 * Hides the caret.
-		 * @see #hidesCaret, #showCaret
-		 */
-		void TextViewer::hideCaret() BOOST_NOEXCEPT {
-			if(!hidesCaret()) {
-				caretBlinker_.reset();
-				textArea().redrawLine(kernel::line(caret()));
 			}
 		}
 
@@ -810,9 +798,7 @@ namespace ascension {
 		/// @internal
 		void TextViewer::initializeGraphics() {
 			textArea_.reset(new TextArea());
-			caret_.reset(new Caret(document()));
 			static_cast<TextViewerComponent*>(textArea_.get())->install(*this, *this);
-			caret().install(textArea());
 			initializeNativeObjects();
 		}
 #if 0
@@ -1096,7 +1082,7 @@ namespace ascension {
 						if(input.hasModifier(UserInput::SHIFT_DOWN))
 							PasteCommand(*this, input.hasModifier(UserInput::CONTROL_DOWN))();
 						else if(input.hasModifier(UserInput::CONTROL_DOWN))
-							copySelection(caret(), true);
+							copySelection(textArea().caret(), true);
 						else
 							OvertypeModeToggleCommand(*this)();
 					}
@@ -1114,7 +1100,7 @@ namespace ascension {
 							CharacterDeletionCommand(*this, Direction::FORWARD)();
 							break;
 						case UserInput::SHIFT_DOWN:
-							cutSelection(caret(), true);
+							cutSelection(textArea().caret(), true);
 							break;
 						case UserInput::CONTROL_DOWN:
 							WordDeletionCommand(*this, Direction::FORWARD)();
@@ -1139,7 +1125,7 @@ namespace ascension {
 				case 'C':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
-						copySelection(caret(), true);	// ^C -> Copy
+						copySelection(textArea().caret(), true);	// ^C -> Copy
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_H:
@@ -1192,7 +1178,7 @@ namespace ascension {
 				case 'X':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
-						cutSelection(caret(), true);	// ^X -> Cut
+						cutSelection(textArea().caret(), true);	// ^X -> Cut
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Y:
@@ -1255,20 +1241,20 @@ namespace ascension {
 						presentation().setDefaultDirection(presentation::RIGHT_TO_LEFT);
 					break;
 				case GDK_KEY_Copy:
-					copySelection(caret(), true);
+					copySelection(textArea().caret(), true);
 					break;
 				case GDK_KEY_Cut:
-					cutSelection(caret(), true);
+					cutSelection(textArea().caret(), true);
 					break;
 				case GDK_KEY_Paste:
 					PasteCommand(*this, false)();
 					break;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Copy:
-					copySelection(caret(), true);
+					copySelection(textArea().caret(), true);
 					break;
 				case Qt::Key_Cut:
-					cutSelection(caret(), true);
+					cutSelection(textArea().caret(), true);
 					break;
 				case Qt::Key_Paste:
 					PasteCommand(*this, false)();
@@ -1291,7 +1277,7 @@ namespace ascension {
 		void TextViewer::keyReleased(widgetapi::event::KeyInput& input) {
 			if(input.hasModifier(widgetapi::event::UserInput::ALT_DOWN)) {
 				restoreHiddenCursor();
-				if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock())
+				if(const auto mouseInputStrategy = textArea().mouseInputStrategy().lock())
 					mouseInputStrategy->interruptMouseReaction(true);
 			}
 			return input.ignore();
@@ -1466,23 +1452,6 @@ namespace ascension {
 		}
 
 		/**
-		 * Sets the caret shaper.
-		 * @param shaper The new caret shaper to set
-		 */
-		void TextViewer::setCaretShaper(std::shared_ptr<CaretShaper> shaper) {
-			if(shaper == caretShaper_)
-				return;
-			if(caretShaper_.get() != nullptr)
-				caretShaper_->uninstall(caret());	// TODO: Support multiple carets.
-			if(shaper.get() == nullptr)
-				shaper = std::make_shared<DefaultCaretShaper>();
-			(caretShaper_ = shaper)->install(caret());	// TODO: Support multiple carets.
-#ifdef ASCENSION_USE_SYSTEM_CARET
-			caretStaticShapeChanged(caret());	// update caret shapes immediately
-#endif
-		}
-
-		/**
 		 * Updates the configurations.
 		 * @param newConfiguration The new configurations
 		 * @param synchronizeUI Set @c true to change the window style according to the new style. This sets
@@ -1538,15 +1507,6 @@ namespace ascension {
 			if(contentAssistant_.get() != nullptr)
 				contentAssistant_->uninstall();	// $friendly-access
 			(contentAssistant_ = std::move(newContentAssistant))->install(*this);	// $friendly-access
-		}
-
-		/**
-		 * Shows the hidden caret.
-		 * @see #hideCaret, #hidesCaret
-		 */
-		void TextViewer::showCaret() BOOST_NOEXCEPT {
-			if(hidesCaret())
-				caretBlinker_.reset(new CaretBlinker(*this));
 		}
 
 		/**
