@@ -20,6 +20,7 @@
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
+#include <ascension/viewer/caret-shaper.hpp>
 #include <ascension/viewer/default-text-area-mouse-input-strategy.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
@@ -41,7 +42,7 @@ namespace ascension {
 
 		/// @see Caret#MotionSignal
 		void TextArea::caretMoved(const Caret& self, const kernel::Region& oldRegion) {
-			if(viewer_ == nullptr || !widgetapi::isVisible(*viewer_))
+			if(viewer_ == nullptr || !widgetapi::isVisible(textViewer()))
 				return;
 			const kernel::Region newRegion(self.selectedRegion());
 			bool changed = false;
@@ -59,8 +60,8 @@ namespace ascension {
 				} else {	// ...if the there is selection
 					if(newRegion.isEmpty()) {	// the selection became empty
 						redrawLines(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
-						if(!viewer_->isFrozen())
-							widgetapi::redrawScheduledRegion(*viewer_);
+						if(!textViewer().isFrozen())
+							widgetapi::redrawScheduledRegion(textViewer());
 					} else if(oldRegion.beginning() == newRegion.beginning()) {	// the beginning point didn't change
 						const Index i[2] = {oldRegion.end().line, newRegion.end().line};
 						redrawLines(boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1));
@@ -76,8 +77,8 @@ namespace ascension {
 							redrawLines(boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1));
 						} else {
 							redrawLines(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
-							if(!viewer_->isFrozen())
-								widgetapi::redrawScheduledRegion(*viewer_);
+							if(!textViewer().isFrozen())
+								widgetapi::redrawScheduledRegion(textViewer());
 							redrawLines(boost::irange(newRegion.beginning().line, newRegion.end().line + 1));
 						}
 					}
@@ -85,8 +86,8 @@ namespace ascension {
 				changed = true;
 			}
 
-			if(changed && !viewer_->isFrozen())
-				widgetapi::redrawScheduledRegion(*viewer_);
+			if(changed && !textViewer().isFrozen())
+				widgetapi::redrawScheduledRegion(textViewer());
 		}
 
 		/// @see TextRenderer#DefaultFontChangedSignal
@@ -108,7 +109,7 @@ namespace ascension {
 		void TextArea::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
 			if(viewer_ != nullptr) {
 				// slide the frozen lines to be drawn
-				if(viewer_->isFrozen() && !boost::empty(linesToRedraw_)) {
+				if(textViewer().isFrozen() && !boost::empty(linesToRedraw_)) {
 					Index b = *linesToRedraw_.begin();
 					Index e = *linesToRedraw_.end();
 					if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
@@ -139,16 +140,16 @@ namespace ascension {
 
 		/// @see TextViewer#FocusChangedSignal
 		void TextArea::focusChanged(const TextViewer& viewer) {
-			if(&viewer == viewer_) {
+			if(&viewer == &textViewer()) {
 				// repaint the lines where the caret places
-				redrawLines(boost::irange(kernel::line(viewer.caret().beginning()), kernel::line(viewer.caret().end()) + 1));
-				widgetapi::redrawScheduledRegion(*viewer_);
+				redrawLines(boost::irange(kernel::line(caret().beginning()), kernel::line(caret().end()) + 1));
+				widgetapi::redrawScheduledRegion(textViewer());
 			}
 		}
 
 		/// @see TextViewer#FrozenStateChangedSignal
 		void TextArea::frozenStateChanged(const TextViewer& viewer) {
-			if(&viewer == viewer_) {
+			if(&viewer == &textViewer()) {
 				if(const std::shared_ptr<graphics::font::TextViewport> viewport = textRenderer().viewport()) {
 					if(viewer.isFrozen()) {
 						try {
@@ -166,10 +167,21 @@ namespace ascension {
 							redrawLines(linesToRedraw_);
 							linesToRedraw_ = boost::irange<Index>(0, 0);
 						}
-						caretMoved(viewer.caret(), viewer.caret().selectedRegion());
-						widgetapi::redrawScheduledRegion(*viewer_);
+						caretMoved(caret(), caret().selectedRegion());
+						widgetapi::redrawScheduledRegion(textViewer());
 					}
 				}
+			}
+		}
+
+		/**
+		 * Hides the caret.
+		 * @see #hidesCaret, #showCaret
+		 */
+		void TextArea::hideCaret() BOOST_NOEXCEPT {
+			if(!hidesCaret()) {
+				caretBlinker_.reset();
+				redrawLine(kernel::line(caret()));
 			}
 		}
 
@@ -177,13 +189,15 @@ namespace ascension {
 		void TextArea::install(TextViewer& viewer, const Locator& locator) {
 			viewer_ = &viewer;
 			locator_ = &locator;
+			caret_.reset(new Caret(viewer.document()));
 			renderer_.reset(new Renderer(viewer));
-			viewer_->document().addListener(*this);
-			caretMotionConnection_ = viewer_->caret().motionSignal().connect(
+			caret().install(*this);
+			textViewer().document().addListener(*this);
+			caretMotionConnection_ = caret().motionSignal().connect(
 				std::bind(&TextArea::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
-			selectionShapeChangedConnection_ = viewer_->caret().selectionShapeChangedSignal().connect(
+			selectionShapeChangedConnection_ = caret().selectionShapeChangedSignal().connect(
 				std::bind(&TextArea::selectionShapeChanged, this, std::placeholders::_1));
-			matchBracketsChangedConnection_ = viewer_->caret().matchBracketsChangedSignal().connect(
+			matchBracketsChangedConnection_ = caret().matchBracketsChangedSignal().connect(
 				std::bind(&TextArea::matchBracketsChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 			defaultFontChangedConnection_ =
 				renderer_->defaultFontChangedSignal().connect(std::bind(&TextArea::defaultFontChanged, this, std::placeholders::_1));
@@ -191,7 +205,7 @@ namespace ascension {
 			renderer_->layouts().addVisualLinesListener(*this);
 			if(mouseInputStrategy_.get() != nullptr) {
 				assert(!mouseInputStrategyIsInstalled_);
-				mouseInputStrategy_->install(*viewer_);
+				mouseInputStrategy_->install(*this);
 			} else
 				setMouseInputStrategy(std::unique_ptr<TextAreaMouseInputStrategy>());
 		}
@@ -204,18 +218,18 @@ namespace ascension {
 			const boost::optional<std::pair<kernel::Position, kernel::Position>>& newPair = caret.matchBrackets();
 			if(newPair) {
 				redrawLine(newPair->first.line);
-				if(!viewer_->isFrozen())
-					widgetapi::redrawScheduledRegion(*viewer_);
+				if(!textViewer().isFrozen())
+					widgetapi::redrawScheduledRegion(textViewer());
 				if(newPair->second.line != newPair->first.line) {
 					redrawLine(newPair->second.line);
-					if(!viewer_->isFrozen())
-						widgetapi::redrawScheduledRegion(*viewer_);
+					if(!textViewer().isFrozen())
+						widgetapi::redrawScheduledRegion(textViewer());
 				}
 				if(previouslyMatchedBrackets	// clear the previous highlight
 						&& previouslyMatchedBrackets->first.line != newPair->first.line && previouslyMatchedBrackets->first.line != newPair->second.line) {
 					redrawLine(previouslyMatchedBrackets->first.line);
-					if(!viewer_->isFrozen())
-						widgetapi::redrawScheduledRegion(*viewer_);
+					if(!textViewer().isFrozen())
+						widgetapi::redrawScheduledRegion(textViewer());
 				}
 				if(previouslyMatchedBrackets && previouslyMatchedBrackets->second.line != newPair->first.line
 						&& previouslyMatchedBrackets->second.line != newPair->second.line && previouslyMatchedBrackets->second.line != previouslyMatchedBrackets->first.line)
@@ -223,8 +237,8 @@ namespace ascension {
 			} else {
 				if(previouslyMatchedBrackets) {	// clear the previous highlight
 					redrawLine(previouslyMatchedBrackets->first.line);
-					if(!viewer_->isFrozen())
-						widgetapi::redrawScheduledRegion(*viewer_);
+					if(!textViewer().isFrozen())
+						widgetapi::redrawScheduledRegion(textViewer());
 					if(previouslyMatchedBrackets->second.line != previouslyMatchedBrackets->first.line)
 						redrawLine(previouslyMatchedBrackets->second.line);
 				}
@@ -278,10 +292,10 @@ namespace ascension {
 				return;
 
 			const boost::integer_range<Index> orderedLines(lines | adaptors::ordered());
-			if(*orderedLines.end() != std::numeric_limits<Index>::max() && *orderedLines.end() >= viewer_->document().numberOfLines())
+			if(*orderedLines.end() != std::numeric_limits<Index>::max() && *orderedLines.end() >= textViewer().document().numberOfLines())
 				throw IndexOutOfBoundsException("lines");
 
-			if(viewer_->isFrozen()) {
+			if(textViewer().isFrozen()) {
 				if(boost::empty(linesToRedraw_))
 					linesToRedraw_ = orderedLines;
 				else
@@ -301,7 +315,7 @@ namespace ascension {
 #endif
 
 			using graphics::Scalar;
-			const presentation::WritingMode writingMode(viewer_->presentation().computeWritingMode());
+			const presentation::WritingMode writingMode(textViewer().presentation().computeWritingMode());
 			std::array<Scalar, 2> beforeAndAfter;	// in viewport (distances from before-edge of the viewport)
 			graphics::font::BaselineIterator baseline(*textRenderer().viewport(), graphics::font::VisualLine(*lines.begin(), 0));
 			std::get<0>(beforeAndAfter) = *baseline;
@@ -314,10 +328,10 @@ namespace ascension {
 			assert(std::get<0>(beforeAndAfter) <= std::get<1>(beforeAndAfter));
 
 			namespace geometry = graphics::geometry;
-			const graphics::Rectangle viewerBounds(widgetapi::bounds(*viewer_, false));
+			const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer(), false));
 			graphics::Rectangle boundsToRedraw(textRenderer().viewport()->boundsInView());
 			geometry::translate(boundsToRedraw, graphics::Dimension(geometry::_dx = geometry::left(viewerBounds), geometry::_dy = geometry::top(viewerBounds)));
-			assert(boost::geometry::equals(boundsToRedraw, viewer_->textAreaAllocationRectangle()));
+			assert(boost::geometry::equals(boundsToRedraw, textViewer().textAreaAllocationRectangle()));
 
 			BOOST_FOREACH(graphics::Scalar& edge, beforeAndAfter) {
 				switch(textRenderer().computedBlockFlowDirection()) {
@@ -350,19 +364,19 @@ namespace ascension {
 				}
 			}
 
-			widgetapi::scheduleRedraw(*viewer_, boundsToRedraw, false);
+			widgetapi::scheduleRedraw(textViewer(), boundsToRedraw, false);
 		}
 
 		/// @see TextViewerComponent#relocated
 		void TextArea::relocated() {
 			if(viewer_ != nullptr)
-				textRenderer().viewport()->setBoundsInView(viewer_->textAreaContentRectangle());
+				textRenderer().viewport()->setBoundsInView(textViewer().textAreaContentRectangle());
 		}
 
 		/// @see Caret#SelectionShapeChangedSignal
 		void TextArea::selectionShapeChanged(const Caret& caret) {
 			if(viewer_ != nullptr) {
-				if(!viewer_->isFrozen() && !isSelectionEmpty(caret))
+				if(!textViewer().isFrozen() && !isSelectionEmpty(caret))
 					redrawLines(boost::irange(kernel::line(caret.beginning()), kernel::line(caret.end()) + 1));
 			}
 		}
@@ -383,13 +397,13 @@ namespace ascension {
 				mouseInputStrategy_ = std::move(newStrategy);
 			else
 				mouseInputStrategy_ = std::make_shared<DefaultTextAreaMouseInputStrategy>();	// TODO: the two parameters don't have rationales.
-			mouseInputStrategy_->install(*viewer_);
+			mouseInputStrategy_->install(*this);
 			dropTargetHandler_ = mouseInputStrategy_->handleDropTarget();
 		}
 
 		/// @see TextViewerComponent#uninstall
 		void TextArea::uninstall(TextViewer& viewer) {
-			if(&viewer == viewer_) {
+			if(&viewer == &textViewer()) {
 				mouseInputStrategy_->uninstall();
 				mouseInputStrategyIsInstalled_ = false;
 				renderer_->layouts().removeVisualLinesListener(*this);
@@ -398,7 +412,7 @@ namespace ascension {
 				selectionShapeChangedConnection_.disconnect();
 				matchBracketsChangedConnection_.disconnect();
 				defaultFontChangedConnection_.disconnect();
-				viewer_->document().removeListener(*this);
+				textViewer().document().removeListener(*this);
 				renderer_.reset();
 				locator_ = nullptr;
 				viewer_ = nullptr;
@@ -414,7 +428,7 @@ namespace ascension {
 		void TextArea::viewportScrollPositionChanged(
 				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
 				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
-			if(viewer_ == nullptr || viewer_->isFrozen())
+			if(viewer_ == nullptr || textViewer().isFrozen())
 				return;
 
 			// 1. calculate pixels to scroll
@@ -432,7 +446,7 @@ namespace ascension {
 					abstractScrollOffsetInPixels.bpd() -= static_cast<std::uint32_t>(lm.leading);
 					if(p.subline < layout->numberOfLines() - 1)
 						++p.subline;
-					else if(p.line < viewer_->document().numberOfLines() - 1) {
+					else if(p.line < textViewer().document().numberOfLines() - 1) {
 						layout = textRenderer().layouts().at(++p.line);
 						p.subline = 0;
 					} else
@@ -464,13 +478,13 @@ namespace ascension {
 				: std::numeric_limits<std::int32_t>::max();
 			// 1-3. calculate physical offsets
 			const auto scrollOffsetsInPixels(presentation::mapFlowRelativeToPhysical(
-				viewer_->presentation().computeWritingMode(), abstractScrollOffsetInPixels));
+				textViewer().presentation().computeWritingMode(), abstractScrollOffsetInPixels));
 
 			// 2. scroll the graphics device
 			const graphics::Rectangle& boundsToScroll = viewport->boundsInView();
 			if(std::abs(graphics::geometry::x(scrollOffsetsInPixels)) >= graphics::geometry::dx(boundsToScroll)
 					|| std::abs(graphics::geometry::y(scrollOffsetsInPixels)) >= graphics::geometry::dy(boundsToScroll))
-				widgetapi::scheduleRedraw(*viewer_, boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
+				widgetapi::scheduleRedraw(textViewer(), boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
 			else {
 				// scroll image by BLIT
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -493,7 +507,7 @@ namespace ascension {
 						origin = graphics::geometry::topRight(boundsToScroll);
 					if(origin != boost::none)
 						widgetapi::scheduleRedraw(
-							*viewer_,
+							textViewer(),
 							graphics::Rectangle(
 								boost::get(origin),
 								graphics::Dimension(
@@ -509,7 +523,7 @@ namespace ascension {
 						origin = graphics::geometry::bottomLeft(boundsToScroll);
 					if(origin != boost::none)
 						widgetapi::scheduleRedraw(
-							*viewer_,
+							textViewer(),
 							graphics::Rectangle(
 								boost::get(origin),
 								graphics::Dimension(
@@ -520,7 +534,7 @@ namespace ascension {
 			}
 
 			// 3. repaint
-			widgetapi::redrawScheduledRegion(*viewer_);
+			widgetapi::redrawScheduledRegion(textViewer());
 		}
 
 		void TextArea::viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) {

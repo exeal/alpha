@@ -53,7 +53,7 @@ namespace ascension {
 					newSelection.first.offsetInLine = (newSelection.first.line > nlines - 1) ? document.lineLength(--newSelection.first.line) : 0;
 					newSelection.second.line = (to.line >= boost::get(lineSelectionAnchorLine_)) ? to.line + 1 : to.line;
 					newSelection.second.offsetInLine = (newSelection.second.line > nlines - 1) ? document.lineLength(--newSelection.second.line) : 0;
-					viewer()->caret().select(newSelection);
+					viewer()->textArea().caret().select(newSelection);
 				}
 			}
 
@@ -81,7 +81,7 @@ namespace ascension {
 					if(input.button() == widgetapi::event::LocatedUserInput::BUTTON1_DOWN) {
 						if(action == PRESSED) {
 							// select line(s)
-							Caret& caret = viewer()->caret();
+							Caret& caret = viewer()->textArea().caret();
 							const kernel::Position to(viewToModel(*viewer()->textArea().textRenderer().viewport(), input.location()).insertionIndex());
 							const bool extend = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN) && to.line != kernel::line(caret.anchor());
 							lineSelectionAnchorLine_ = extend ? kernel::line(caret.anchor()) : to.line;

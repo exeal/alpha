@@ -28,14 +28,13 @@ namespace ascension {
 
 	namespace viewer {
 		class Caret;
-		class TextViewer;
+		class TextArea;
 
 		boost::optional<graphics::Rectangle> currentCharacterLogicalBounds(const Caret& caret);
 
 		/**
 		 * Interface for objects which define the shape of the text viewer's caret.
-		 * @see TextViewer#setCaretShaper, CaretShapeUpdater, DefaultCaretShaper,
-		 *      LocaleSensitiveCaretShaper
+		 * @see TextArea#setCaretShaper, CaretShapeUpdater, DefaultCaretShaper, LocaleSensitiveCaretShaper
 		 */
 		class CaretShaper {
 		public:
@@ -83,7 +82,7 @@ namespace ascension {
 			 * @param caret The caret
 			 */
 			virtual void uninstall(Caret& caret) BOOST_NOEXCEPT = 0;
-			friend class TextViewer;
+			friend class TextArea;
 
 		private:
 			StaticShapeChangedSignal staticShapeChangedSignal_;

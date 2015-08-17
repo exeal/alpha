@@ -14,10 +14,10 @@
 namespace ascension {
 	namespace viewer {
 		namespace {
-			inline boost::optional<boost::chrono::milliseconds> systemBlinkTime(TextViewer& viewer) {
+			inline boost::optional<boost::chrono::milliseconds> systemBlinkTime(const Caret& caret) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #ifndef GTKMM_DISABLE_DEPRECATED
-				const Glib::RefPtr<const Gtk::Settings> settings(viewer.get_settings());
+				const Glib::RefPtr<const Gtk::Settings> settings(caret.textArea().textViewer().get_settings());
 				if(settings->property_gtk_cursor_blink().get_value())
 					return boost::chrono::milliseconds(settings->property_gtk_cursor_blink_time().get_value());
 #endif // !GTKMM_DISABLE_DEPRECATED
@@ -37,36 +37,36 @@ namespace ascension {
 
 		/**
 		 * Constructor.
-		 * @param viewer The text viewer this object is associated with
+		 * @param caret The caret this object is associated with
 		 */
-		TextViewer::CaretBlinker::CaretBlinker(TextViewer& viewer) : viewer_(viewer) {
+		TextArea::CaretBlinker::CaretBlinker(Caret& caret) : caret_(caret) {
 		}
 
 		/// Pends blinking of the caret(s).
-		void TextViewer::CaretBlinker::pend() {
-			if(widgetapi::hasFocus(viewer_)) {
+		void TextArea::CaretBlinker::pend() {
+			if(widgetapi::hasFocus(caret_.textArea().textViewer())) {
 				stop();
 				setVisible(true);
-				if(const boost::optional<boost::chrono::milliseconds> blinkTime = systemBlinkTime(viewer_))
+				if(const boost::optional<boost::chrono::milliseconds> blinkTime = systemBlinkTime(caret_))
 					timer_.start(boost::get(blinkTime), *this);
 			}
 		}
 
-		inline void TextViewer::CaretBlinker::setVisible(bool visible) {
+		inline void TextArea::CaretBlinker::setVisible(bool visible) {
 			if(visible == visible_)
 				return;
 			visible_ = visible;
-			viewer_.textArea().redrawLine(kernel::line(viewer_.caret()));	// TODO: This code is not efficient.
+			caret_.textArea().redrawLine(kernel::line(caret_));	// TODO: This code is not efficient.
 		}
 
 		/// Stops blinking of the caret(s).
-		void TextViewer::CaretBlinker::stop() {
+		void TextArea::CaretBlinker::stop() {
 			timer_.stop();
 		}
 
 		/// @see HasTimer#timeElapsed
-		void TextViewer::CaretBlinker::timeElapsed(Timer<>&) {
-			if(!widgetapi::hasFocus(viewer_)) {
+		void TextArea::CaretBlinker::timeElapsed(Timer<>&) {
+			if(!widgetapi::hasFocus(caret_.textArea().textViewer())) {
 				timer_.stop();
 				update();
 				return;
@@ -76,9 +76,9 @@ namespace ascension {
 		}
 
 		/// Checks and updates state of blinking of the caret.
-		void TextViewer::CaretBlinker::update() {
-			if(widgetapi::hasFocus(viewer_)) {
-				if(const boost::optional<boost::chrono::milliseconds> blinkTime = systemBlinkTime(viewer_)) {
+		void TextArea::CaretBlinker::update() {
+			if(widgetapi::hasFocus(caret_.textArea().textViewer())) {
+				if(const boost::optional<boost::chrono::milliseconds> blinkTime = systemBlinkTime(caret_)) {
 					if(!timer_.isActive()) {
 						setVisible(true);
 						timer_.start(boost::get(blinkTime) / 2, *this);

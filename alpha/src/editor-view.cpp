@@ -95,7 +95,7 @@ namespace alpha {
 	/// @see IncrementalSearchListener#incrementalSearchAborted
 	void EditorView::incrementalSearchAborted(const ascension::kernel::Position& initialPosition) {
 		incrementalSearchCompleted();
-		caret().moveTo(initialPosition);
+		textArea().caret().moveTo(initialPosition);
 	}
 
 	/// @see IncrementalSearchListener#incrementalSearchCompleted
@@ -114,11 +114,11 @@ namespace alpha {
 		bool messageIsFormat = true;
 
 		if(result == ascension::searcher::IncrementalSearchCallback::EMPTY_PATTERN) {
-			caret().select(isearch.matchedRegion());
+			textArea().caret().select(isearch.matchedRegion());
 			message = forward ? _("Incremental search : (empty pattern)") : _("Reversal incremental search : (empty pattern)");
 			messageIsFormat = false;
 		} else if(result == ascension::searcher::IncrementalSearchCallback::FOUND) {
-			caret().select(isearch.matchedRegion());
+			textArea().caret().select(isearch.matchedRegion());
 			message = forward ? _("Incremental search : %1") : _("Reversal incremental search : %1");
 		} else {
 			if(result == ascension::searcher::IncrementalSearchCallback::NOT_FOUND)

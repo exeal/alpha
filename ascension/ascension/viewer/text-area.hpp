@@ -7,6 +7,7 @@
 
 #ifndef ASCENSION_TEXT_AREA_HPP
 #define ASCENSION_TEXT_AREA_HPP
+#include <ascension/corelib/timer.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
@@ -23,6 +24,7 @@ namespace ascension {
 
 	namespace viewer {
 		class Caret;
+		class CaretShaper;
 		class TextAreaMouseInputStrategy;
 
 		namespace widgetapi {
@@ -40,6 +42,16 @@ namespace ascension {
 			/// @{
 			BOOST_CONSTEXPR TextViewer& textViewer() BOOST_NOEXCEPT;
 			BOOST_CONSTEXPR const TextViewer& textViewer() const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Caret
+			/// @{
+			BOOST_CONSTEXPR Caret& caret() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR const Caret& caret() const BOOST_NOEXCEPT;
+			void hideCaret() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR bool hidesCaret() const BOOST_NOEXCEPT;
+			void setCaretShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
+			void showCaret() BOOST_NOEXCEPT;
 			/// @}
 
 			/**
@@ -132,8 +144,25 @@ namespace ascension {
 			void documentAboutToBeChanged(const kernel::Document& document) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 		private:
+			class CaretBlinker : private HasTimer<> {
+			public:
+				explicit CaretBlinker(Caret& caret) BOOST_NOEXCEPT;
+				bool isVisible() const BOOST_NOEXCEPT;
+				void pend();
+				void stop();
+				void update();
+			private:
+				void setVisible(bool visible);
+				void timeElapsed(Timer<>& timer);
+				Caret& caret_;
+				Timer<> timer_;
+				bool visible_;
+			};
 			TextViewer* viewer_;
 			const Locator* locator_;
+			std::unique_ptr<Caret> caret_;
+			std::shared_ptr<CaretShaper> caretShaper_;
+			std::unique_ptr<CaretBlinker> caretBlinker_;	// null when the caret is set to invisible
 			std::unique_ptr<Renderer> renderer_;
 			boost::integer_range<Index> linesToRedraw_;
 			std::shared_ptr<TextAreaMouseInputStrategy> mouseInputStrategy_;
@@ -143,23 +172,41 @@ namespace ascension {
 				defaultFontChangedConnection_, matchBracketsChangedConnection_, selectionShapeChangedConnection_;
 		};
 		
+		/// Returns the caret.
+		inline BOOST_CONSTEXPR Caret& TextArea::caret() BOOST_NOEXCEPT {
+			return *caret_;
+		}
+		
+		/// Returns the caret.
+		inline BOOST_CONSTEXPR const Caret& TextArea::caret() const BOOST_NOEXCEPT {
+			return *caret_;
+		}
+
+		/**
+		 * Returns @c true if the caret is hidden.
+		 * @see #hideCaret, showCaret
+		 */
+		inline BOOST_CONSTEXPR bool TextArea::hidesCaret() const BOOST_NOEXCEPT {
+			return caretBlinker_.get() == nullptr;
+		}
+		
 		/// Returns the text renderer.
-		inline TextArea::Renderer& TextArea::textRenderer() BOOST_NOEXCEPT {
+		inline BOOST_CONSTEXPR TextArea::Renderer& TextArea::textRenderer() BOOST_NOEXCEPT {
 			return *renderer_;
 		}
 		
 		/// Returns the text renderer.
-		inline const TextArea::Renderer& TextArea::textRenderer() const BOOST_NOEXCEPT {
+		inline BOOST_CONSTEXPR const TextArea::Renderer& TextArea::textRenderer() const BOOST_NOEXCEPT {
 			return *renderer_;
 		}
 		
 		/// Returns the text viewer.
-		inline TextViewer& TextArea::textViewer() BOOST_NOEXCEPT {
+		inline BOOST_CONSTEXPR TextViewer& TextArea::textViewer() BOOST_NOEXCEPT {
 			return *viewer_;
 		}
 		
 		/// Returns the text viewer.
-		inline const TextViewer& TextArea::textViewer() const BOOST_NOEXCEPT {
+		inline BOOST_CONSTEXPR const TextViewer& TextArea::textViewer() const BOOST_NOEXCEPT {
 			return *viewer_;
 		}
 	}

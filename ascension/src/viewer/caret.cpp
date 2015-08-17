@@ -15,6 +15,7 @@
 #include <ascension/text-editor/input-sequence-checker.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>
+#include <ascension/viewer/default-caret-shaper.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/virtual-box.hpp>
@@ -677,6 +678,23 @@ namespace ascension {
 		}
 
 		/**
+		 * Sets the caret shaper.
+		 * @param shaper The new caret shaper to set
+		 */
+		void TextArea::setCaretShaper(std::shared_ptr<CaretShaper> shaper) {
+			if(shaper == caretShaper_)
+				return;
+			if(caretShaper_.get() != nullptr)
+				caretShaper_->uninstall(caret());	// TODO: Support multiple carets.
+			if(shaper.get() == nullptr)
+				shaper = std::make_shared<DefaultCaretShaper>();
+			(caretShaper_ = shaper)->install(caret());	// TODO: Support multiple carets.
+#ifdef ASCENSION_USE_SYSTEM_CARET
+			caretStaticShapeChanged(caret());	// update caret shapes immediately
+#endif
+		}
+
+		/**
 		 * Sets character input mode.
 		 * @param overtype Set @c true to set to overtype mode, @c false to set to insert mode
 		 * @return This caret
@@ -688,6 +706,15 @@ namespace ascension {
 				inputModeChangedSignal_(*this, OVERTYPE_MODE);
 			}
 			return *this;
+		}
+
+		/**
+		 * Shows the hidden caret.
+		 * @see #hideCaret, #hidesCaret
+		 */
+		void TextArea::showCaret() BOOST_NOEXCEPT {
+			if(hidesCaret())
+				caretBlinker_.reset(new CaretBlinker(caret()));
 		}
 
 		/// @see VisualPoint#uninstall

@@ -15,7 +15,7 @@
 
 namespace ascension {
 	namespace viewer {
-		class TextViewer;
+		class TextArea;
 #if 0
 		/**
 		 * Interface of objects which define how the text editors react to the users' keyboard
@@ -38,9 +38,9 @@ namespace ascension {
 			virtual ~TextAreaMouseInputStrategy() BOOST_NOEXCEPT {}
 			/**
 			 * Installs the strategy.
-			 * @param viewer The text viewer uses the strategy. The window had been created at this time
+			 * @param viewer The text area uses the strategy. The window had been created at this time
 			 */
-			virtual void install(TextViewer& viewer) = 0;
+			virtual void install(TextArea& viewer) = 0;
 			/// Uninstalls the strategy. The window is not destroyed yet at this time.
 			virtual void uninstall() = 0;
 		};
