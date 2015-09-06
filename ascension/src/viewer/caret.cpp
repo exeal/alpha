@@ -261,7 +261,7 @@ namespace ascension {
 		/// @see kernel#DocumentListener#documentChanged
 		void Caret::documentChanged(const kernel::Document&, const kernel::DocumentChange&) {
 			context_.yanking = false;
-			if(context_.regionBeforeMoved)
+			if(context_.regionBeforeMoved != boost::none)
 				updateVisualAttributes();
 		}
 
@@ -708,15 +708,6 @@ namespace ascension {
 			return *this;
 		}
 
-		/**
-		 * Shows the hidden caret.
-		 * @see #hideCaret, #hidesCaret
-		 */
-		void TextArea::showCaret() BOOST_NOEXCEPT {
-			if(hidesCaret())
-				caretBlinker_.reset(new CaretBlinker(caret()));
-		}
-
 		/// @see VisualPoint#uninstall
 		void Caret::uninstall() BOOST_NOEXCEPT {
 			try {
@@ -780,7 +771,7 @@ namespace ascension {
 		inline void Caret::updateVisualAttributes() {
 			if(isSelectionRectangle())
 				context_.selectedRectangle->update(selectedRegion());
-			if((context_.regionBeforeMoved->first != position() || context_.regionBeforeMoved->second != position()))
+			if(context_.regionBeforeMoved != boost::none && (context_.regionBeforeMoved->first != position() || context_.regionBeforeMoved->second != position()))
 				fireCaretMoved(*context_.regionBeforeMoved);
 			if(autoShow_)
 				utils::show(*this);
