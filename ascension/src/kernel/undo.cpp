@@ -2,13 +2,14 @@
  * @file undo.cpp
  * @author exeal
  * @date 2009 separated from document.cpp
- * @date 2010-2014
+ * @date 2010-2015
  */
 
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/corelib/utility.hpp>	// detail.ValueSaver
 #include <boost/foreach.hpp>
+#include <boost/range/algorithm/find_first_of.hpp>
 #include <stack>
 #include <vector>
 
@@ -183,9 +184,9 @@ namespace ascension {
 					(*i)->perform(document, delta);
 					result.numberOfRevisions += delta.numberOfRevisions;
 					if(!delta.completed) {
-						if(i != --end(changes_))
+						if(i != --std::end(changes_))
 							// partially completed
-							changes_.erase(++i, end(changes_));
+							changes_.erase(++i, std::end(changes_));
 						result.endOfChange = delta.endOfChange;
 						break;
 					} else if(i == e) {	// completed
@@ -561,8 +562,7 @@ namespace ascension {
 			// change the content
 			const Position& beginning = region.beginning();
 			const Position& end = region.end();
-			const Char* nextNewline = (text.cbegin() != nullptr && !text.empty()) ?
-				text.cbegin() + text.find_first_of(StringPiece(text::NEWLINE_CHARACTERS.data(), text::NEWLINE_CHARACTERS.size())) : nullptr;
+			StringPiece::const_iterator nextNewline((text.cbegin() != nullptr) ? boost::find_first_of(text, text::NEWLINE_CHARACTERS) : text.cend());
 			std::basic_stringbuf<Char> erasedString;
 			Index erasedStringLength = 0, insertedStringLength = 0;
 			Position endOfInsertedString;
@@ -574,12 +574,12 @@ namespace ascension {
 					line.text_.erase(beginning.offsetInLine, end.offsetInLine - beginning.offsetInLine);
 					erasedStringLength += end.offsetInLine - beginning.offsetInLine;
 					endOfInsertedString = beginning;
-				} else if(region.isEmpty() && nextNewline == text.end()) {	// insert single line
+				} else if(region.isEmpty() && nextNewline == text.cend()) {	// insert single line
 					lines_[beginning.line]->text_.insert(beginning.offsetInLine, text.cbegin(), text.length());
 					insertedStringLength += text.length();
 					endOfInsertedString.line = beginning.line;
 					endOfInsertedString.offsetInLine = beginning.offsetInLine + text.length();
-				} else if(beginning.line == end.line && nextNewline == text.end()) {	// replace in single line
+				} else if(beginning.line == end.line && nextNewline == text.cend()) {	// replace in single line
 					Line& line = *lines_[beginning.line];
 					erasedString.sputn(line.text().data() + beginning.offsetInLine, static_cast<std::streamsize>(end.offsetInLine - beginning.offsetInLine));
 					line.text_.replace(beginning.offsetInLine, end.offsetInLine - beginning.offsetInLine, text.cbegin(), text.length());
@@ -610,20 +610,20 @@ namespace ascension {
 					}
 					// 2. allocate strings (lines except first) to insert newly. only when inserted string was multiline
 					std::vector<Line*> allocatedLines;
-					const Char* const firstNewline = nextNewline;
-					if(text.cbegin() != nullptr && nextNewline != text.end()) {
+					const StringPiece::const_iterator firstNewline(nextNewline);
+					if(text.cbegin() != nullptr && nextNewline != text.cend()) {
 						try {
-							const Char* p = nextNewline + text::eatNewline(nextNewline, text.end())->asString().length();
+							StringPiece::const_iterator p(std::next(nextNewline, text::eatNewline(nextNewline, text.cend())->asString().length()));
 							while(true) {
-								nextNewline = std::find_first_of(p, text.end(),
+								nextNewline = std::find_first_of(p, text.cend(),
 									std::begin(text::NEWLINE_CHARACTERS), std::end(text::NEWLINE_CHARACTERS));
-								std::unique_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), *text::eatNewline(nextNewline, text.end())));
+								std::unique_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), *text::eatNewline(nextNewline, text.cend())));
 								allocatedLines.push_back(temp.get());
 								temp.release();
 								insertedStringLength += allocatedLines.back()->text().length();
-								if(nextNewline == text.end())
+								if(nextNewline == text.cend())
 									break;
-								p = nextNewline + allocatedLines.back()->newline().asString().length();
+								p = std::next(nextNewline, allocatedLines.back()->newline().asString().length());
 							}
 							// merge last line
 							Line& lastAllocatedLine = *allocatedLines.back();
@@ -666,7 +666,7 @@ namespace ascension {
 							throw;
 						}
 						firstLine.newline_ = (firstNewline != nullptr) ?
-							*text::eatNewline(firstNewline, text.end()) : lines_[end.line]->newline();
+							*text::eatNewline(firstNewline, text.cend()) : lines_[end.line]->newline();
 						erasedStringLength += erasedLength;
 						insertedStringLength += insertedLength;
 					} catch(...) {

@@ -67,7 +67,7 @@ namespace ascension {
 						close();
 					else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c)) {
 						kernel::Document& document = textViewer_->document();
-						viewer::Caret& caret = textViewer_->caret();
+						viewer::Caret& caret = textViewer_->textArea().caret();
 						try {
 							document.insertUndoBoundary();
 							erase(document, kernel::locations::nextCharacter(caret, Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT), caret);
@@ -78,7 +78,7 @@ namespace ascension {
 					}
 				} else {
 					// activate automatically
-					if(const std::shared_ptr<const ContentAssistProcessor> cap = contentAssistProcessor(contentType(textViewer_->caret()))) {
+					if(const std::shared_ptr<const ContentAssistProcessor> cap = contentAssistProcessor(contentType(textViewer_->textArea().caret()))) {
 						if(cap->isCompletionProposalAutoActivationCharacter(c)) {
 							if(autoActivationDelay_ == boost::chrono::milliseconds::zero())
 								showPossibleCompletions();
@@ -187,7 +187,7 @@ namespace ascension {
 		/// @see ContentAssistant#install
 		void DefaultContentAssistant::install(viewer::TextViewer& viewer) {
 			textViewer_ = &viewer;
-			caretCharacterInputConnection_ = textViewer_->caret().characterInputSignal().connect(
+			caretCharacterInputConnection_ = textViewer_->textArea().caret().characterInputSignal().connect(
 				std::bind(&DefaultContentAssistant::characterInput, this, std::placeholders::_1, std::placeholders::_2));
 		}
 
@@ -217,7 +217,7 @@ namespace ascension {
 		void DefaultContentAssistant::showPossibleCompletions() {
 			if(textViewer_ == nullptr || completionSession_.get() != nullptr || textViewer_->document().isReadOnly())
 				return textViewer_->beep();
-			const viewer::Caret& caret = textViewer_->caret();
+			const viewer::Caret& caret = textViewer_->textArea().caret();
 			if(const std::shared_ptr<const ContentAssistProcessor> cap = contentAssistProcessor(contentType(caret))) {
 				std::set<std::shared_ptr<const CompletionProposal>> proposals;
 				completionSession_.reset(new CompletionSession);
@@ -256,14 +256,14 @@ namespace ascension {
 			proposalsPopup_->setWritingMode(
 				graphics::font::writingMode(
 					textViewer_->textArea().textRenderer().layouts().at(
-						kernel::line(textViewer_->caret()),
+						kernel::line(textViewer_->textArea().caret()),
 						graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)));
 			proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 			updatePopupBounds();
 
 			// these connections are revoke by close() method
 			textViewer_->textArea().textRenderer().viewport()->addListener(*this);
-			caretMotionConnection_ = textViewer_->caret().motionSignal().connect(
+			caretMotionConnection_ = textViewer_->textArea().caret().motionSignal().connect(
 				std::bind(&DefaultContentAssistant::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
 			if(completionSession_->incremental)
 				textViewer_->document().addListener(*this);
@@ -292,7 +292,7 @@ namespace ascension {
 				const presentation::WritingMode writingMode(
 					graphics::font::writingMode(
 						textRenderer.layouts().at(
-							kernel::line(textViewer_->caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)));
+							kernel::line(textViewer_->textArea().caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)));
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				const Glib::RefPtr<const Gdk::Screen> screen(textViewer_->get_screen());

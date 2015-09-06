@@ -30,8 +30,8 @@ namespace ascension {
 	 * @throw Glib#Error @c g_utf8_to_utf16 failed
 	 */
 	String fromGlibUstring(const Glib::ustring& s) {
-		GError* error;
-		std::shared_ptr<const gunichar2> p(::g_utf8_to_utf16(s.data(), s.length(), nullptr, nullptr, &error), &::g_free);
+		GError* error = nullptr;
+		std::shared_ptr<const gunichar2> p(::g_utf8_to_utf16(s.data(), s.bytes(), nullptr, nullptr, &error), &::g_free);
 		if(p.get() == nullptr)
 			Glib::Error::throw_exception(error);
 		return String(reinterpret_cast<const Char*>(p.get()));

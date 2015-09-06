@@ -401,6 +401,15 @@ namespace ascension {
 			dropTargetHandler_ = mouseInputStrategy_->handleDropTarget();
 		}
 
+		/**
+		 * Shows the hidden caret.
+		 * @see #hideCaret, #hidesCaret
+		 */
+		void TextArea::showCaret() BOOST_NOEXCEPT {
+			if(hidesCaret())
+				caretBlinker_.reset(new CaretBlinker(caret()));
+		}
+
 		/// @see TextViewerComponent#uninstall
 		void TextArea::uninstall(TextViewer& viewer) {
 			if(&viewer == &textViewer()) {

@@ -14,6 +14,7 @@ namespace ascension {
 
 	namespace viewer {
 		class BlockProgressionDestinationProxy;
+		class Caret;
 		class TextViewer;
 	}
 
