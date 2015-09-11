@@ -10,7 +10,7 @@
 #include <ascension/presentation/hyperlink/hyperlink-detector.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/presentation-reconstructor.hpp>
-#include <ascension/presentation/styled-text-run-iterator.hpp>
+#include <ascension/presentation/single-styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
@@ -405,7 +405,9 @@ namespace ascension {
 					return std::unique_ptr<ComputedStyledTextRunIterator>(
 						new ComputedStyledTextRunIteratorImpl(std::move(declaredRunStyles), computeTextRunStyleForLine(line), computedStyles_->cacheForRuns));
 			}
-			return std::unique_ptr<ComputedStyledTextRunIterator>();	// TODO: Is this ok?
+			return std::unique_ptr<ComputedStyledTextRunIterator>(
+				new SingleStyledTextRunIterator<ComputedStyledTextRunIterator>(
+					kernel::Region(line, boost::irange<Index>(0, document().lineLength(line))), computedStyles_->forRuns.get()));
 		}
 
 		/**

@@ -455,6 +455,7 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\partition-presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\single-styled-text-run-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\style-property.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\styled-text-run-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\auxiliary.hpp" />

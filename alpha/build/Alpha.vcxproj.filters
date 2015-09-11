@@ -1222,6 +1222,12 @@
     <ClInclude Include="..\..\ascension\ascension\log.hpp">
       <Filter>ascension\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\detail\input-method.hpp">
+      <Filter>ascension\Header Files\viewer\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\single-styled-text-run-iterator.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
