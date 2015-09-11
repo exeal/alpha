@@ -21,7 +21,7 @@ namespace ascension {
 	namespace presentation {
 		/**
 		 * Abstract input iterator to obtain text run style objects.
-		 * @tparam Style The return type of @c #currentStyle method
+		 * @tparam Style The return type of @c #style method
 		 *
 		 * <h3>Basic Usage</h3>
 		 * @code
@@ -35,6 +35,8 @@ namespace ascension {
 		template<typename Style>
 		struct StyledTextRunIterator {
 		public:
+			/// The return type of @c #style method.
+			typedef Style StyleType;
 			/// Destructor.
 			virtual ~StyledTextRunIterator() BOOST_NOEXCEPT {}
 			/// Returns @c true if the iterator addresses the end of the range.
