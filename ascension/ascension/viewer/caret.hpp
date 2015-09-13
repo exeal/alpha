@@ -13,6 +13,7 @@
 #include <ascension/corelib/text/newline.hpp>
 #include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/kernel/document-observers.hpp>
+#include <ascension/viewer/detail/input-method.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>	// widgetapi.MimeData, widgetapi.MimeDataFormats
 
@@ -50,20 +51,10 @@ namespace ascension {
 	}
 
 	namespace viewer {
-		namespace detail {
-			class InputEventHandler {	// this is not an observer of caret...
-			private:
-				virtual void abortInput() = 0;
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				virtual LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) = 0;
-#endif
-				friend class TextViewer;
-			};
-		}
-
 		// documentation is caret.cpp
-		class Caret : public VisualPoint, public detail::InputEventHandler,
-			public kernel::DocumentListener, public graphics::font::TextViewportListener {
+		class Caret : public VisualPoint,
+			public kernel::DocumentListener, public graphics::font::TextViewportListener,
+			public detail::InputMethodEvent, public detail::InputMethodQueryEvent {
 		public:
 			/// Mode of tracking match brackets.
 			enum MatchBracketsTrackingMode {
@@ -180,8 +171,6 @@ namespace ascension {
 			// VisualPoint
 			void aboutToMove(kernel::Position& to) override;
 			void moved(const kernel::Position& from) override BOOST_NOEXCEPT;
-			// detail.InputEventHandler
-			void abortInput() override;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			void onChar(CodePoint c, bool& consumed);
@@ -200,6 +189,13 @@ namespace ascension {
 				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
 			void viewportScrollPropertiesChanged(
 				const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
+			// detail.InputMethodEvent
+			void commitInputString(const StringPiece& text) override;
+			void preeditChanged() override;
+			void preeditEnded() override;
+			void preeditStarted() override;
+			// detail.InputMethodQueryEvent
+			std::pair<const StringPiece, StringPiece::const_iterator> querySurroundingText() const override;
 		private:
 			class SelectionAnchor : public VisualPoint {
 			public:

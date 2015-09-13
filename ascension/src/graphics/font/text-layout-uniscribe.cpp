@@ -303,15 +303,22 @@ namespace ascension {
 					return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);
 				}
 
+				inline void recordUserDefaultLocaleDigitSubstitution(SCRIPT_DIGITSUBSTITUTE& sds) {
+					const HRESULT hr = ::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT, &sds);
+					if(FAILED(hr))
+						throw makePlatformError(hr);
+				}
+
 				void convertNumberSubstitutionToUniscribe(const NumberSubstitution& from, SCRIPT_DIGITSUBSTITUTE& to) {
-					win32::AutoZero<SCRIPT_DIGITSUBSTITUTE> result;
+					boost::optional<win32::AutoZero<SCRIPT_DIGITSUBSTITUTE>> userLocale;
 					switch(boost::native_value(from.localeSource)) {
-					case NumberSubstitution::LocaleSource::TEXT:
+						case NumberSubstitution::LocaleSource::TEXT:
 						case NumberSubstitution::LocaleSource::USER: {
 							// TODO: This code should not run frequently.
-							const HRESULT hr = ::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT, &result);
-							if(FAILED(hr))
-								throw makePlatformError(hr);
+							userLocale = win32::AutoZero<SCRIPT_DIGITSUBSTITUTE>();
+							recordUserDefaultLocaleDigitSubstitution(boost::get(userLocale));
+							to = boost::get(userLocale);
+							break;
 						}
 //						case NumberSubstitution::LocaleSource::OVERRIDE:
 //							result.NationalDigitLanguage = result.TraditionalDigitLanguage = ????(from.localeOverride);
@@ -322,19 +329,23 @@ namespace ascension {
 
 					switch(boost::native_value(from.method)) {
 						case NumberSubstitution::Method::AS_LOCALE:
-							result.DigitSubstitute = static_cast<DWORD>(-1);
+							if(userLocale == boost::none) {
+								userLocale = win32::AutoZero<SCRIPT_DIGITSUBSTITUTE>();
+								recordUserDefaultLocaleDigitSubstitution(boost::get(userLocale));
+							}
+							to.DigitSubstitute = userLocale->DigitSubstitute;
 							break;
 						case NumberSubstitution::Method::CONTEXT:
-							result.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_CONTEXT;
+							to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_CONTEXT;
 							break;
 						case NumberSubstitution::Method::EUROPEAN:
-							result.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NONE;
+							to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NONE;
 							break;
 						case NumberSubstitution::Method::NATIVE_NATIONAL:
-							result.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NATIONAL;
+							to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NATIONAL;
 							break;
 						case NumberSubstitution::Method::TRADITIONAL:
-							result.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_TRADITIONAL;
+							to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_TRADITIONAL;
 							break;
 						default:
 							throw UnknownValueException("from.method");
@@ -364,7 +375,6 @@ namespace ascension {
 					}
 					return S_OK;
 #endif
-					std::swap(static_cast<SCRIPT_DIGITSUBSTITUTE&>(result), to);
 				}
 
 				inline DWORD localeIntrinsicDigitSubstitution(LCID locale) {
@@ -1109,12 +1119,16 @@ namespace ascension {
 					}
 
 					std::shared_ptr<const Font> selectFont(const StringPiece& textString, const FontCollection& fontCollection, const ActualFontSpecification& specification) {
-						const auto family(findMatchingFontFamily(
-							fontCollection, boost::fusion::at_key<presentation::styles::FontFamily>(specification)));
-						const FontDescription description(FontFamily(*family),
-							boost::fusion::at_key<presentation::styles::FontSize>(specification), boost::fusion::at_key<void>(specification));
-						return fontCollection.get(description, geometry::makeIdentityTransform(),
-							boost::fusion::at_key<presentation::styles::FontSizeAdjust>(specification));
+						const auto& families = boost::fusion::at_key<presentation::styles::FontFamily>(specification);
+						const auto& pointSize = boost::fusion::at_key<presentation::styles::FontSize>(specification);
+						const auto& properties = boost::fusion::at_key<void>(specification);
+						const auto& sizeAdjust = boost::fusion::at_key<presentation::styles::FontSizeAdjust>(specification);
+						if(!boost::empty(families)) {
+							const auto family(findMatchingFontFamily(fontCollection, families));
+							const FontDescription description(FontFamily(*family), pointSize, properties);
+							return fontCollection.get(description, geometry::makeIdentityTransform(), sizeAdjust);
+						} else
+							return fontCollection.lastResortFallback(pointSize, properties, geometry::makeIdentityTransform(), sizeAdjust);
 					}
 				}
 
@@ -1306,22 +1320,21 @@ namespace ascension {
 				inline boost::integer_range<std::size_t> GlyphVectorImpl::glyphRange(const StringPiece& range /* = StringPiece() */) const {
 					assert(glyphs_.get() != nullptr);
 					assert(analysis_.fLogicalOrder == 0);
-					boost::integer_range<ptrdiff_t> characterRange((range != StringPiece()) ?
-						boost::irange(range.cbegin() - begin(), range.cend() - begin()) : boost::irange<std::ptrdiff_t>(0, length()));
-					assert(includes(boost::irange<ptrdiff_t>(0, length()), characterRange));
-					assert(*characterRange.begin() == 0 || *characterRange.begin() == length()
-						|| glyphs_->clusters[*characterRange.begin()] != glyphs_->clusters[*characterRange.begin() - 1]);
-					assert(*characterRange.end() == 0 || *characterRange.end() == length()
-						|| glyphs_->clusters[*characterRange.end()] != glyphs_->clusters[*characterRange.end() + 1]);
+					const StringPiece characterRange((range != StringPiece()) ? range : *this);
+					assert(includes(*this, characterRange));
+					assert(characterRange.cbegin() == cbegin() || characterRange.cbegin() == cend()
+						|| glyphs_->clusters[characterRange.cbegin() - cbegin()] != glyphs_->clusters[characterRange.cbegin() - cbegin() - 1]);
+					assert(characterRange.end() == cbegin() || characterRange.end() == cend()
+						|| glyphs_->clusters[characterRange.cend() - cbegin()] != glyphs_->clusters[characterRange.cend() - cbegin() + 1]);
 
 					if(analysis_.fRTL == 0)	// LTR
 						return boost::irange(
-							(range.cbegin() < end()) ? glyphs_->clusters[range.cbegin() - begin()] : glyphs_->numberOfGlyphs,
-							(range.cend() < end()) ? glyphs_->clusters[range.cend() - begin() + 1] : glyphs_->numberOfGlyphs);
+							(characterRange.cbegin() < cend()) ? glyphs_->clusters[*characterRange.begin()] : glyphs_->numberOfGlyphs,
+							(characterRange.cend() < cend()) ? glyphs_->clusters[*characterRange.end() + 1] : glyphs_->numberOfGlyphs);
 					else					// RTL
 						return boost::irange(
-							(range.cend() > begin()) ? glyphs_->clusters[range.cend() - begin() - 1] : glyphs_->numberOfGlyphs,
-							(range.cbegin() > begin()) ? glyphs_->clusters[range.cbegin() - begin() - 1] : glyphs_->numberOfGlyphs
+							(characterRange.cend() > cbegin()) ? glyphs_->clusters[characterRange.cend() - cbegin() - 1] : glyphs_->numberOfGlyphs,
+							(characterRange.cbegin() > cbegin()) ? glyphs_->clusters[characterRange.cbegin() - cbegin() - 1] : glyphs_->numberOfGlyphs
 						);
 				}
 
@@ -2247,12 +2260,14 @@ namespace ascension {
 											selectFont(subRange, fontCollection, fontSpecification),
 											frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
 								scriptPointers.push_back(&scriptRuns[scriptRun.attribute - scriptRuns.get()].a);
-								assert(nextScriptRun.position < textString.cend());
+								assert(nextScriptRun.position <= textString.cend());
 								scriptRun = nextScriptRun;
-								if(++nextScriptRun.attribute < scriptRuns.get() + numberOfScriptRuns)
-									nextScriptRun.position = textString.cbegin() + nextScriptRun.attribute->iCharPos;
-								else
-									nextScriptRun.position = textString.cend();
+								if(scriptRun.position != textString.cend()) {
+									if(++nextScriptRun.attribute < scriptRuns.get() + numberOfScriptRuns)
+										nextScriptRun.position = textString.cbegin() + nextScriptRun.attribute->iCharPos;
+									else
+										nextScriptRun.position = textString.cend();
+								}
 							}
 							if(advanceStyleRun) {
 								if(!advanceScriptRun) {
@@ -2264,16 +2279,17 @@ namespace ascension {
 												selectFont(subRange, fontCollection, fontSpecification),
 												frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
 								}
-								assert(nextStyleRun.position < textString.cend());
+								assert(nextStyleRun.position <= textString.cend());
 								styleRun = std::move(nextStyleRun);	// C2668 if included <boost/log/trivial.hpp> without 'std::' ???
 								styleRuns.push_back(AttributedCharacterRange<presentation::ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
-								assert(!textRunStyles->isDone());
-								textRunStyles->next();
 								if(!textRunStyles->isDone()) {
-									nextStyleRun.attribute = textRunStyles->style();
-									nextStyleRun.position = textString.cbegin() + textRunStyles->position().offsetInLine;
-								} else
-									nextStyleRun.position = textString.cend();
+									textRunStyles->next();
+									if(!textRunStyles->isDone()) {
+										nextStyleRun.attribute = textRunStyles->style();
+										nextStyleRun.position = textString.cbegin() + textRunStyles->position().offsetInLine;
+									} else
+										nextStyleRun.position = textString.cend();
+								}
 							}
 							lastGlyphRunEnd = next;
 						} while(scriptRun.position < textString.cend() || styleRun.position < textString.cend());
