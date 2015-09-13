@@ -1215,7 +1215,7 @@ namespace ascension {
 					}
 				}
 #else
-				std::tuple<VisualLine, TextViewportScrollOffset>&& locateVisualLine(const TextViewport& viewport,
+				std::tuple<VisualLine, TextViewportScrollOffset> locateVisualLine(const TextViewport& viewport,
 						const boost::optional<TextViewportScrollOffset>& to, const boost::optional<VisualLine>& toLine,
 						TextViewportScrollOffset from, const VisualLine& lineFrom) {
 					assert((to != boost::none && toLine == boost::none) || (to == boost::none && toLine != boost::none));
