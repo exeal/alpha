@@ -615,9 +615,11 @@ namespace ascension {
 						try {
 							StringPiece::const_iterator p(std::next(nextNewline, text::eatNewline(nextNewline, text.cend())->asString().length()));
 							while(true) {
-								nextNewline = std::find_first_of(p, text.cend(),
-									std::begin(text::NEWLINE_CHARACTERS), std::end(text::NEWLINE_CHARACTERS));
-								std::unique_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), *text::eatNewline(nextNewline, text.cend())));
+								nextNewline = boost::find_first_of(boost::make_iterator_range(p, text.cend()), text::NEWLINE_CHARACTERS);
+								std::unique_ptr<Line> temp(
+									(nextNewline != text.cend()) ?
+										new Line(revisionNumber_ + 1, String(p, nextNewline), *text::eatNewline(nextNewline, text.cend()))
+										: new Line(revisionNumber_ + 1, String(p, nextNewline)));
 								allocatedLines.push_back(temp.get());
 								temp.release();
 								insertedStringLength += allocatedLines.back()->text().length();
@@ -665,7 +667,7 @@ namespace ascension {
 							lines_.erase(b, e);
 							throw;
 						}
-						firstLine.newline_ = (firstNewline != nullptr) ?
+						firstLine.newline_ = (firstNewline != text.cend()) ?
 							*text::eatNewline(firstNewline, text.cend()) : lines_[end.line]->newline();
 						erasedStringLength += erasedLength;
 						insertedStringLength += insertedLength;
