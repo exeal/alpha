@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2005-2009 (was gap-buffer.hpp)
  * @date 2010-10-20 Renamed GapBuffer to GapVector.
- * @date 2011-2014
+ * @date 2011-2015
  */
 
 #ifndef ASCENSION_GAP_VECTOR_HPP
@@ -53,56 +53,75 @@ namespace ascension {
 			boost::iterators::random_access_traversal_tag, Reference, typename Target::difference_type> {
 		public:
 			typedef GapVectorIterator<Target, Pointer, Reference> Self;
-			GapVectorIterator() BOOST_NOEXCEPT : target_(nullptr) {}
-			GapVectorIterator(const Target& target, Pointer position) BOOST_NOEXCEPT
-					: target_(&target), current_(position - target.first_) {}
+			GapVectorIterator() BOOST_NOEXCEPT : target_(nullptr), p_(nullptr) {}
+			GapVectorIterator(const Target& target, Pointer position) BOOST_NOEXCEPT : target_(&target), p_(position) {
+				assert(p_ != nullptr);
+				if(p_ == target.gapFirst_)
+					p_ = target.gapLast_;
+				assert(validate());
+			}
 			template<typename Pointer2, typename Reference2>
 			GapVectorIterator(const GapVectorIterator<Target, Pointer2, Reference2>& other)
-					: target_(other.target()), current_(other.get() - other.target()->first_) {}
+					: target_(other.target()), p_(std::next(target_->first_, other.p_ - other.target()->first_)) {}
 			Self& operator=(const Self& other) {
 				target_ = other.target_;
-				current_ = other.current_;
+				p_ = other.p_;
 				return *this;
 			}
-			const Pointer get() const BOOST_NOEXCEPT {return target()->first_ + current_;}
-			typename boost::iterators::iterator_difference<Self>::type offset() const BOOST_NOEXCEPT {
-				return (get() <= target_->gapFirst_) ?
-					get() - target_->first_ :
-						get() - target_->gapLast_ + target_->gapFirst_ - target_->first_;
+			Pointer after() const BOOST_NOEXCEPT {
+				assert(validate());
+				return (p_ == target()->gapFirst_) ? target()->gapLast_ : p_;
 			}
-			const Target* target() const BOOST_NOEXCEPT {return target_;}
+			Pointer before() const BOOST_NOEXCEPT {
+				assert(validate());
+				return (p_ == target()->gapLast_) ? target()->gapFirst_ : p_;
+			}
+			BOOST_CONSTEXPR const Target* target() const BOOST_NOEXCEPT {
+				return target_;
+			}
 
 		private:
+			template<typename Target2, typename Pointer2, typename Reference2> friend class GapVectorIterator;
+			BOOST_CONSTEXPR typename boost::iterators::iterator_difference<Self>::type offset() const BOOST_NOEXCEPT {
+				return (p_ < target()->gapLast_) ? (p_ - target()->first_) : ((p_ - target()->first_) - target()->gap());
+			}
+			BOOST_CONSTEXPR bool validate() const BOOST_NOEXCEPT {
+				return (p_ >= target()->gapLast_ && p_ <= target()->last_) || (p_ >= target()->first_ && p_ < target()->gapFirst_);
+			}
+			// boost.iterators.iterator_facade
 			friend class boost::iterators::iterator_core_access;
 			void advance(typename boost::iterators::iterator_difference<Self>::type n) {
-				if(get() + n >= target_->gapFirst_ && get() + n < target_->gapLast_)
-					n += target_->gap();
-				current_ += n;
+				const auto nextOpportunity(std::next(p_, n));
+				if(nextOpportunity >= target()->gapFirst_ && nextOpportunity < target()->gapLast_)
+					std::advance(p_, n += target()->gap());
+				else
+					p_ = nextOpportunity;
 			}
 			void decrement() BOOST_NOEXCEPT {
-				if(get() != target_->gapLast_)
-					--current_;
+				if(p_ != target()->gapLast_)
+					--p_;
 				else
-					current_ = (target()->gapFirst_ - target()->first_) - 1;
+					p_ = std::prev(target()->gapFirst_);
 			}
-			typename boost::iterators::iterator_reference<Self>::type dereference() const BOOST_NOEXCEPT {
-				return target_->first_[current_];
+			BOOST_CONSTEXPR typename boost::iterators::iterator_reference<Self>::type dereference() const BOOST_NOEXCEPT {
+				return *p_;
 			}
-			typename boost::iterators::iterator_difference<Self>::type distance_to(const GapVectorIterator& other) const BOOST_NOEXCEPT {
-				return current_ - other.current_;
+			BOOST_CONSTEXPR typename boost::iterators::iterator_difference<Self>::type distance_to(const GapVectorIterator& other) const BOOST_NOEXCEPT {
+				return other.offset() - offset();
 			}
-			bool equal(const GapVectorIterator& other) const BOOST_NOEXCEPT {
-				return current_ == current_;
+			BOOST_CONSTEXPR bool equal(const GapVectorIterator& other) const BOOST_NOEXCEPT {
+				return offset() == other.offset();
 			}
 			void increment() BOOST_NOEXCEPT {
-				assert(get() != target_->gapFirst_);
-				++current_;
-				if(get() == target_->gapFirst_)
-					current_ += target_->gap();
+				assert(p_ != target()->gapFirst_);
+				if(std::next(p_) != target()->gapFirst_)
+					++p_;
+				else
+					p_ = target()->gapLast_;
 			}
 		private:
 			const Target* target_;
-			typename boost::iterators::iterator_difference<Self>::type current_;
+			Pointer p_;
 		};
 
 		/**
@@ -110,6 +129,7 @@ namespace ascension {
 		 * @tparam T The element type. Should be primitive
 		 * @tparam Allocator The allocator to use for all memory allocations of this container
 		 * @note This class is not intended to be derived.
+		 * @todo Rewrite with std.allocator_traits.
 		 */
 		template<typename T, typename Allocator = std::allocator<T>>
 		class GapVector : boost::totally_ordered<GapVector<T, Allocator>> {
@@ -149,7 +169,7 @@ namespace ascension {
 			explicit GapVector(const allocator_type& allocator = allocator_type()) :
 				allocator_(allocator),
 				first_(allocator_.allocate(ASCENSION_GAP_VECTOR_INITIAL_SIZE, 0)),
-				last_(first_ + ASCENSION_GAP_VECTOR_INITIAL_SIZE),
+				last_(std::next(first_, ASCENSION_GAP_VECTOR_INITIAL_SIZE)),
 				gapFirst_(first_), gapLast_(last_) {}
 
 			/**
@@ -160,7 +180,7 @@ namespace ascension {
 			 */
 			GapVector(size_type n, const_reference value,
 					const allocator_type& allocator = allocator_type()) : allocator_(allocator),
-					first_(allocator_.allocate(count, 0)), last_(first_ + n),
+					first_(allocator_.allocate(count, 0)), last_(std::next(first_, n)),
 					gapFirst_(first_), gapLast_(last_) {
 				insert(0, n, value);
 			}
@@ -186,15 +206,15 @@ namespace ascension {
 			 *              of the container with
 			 */
 			GapVector(const GapVector& other) : allocator_(other.allocator_),
-					first_(allocator_.allocate(last_ - first_)),
-					last_(first_ + (other.last_ - other.first_)),
-					gapFirst_(first_ + (other.gapFirst_ - other.first_)),
-					gapLast_(first_ + (other.gapLast_ - other.first_)) {
+					first_(allocator_.allocate(other.capacity())),
+					last_(std::next(first_, other.capacity())),
+					gapFirst_(std::next(first_, std::distance(other.first_, other.gapFirst_))),
+					gapLast_(std::next(first_, std::distance(other.first_, other.gapLast_))) {
 				try {
 					uninitializedCopy(other.first_, other.gapFirst_, first_, allocator);
 					uninitializedCopy(other.gapLast_, other.last_, gapFirst_, allocator);
 				} catch(...) {
-					allocator.deallocate(first_, last_ - first_);
+					allocator.deallocate(first_, capacity());
 				}
 			}
 
@@ -206,15 +226,15 @@ namespace ascension {
 			 */
 			GapVector(const GapVector& other, const allocator_type& allocator) :
 					allocator_(allocator),
-					first_(allocator_.allocate(last_ - first_)),
-					last_(first_ + (other.last_ - other.first_)),
-					gapFirst_(first_ + (other.gapFirst_ - other.first_)),
-					gapLast_(first_ + (other.gapLast_ - other.first_)) {
+					first_(allocator_.allocate(other.capacity())),
+					last_(std::next(first_, other.capacity())),
+					gapFirst_(std::next(first_, std::distance(other.first_, other.gapFirst_))),
+					gapLast_(std::next(first_, std::distance(other.first_, other.gapLast_))) {
 				try {
 					uninitializedCopy(other.first_, other.gapFirst_, first_, allocator);
 					uninitializedCopy(other.gapLast_, other.last_, gapFirst_, allocator);
 				} catch(...) {
-					allocator.deallocate(first_, last_ - first_);
+					allocator.deallocate(first_, capacity());
 				}
 			}
 
@@ -236,14 +256,14 @@ namespace ascension {
 			 * @param allocator The allocator object
 			 */
 			GapVector(GapVector&& other, const allocator_type& allocator) : allocator_(allocator_),
-					first_(allocator_.allocate(last_ - first_)),
-					last_(first_ + (other.last_ - other.first_)),
-					gapFirst_(first_ + (other.gapFirst_ - other.first_)),
-					gapLast_(first_ + (other.gapLast_ - other.first_)) {
-				for(pointer p = first_; p != gapFirst_; ++p)
-					*p = std::move(other.first_ + (p - first_));
-				for(pointer p = gapLast_; p != last_; ++p)
-					*p = std::move(other.first_ + (p - first_));
+					first_(allocator_.allocate(other.capacity())),
+					last_(std::next(first_, other.capacity())),
+					gapFirst_(std::next(first_, std::distance(other.first_, other.gapFirst_))),
+					gapLast_(std::next(first_, std::distance(other.first_, other.gapLast_))) {
+				for(pointer p(first_); p != gapFirst_; ++p)
+					*p = std::move(std::next(other.first_, std::distance(first_, p)));
+				for(pointer p(gapLast_); p != last_; ++p)
+					*p = std::move(std::next(other.first_, std::distance(first_, p)));
 				other.first_ = other.last_ = other.gapFirst_ = other.gapLast_ = nullptr;
 			}
 #ifndef BOOST_NO_CXX11_HDR_INITIALIZER_LIST
@@ -255,7 +275,9 @@ namespace ascension {
 			GapVector(std::initializer_list<value_type> values, const allocator_type& allocator);
 #endif	// !BOOST_NO_CXX11_HDR_INITIALIZER_LIST
 			/// Destructor.
-			~GapVector() {release();}
+			~GapVector() {
+				release();
+			}
 
 			/**
 			 * Copy-assignment operator.
@@ -305,7 +327,9 @@ namespace ascension {
 #endif	// !BOOST_NO_CXX11_HDR_INITIALIZER_LIST
 
 			/// Returns the allocator associated with the container.
-			allocator_type allocator() const {return allocator_;}
+			BOOST_CONSTEXPR allocator_type allocator() const {
+				return allocator_;
+			}
 			/// @}
 
 
@@ -341,7 +365,7 @@ namespace ascension {
 			 * @return A reference to the requested element
 			 */
 			reference operator[](size_type position) BOOST_NOEXCEPT {
-				return first_[(first_ + position < gapFirst_) ? position : position + gap()];
+				return first_[(std::next(first_, position) < gapFirst_) ? position : position + gap()];
 			}
 
 			/**
@@ -349,21 +373,21 @@ namespace ascension {
 			 * @param position The position of the element to return
 			 * @return A reference to the requested element
 			 */
-			const_reference operator[](size_type position) const BOOST_NOEXCEPT {
-				return first_[(first_ + position < gapFirst_) ? position : position + gap()];
+			BOOST_CONSTEXPR const_reference operator[](size_type position) const BOOST_NOEXCEPT {
+				return first_[(std::next(first_, position) < gapFirst_) ? position : position + gap()];
 			}
 
 			/// Returns a reference to the first element in the container.
 			reference front() BOOST_NOEXCEPT {return (*this)[0];}
 
 			/// Returns a reference to the first element in the container.
-			const_reference front() const BOOST_NOEXCEPT {return (*this)[0];}
+			BOOST_CONSTEXPR const_reference front() const BOOST_NOEXCEPT {return (*this)[0];}
 
 			/// Returns a reference to the last element in the container.
 			reference back() BOOST_NOEXCEPT {return (*this)[size() - 1];}
 
 			/// Returns a const reference to the last element in the container.
-			const_reference back() const BOOST_NOEXCEPT {return (*this)[size() - 1];}
+			BOOST_CONSTEXPR const_reference back() const BOOST_NOEXCEPT {return (*this)[size() - 1];}
 			/// @}
 
 			/// @name Iterators
@@ -411,13 +435,13 @@ namespace ascension {
 			/// @note @c GapVector does not provide @c resize methods.
 			/// @{
 			/** Returns @c true if the container is empty. */
-			bool empty() const BOOST_NOEXCEPT {return size() == 0;}
+			BOOST_CONSTEXPR bool empty() const BOOST_NOEXCEPT {return size() == 0;}
 
 			/// Returns the number of elements in the container.
-			size_type size() const BOOST_NOEXCEPT {return capacity() - gap();}
+			BOOST_CONSTEXPR size_type size() const BOOST_NOEXCEPT {return capacity() - gap();}
 
 			/// Returns the maximum size of the container.
-			size_type maxSize() const BOOST_NOEXCEPT {return allocator_.max_size();}
+			BOOST_CONSTEXPR size_type maxSize() const BOOST_NOEXCEPT {return allocator_.max_size();}
 
 			/**
 			 * Sets the capacity of the container to at least @a size.
@@ -439,7 +463,7 @@ namespace ascension {
 			void resize(size_type count, const_reference value);
 
 			/// Returns the total number of elements that the gap vector can hold without requiring reallocation.
-			size_type capacity() const BOOST_NOEXCEPT {return last_ - first_;}
+			BOOST_CONSTEXPR size_type capacity() const BOOST_NOEXCEPT {return std::distance(first_, last_);}
 
 			/// Requests the removal of unused capacity.
 			void shrinkToFit() {reallocate(size());}
@@ -457,7 +481,7 @@ namespace ascension {
 			 * @param value The element value to insert
 			 */
 			iterator insert(const_iterator position, const_reference value) {
-				makeGapAt(position.get());
+				makeGapAt(position.before());
 				*(gapFirst_++) = value;
 				if(gapFirst_ == gapLast_)
 					reallocate(capacity() * 2);
@@ -470,7 +494,7 @@ namespace ascension {
 			 * @param value The element value to insert
 			 */
 			iterator insert(const_iterator position, value_type&& value) {
-				makeGapAt(position.get());
+				makeGapAt(position.before());
 				*(gapFirst_++) = std::move(value);
 				if(gapFirst_ == gapLast_)
 					reallocate(capacity() * 2);
@@ -484,13 +508,14 @@ namespace ascension {
 			 * @param value The element value to insert
 			 */
 			iterator insert(const_iterator position, size_type n, const_reference value) {
-				makeGapAt(first_ + size());
-				makeGapAt(position.get());
+				makeGapAt(std::next(first_, size()));
+				makeGapAt(position.before());
 				if(static_cast<size_type>(gap()) <= count)
 					reallocate(std::max(capacity() + n + 1, capacity() * 2));
 				std::fill_n(gapFirst_, n, value);
-				gapFirst_ += n;
-				return iterator(*this, gapFirst_ - n);
+				const auto oldGapFirst(gapFirst);
+				std::next(gapFirst_, n);
+				return iterator(*this, oldGapFirst);
 			}
 
 			/**
@@ -506,15 +531,15 @@ namespace ascension {
 				if(n == 0)
 					return position;
 				if(n > gap()) {
-					const const_iterator::difference_type index = position.offset();
+					const const_iterator::difference_type index = std::distance(cbegin(), position);
 					reallocate(std::max(n + size(), capacity() * 2));
-					position = cbegin() + index;
+					position = std::next(cbegin(), index);
 				}
 //				makeGapAt(first_ + size());
-				makeGapAt(position.get());
-				pointer p = const_cast<pointer>(position.get());
-				gapFirst_ = first_ + (uninitializedCopy(first, last, p, allocator_) - first_);
-				return iterator(*this, gapFirst_ - n);
+				makeGapAt(position.before());
+				const pointer p(const_cast<pointer>(position.before()));
+				gapFirst_ = std::next(first_, std::distance(first_, uninitializedCopy(first, last, p, allocator_)));
+				return iterator(*this, std::prev(gapFirst_, n));
 			}
 #ifndef BOOST_NO_CXX11_HDR_INITIALIZER_LIST
 			/**
@@ -540,23 +565,22 @@ namespace ascension {
 			 * @return An iterator following the last removed element
 			 */
 			iterator erase(const_iterator first, const_iterator last) {
-				const pointer b = first_ + (first.get() - first_);
-				const pointer e = first_ + (last.get() - first_);
-				if(b >= gapLast_) {
-					makeGapAt(b);
-					destroy(b, e);
-					gapLast_ = e;
-				} else if(e <= gapFirst_) {
-					makeGapAt(e);
-					destroy(b, e);
-					gapFirst_ = b;
-				} else {
+				if(first == last)
+					return first;
+				assert(first < last);
+				if(first.before() <= gapFirst_ && last.after() >= gapLast_) {
+					const auto b(const_cast<pointer>(first.before())), e(const_cast<pointer>(last.after()));
 					destroy(b, gapFirst_);
 					destroy(gapLast_, e);
 					gapFirst_ = b;
-					gapLast_ = e;
+					return iterator(*this, gapLast_ = e);
+				} else {
+					const auto n = std::distance(first, last);
+					makeGapAt(first.after());
+					destroy(gapLast_, std::next(gapLast_));
+					std::advance(gapLast_, n);
+					return iterator(*this, gapLast_);
 				}
-				return iterator(*this, gapLast_);
 			}
 
 			void pushBack(const_reference value);
@@ -572,11 +596,12 @@ namespace ascension {
 			 * @param other A gap vector whose elements to be exchanged
 			 */
 			void swap(GapVector& other) BOOST_NOEXCEPT {
-				std::swap(allocator_, other.allocator);
-				std::swap(first_, other.first_);
-				std::swap(last_, other.last_);
-				std::swap(gapFirst_, other.gapFirst_);
-				std::swap(gapLast_, other.gapLast_);
+				using std::swap;
+				swap(allocator_, other.allocator);
+				swap(first_, other.first_);
+				swap(last_, other.last_);
+				swap(gapFirst_, other.gapFirst_);
+				swap(gapLast_, other.gapLast_);
 			}
 			/// @}
 
@@ -586,49 +611,51 @@ namespace ascension {
 				for(; first != last; ++first)
 					allocator_.destroy(first);
 			}
-			difference_type gap() const BOOST_NOEXCEPT {return gapLast_ - gapFirst_;}
+			BOOST_CONSTEXPR difference_type gap() const BOOST_NOEXCEPT {
+				return std::distance(gapFirst_, gapLast_);
+			}
 			void makeGapAt(const_pointer position) {
 				pointer p = const_cast<pointer>(position);
 				if(position < gapFirst_) {
-					const size_type n = gapFirst_ - position;
-					if(n <= static_cast<size_type>(gap())) {
-						uninitializedCopy(std::make_move_iterator(p),
-							std::make_move_iterator(gapFirst_), gapLast_ - n, allocator_);
+					const difference_type n = std::distance(p, gapFirst_);
+					const auto newGapLast(std::prev(gapLast_, n));
+					if(n <= gap()) {
+						uninitializedCopy(std::make_move_iterator(p), std::make_move_iterator(gapFirst_), newGapLast, allocator_);
 						destroy(p, gapFirst_);
 					} else {
 						uninitializedCopy(std::make_move_iterator(gapFirst_ - gap()),
-							std::make_move_iterator(gapFirst_), gapLast_ - gap(), allocator_);
+							std::make_move_iterator(gapFirst_), gapFirst_, allocator_);
 						try {
 							std::copy_backward(std::make_move_iterator(p),
-								std::make_move_iterator(gapFirst_ - gap()), gapLast_ - gap());
-						} catch(...) {
-							destroy(gapLast_ - gap(), gapLast_);
-							throw;
-						}
-						destroy(p, gapLast_ - gap());
-					}
-					gapFirst_ -= n;
-					gapLast_ -= n;
-				} else if(position > gapFirst_) {
-					const size_type n = position - gapFirst_;
-					if(n <= static_cast<size_type>(gap())) {
-						uninitializedCopy(std::make_move_iterator(gapLast_),
-							std::make_move_iterator(gapLast_ + n), gapFirst_, allocator_);
-						destroy(gapLast_, gapLast_ + n);
-					} else {
-						uninitializedCopy(std::make_move_iterator(gapLast_),
-							std::make_move_iterator(gapLast_ + gap()), gapFirst_, allocator_);
-						try {
-							std::copy(std::make_move_iterator(gapLast_ + gap()),
-								std::make_move_iterator(gapLast_ + n), gapFirst_ + gap());
+								std::make_move_iterator(std::prev(gapFirst_, gap())), gapFirst_);
 						} catch(...) {
 							destroy(gapFirst_, gapLast_);
 							throw;
 						}
-						destroy(gapLast_ + (n - gap()), gapLast_ + n);
+						destroy(p, gapFirst_);
 					}
-					gapFirst_ += n;
-					gapLast_ += n;
+					std::advance(gapFirst_, -n);
+					gapLast_ = newGapLast;
+				} else if(position > gapFirst_) {
+					const difference_type n = std::distance(gapFirst_, p);
+					const auto newGapLast(std::next(gapLast_, n));
+					if(n <= gap()) {
+						uninitializedCopy(std::make_move_iterator(gapLast_), std::make_move_iterator(newGapLast), gapFirst_, allocator_);
+						destroy(gapLast_, newGapLast);
+					} else {
+						uninitializedCopy(std::make_move_iterator(gapLast_),
+							std::make_move_iterator(std::next(gapLast_, gap())), gapFirst_, allocator_);
+						try {
+							std::copy(std::make_move_iterator(gapLast_ + gap()),
+								std::make_move_iterator(newGapLast), std::next(gapFirst_, gap()));
+						} catch(...) {
+							destroy(gapFirst_, gapLast_);
+							throw;
+						}
+						destroy(std::next(gapLast_, n - gap()), newGapLast);
+					}
+					std::advance(gapFirst_, +n);
+					gapLast_ = newGapLast;
 				}
 				assert(gapFirst_ == position);
 			}
@@ -636,22 +663,27 @@ namespace ascension {
 				if(newCapacity > maxSize())
 					throw std::length_error("size");
 				assert(newCapacity >= size());
-				const pointer temp = allocator_.allocate(newCapacity);
-				uninitializedCopy(std::make_move_iterator(first_),
-					std::make_move_iterator(gapFirst_), temp, allocator_);
+				const pointer newBuffer(allocator_.allocate(newCapacity));
+				const pointer newGapLast = std::next(newBuffer, newCapacity - std::distance(gapLast_, last_));
 				try {
-					uninitializedCopy(
-						std::make_move_iterator(gapLast_), std::make_move_iterator(last_),
-						temp + (gapFirst_ - first_), allocator_);
+					uninitializedCopy(std::make_move_iterator(first_),
+						std::make_move_iterator(gapFirst_), newBuffer, allocator_);
+					try {
+						uninitializedCopy(
+							std::make_move_iterator(gapLast_), std::make_move_iterator(last_),
+							newGapLast, allocator_);
+					} catch(...) {
+						destroy(first_, gapFirst_);
+						throw;
+					}
+					release();
 				} catch(...) {
-					destroy(first_, gapFirst_);
-					throw;
+					allocator_.deallocate(newBuffer, newCapacity);
 				}
-				release();
-				gapFirst_ = temp + (gapFirst_ - first_);
-				gapLast_ = temp + (gapLast_ - first_);
-				first_ = temp;
-				last_ = temp + newCapacity;
+				gapFirst_ = std::next(newBuffer, std::distance(first_, gapFirst_));
+				gapLast_ = newGapLast;
+				first_ = newBuffer;
+				last_ = std::next(newBuffer, newCapacity);
 			}
 			void release() {
 				destroy(first_, gapFirst_);
