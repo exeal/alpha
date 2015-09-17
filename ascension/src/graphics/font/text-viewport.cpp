@@ -887,9 +887,17 @@ namespace ascension {
 			 */
 			inline void TextViewport::adjustBpdScrollPositions() BOOST_NOEXCEPT {
 				auto newScrollPositions(scrollPositions());
-				decltype(firstVisibleLine_) newFirstVisibleLine(
-					std::min(firstVisibleLine().line, textRenderer().presentation().document().numberOfLines() - 1),
-					std::min(firstVisibleLine().subline, textRenderer().layouts().numberOfSublinesOfLine(firstVisibleLine().line) - 1));
+
+				decltype(firstVisibleLine_) newFirstVisibleLine;
+				const Index nlines = textRenderer().presentation().document().numberOfLines();
+				if(firstVisibleLine().line > nlines - 1) {
+					newFirstVisibleLine.line = nlines - 1;
+					newFirstVisibleLine.subline = textRenderer().layouts().numberOfSublinesOfLine(newFirstVisibleLine.line) - 1;
+				} else {
+					newFirstVisibleLine.line = firstVisibleLine().line;
+					newFirstVisibleLine.subline = std::min(
+						firstVisibleLine().subline, textRenderer().layouts().numberOfSublinesOfLine(newFirstVisibleLine.line) - 1);
+				}
 				if(newFirstVisibleLine != firstVisibleLine()) {
 					newScrollPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -898,6 +906,7 @@ namespace ascension {
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				}
 
+				using std::swap;
 				swap(newFirstVisibleLine, firstVisibleLine_);
 				swap(newScrollPositions, scrollPositions_);
 			}
@@ -1470,7 +1479,7 @@ namespace ascension {
 						bpd, line, boost::get(positions.bpd()) - bpd, true, defaultLineExtent_,
 						newFirstVisibleLine, newBlockFlowScrollOffsetInFirstVisibleVisualLine);
 #else
-					std::tie(line, newPositions.bpd()) = locateVisualLine(*this, newPositions.bpd(), boost::none, bpd, line);
+					std::tie(newFirstVisibleLine, newPositions.bpd()) = locateVisualLine(*this, newPositions.bpd(), boost::none, bpd, line);
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				} else {
 					newFirstVisibleLine = firstVisibleLine_;
