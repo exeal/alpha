@@ -36,6 +36,11 @@ namespace ascension {
 				BasicDimensionBase() {}
 				template<typename Arguments>
 				BasicDimensionBase(const Arguments& arguments) : dx_(arguments[_dx]), dy_(arguments[_dy]) {}
+				void swap(BasicDimensionBase& other) {
+					using std::swap;
+					swap(dx_, other.dx_);
+					swap(dy_, other.dy_);
+				}
 			protected:
 				Coordinate dx_, dy_;
 			};
@@ -69,14 +74,18 @@ namespace ascension {
 
 				/// Copy-assignment operator.
 				BasicDimension& operator=(const BasicDimension& other) {
-					std::swap(*this, BasicDimension(other));
+					BasicDimension(other).swap(*this);
 					return *this;
 				}
 				/// Copy-assignment operator for different template parameter.
 				template<typename U>
 				BasicDimension& operator=(const BasicDimension<U>& other) {
-					std::swap(*this, BasicDimension(other));
+					BasicDimension(other).swap(*this);
 					return *this;
+				}
+				/// Swaps the two @c BasicDimension.
+				friend void swap(BasicDimension& lhs, BasicDimension& rhs) {
+					lhs.swap(rhs);
 				}
 
 			private:

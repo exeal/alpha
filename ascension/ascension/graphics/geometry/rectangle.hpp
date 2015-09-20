@@ -61,6 +61,10 @@ namespace ascension {
 				template<typename Arguments>
 				BasicRectangleBase(const Arguments& arguments) :
 					ranges_(nrange(arguments[_left], arguments[_right]), nrange(arguments[_top], arguments[_bottom])) {}
+				void swap(BasicRectangleBase& other) {
+					using std::swap;
+					swap(ranges_, other.ranges_);
+				}
 			private:
 				template<typename OtherCoordinate>
 				friend class BasicRectangleBase;
@@ -177,14 +181,18 @@ namespace ascension {
 
 				/// Copy-assignment operator.
 				BasicRectangle& operator=(const BasicRectangle& other) {
-					std::swap(*this, BasicRectangle(other));
+					BasicRectangle(other).swap(*this);
 					return *this;
 				}
 				/// Copy-assignment operator for different template parameter.
 				template<typename U>
 				BasicRectangle& operator=(const BasicRectangle<U>& other) {
-					std::swap(*this, BasicRectangle(other));
+					BasicRectangle(other).swap(*this);
 					return *this;
+				}
+				/// Swaps the two @c BasicPoint.
+				friend void swap(BasicRectangle& lhs, BasicRectangle& rhs) {
+					lhs.swap(rhs);
 				}
 			};
 			/// @}

@@ -42,6 +42,11 @@ namespace ascension {
 				BasicPointBase() {}
 				template<typename Arguments>
 				BasicPointBase(const Arguments& arguments) : x_(arguments[_x]), y_(arguments[_y]) {}
+				void swap(BasicPointBase& other) {
+					using std::swap;
+					swap(x_, other.x_);
+					swap(y_, other.y_);
+				}
 			protected:
 				Coordinate x_, y_;
 			};
@@ -75,14 +80,18 @@ namespace ascension {
 
 				/// Copy-assignment operator.
 				BasicPoint& operator=(const BasicPoint& other) {
-					std::swap(*this, BasicPoint(other));
+					BasicPoint(other).swap(*this);
 					return *this;
 				}
 				/// Copy-assignment operator for different template parameter.
 				template<typename U>
 				BasicPoint& operator=(const BasicPoint<U>& other) {
-					std::swap(*this, BasicPoint(other));
+					BasicPoint(other).swap(*this);
 					return *this;
+				}
+				/// Swaps the two @c BasicPoint.
+				friend void swap(BasicPoint& lhs, BasicPoint& rhs) {
+					lhs.swap(rhs);
 				}
 
 			private:
