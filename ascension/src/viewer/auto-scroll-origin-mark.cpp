@@ -176,7 +176,7 @@ namespace ascension {
 				instances[type] = widgetapi::Cursor::createMonochrome(
 					geometry::BasicDimension<std::uint16_t>(geometry::_dx = 32, geometry::_dy = 32),
 					andBits, xorBits,
-					geometry::BasicPoint<std::uint16_t>(geometry::_x = 16, geometry::_y = 16));
+					geometry::make<boost::geometry::model::d2::point_xy<std::uint16_t>>((geometry::_x = 16, geometry::_y = 16)));
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				instances[type].reset(new widgetapi::Cursor(win32::Handle<HCURSOR>::Type(
 					::CreateCursor(::GetModuleHandleW(nullptr), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
@@ -203,39 +203,39 @@ namespace ascension {
 			using graphics::Point;
 			context
 				.beginPath()
-				.moveTo(Point(geometry::_x = 13.0f, geometry::_y = 3.0f))
-				.lineTo(Point(geometry::_x = 7.0f, geometry::_y = 9.0f))
-				.lineTo(Point(geometry::_x = 20.0f, geometry::_y = 9.0f))
-				.lineTo(Point(geometry::_x = 14.0f, geometry::_y = 3.0f))
+				.moveTo(geometry::make<Point>((geometry::_x = 13.0f, geometry::_y = 3.0f)))
+				.lineTo(geometry::make<Point>((geometry::_x = 7.0f, geometry::_y = 9.0f)))
+				.lineTo(geometry::make<Point>((geometry::_x = 20.0f, geometry::_y = 9.0f)))
+				.lineTo(geometry::make<Point>((geometry::_x = 14.0f, geometry::_y = 3.0f)))
 				.closePath()
 				.fill();
 			context
 				.beginPath()
-				.moveTo(Point(geometry::_x = 13.0f, geometry::_y = 24.0f))
-				.lineTo(Point(geometry::_x = 7.0f, geometry::_y = 18.0f))
-				.lineTo(Point(geometry::_x = 20.0f, geometry::_y = 18.0f))
-				.lineTo(Point(geometry::_x = 14.0f, geometry::_y = 24.0f))
+				.moveTo(geometry::make<Point>((geometry::_x = 13.0f, geometry::_y = 24.0f)))
+				.lineTo(geometry::make<Point>((geometry::_x = 7.0f, geometry::_y = 18.0f)))
+				.lineTo(geometry::make<Point>((geometry::_x = 20.0f, geometry::_y = 18.0f)))
+				.lineTo(geometry::make<Point>((geometry::_x = 14.0f, geometry::_y = 24.0f)))
 				.closePath()
 				.fill();
 			context
 				.beginPath()
-				.moveTo(Point(geometry::_x = 13.0f, geometry::_y = 12.0f))
-				.lineTo(Point(geometry::_x = 15.0f, geometry::_y = 12.0f))
+				.moveTo(geometry::make<Point>((geometry::_x = 13.0f, geometry::_y = 12.0f)))
+				.lineTo(geometry::make<Point>((geometry::_x = 15.0f, geometry::_y = 12.0f)))
 				.stroke();
 			context
 				.beginPath()
-				.moveTo(Point(geometry::_x = 12.0f, geometry::_y = 13.0f))
-				.lineTo(Point(geometry::_x = 16.0f, geometry::_y = 13.0f))
+				.moveTo(geometry::make<Point>((geometry::_x = 12.0f, geometry::_y = 13.0f)))
+				.lineTo(geometry::make<Point>((geometry::_x = 16.0f, geometry::_y = 13.0f)))
 				.stroke();
 			context
 				.beginPath()
-				.moveTo(Point(geometry::_x = 12.0f, geometry::_y = 14.0f))
-				.lineTo(Point(geometry::_x = 16.0f, geometry::_y = 14.0f))
+				.moveTo(geometry::make<Point>((geometry::_x = 12.0f, geometry::_y = 14.0f)))
+				.lineTo(geometry::make<Point>((geometry::_x = 16.0f, geometry::_y = 14.0f)))
 				.stroke();
 			context
 				.beginPath()
-				.moveTo(Point(geometry::_x = 13.0f, geometry::_y = 15.0f))
-				.lineTo(Point(geometry::_x = 15.0f, geometry::_y = 15.0f))
+				.moveTo(geometry::make<Point>((geometry::_x = 13.0f, geometry::_y = 15.0f)))
+				.lineTo(geometry::make<Point>((geometry::_x = 15.0f, geometry::_y = 15.0f)))
 				.stroke();
 		}
 

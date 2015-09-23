@@ -296,13 +296,14 @@ namespace ascension {
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				const Glib::RefPtr<const Gdk::Screen> screen(textViewer_->get_screen());
-				graphics::Rectangle screenBounds(
-					boost::geometry::make_zero<graphics::Point>(),
-					graphics::Dimension(
-						graphics::geometry::_dx = static_cast<graphics::Scalar>(screen->get_width()),
-						graphics::geometry::_dy = static_cast<graphics::Scalar>(screen->get_height())));
+				auto screenBounds(
+					graphics::geometry::make<graphics::Rectangle>(
+						boost::geometry::make_zero<graphics::Point>(),
+						graphics::Dimension(
+							graphics::geometry::_dx = static_cast<graphics::Scalar>(screen->get_width()),
+							graphics::geometry::_dy = static_cast<graphics::Scalar>(screen->get_height()))));
 #else
-				graphics::Rectangle screenBounds(viewer::widgetapi::bounds(viewer::widgetapi::desktop(), false));
+				auto screenBounds(viewer::widgetapi::bounds(viewer::widgetapi::desktop(), false));
 #endif
 				screenBounds = viewer::widgetapi::mapFromGlobal(*textViewer_, screenBounds);
 
@@ -351,7 +352,7 @@ namespace ascension {
 						graphics::geometry::y(origin) = graphics::geometry::y(origin) - graphics::geometry::dy(size) - 1;
 					}
 				}
-				viewer::widgetapi::setBounds(*proposalsPopup_, graphics::Rectangle(origin, size));
+				viewer::widgetapi::setBounds(*proposalsPopup_, graphics::geometry::make<graphics::Rectangle>(origin, size));
 			}
 		}
 

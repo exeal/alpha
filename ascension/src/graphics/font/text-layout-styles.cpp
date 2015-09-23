@@ -95,11 +95,11 @@ namespace ascension {
 					throw NoSuchElementException();
 				switch(boost::fusion::at_key<presentation::styles::WritingMode>(layout_->parentStyle())) {
 					case presentation::HORIZONTAL_TB:
-						return Point(geometry::_x = 0.0f, geometry::_y = baselineOffset());
+						return geometry::make<Point>((geometry::_x = 0.0f, geometry::_y = baselineOffset()));
 					case presentation::VERTICAL_RL:
-			 			return Point(geometry::_x = -baselineOffset(), geometry::_y = 0.0f);
+			 			return geometry::make<Point>((geometry::_x = -baselineOffset(), geometry::_y = 0.0f));
 					case presentation::VERTICAL_LR:
-			 			return Point(geometry::_x = +baselineOffset(), geometry::_y = 0.0f);
+			 			return geometry::make<Point>((geometry::_x = +baselineOffset(), geometry::_y = 0.0f));
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}

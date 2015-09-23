@@ -1006,7 +1006,8 @@ namespace ascension {
 							right = std::max(x + static_cast<Scalar>(gm.gmBlackBoxX * sx) + glyphOffsets2D[i].du, right);
 							bottom = std::max(0 + static_cast<Scalar>(gm.gmBlackBoxY * sy) + glyphOffsets2D[i].dv, bottom);
 						}
-						bounds.push_back(graphics::Rectangle(geometry::_left = left, geometry::_top = top, geometry::_right = right, geometry::_bottom = bottom));
+						bounds.push_back(graphics::geometry::make<graphics::Rectangle>((
+							geometry::_left = left, geometry::_top = top, geometry::_right = right, geometry::_bottom = bottom)));
 					}
 					context.restore();
 					if(lastError != ERROR_SUCCESS)
@@ -1248,9 +1249,9 @@ namespace ascension {
 						throw std::out_of_range("index");
 					const Scalar x = glyphLogicalPosition(index);
 					const auto yrange = logicalExtents();
-					return graphics::Rectangle(
+					return graphics::geometry::make<graphics::Rectangle>((
 						geometry::_top = *yrange.begin(), geometry::_bottom = *yrange.end(),
-						geometry::_left = x, geometry::_right = static_cast<Scalar>(x + effectiveAdvances()[index]));
+						geometry::_left = x, geometry::_right = static_cast<Scalar>(x + effectiveAdvances()[index])));
 				}
 
 				inline Scalar GlyphVectorImpl::glyphLogicalPosition(std::size_t index) const {
@@ -1285,8 +1286,9 @@ namespace ascension {
 					const auto sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
 					return GlyphMetrics(gm.gmCellIncY == 0,
 						Dimension(geometry::_dx = static_cast<Scalar>(gm.gmCellIncX * sx), geometry::_dy = static_cast<Scalar>(gm.gmCellIncY * sy)),
-						graphics::Rectangle(
-							Point(geometry::_x = static_cast<Scalar>(gm.gmptGlyphOrigin.x * sx), geometry::_y = -static_cast<Scalar>(gm.gmptGlyphOrigin.y * sy)),
+						geometry::make<Rectangle>(
+							geometry::make<Point>((
+								geometry::_x = static_cast<Scalar>(gm.gmptGlyphOrigin.x * sx), geometry::_y = -static_cast<Scalar>(gm.gmptGlyphOrigin.y * sy))),
 							Dimension(geometry::_dx = static_cast<Scalar>(gm.gmBlackBoxX * sx), geometry::_dy = static_cast<Scalar>(gm.gmBlackBoxY * sy))),
 						static_cast<GlyphMetrics::Type>(0));
 				}
@@ -1297,7 +1299,8 @@ namespace ascension {
 						throw IndexOutOfBoundsException("index");
 					const Scalar logicalPosition = glyphLogicalPosition(index);
 					const GOFFSET& glyphOffset = glyphOffsets()[index];
-					return Point(geometry::_x = static_cast<Scalar>(logicalPosition + glyphOffset.du), geometry::_y = static_cast<Scalar>(glyphOffset.dv));
+					return geometry::make<Point>((
+						geometry::_x = static_cast<Scalar>(logicalPosition + glyphOffset.du), geometry::_y = static_cast<Scalar>(glyphOffset.dv)));
 				}
 
 				/// @see GlyphVector#glyphPositions
@@ -1327,15 +1330,21 @@ namespace ascension {
 					assert(characterRange.end() == cbegin() || characterRange.end() == cend()
 						|| glyphs_->clusters[characterRange.cend() - cbegin()] != glyphs_->clusters[characterRange.cend() - cbegin() + 1]);
 
-					if(analysis_.fRTL == 0)	// LTR
-						return boost::irange(
-							(characterRange.cbegin() < cend()) ? glyphs_->clusters[*characterRange.begin()] : glyphs_->numberOfGlyphs,
-							(characterRange.cend() < cend()) ? glyphs_->clusters[*characterRange.end() + 1] : glyphs_->numberOfGlyphs);
-					else					// RTL
-						return boost::irange(
-							(characterRange.cend() > cbegin()) ? glyphs_->clusters[characterRange.cend() - cbegin() - 1] : glyphs_->numberOfGlyphs,
-							(characterRange.cbegin() > cbegin()) ? glyphs_->clusters[characterRange.cbegin() - cbegin() - 1] : glyphs_->numberOfGlyphs
-						);
+					boost::optional<std::size_t> b, e;
+					if(analysis_.fRTL == 0) {	// LTR
+						if(characterRange.cbegin() < cend())
+							b = characterRange.cbegin() - cbegin();
+						if(characterRange.cend() < cend())
+							e = characterRange.cend() - cbegin() + 1;
+					} else {					// RTL
+						if(characterRange.cend() > cbegin())
+							b = characterRange.cend() - cbegin() - 1;
+						if(characterRange.cbegin() > cbegin())
+							e = characterRange.cbegin() - cbegin() - 1;
+					}
+					return boost::irange(
+						(b != boost::none) ? glyphs_->clusters[boost::get(b)] : glyphs_->numberOfGlyphs,
+						(e != boost::none) ? glyphs_->clusters[boost::get(e)] : glyphs_->numberOfGlyphs);
 				}
 
 				/// @see GlyphVector#glyphVisualBounds
@@ -1438,7 +1447,7 @@ namespace ascension {
 						left = std::min(x, left);
 						right = std::max(x + xs[i], right);
 					}
-					return graphics::Rectangle(std::make_pair(nrange(left, right), logicalExtents()));
+					return geometry::make<graphics::Rectangle>(std::make_pair(nrange(left, right), logicalExtents()));
 				}
 
 				inline HRESULT GlyphVectorImpl::logicalWidths(int widths[]) const {
@@ -1991,7 +2000,8 @@ namespace ascension {
 						bottom = std::max(geometry::bottom(gvb), bottom);
 						left = std::min(geometry::left(gvb), left);
 					}
-					return graphics::Rectangle(geometry::_top = top, geometry::_right = right, geometry::_bottom = bottom, geometry::_left = left);
+					return geometry::make<graphics::Rectangle>((
+						geometry::_top = top, geometry::_right = right, geometry::_bottom = bottom, geometry::_left = left));
 				}
 			}
 

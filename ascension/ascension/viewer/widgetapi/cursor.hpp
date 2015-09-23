@@ -61,7 +61,7 @@ namespace ascension {
 				 * @param hotspot The hotspot of the cursor in pixels. If @c boost#none, the center of @a shape is used
 				 */
 				explicit Cursor(const graphics::Image& shape,
-					const boost::optional<graphics::geometry::BasicPoint<Coordinate>>& hotspot = boost::none);
+					const boost::optional<boost::geometry::model::d2::point_xy<Coordinate>>& hotspot = boost::none);
 				/// Copy-constructor.
 				Cursor(const Cursor& other);
 				/// Copy-assignment operator.
@@ -92,7 +92,7 @@ namespace ascension {
 				static std::unique_ptr<Cursor> createMonochrome(
 					const graphics::geometry::BasicDimension<Coordinate>& size,
 					const std::uint8_t* bitmap, const std::uint8_t* mask,
-					const boost::optional<graphics::geometry::BasicPoint<Coordinate>>& hotspot = boost::none);
+					const boost::optional<boost::geometry::model::d2::point_xy<Coordinate>>& hotspot = boost::none);
 
 			public:
 				/// Hides the global cursor.

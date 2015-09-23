@@ -9,6 +9,7 @@
 #include "buffer-list.hpp"
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
+#include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/paint.hpp>
@@ -62,12 +63,16 @@ namespace alpha {
 		if(document().bookmarker().isMarked(line)) {
 			// draw a bookmark indication mark
 			namespace gfx = ascension::graphics;
-			auto xrange(gfx::geometry::range<0>(rect));
-			xrange.advance_begin(+2);
-			xrange.advance_end(-2);
-			auto yrange(boost::irange((gfx::geometry::top(rect) * 2 + gfx::geometry::bottom(rect)) / 3, (gfx::geometry::top(rect) + gfx::geometry::bottom(rect) * 2) / 3));
-			const gfx::Rectangle r(std::make_pair(xrange, yrange));
-			auto gradient(std::make_shared<gfx::LinearGradient>(boost::geometry::make_zero<gfx::Point>(), gfx::Point(gfx::geometry::_x = gfx::geometry::dx(r), gfx::geometry::_y = static_cast<gfx::Scalar>(0))));
+			const ascension::NumericRange<ascension::graphics::Scalar> xrange(gfx::geometry::range<0>(rect) | ascension::adaptors::ordered());
+			const auto yrange(
+				ascension::nrange(
+					(gfx::geometry::top(rect) * 2 + gfx::geometry::bottom(rect)) / 3, (gfx::geometry::top(rect) + gfx::geometry::bottom(rect) * 2) / 3));
+			const auto r(gfx::geometry::make<gfx::Rectangle>(std::make_pair(xrange, yrange)));
+			auto gradient(
+				std::make_shared<gfx::LinearGradient>(
+					boost::geometry::make_zero<gfx::Point>(),
+					gfx::geometry::make<gfx::Point>((
+						gfx::geometry::_x = gfx::geometry::dx(r), gfx::geometry::_y = static_cast<gfx::Scalar>(0)))));
 
 			// get themed colors
 			if(Glib::RefPtr<Gtk::StyleContext> styleContext = get_style_context()) {

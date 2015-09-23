@@ -132,10 +132,12 @@ namespace ascension {
 					switch(boost::native_value(physicalAlignment)) {
 						case graphics::PhysicalDirection::TOP:
 						case graphics::PhysicalDirection::BOTTOM:
-							return graphics::Rectangle(std::make_pair(graphics::geometry::range<0>(composite), boost::get(range)));
+							return graphics::geometry::make<graphics::Rectangle>(
+								std::make_pair(graphics::geometry::range<0>(composite), boost::get(range)));
 						case graphics::PhysicalDirection::LEFT:
 						case graphics::PhysicalDirection::RIGHT:
-							return graphics::Rectangle(std::make_pair(boost::get(range), graphics::geometry::range<1>(composite)));
+							return graphics::geometry::make<graphics::Rectangle>(
+								std::make_pair(boost::get(range), graphics::geometry::range<1>(composite)));
 					}
 				}
 				return boost::geometry::make_zero<graphics::Rectangle>();

@@ -8,6 +8,7 @@
  * @date 2012-02-18 separated from text-renderer.hpp
  */
 
+#include <ascension/corelib/numeric-range-algorithm/clamp.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>	// text.GraphemeBreakIterator
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
@@ -457,12 +458,12 @@ namespace ascension {
 					const presentation::WritingMode wm(writingMode(*layout));
 					const bool horizontal = presentation::isHorizontal(wm.blockFlowDirection);
 					const PhysicalTwoAxes<Scalar> lineLocalPoint(horizontal ?
-						Point(
+						geometry::make<Point>((
 							geometry::_x = mapViewportIpdToLineLayout(viewport, *layout, geometry::x(p)),
-							geometry::_y = geometry::y(p) + geometry::y(baseline.positionInViewport()))
-						: Point(
+							geometry::_y = geometry::y(p) + geometry::y(baseline.positionInViewport())))
+						: geometry::make<Point>((
 							geometry::_x = geometry::x(p) + geometry::x(baseline.positionInViewport()),
-							geometry::_y = mapViewportIpdToLineLayout(viewport, *layout, geometry::y(p))));
+							geometry::_y = mapViewportIpdToLineLayout(viewport, *layout, geometry::y(p)))));
 					TextHit<> hitInLine(layout->hitTestCharacter(mapPhysicalToFlowRelative(wm, lineLocalPoint), &outside));
 					if(abortNoCharacter && outside)
 						return boost::none;
@@ -619,13 +620,13 @@ namespace ascension {
 				inline Point&& calculatePositionInViewport(presentation::BlockFlowDirection blockFlowDirection, const Rectangle& bounds, Scalar distanceFromViewportBeforeEdge) {
 					switch(blockFlowDirection) {
 						case presentation::HORIZONTAL_TB:
-							return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = geometry::top(bounds) + distanceFromViewportBeforeEdge);
+							return geometry::make<Point>((geometry::_x = static_cast<Scalar>(0), geometry::_y = geometry::top(bounds) + distanceFromViewportBeforeEdge));
 							break;
 						case presentation::VERTICAL_RL:
-							return Point(geometry::_x = geometry::right(bounds) - distanceFromViewportBeforeEdge, geometry::_y = static_cast<Scalar>(0));
+							return geometry::make<Point>((geometry::_x = geometry::right(bounds) - distanceFromViewportBeforeEdge, geometry::_y = static_cast<Scalar>(0)));
 							break;
 						case presentation::VERTICAL_LR:
-							return Point(geometry::_x = geometry::left(bounds) + distanceFromViewportBeforeEdge, geometry::_y = static_cast<Scalar>(0));
+							return geometry::make<Point>((geometry::_x = geometry::left(bounds) + distanceFromViewportBeforeEdge, geometry::_y = static_cast<Scalar>(0)));
 							break;
 						default:
 							ASCENSION_ASSERT_NOT_REACHED();
@@ -640,16 +641,16 @@ namespace ascension {
 				assert(layout != nullptr);
 				const Scalar baseline = layout->lineMetrics(firstVisibleLine.subline).ascent;
 				Point axis;
-				const Rectangle bounds(boost::geometry::make_zero<Point>(), geometry::size(viewport().boundsInView()));
+				const Rectangle bounds(geometry::make<Rectangle>(boost::geometry::make_zero<Point>(), geometry::size(viewport().boundsInView())));
 				switch(viewport().textRenderer().computedBlockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
-						axis = Point(geometry::_x = 0.0f, geometry::_y = geometry::top(bounds) + baseline);
+						axis = geometry::make<Point>((geometry::_x = 0.0f, geometry::_y = geometry::top(bounds) + baseline));
 						break;
 					case presentation::VERTICAL_RL:
-						axis = Point(geometry::_x = geometry::right(bounds) - baseline, geometry::_y = 0.0f);
+						axis = geometry::make<Point>((geometry::_x = geometry::right(bounds) - baseline, geometry::_y = 0.0f));
 						break;
 					case presentation::VERTICAL_LR:
-						axis = Point(geometry::_x = geometry::left(bounds) + baseline, geometry::_y = 0.0f);
+						axis = geometry::make<Point>((geometry::_x = geometry::left(bounds) + baseline, geometry::_y = 0.0f));
 						break;
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();

@@ -117,8 +117,9 @@ namespace ascension {
 		}
 
 		namespace {
-			std::unique_ptr<graphics::Image> createSelectionImage(Caret& caret,
-					const graphics::Point& cursorPosition, bool highlightSelection, graphics::geometry::BasicRectangle<std::int32_t>& dimensions) {
+			std::unique_ptr<graphics::Image> createSelectionImage(
+					Caret& caret, const graphics::Point& cursorPosition, bool highlightSelection,
+					boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>>& dimensions) {
 				// determine the range to draw
 				const kernel::Region selectedRegion(caret);
 //				const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
@@ -133,11 +134,13 @@ namespace ascension {
 				graphics::font::TextRenderer& renderer = caret.textArea().textRenderer();
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(renderer.viewport());
 //				const graphics::font::TextViewportNotificationLocker lock(viewport.get());
-				graphics::Rectangle selectionBounds(
-					graphics::Point(geometry::_x = std::numeric_limits<Scalar>::max(), geometry::_y = 0.0f),
-					graphics::Dimension(geometry::_dx = std::numeric_limits<Scalar>::min(), geometry::_dy = 0.0f));
+				auto selectionBounds(
+					graphics::geometry::make<graphics::Rectangle>(
+						graphics::geometry::make<graphics::Point>((
+							geometry::_x = std::numeric_limits<Scalar>::max(), geometry::_y = 0.0f)),
+						graphics::Dimension(geometry::_dx = std::numeric_limits<Scalar>::min(), geometry::_dy = 0.0f)));
 				for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
-					NumericRange<Scalar> yrange(geometry::range<1>(selectionBounds) | adaptors::ordered());
+					NumericRange<Scalar> yrange(geometry::crange<1>(selectionBounds) | adaptors::ordered());
 //					yrange.advance_end(widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
 					yrange = boost::irange(*yrange.begin(), *yrange.end() + widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
 					geometry::range<1>(selectionBounds) = yrange;
@@ -170,7 +173,9 @@ namespace ascension {
 
 					// fill with transparent bits
 					context->setFillStyle(std::make_shared<graphics::SolidColor>(graphics::Color::OPAQUE_BLACK));
-					context->fillRectangle(graphics::Rectangle(boost::geometry::make_zero<graphics::Point>(), geometry::size(selectionBounds)));
+					context->fillRectangle(
+						graphics::geometry::make<graphics::Rectangle>(
+							boost::geometry::make_zero<graphics::Point>(), geometry::size(selectionBounds)));
 
 					// render mask pattern
 					Scalar y = 0;
@@ -217,9 +222,9 @@ namespace ascension {
 					Scalar y = geometry::top(selectionBounds);
 					for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 						renderer.paint(line, context,
-							graphics::Point(
+							graphics::geometry::make<graphics::Point>((
 								geometry::_x = graphics::font::lineIndent(renderer.layouts()[line], viewport->contentMeasure()) - geometry::left(selectionBounds),
-								geometry::_y = y));
+								geometry::_y = y)));
 						y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts().numberOfSublinesOfLine(line);
 					}
 
@@ -259,8 +264,9 @@ namespace ascension {
 					graphics::font::TextHit<kernel::Position>::leading(kernel::Position(selectedRegion.beginning().line, 0))));
 
 				// calculate 'dimensions'
-				dimensions = geometry::BasicRectangle<std::uint16_t>(
-					static_cast<geometry::BasicPoint<std::uint16_t>>(geometry::negate(hotspot)), static_cast<geometry::BasicDimension<std::uint16_t>>(size));
+				boost::geometry::assign(dimensions,
+					geometry::make<boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::uint16_t>>>(
+						geometry::negate(hotspot), static_cast<geometry::BasicDimension<std::uint16_t>>(size)));
 
 				return image;
 			}
@@ -284,9 +290,11 @@ namespace ascension {
 			const std::shared_ptr<const widgetapi::MimeData> draggingContent(utils::createMimeDataForSelectedString(textArea_->caret(), true));
 			d.setMimeData(draggingContent);
 
-			graphics::geometry::BasicRectangle<std::int32_t> imageDimensions;
+			boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>> imageDimensions;
 			std::unique_ptr<graphics::Image> image(createSelectionImage(caret, dragAndDrop_->approachedPosition, true, imageDimensions));
-			d.setImage(*image, graphics::geometry::negate(graphics::geometry::topLeft(imageDimensions)));
+			boost::geometry::model::d2::point_xy<std::uint32_t> hotspot;
+			boost::geometry::assign(hotspot, graphics::geometry::negate(graphics::geometry::topLeft(imageDimensions)));
+			d.setImage(*image, hotspot);
 
 			widgetapi::DropAction possibleActions = widgetapi::DROP_ACTION_COPY;
 			if(!viewer.document().isReadOnly())
@@ -829,9 +837,9 @@ namespace ascension {
 							graphics::Rectangle rect(widgetapi::bounds(*autoScrollOriginMark_, true));
 							widgetapi::move(
 								widgetapi::window(*autoScrollOriginMark_),
-								graphics::Point(
+								graphics::geometry::make<graphics::Point>((
 									graphics::geometry::_x = graphics::geometry::x(p) - graphics::geometry::dx(rect) / 2,
-									graphics::geometry::_y = graphics::geometry::y(p) - graphics::geometry::dy(rect) / 2));
+									graphics::geometry::_y = graphics::geometry::y(p) - graphics::geometry::dy(rect) / 2)));
 							widgetapi::show(*autoScrollOriginMark_);
 							widgetapi::raise(widgetapi::window(*autoScrollOriginMark_));
 							beginLocationTracking(viewer, &targetLocker, false, false);

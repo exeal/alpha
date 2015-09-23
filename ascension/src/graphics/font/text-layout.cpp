@@ -590,9 +590,9 @@ namespace ascension {
 			Point TextLayout::lineLeft(Index line) const {
 				if(!isVertical(*this)) {
 					if(isLeftToRight(*this))
-						return Point(geometry::_x = lineStartEdge(line), geometry::_y = 0.0f);
+						return geometry::make<Point>((geometry::_x = lineStartEdge(line), geometry::_y = 0.0f));
 					else
-						return Point(geometry::_x = -lineStartEdge(line) - measure(line), geometry::_y = 0.0f);
+						return geometry::make<Point>((geometry::_x = -lineStartEdge(line) - measure(line), geometry::_y = 0.0f));
 				} else {
 					const presentation::WritingMode wm(writingMode(*this));
 					Scalar y = -lineStartEdge(line);
@@ -600,17 +600,17 @@ namespace ascension {
 						y -= measure(line);
 					if(resolveTextOrientation(wm) == presentation::SIDEWAYS_LEFT)
 						y = -y;
-					return Point(geometry::_x = 0.0f, geometry::_y = y);
+					return geometry::make<Point>((geometry::_x = 0.0f, geometry::_y = y));
 /*					if(writingMode().inlineFlowDirection == presentation::LEFT_TO_RIGHT) {
 						if(resolveTextOrientation(writingMode()) != presentation::SIDEWAYS_LEFT)
-							return Point(geometry::_x = 0.0f, geometry::_y = lineStartEdge(line));
+							return geometry::make<Point>((geometry::_x = 0.0f, geometry::_y = lineStartEdge(line)));
 						else
-							return Point(geometry::_x = 0.0f, geometry::_y = -lineStartEdge(line));
+							return geometry::make<Point>((geometry::_x = 0.0f, geometry::_y = -lineStartEdge(line)));
 					} else {
 						if(resolveTextOrientation(writingMode()) != presentation::SIDEWAYS_LEFT)
-							return Point(geometry::_x = 0.0f, geometry::_y = -lineStartEdge(line) - measure(line));
+							return geometry::make<Point>((geometry::_x = 0.0f, geometry::_y = -lineStartEdge(line) - measure(line)));
 						else
-							return Point(geometry::_x = 0.0f, geometry::_y = lineStartEdge(line) + measure(line));
+							return geometry::make<Point>((geometry::_x = 0.0f, geometry::_y = lineStartEdge(line) + measure(line)));
 					}
 */				}
 			}

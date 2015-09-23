@@ -517,7 +517,7 @@ namespace ascension {
 					if(origin != boost::none)
 						widgetapi::scheduleRedraw(
 							textViewer(),
-							graphics::Rectangle(
+							graphics::geometry::make<graphics::Rectangle>(
 								boost::get(origin),
 								graphics::Dimension(
 									graphics::geometry::_dx = static_cast<graphics::Scalar>(graphics::geometry::x(scrollOffsetsInPixels)),
@@ -533,7 +533,7 @@ namespace ascension {
 					if(origin != boost::none)
 						widgetapi::scheduleRedraw(
 							textViewer(),
-							graphics::Rectangle(
+							graphics::geometry::make<graphics::Rectangle>(
 								boost::get(origin),
 								graphics::Dimension(
 									graphics::geometry::_dx = graphics::geometry::dx(boundsToScroll),
