@@ -154,15 +154,6 @@ namespace ascension {
 				return std::move(temp);
 			}
 
-			template<typename Geometry, typename Arguments>
-			inline Geometry make(const Arguments& arguments, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
-				return boost::geometry::make<Geometry>(arguments[_x], arguments[_y]);
-			}
-
-			template<typename Geometry, typename Arguments>
-			inline Geometry make(const Arguments& arguments, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
-				return boost::geometry::make<Geometry>(arguments[_left], arguments[_top], arguments[_right], arguments[_bottom]);
-			}
 
 			template<typename Geometry>
 			inline Geometry& negate(Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
@@ -405,7 +396,7 @@ namespace ascension {
 					typename geometry::detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
 				return geometry::make<Geometry>((
 					geometry::_left = native.get_x(), geometry::_top = native.get_y(),
-					geometry::_right = native.get_x() /*+ native.get_width()*/, geometry::_bottom = native.get_y() /*+ native.get_height()*/));
+					geometry::_right = native.get_x() + native.get_width(), geometry::_bottom = native.get_y() + native.get_height()));
 			}
 			template<typename Geometry>
 			inline Geometry fromNative(const Cairo::Rectangle& native,

@@ -733,7 +733,7 @@ namespace ascension {
 			 * @see #getImageData
 			 */
 			RenderingContext2D& putImageData(const ImageData& image, const Point& destination) {
-				return putImageData(image, destination, Rectangle(
+				return putImageData(image, destination, geometry::make<Rectangle>(
 					boost::geometry::make_zero<Point>(),
 					Dimension(
 						geometry::_dx = static_cast<Scalar>(image.width()),

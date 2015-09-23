@@ -46,7 +46,7 @@ namespace ascension {
 				/// The alignment-point of the @c #image in pixels, which matches the alignment-point (a point on the
 				/// start-edge of the glyph on the the baseline of the line (not the glyph)) of the character addressed
 				/// by the caret.
-				graphics::geometry::BasicPoint<std::uint32_t> alignmentPoint;
+				boost::geometry::model::d2::point_xy<std::uint32_t> alignmentPoint;
 			};
 			/// Destructor.
 			virtual ~CaretShaper() BOOST_NOEXCEPT {}

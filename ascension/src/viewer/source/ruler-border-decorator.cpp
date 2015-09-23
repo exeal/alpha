@@ -44,7 +44,7 @@ namespace ascension {
 							xrange.advance_end(-borderEnd_.actualWidth());
 							break;
 					}
-					return graphics::Rectangle(std::make_pair(xrange, yrange));
+					return graphics::geometry::make<graphics::Rectangle>(std::make_pair(xrange, yrange));
 				}
 				return boost::geometry::make_zero<graphics::Rectangle>();
 			}

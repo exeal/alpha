@@ -229,7 +229,6 @@ namespace ascension {
 		}
 
 		void TextViewer::doShowContextMenu(void* nativeEvent) {
-			namespace geom = graphics::geometry;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			const Gdk::Event abstractEvent(Glib::wrap(static_cast<GdkEvent*>(nativeEvent)));
 			bool byKeyboard;
@@ -247,8 +246,8 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			const MSG& message = *static_cast<const MSG*>(nativeEvent);
-			const auto globalLocation(win32::makeMouseLocation<geom::BasicPoint<WORD>>(message.lParam));
-			const bool byKeyboard = geom::x(globalLocation) == 0xffffu && geom::y(globalLocation) == 0xffffu;
+			const auto globalLocation(win32::makeMouseLocation<boost::geometry::model::d2::point_xy<WORD>>(message.lParam));
+			const bool byKeyboard = graphics::geometry::x(globalLocation) == 0xffffu && graphics::geometry::y(globalLocation) == 0xffffu;
 #endif
 
 			if(!allowsMouseInput() && !byKeyboard)	// however, may be invoked by other than the mouse...
@@ -269,7 +268,7 @@ namespace ascension {
 				graphics::geometry::y(location) +=
 					widgetapi::createRenderingContext(*this)->fontMetrics(textArea().textRenderer().defaultFont())->cellHeight() + 1;
 				if(!boost::geometry::within(location, textAreaContentRectangle()))
-					location = graphics::Point(geom::_x = 1.0f, geom::_y = 1.0f);
+					location = graphics::geometry::make<graphics::Point>((graphics::geometry::_x = 1.0f, graphics::geometry::_y = 1.0f));
 			} else {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				double x, y;
@@ -278,14 +277,16 @@ namespace ascension {
 				Gdk::ModifierType state;
 				if(!abstractEvent.get_state(state))
 					return;
-				location = graphics::Point(geom::_x = static_cast<graphics::Scalar>(x), geom::_y = static_cast<graphics::Scalar>(y));
+				location = graphics::geometry::make<graphics::Point>((
+					graphics::geometry::_x = static_cast<graphics::Scalar>(x), graphics::geometry::_y = static_cast<graphics::Scalar>(y)));
 				static const Gdk::ModifierType NATIVE_BUTTON_MASK = Gdk::BUTTON1_MASK | Gdk::BUTTON2_MASK | Gdk::BUTTON3_MASK | Gdk::BUTTON4_MASK | Gdk::BUTTON5_MASK;
 				buttons = !byKeyboard ? (state & NATIVE_BUTTON_MASK) : widgetapi::event::LocatedUserInput::NO_BUTTON;
 				modifiers = state & ~NATIVE_BUTTON_MASK;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				location = graphics::Point(geom::_x = geom::x(globalLocation), geom::_y = geom::y(globalLocation));
+				location = graphics::geometry::make<graphics::Point>((
+					graphics::geometry::_x = graphics::geometry::x(globalLocation), graphics::geometry::_y = graphics::geometry::y(globalLocation)));
 				widgetapi::mapFromGlobal(*this, location);
 				buttons = widgetapi::event::LocatedUserInput::NO_BUTTON;
 				modifiers = win32::makeModifiers();

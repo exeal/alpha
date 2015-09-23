@@ -116,7 +116,7 @@ namespace ascension {
 				return context->get_selected_action();
 			}
 
-			void DragContext::setImage(const graphics::Image& image, const graphics::geometry::BasicPoint<uint32_t>& hotspot) {
+			void DragContext::setImage(const graphics::Image& image, const boost::geometry::model::d2::point_xy<uint32_t>& hotspot) {
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 				Glib::RefPtr<Gdk::Pixbuf> icon(Gdk::Pixbuf::create(image.asNativeObject(), 0, 0, image.width(), image.height()));
 #else

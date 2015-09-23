@@ -267,9 +267,13 @@ namespace ascension {
 		bool TextViewer::on_draw(const Cairo::RefPtr<Cairo::Context>& context) {
 			double x1, y1, x2, y2;
 			context->get_clip_extents(x1, y1, x2, y2);
-			const graphics::Rectangle boundsToPaint(std::make_pair(
-				graphics::Point(graphics::geometry::_x = static_cast<graphics::Scalar>(x1), graphics::geometry::_y = static_cast<graphics::Scalar>(y1)),
-				graphics::Point(graphics::geometry::_x = static_cast<graphics::Scalar>(x2), graphics::geometry::_y = static_cast<graphics::Scalar>(y2))));
+			const auto boundsToPaint(
+				graphics::geometry::make<graphics::Rectangle>(
+					std::make_pair(
+						graphics::geometry::make<graphics::Point>((
+							graphics::geometry::_x = static_cast<graphics::Scalar>(x1), graphics::geometry::_y = static_cast<graphics::Scalar>(y1))),
+						graphics::geometry::make<graphics::Point>((
+							graphics::geometry::_x = static_cast<graphics::Scalar>(x2), graphics::geometry::_y = static_cast<graphics::Scalar>(y2))))));
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 			graphics::PaintContext pc(graphics::RenderingContext2D(context), boundsToPaint);
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)

@@ -226,7 +226,7 @@ namespace ascension {
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;
 			struct Shape {
 				std::unique_ptr<graphics::Image> image;
-				graphics::geometry::BasicPoint<std::uint16_t> alignmentPoint;
+				boost::geometry::model::d2::point_xy<std::uint16_t> alignmentPoint;
 				Shape() BOOST_NOEXCEPT;
 			} shapeCache_;
 			struct Context {

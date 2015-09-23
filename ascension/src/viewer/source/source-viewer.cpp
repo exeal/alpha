@@ -102,7 +102,7 @@ namespace ascension {
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
 
-				return graphics::Rectangle(std::make_pair(xrange, yrange));
+				return graphics::geometry::make<graphics::Rectangle>(std::make_pair(xrange, yrange));
 			}
 
 			/// @see TextViewer#paint

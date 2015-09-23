@@ -25,7 +25,7 @@ namespace ascension {
 			}
 
 			Cursor::Cursor(const graphics::Image& shape,
-					const boost::optional<graphics::geometry::BasicPoint<Cursor::Coordinate>>& hotspot /* = boost::none */) {
+					const boost::optional<boost::geometry::model::d2::point_xy<Cursor::Coordinate>>& hotspot /* = boost::none */) {
 				Cairo::RefPtr<Cairo::Surface> surface;
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 				surface = shape.asNativeObject();
@@ -66,7 +66,7 @@ namespace ascension {
 			std::unique_ptr<Cursor> Cursor::createMonochrome(
 					const graphics::geometry::BasicDimension<Cursor::Coordinate>& size,
 					const std::uint8_t* bitmap, const std::uint8_t* mask,
-					const boost::optional<graphics::geometry::BasicPoint<Cursor::Coordinate>>& hotspot /* = boost::none */) {
+					const boost::optional<boost::geometry::model::d2::point_xy<Cursor::Coordinate>>& hotspot /* = boost::none */) {
 				if(bitmap == nullptr)
 					throw NullPointerException("bitmap");
 				else if(mask == nullptr)
