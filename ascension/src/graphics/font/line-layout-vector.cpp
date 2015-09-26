@@ -102,7 +102,7 @@ namespace ascension {
 			 * @see #operator[], #at(Index)
 			 */
 			const TextLayout& LineLayoutVector::at(Index line, const UseCalculatedLayoutTag&) {
-				if(line > document().numberOfLines())
+				if(line >= document().numberOfLines())
 					throw IndexOutOfBoundsException("line");
 				return (*this)[line];
 			}
