@@ -190,7 +190,7 @@ namespace ascension {
 				}
 				result.set_size(static_cast<int>(object.pointSize() * PANGO_SCALE));
 
-				return std::move(result);
+				return result;
 			}
 		}
 #endif	// ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
