@@ -27,6 +27,7 @@
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
 
+
 namespace ascension {
 	namespace viewer {
 		/// Default constructor.
@@ -497,8 +498,19 @@ namespace ascension {
 			else {
 				// scroll image by BLIT
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Cairo::RefPtr<Cairo::Region> boundsToMove(
-					Cairo::Region::create(graphics::toNative<Cairo::RectangleInt>(boundsToScroll)));
+				{
+#if 0
+					// TODO: The destructor of Cairo.RefPtr crashes with MSVC heap manager :(
+					Cairo::RefPtr<Cairo::Region> regionToScroll(
+						Cairo::Region::create(graphics::toNative<Cairo::RectangleInt>(boundsToScroll)));
+					textViewer().get_window()->move_region(regionToScroll,
+						graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels));
+#else
+					Cairo::Region regionToScroll(::cairo_region_create(), false);
+					::gdk_window_move_region(textViewer().get_window()->gobj(), regionToScroll.cobj(),
+						graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels));
+#endif
+				}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				::ScrollWindowEx(handle().get(),
