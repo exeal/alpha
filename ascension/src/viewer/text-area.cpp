@@ -209,6 +209,7 @@ namespace ascension {
 				mouseInputStrategy_->install(*this);
 			} else
 				setMouseInputStrategy(std::unique_ptr<TextAreaMouseInputStrategy>());
+			relocated();
 		}
 
 		/// @see Caret#MatchBracketsChangedSignal
@@ -486,19 +487,20 @@ namespace ascension {
 					inlineProgressionOffsetInViewerGeometry(*viewport, positionsBeforeScroll.ipd())
 						- inlineProgressionOffsetInViewerGeometry(*viewport, viewport->scrollPositions().ipd()))
 				: std::numeric_limits<std::int32_t>::max();
-			// 1-3. calculate physical offsets
-			const auto scrollOffsetsInPixels(presentation::mapFlowRelativeToPhysical(
-				textViewer().presentation().computeWritingMode(), abstractScrollOffsetInPixels));
 
-			// 2. scroll the graphics device
-			const graphics::Rectangle& boundsToScroll = viewport->boundsInView();
-			if(std::abs(graphics::geometry::x(scrollOffsetsInPixels)) >= graphics::geometry::dx(boundsToScroll)
-					|| std::abs(graphics::geometry::y(scrollOffsetsInPixels)) >= graphics::geometry::dy(boundsToScroll))
-				widgetapi::scheduleRedraw(textViewer(), boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
-			else {
-				// scroll image by BLIT
+			if(abstractScrollOffsetInPixels.bpd() != 0 || abstractScrollOffsetInPixels.ipd() != 0) {
+				// 1-3. calculate physical offsets
+				const auto scrollOffsetsInPixels(presentation::mapFlowRelativeToPhysical(
+					textViewer().presentation().computeWritingMode(), abstractScrollOffsetInPixels));
+
+				// 2. scroll the graphics device
+				const graphics::Rectangle& boundsToScroll = viewport->boundsInView();
+				if(std::abs(graphics::geometry::x(scrollOffsetsInPixels)) >= graphics::geometry::dx(boundsToScroll)
+						|| std::abs(graphics::geometry::y(scrollOffsetsInPixels)) >= graphics::geometry::dy(boundsToScroll))
+					widgetapi::scheduleRedraw(textViewer(), boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
+				else {
+					// scroll image by BLIT
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				{
 #if 0
 					// TODO: The destructor of Cairo.RefPtr crashes with MSVC heap manager :(
 					Cairo::RefPtr<Cairo::Region> regionToScroll(
@@ -510,52 +512,49 @@ namespace ascension {
 					::gdk_window_move_region(textViewer().get_window()->gobj(), regionToScroll.cobj(),
 						graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels));
 #endif
-				}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				::ScrollWindowEx(handle().get(),
-					graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels),
-					nullptr, &static_cast<RECT>(boundsToScroll), nullptr, nullptr, SW_INVALIDATE);
+					::ScrollWindowEx(handle().get(),
+						graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels),
+						nullptr, &static_cast<RECT>(boundsToScroll), nullptr, nullptr, SW_INVALIDATE);
 #else
-				ASCENSION_CANT_DETECT_PLATFORM();
+					ASCENSION_CANT_DETECT_PLATFORM();
 #endif
-				// invalidate bounds newly entered into the viewport
-				{
-					boost::optional<graphics::Point> origin;
+					// invalidate bounds newly entered into the viewport
+					boost::optional<graphics::Point> originOfBoundsToRedraw;
 					if(graphics::geometry::x(scrollOffsetsInPixels) > 0)
-						origin = graphics::geometry::topLeft(boundsToScroll);
+						originOfBoundsToRedraw = graphics::geometry::topLeft(boundsToScroll);
 					else if(graphics::geometry::x(scrollOffsetsInPixels) < 0)
-						origin = graphics::geometry::topRight(boundsToScroll);
-					if(origin != boost::none)
+						originOfBoundsToRedraw = graphics::geometry::topRight(boundsToScroll);
+					if(originOfBoundsToRedraw != boost::none)
 						widgetapi::scheduleRedraw(
 							textViewer(),
 							graphics::geometry::make<graphics::Rectangle>(
-								boost::get(origin),
+								boost::get(originOfBoundsToRedraw),
 								graphics::Dimension(
 									graphics::geometry::_dx = static_cast<graphics::Scalar>(graphics::geometry::x(scrollOffsetsInPixels)),
 									graphics::geometry::_dy = graphics::geometry::dy(boundsToScroll))),
 							false);
-				}
-				{
-					boost::optional<graphics::Point> origin;
+
+					originOfBoundsToRedraw = boost::none;
 					if(graphics::geometry::y(scrollOffsetsInPixels) > 0)
-						origin = graphics::geometry::topLeft(boundsToScroll);
+						originOfBoundsToRedraw = graphics::geometry::topLeft(boundsToScroll);
 					else if(graphics::geometry::y(scrollOffsetsInPixels) < 0)
-						origin = graphics::geometry::bottomLeft(boundsToScroll);
-					if(origin != boost::none)
+						originOfBoundsToRedraw = graphics::geometry::bottomLeft(boundsToScroll);
+					if(originOfBoundsToRedraw != boost::none)
 						widgetapi::scheduleRedraw(
 							textViewer(),
 							graphics::geometry::make<graphics::Rectangle>(
-								boost::get(origin),
+								boost::get(originOfBoundsToRedraw),
 								graphics::Dimension(
 									graphics::geometry::_dx = graphics::geometry::dx(boundsToScroll),
 									graphics::geometry::_dy = static_cast<graphics::Scalar>(graphics::geometry::y(scrollOffsetsInPixels)))),
 							false);
 				}
-			}
 
-			// 3. repaint
-			widgetapi::redrawScheduledRegion(textViewer());
+				// 3. repaint
+				widgetapi::redrawScheduledRegion(textViewer());
+			}
 		}
 
 		void TextArea::viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) {
