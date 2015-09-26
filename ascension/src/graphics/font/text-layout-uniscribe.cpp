@@ -686,7 +686,7 @@ namespace ascension {
 					// attributes
 					HRESULT logicalAttributes(SCRIPT_LOGATTR attributes[]) const;
 					// geometry
-					std::vector<graphics::Rectangle>&& charactersBounds(const boost::integer_range<Index>& characterRange) const;
+					void charactersBounds(const boost::integer_range<Index>& characterRange, std::vector<graphics::Rectangle>& result) const;
 					HRESULT logicalWidths(int widths[]) const;
 //					int totalAdvance() const BOOST_NOEXCEPT {return boost::accumulate(advances(), 0);}
 					// layout
@@ -968,9 +968,11 @@ namespace ascension {
 					return static_cast<std::uint8_t>(analysis_.s.uBidiLevel);
 				}
 
-				std::vector<graphics::Rectangle>&& GlyphVectorImpl::charactersBounds(const boost::integer_range<Index>& characterRange) const {
-					if(characterRange.empty())
-						return std::vector<graphics::Rectangle>();
+				void GlyphVectorImpl::charactersBounds(const boost::integer_range<Index>& characterRange, std::vector<graphics::Rectangle>& result) const {
+					if(characterRange.empty()) {
+						result.clear();
+						return;
+					}
 					// 'characterRange' are offsets from the beginning of this vector
 
 					// measure glyph black box bounds
@@ -1012,7 +1014,8 @@ namespace ascension {
 					context.restore();
 					if(lastError != ERROR_SUCCESS)
 						throw makePlatformError(lastError);
-					return std::move(bounds);
+					using std::swap;
+					return swap(bounds, result);
 				}
 
 				/// @see TextRun#characterRange
@@ -2645,7 +2648,8 @@ namespace ascension {
 						if(intersection != boost::none) {
 							const std::ptrdiff_t beginningOfRun = (*run)->characterRange().begin() - textString_.data();
 							const boost::integer_range<Index> offsetsInRun = boost::irange(*intersection->begin() - beginningOfRun, *intersection->end() - beginningOfRun);
-							std::vector<graphics::Rectangle> runBlackBoxBounds(static_cast<const TextRunImpl&>(**run).charactersBounds(offsetsInRun));
+							std::vector<graphics::Rectangle> runBlackBoxBounds;
+							static_cast<const TextRunImpl&>(**run).charactersBounds(offsetsInRun, runBlackBoxBounds);
 							AffineTransform typographicalToPhysicalMapping(geometry::makeTranslationTransform(
 								geometry::_tx = geometry::x(runTypographicOrigin), geometry::_ty = geometry::y(runTypographicOrigin)));
 							if(isVertical(wm.blockFlowDirection)) {

@@ -364,7 +364,7 @@ namespace ascension {
 				native.eM22 = static_cast<FLOAT>(geometry::scaleY(tx));
 				native.eDx = static_cast<FLOAT>(geometry::translateX(tx));
 				native.eDy = static_cast<FLOAT>(geometry::translateY(tx));
-				return std::move(native);
+				return native;
 			}
 #endif
 		}

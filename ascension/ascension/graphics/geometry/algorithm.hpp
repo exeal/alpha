@@ -151,7 +151,7 @@ namespace ascension {
 				boost::geometry::assign_values(temp,
 					std::min(*xrange1.begin(), *xrange2.begin()), std::min(*yrange1.begin(), *yrange2.begin()),
 					std::max(*xrange1.end(), *xrange2.end()), std::max(*yrange1.end(), *yrange2.end()));
-				return std::move(temp);
+				return temp;
 			}
 
 
@@ -433,7 +433,7 @@ namespace ascension {
 				native.y = geometry::top(g);
 				native.width = geometry::dx(g);
 				native.height = geometry::dy(g);
-				return std::move(native);
+				return native;
 			}
 			template<typename Geometry>
 			inline Cairo::RectangleInt toNative(const Geometry& g, const Cairo::RectangleInt* = nullptr,
@@ -443,7 +443,7 @@ namespace ascension {
 				native.y = static_cast<int>(geometry::top(g));
 				native.width = static_cast<int>(geometry::dx(g));
 				native.height = static_cast<int>(geometry::dy(g));
-				return std::move(native);
+				return native;
 			}
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
@@ -504,7 +504,7 @@ namespace ascension {
 				COORD native;
 				native.X = static_cast<SHORT>(geometry::x(g));
 				native.Y = static_cast<SHORT>(geometry::y(g));
-				return std::move(native);
+				return native;
 			}
 			template<typename Geometry>
 			inline POINT toNative(const Geometry& g, const POINT* = nullptr,
@@ -512,7 +512,7 @@ namespace ascension {
 				POINT native;
 				native.x = static_cast<LONG>(geometry::x(g));
 				native.y = static_cast<LONG>(geometry::y(g));
-				return std::move(native);
+				return native;
 			}
 			template<typename Geometry>
 			inline POINTL toNative(const Geometry& g, const POINTL* = nullptr,
@@ -520,7 +520,7 @@ namespace ascension {
 				POINTL native;
 				native.x = static_cast<LONG>(geometry::x(g));
 				native.y = static_cast<LONG>(geometry::y(g));
-				return std::move(native);
+				return native;
 			}
 			template<typename Geometry>
 			inline POINTS toNative(const Geometry& g, const POINTS* = nullptr,
@@ -528,7 +528,7 @@ namespace ascension {
 				POINTS native;
 				native.x = static_cast<SHORT>(geometry::x(g));
 				native.y = static_cast<SHORT>(geometry::y(g));
-				return std::move(native);
+				return native;
 			}
 
 			template<typename Geometry>
@@ -537,7 +537,7 @@ namespace ascension {
 				SIZE native;
 				native.cx = static_cast<LONG>(geometry::dx(g));
 				native.cy = static_cast<LONG>(geometry::dy(g));
-				return std::move(native);
+				return native;
 			}
 
 			template<typename Geometry>
@@ -548,7 +548,7 @@ namespace ascension {
 				native.top = static_cast<LONG>(geometry::top(g));
 				native.right = static_cast<LONG>(geometry::right(g));
 				native.bottom = static_cast<LONG>(geometry::bottom(g));
-				return std::move(native);
+				return native;
 			}
 			template<typename Geometry>
 			inline RECTL toNative(const Geometry& g, const RECTL* = nullptr,
@@ -558,7 +558,7 @@ namespace ascension {
 				native.top = static_cast<LONG>(geometry::top(g));
 				native.right = static_cast<LONG>(geometry::right(g));
 				native.bottom = static_cast<LONG>(geometry::bottom(g));
-				return std::move(native);
+				return native;
 			}
 			template<typename Geometry>
 			inline SMALL_RECT toNative(const Geometry& g, const SMALL_RECT* = nullptr,
@@ -568,7 +568,7 @@ namespace ascension {
 				native.Top = static_cast<SHORT>(geometry::top(g));
 				native.Right = static_cast<SHORT>(geometry::right(g));
 				native.Bottom = static_cast<SHORT>(geometry::bottom(g));
-				return std::move(native);
+				return native;
 			}
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)

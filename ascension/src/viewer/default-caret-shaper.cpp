@@ -124,7 +124,7 @@ namespace ascension {
 				static_cast<graphics::geometry::BasicDimension<std::uint32_t>>(graphics::geometry::size(bounds)),
 				boost::get_optional_value_or(color, graphics::Color::OPAQUE_BLACK));
 			boost::geometry::assign(shape.alignmentPoint, graphics::geometry::negate(graphics::geometry::topLeft(bounds)));
-			return std::move(shape);
+			return shape;
 		}
 
 		/// @see CaretShaper#install
