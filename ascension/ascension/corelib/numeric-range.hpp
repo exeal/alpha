@@ -56,7 +56,8 @@ namespace ascension {
 
 	/// Return type of @a nrange function template.
 	template<typename Value>
-	class NumericRange : public boost::iterator_range<detail::NumericIterator<Value>>, private boost::equality_comparable<NumericRange<Value>> {
+	class NumericRange : public boost::iterator_range<detail::NumericIterator<Value>>,
+		private boost::equality_comparable<NumericRange<Value>>, private boost::additive<NumericRange<Value>, Value> {
 		typedef detail::NumericIterator<Value> Iterator;
 		typedef boost::iterator_range<Iterator> Super;
 
@@ -70,6 +71,14 @@ namespace ascension {
 			Super(Iterator(*boost::const_begin(otherRange)), Iterator(*boost::const_end(otherRange))) {}
 		bool operator==(const NumericRange& other) const {
 			return boost::equal(*this, other);
+		}
+		NumericRange& operator+=(typename boost::range_value<NumericRange>::type other) {
+			advance_begin(other).advance_end(other);
+			return *this;
+		}
+		NumericRange& operator-=(typename boost::range_value<NumericRange>::type other) {
+			advance_begin(-other).advance_end(-other);
+			return *this;
 		}
 		size_type size() const {
 			return *boost::const_end(*this) - *boost::const_begin(*this);
