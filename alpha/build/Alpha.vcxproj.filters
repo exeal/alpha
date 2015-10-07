@@ -551,6 +551,9 @@
     <ClCompile Include="..\..\ascension\src\log.cpp">
       <Filter>ascension\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\baseline-iterator.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1227,6 +1230,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\single-styled-text-run-iterator.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\baseline-iterator.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

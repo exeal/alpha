@@ -201,6 +201,7 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\identifier-syntax.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\normalizer.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\actual-text-styles.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\font\baseline-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\default-special-character-renderer.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -402,6 +403,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp" />
     <ClInclude Include="..\..\ascension\ascension\direction.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\actual-text-styles.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\baseline-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\detail\inline-progression-dimension-range-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-collection.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-description.hpp" />
