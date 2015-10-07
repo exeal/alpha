@@ -38,6 +38,14 @@ namespace ascension {
 					boost::fusion::at_key<presentation::styles::TextOrientation>(layout.style()));
 			}
 
+			namespace detail {
+				bool isNegativeVertical(const TextLayout& layout) {
+					return
+						presentation::isVertical(boost::fusion::at_key<presentation::styles::WritingMode>(layout.parentStyle()))
+							&& presentation::detail::isNegativeVertical(writingMode(layout));
+				}
+			}
+
 			/**
 			 * Constructor.
 			 * @param textString The text string to display
