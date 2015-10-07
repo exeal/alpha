@@ -296,7 +296,7 @@ namespace ascension {
 			 */
 			presentation::FlowRelativeFourSides<Scalar> TextLayout::bounds(const boost::integer_range<Index>& characterRange) const {
 				const auto orderedCharacterRange(characterRange | adaptors::ordered());
-				if(*orderedCharacterRange.end() > numberOfCharacters())
+				if(*boost::const_end(orderedCharacterRange) > numberOfCharacters())
 					throw IndexOutOfBoundsException("characterRange");
 
 				Scalar before, after, start, end;	// results
@@ -761,47 +761,43 @@ namespace ascension {
 			 * @throw IndexOutOfBoundsException
 			 * @see #logicalRangesForVisualSelection, #visualHighlightShape
 			 */
-			void TextLayout::logicalHighlightShape(const boost::integer_range<Index>& range,
+			void TextLayout::logicalHighlightShape(const boost::integer_range<Index>& range, bool includeHalfLeadings,
 					const boost::optional<graphics::Rectangle>& bounds, boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& shape) const {
 				const presentation::WritingMode wm(writingMode(*this));
 				const bool horizontal = isHorizontal(wm.blockFlowDirection);
 				boost::optional<NumericRange<Scalar>> linearBounds;
-				if(bounds)
+				if(bounds != boost::none)
 					linearBounds = horizontal ? geometry::range<0>(*bounds) : geometry::range<1>(*bounds);
 				std::remove_reference<decltype(shape)>::type result;
 
-				const boost::integer_range<Index> orderedRange(range | adaptors::ordered());
-				const boost::integer_range<Index> lines(boost::irange(lineAt(*boost::const_begin(orderedRange)), lineAt(*boost::const_end(orderedRange))));
+				const auto orderedRange(range | adaptors::ordered());
+				const auto lines(boost::irange(lineAt(*boost::const_begin(orderedRange)), lineAt(*boost::const_end(orderedRange))));
 				const bool ltr = wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT;
-				for(LineMetricsIterator line(*this, *boost::const_begin(lines)); line.line() != *boost::const_end(lines); ++line) {
-					const Point baseline(line.baselineOffsetInPhysicalCoordinates());
+				for(LineMetricsIterator line(lineMetrics(*boost::const_begin(lines))); line.line() != *boost::const_end(lines); ++line) {
 					Scalar lineOver, lineUnder;
-					if(horizontal) {
-						lineOver = geometry::y(baseline) - line.ascent();
-						lineUnder = geometry::y(baseline) + line.descent() + line.leading();
-					} else {
-						const bool sidewaysLeft = resolveTextOrientation(wm) == presentation::SIDEWAYS_LEFT;
-						lineOver = geometry::x(baseline) + (!sidewaysLeft ? line.ascent() : -line.ascent());
-						lineUnder = geometry::x(baseline) - (!sidewaysLeft ? (line.descent() + line.leading()) : -(line.descent() + line.leading()));
+					{
+						const auto e(includeHalfLeadings ? line.extentWithHalfLeadings() : line.extent());
+						lineOver = *boost::const_begin(e);
+						lineUnder = *boost::const_end(e);
 					}
 
 					// skip the line if out of bounds
-					if(bounds) {
+					if(bounds != boost::none) {
 						if(horizontal) {
-							if(std::max(lineOver, lineUnder) <= geometry::top(*bounds))
+							if(std::max(lineOver, lineUnder) <= geometry::top(boost::get(bounds)))
 								continue;
-							else if(std::min(lineOver, lineUnder) >= geometry::bottom(*bounds))
+							else if(std::min(lineOver, lineUnder) >= geometry::bottom(boost::get(bounds)))
 								break;
 						} else {
 							if(wm.blockFlowDirection == presentation::VERTICAL_RL) {
-								if(std::min(lineOver, lineUnder) >= geometry::right(*bounds))
+								if(std::min(lineOver, lineUnder) >= geometry::right(boost::get(bounds)))
 									continue;
-								else if(std::max(lineOver, lineUnder) <= geometry::left(*bounds))
+								else if(std::max(lineOver, lineUnder) <= geometry::left(boost::get(bounds)))
 									break;
 							} else {
-								if(std::max(lineOver, lineUnder) <= geometry::left(*bounds))
+								if(std::max(lineOver, lineUnder) <= geometry::left(boost::get(bounds)))
 									continue;
-								else if(std::min(lineOver, lineUnder) >= geometry::right(*bounds))
+								else if(std::min(lineOver, lineUnder) >= geometry::right(boost::get(bounds)))
 									break;
 							}
 						}
@@ -810,10 +806,10 @@ namespace ascension {
 					Scalar x = static_cast<Scalar>(boost::geometry::distance(lineLeft(line.line()), boost::geometry::make_zero<Point>()));	// line-relative
 					BOOST_FOREACH(const std::unique_ptr<const TextRun>& run, runsForLine(line.line())) {
 						// 'x' is line-left edge of the run, here
-						if(linearBounds != boost::none && x >= *linearBounds->end())
+						if(linearBounds != boost::none && x >= *boost::const_end(boost::get(linearBounds)))
 							break;
 						const Scalar runAllocationMeasure = allocationMeasure(*run);
-						if(linearBounds == boost::none || x + runAllocationMeasure > *linearBounds->begin()) {
+						if(linearBounds == boost::none || x + runAllocationMeasure > *boost::const_begin(boost::get(linearBounds))) {
 							auto selectionInRun(intersection(
 								boost::irange<Index>(run->characterRange().begin() - textString_.data(), run->characterRange().end() - textString_.data()), orderedRange));
 							if(selectionInRun != boost::none) {
@@ -835,8 +831,8 @@ namespace ascension {
 												_over = lineOver, _under = lineUnder,
 												_lineLeft = std::min(leading, trailing), _lineRight = std::max(leading, trailing)))));
 
-								if(bounds)
-									boost::geometry::intersection(rectangle, *bounds, rectangle);	// clip by 'bounds'
+								if(bounds != boost::none)
+									boost::geometry::intersection(rectangle, boost::get(bounds), rectangle);	// clip by 'bounds'
 								boost::geometry::model::polygon<Point> oneShape;
 								boost::geometry::convert(rectangle, oneShape);
 								result.push_back(oneShape);
@@ -1149,12 +1145,14 @@ namespace ascension {
 			 * @param range The visual selection
 			 * @param bounds The bounding rectangle to which to extend the selection, in user units. If this is
 			 *               @c boost#none, the natural bounds is used
+			 * @param includeHalfLeadings Set @c true to include the 'half-leading's of the first and the last lines
 			 * @param[out] shape An area enclosing the selection, in user units
 			 * @throw IndexOutOfBoundsException
 			 * @see #logicalHighlightShape, #logicalRangesForVisualSelection
 			 */
 			void TextLayout::visualHighlightShape(const boost::integer_range<TextHit<>>& range,
-					const boost::optional<graphics::Rectangle>& bounds, boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& shape) const {
+					const boost::optional<graphics::Rectangle>& bounds, bool includeHalfLeadings,
+					boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& shape) const {
 				// TODO: Not implemented.
 				shape = boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>();
 			}

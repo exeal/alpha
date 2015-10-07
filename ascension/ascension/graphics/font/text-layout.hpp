@@ -186,17 +186,21 @@ namespace ascension {
 
 				/// @name Highlight Shapes
 				/// @{
-				void logicalHighlightShape(const boost::integer_range<Index>& range,
+				void logicalHighlightShape(const boost::integer_range<Index>& range, bool includeHalfLeadings,
 					const boost::optional<Rectangle>& bounds, boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& shape) const;
-				void logicalRangesForVisualSelection(const boost::integer_range<TextHit<>>& visualSelection, std::vector<boost::integer_range<Index>>& ranges) const;
-				void visualHighlightShape(const boost::integer_range<TextHit<>>& range,
-					const boost::optional<Rectangle>& bounds, boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& shape) const;
+				void logicalRangesForVisualSelection(
+					const boost::integer_range<TextHit<>>& visualSelection, std::vector<boost::integer_range<Index>>& ranges) const;
+				void visualHighlightShape(const boost::integer_range<TextHit<>>& range, const boost::optional<Rectangle>& bounds,
+					bool includeHalfLeadings, boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& shape) const;
 				/// @}
 
 				/// @name Hit Test
 				/// @{
-				TextHit<> hitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point, bool* outOfBounds = nullptr) const;
-				TextHit<> hitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point, const presentation::FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds = nullptr) const;
+				TextHit<> hitTestCharacter(
+					const presentation::FlowRelativeTwoAxes<Scalar>& point, bool* outOfBounds = nullptr) const;
+				TextHit<> hitTestCharacter(
+					const presentation::FlowRelativeTwoAxes<Scalar>& point,
+					const presentation::FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds = nullptr) const;
 				presentation::FlowRelativeTwoAxes<Scalar> hitToPoint(const TextHit<>& hit) const;
 				/// @}
 
