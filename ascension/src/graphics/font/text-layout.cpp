@@ -303,14 +303,14 @@ namespace ascension {
 
 				if(isEmpty()) {	// empty line
 					start = end = 0;
-					const LineMetrics& lm(lineMetrics(0));
-					before = -lm.ascent;
-					after = lm.descent + lm.leading;
+					const auto lm(lineMetrics(0));
+					before = -lm.ascent();
+					end = +lm.descent();
 				} else if(orderedCharacterRange.empty()) {	// an empty rectangle for an empty range
-					const LineMetrics& lm(lineMetrics(lineAt(orderedCharacterRange.front())));
+					const auto lm(lineMetrics(lineAt(orderedCharacterRange.front())));
 					const presentation::FlowRelativeTwoAxes<Scalar> leading(hitToPoint(TextHit<>::leading(orderedCharacterRange.front())));
-					before = leading.bpd() - lm.ascent;
-					after = leading.bpd() + lm.descent + lm.leading;
+					before = leading.bpd() - lm.ascent();
+					after = leading.bpd() + lm.descent();
 					start = end = leading.ipd();
 				} else {
 					const Index firstLine = lineAt(*orderedCharacterRange.begin()), lastLine = lineAt(*orderedCharacterRange.end());
@@ -756,6 +756,7 @@ namespace ascension {
 			 * @param range The range of characters to select
 			 * @param bounds The bounding rectangle to which to extend the selection, in user units. If this is
 			 *               @c boost#none, the natural bounds is used
+			 * @param includeHalfLeadings Set @c true to include the 'half-leading's of the first and the last lines
 			 * @param[out] shape An area enclosing the selection, in user units
 			 * @throw IndexOutOfBoundsException
 			 * @see #logicalRangesForVisualSelection, #visualHighlightShape
@@ -1075,7 +1076,7 @@ namespace ascension {
 					const presentation::styles::Length::Context& lengthContext, LineBoxContain lineBoxContain, const Font& nominalFont) {
 				// TODO: this code is temporary. should rewrite later.
 				assert(numberOfLines() > 0);
-				std::unique_ptr<LineMetrics[]> newLineMetrics(new LineMetrics[numberOfLines()]);
+				std::unique_ptr<Adl[]> newLineMetrics(new Adl[numberOfLines()]);
 				// calculate allocation-rectangle of the lines according to line-stacking-strategy
 				const std::unique_ptr<const FontMetrics<Scalar>> nominalFontMetrics(context.fontMetrics(nominalFont.shared_from_this()));
 				const Scalar textAltitude = nominalFontMetrics->ascent();
@@ -1208,11 +1209,11 @@ namespace ascension {
 				Scalar newOffset = 0;
 				if(line() != 0) {
 					const bool negativeVertical = isNegativeVertical();
-					const TextLayout::LineMetrics* current;
-					const TextLayout::LineMetrics* next = &layout_->lineMetrics(0);
+					const TextLayout::Adl* current;
+					const TextLayout::Adl* next = &layout_->lineMetrics_[0];
 					for(Index i = 0; i != line(); ++i) {
 						current = next;
-						next = &layout_->lineMetrics(i + 1);
+						next = &layout_->lineMetrics_[i + 1];
 						newOffset += !negativeVertical ? current->descent : current->ascent;
 						newOffset += current->leading;
 						newOffset += !negativeVertical ? next->ascent : next->descent;

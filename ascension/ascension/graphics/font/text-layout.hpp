@@ -44,6 +44,9 @@ namespace ascension {
 			BOOST_CONSTEXPR bool isLeftToRight(const TextLayout& layout) BOOST_NOEXCEPT;
 			bool isVertical(const TextLayout& layout) BOOST_NOEXCEPT;
 			presentation::WritingMode writingMode(const TextLayout& textLayout) BOOST_NOEXCEPT;
+			namespace detail {
+				bool isNegativeVertical(const TextLayout& layout);
+			}
 			/// @}
 
 			/**
@@ -80,42 +83,38 @@ namespace ascension {
 
 			class TextLayout : private boost::noncopyable {
 			public:
-				/// 
-				struct LineMetrics {
-					/// Ascent is distance from the baseline to before-edge of the line, in user units.
-					Scalar ascent;
-					/// Descent is distance from the baseline to after-edge of the line, in user units.
-					Scalar descent;
-					/// Leading is distance from after-edge of the line to before-edge of the next line, in user units.
-					Scalar leading;
-//					Scalar advance;
-				};
-
-				/// 
-				class LineMetricsIterator : public boost::iterators::iterator_facade<LineMetricsIterator, std::nullptr_t, boost::iterators::bidirectional_traversal_tag> {
+				/**
+				 * Fetches the metrics of the lines in @c TextLayout object.
+				 * @see BaselineIterator, FontMetrics, TextLayout
+				 */
+				class LineMetricsIterator : public boost::iterators::iterator_facade<
+					LineMetricsIterator,	// Derived
+					std::nullptr_t,			// value_type
+					boost::iterators::bidirectional_traversal_tag> {
 				public:
 					LineMetricsIterator() BOOST_NOEXCEPT;
 					LineMetricsIterator(const TextLayout& layout, Index line);
+					Index line() const BOOST_NOEXCEPT;
+
+					/// @name Metrics
+					/// @{
 					Scalar ascent() const;
 					DominantBaseline baseline() const;
 					Scalar baselineOffset() const;
 					Point baselineOffsetInPhysicalCoordinates() const;
 					Scalar descent() const;
 					NumericRange<Scalar> extent() const;
+					NumericRange<Scalar> extentWithHalfLeadings() const;
 					Scalar height() const;
 					Scalar leading() const;
-					Index line() const BOOST_NOEXCEPT;
+					/// @}
+
 				private:
 					bool isDone() const BOOST_NOEXCEPT {
 						return layout_ == nullptr || line() >= layout_->numberOfLines();
 					}
 					bool isNegativeVertical() const {
-						const auto wm(writingMode(*layout_));
-						if(wm.blockFlowDirection == presentation::VERTICAL_RL)
-							return presentation::resolveTextOrientation(wm) == presentation::SIDEWAYS_LEFT;
-						else if(wm.blockFlowDirection == presentation::VERTICAL_LR)
-							return presentation::resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT;
-						return false;
+						return detail::isNegativeVertical(*layout_);
 					}
 					void resetBaselineOffset();
 					// boost.iterator_facade
@@ -168,7 +167,7 @@ namespace ascension {
 
 				/// @name Metrics
 				/// @{
-				const LineMetrics& lineMetrics(Index line) const;
+				LineMetricsIterator lineMetrics(Index line) const;
 				NumericRange<Scalar> extent() const;
 				NumericRange<Scalar> extent(const boost::integer_range<Index>& lines) const;
 				Scalar measure() const BOOST_NOEXCEPT;
@@ -283,10 +282,14 @@ namespace ascension {
 				RunVector runs_;
 				Index numberOfLines_;	// TODO: The following 3 std.unique_ptr<T[]> members can be packed for compaction.
 				std::unique_ptr<RunVector::const_iterator[]> firstRunsInLines_;	// size is numberOfLines_, or null if not wrapped
-				std::unique_ptr<LineMetrics[]> lineMetrics_;	// size is numberOfLines_
+				struct Adl {
+					Scalar ascent, descent, leading;
+				};
+				std::unique_ptr<Adl[]> lineMetrics_;		// size is numberOfLines_
 				std::unique_ptr<Scalar[]> lineMeasures_;	// size is numberOfLines_, or null if not wrapped
 				boost::optional<Scalar> maximumMeasure_;	// cached measure of the longest line
 				friend class LineLayoutVector;
+				friend class LineMetricsIterator;
 //				friend class StyledSegmentIterator;
 			};
 
@@ -345,18 +348,22 @@ namespace ascension {
 			 * @return The line metrics
 			 * @throw IndexOutOfBoundsException @a line &gt;= numberOfLines()
 			 */
-			inline const TextLayout::LineMetrics& TextLayout::lineMetrics(Index line) const {
+			inline TextLayout::LineMetricsIterator TextLayout::lineMetrics(Index line) const {
 				if(line >= numberOfLines())
 					throw IndexOutOfBoundsException("line");
 				assert(lineMetrics_.get() != nullptr);
-				return lineMetrics_[line];
+				return LineMetricsIterator(*this, line);
 			}
 
 			/// Returns the number of characters represented by this @c TextLayout.
-			inline Index TextLayout::numberOfCharacters() const BOOST_NOEXCEPT {return textString_.length();}
+			inline Index TextLayout::numberOfCharacters() const BOOST_NOEXCEPT {
+				return textString_.length();
+			}
 
 			/// Returns the number of the wrapped lines.
-			inline Index TextLayout::numberOfLines() const BOOST_NOEXCEPT {return numberOfLines_;}
+			inline Index TextLayout::numberOfLines() const BOOST_NOEXCEPT {
+				return numberOfLines_;
+			}
 
 			/**
 			 * @internal Returns iterator range addresses the all text runs belong to the specified visual line.
@@ -374,7 +381,8 @@ namespace ascension {
 			}
 
 			/**
-			 * Returns the ascent of the current line.
+			 * Returns the ascent of the current line in user units.
+			 * Ascent is distance from the baseline to 'before-edge' of the line
 			 * @return The ascent in user units
 			 * @see #baselineOffset, #descent, #leading
 			 * @throw NoSuchElementException The iterator is done
@@ -382,7 +390,7 @@ namespace ascension {
 			inline Scalar TextLayout::LineMetricsIterator::ascent() const {
 				if(isDone())
 					throw NoSuchElementException();
-				return layout_->lineMetrics(line_).ascent;
+				return layout_->lineMetrics_[line()].ascent;
 			}
 
 			/**
@@ -398,7 +406,8 @@ namespace ascension {
 			}
 
 			/**
-			 * Returns the descent of the current line.
+			 * Returns the descent of the current line, in user units.
+			 * Descent is distance from the baseline to 'after-edge' of the line
 			 * @return The descent in user units
 			 * @see #ascent, #baselineOffset, #leading
 			 * @throw NoSuchElementException The iterator is done
@@ -406,7 +415,7 @@ namespace ascension {
 			inline Scalar TextLayout::LineMetricsIterator::descent() const {
 				if(isDone())
 					throw NoSuchElementException();
-				return layout_->lineMetrics(line_).descent;
+				return layout_->lineMetrics_[line()].descent;
 			}
 
 			/// @internal Implements relational and subtract operators.
@@ -436,31 +445,44 @@ namespace ascension {
 			/**
 			 * Returns the extent of the current line in block-progression-dimension.
 			 * @return The extent range by the distance from the baseline of the fitst line, in user units
-			 * @see #ascent, #descent, #height, #leading
+			 * @see #ascent, #descent, #extentWithHalfLeadings, #height, #leading, TextLayout#extent
 			 * @throw NoSuchElementException The iterator is done
-			 * @see TextLayout#extent
 			 */
 			inline NumericRange<Scalar> TextLayout::LineMetricsIterator::extent() const {
 				const Scalar bsln = baselineOffset();	// may throw NoSuchElementException
 				return !isNegativeVertical() ?
-					nrange(bsln - ascent(), bsln + descent() + leading())
-			    	: nrange(bsln - descent(), bsln + ascent() + leading());	// TODO: leading is there?
+					nrange(bsln - layout_->lineMetrics_[line()].ascent, bsln + layout_->lineMetrics_[line()].descent)
+					: nrange(bsln - layout_->lineMetrics_[line()].descent, bsln + layout_->lineMetrics_[line()].ascent);
 			}
 
 			/**
-			 * Returns the height of the current line.
+			 * Returns the extent of the current line in block-progression-dimension with leading. The leading is
+			 * processed as 'half-leading's described by CSS 2.1 (http://www.w3.org/TR/CSS21/visudet.html#leading).
+			 * @return The extent range by the distance from the baseline of the fitst line, in user units
+			 * @see #ascent, #descent, #extent, #height, #leading, TextLayout#extentWithHalfLeadings
+			 * @throw NoSuchElementException The iterator is done
+			 */
+			inline NumericRange<Scalar> TextLayout::LineMetricsIterator::extentWithHalfLeadings() const {
+				Scalar lineUnder = *boost::const_end(extent());	// may throw NoSuchElementException
+				lineUnder += layout_->lineMetrics_[line()].leading / 2;
+				return nrange(lineUnder - height(), lineUnder);
+			}
+
+			/**
+			 * Returns the height of the current line. Height is sum of 'ascent', 'descent' and 'leading'.
 			 * @return The height in user units
-			 * @see #extent
+			 * @see #extentWithHalfLeadings
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::height() const {
-//				const NumericRange<Scalar> e(extent() | adaptors::ordered());
-				const NumericRange<Scalar> e(extent());	// may throw NoSuchElementException
-				return *e.end() - *e.begin();
+				if(isDone())
+					throw NoSuchElementException();
+				return layout_->lineMetrics_[line()].ascent + layout_->lineMetrics_[line()].descent + layout_->lineMetrics_[line()].leading;
 			}
 
 			/**
-			 * Returns the leading of the current line.
+			 * Returns the leading of the current line in user units.
+			 * Leading is distance from after-edge of the line to 'before-edge' of the next line.
 			 * @return The leading in user units
 			 * @see #ascent, #baselineOffset, #descent
 			 * @throw NoSuchElementException The iterator is done
@@ -468,7 +490,7 @@ namespace ascension {
 			inline Scalar TextLayout::LineMetricsIterator::leading() const {
 				if(isDone())
 					throw NoSuchElementException();
-				return layout_->lineMetrics(line_).leading;
+				return layout_->lineMetrics_[line()].leading;
 			}
 
 			/// Returns the line number of the current line.
