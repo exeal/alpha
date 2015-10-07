@@ -10,6 +10,7 @@
 
 #include <ascension/corelib/numeric-range-algorithm/clamp.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>	// text.GraphemeBreakIterator
+#include <ascension/graphics/font/baseline-iterator.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
@@ -19,6 +20,7 @@
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
+#include <boost/geometry/algorithms/equals.hpp>
 #include <tuple>
 #define BOOST_THREAD_NO_LIB
 #include <boost/thread/lock_guard.hpp>
@@ -200,46 +202,6 @@ namespace ascension {
 				return lineStartEdge(viewport, line, &viewport.textRenderer().layouts().at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT));	// this may throw IndexOutOfBoundsException
 			}
 
-			namespace {
-				inline bool isNegativeVertical(const TextLayout& layout) {
-					if(presentation::isHorizontal(boost::fusion::at_key<presentation::styles::WritingMode>(layout.parentStyle()))) {
-						const presentation::WritingMode wm(writingMode(layout));
-						if(wm.blockFlowDirection == presentation::VERTICAL_RL)
-							return presentation::resolveTextOrientation(wm) == presentation::SIDEWAYS_LEFT;
-						else if(wm.blockFlowDirection == presentation::VERTICAL_LR)
-							return presentation::resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT;
-					}
-					return false;
-				}
-
-				NumericRange<Scalar> viewportContentExtent(const TextViewport& viewport) BOOST_NOEXCEPT {
-					const presentation::BlockFlowDirection blockFlowDirection = viewport.textRenderer().computedBlockFlowDirection();
-					const PhysicalFourSides<Scalar>& physicalSpaces = viewport.textRenderer().spaceWidths();
-					Scalar spaceBefore, spaceAfter;
-					switch(blockFlowDirection) {
-						case presentation::HORIZONTAL_TB:
-							spaceBefore = physicalSpaces.top();
-							spaceAfter = physicalSpaces.bottom();
-							break;
-						case presentation::VERTICAL_RL:
-							spaceBefore = physicalSpaces.right();
-							spaceAfter = physicalSpaces.left();
-							break;
-						case presentation::VERTICAL_LR:
-							spaceBefore = physicalSpaces.left();
-							spaceAfter = physicalSpaces.right();
-							break;
-						default:
-							ASCENSION_ASSERT_NOT_REACHED();
-					}
-					const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;	// TODO: Not implemented.
-					const Scalar before = spaceBefore + borderBefore + paddingBefore;
-					const Scalar after = (presentation::isHorizontal(blockFlowDirection) ?
-						geometry::dy(viewport.boundsInView()) : geometry::dx(viewport.boundsInView())) - spaceAfter - borderAfter - paddingBefore;
-					return nrange(before, after);
-				}
-			}
-
 			/**
 			 * Converts the point in the viewport into the logical line number and visual subline offset.
 			 * @param p The point in the viewport in user coordinates
@@ -253,55 +215,40 @@ namespace ascension {
 				Scalar bpd;
 				switch(viewport.textRenderer().computedBlockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
-						bpd = geometry::y(p) - *viewportContentExtent(viewport).begin();
+						bpd = geometry::y(p) - *boost::const_begin(viewportContentExtent(viewport));
 						break;
 					case presentation::VERTICAL_RL:
-						bpd = geometry::dx(viewport.boundsInView()) - geometry::x(p) - *viewportContentExtent(viewport).begin();
+						bpd = geometry::dx(viewport.boundsInView()) - geometry::x(p) - *boost::const_begin(viewportContentExtent(viewport));
 						break;
 					case presentation::VERTICAL_LR:
-						bpd = geometry::x(p) - *viewportContentExtent(viewport).begin();
+						bpd = geometry::x(p) - *boost::const_begin(viewportContentExtent(viewport));
 						break;
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
 
 				// locate visual line
-				BaselineIterator baseline(viewport);
-				if(bpd < 0) {	// before before-edge
-					if(snapped != nullptr)
-						*snapped = true;
-					return boost::get(baseline.line());
-				}
+				const Index nlines = viewport.textRenderer().presentation().document().numberOfLines();
+				LineLayoutVector& layouts = const_cast<TextViewport&>(viewport).textRenderer().layouts();
+				BaselineIterator baseline(viewport, false);
 				VisualLine previousLine(boost::get(baseline.line()));
-				++previousLine.line;
-				const TextLayout* layout;
-				bool negativeVertical;
-				for(; ; ++baseline) {
-					if(baseline.line() == boost::none)	// after after-edge
-						break;
-
-					const VisualLine line(boost::get(baseline.line()));
-					if(line.line != previousLine.line) {
-						layout = viewport.textRenderer().layouts().at(line.line);
-						negativeVertical = isNegativeVertical(*layout);
+				bool snap = false;
+				if(bpd >= 0) {	// before 'before-edge' ?
+					for(; ; ++baseline) {
+						const boost::optional<VisualLine> line(baseline.line());
+						if(line == boost::none)	// after 'after-edge' ?
+							break;
+						else if(includes(baseline.extentWithHalfLeadings(), bpd)) {
+							previousLine = boost::get(line);
+							snap = false;
+							break;
+						} else if(line->line == nlines - 1 && line->subline == layouts.at(line->line, LineLayoutVector::USE_CALCULATED_LAYOUT).numberOfLines() - 1)
+							break;
 					}
-					const TextLayout::LineMetrics& lineMetrics = layout->lineMetrics(line.subline);
-					const NumericRange<Scalar> lineExtent(
-						*baseline - (!negativeVertical ? lineMetrics.ascent : lineMetrics.descent),
-						*baseline + (!negativeVertical ? lineMetrics.descent : lineMetrics.ascent) + lineMetrics.leading);
-					if(includes(lineExtent, bpd)) {
-						if(snapped != nullptr)
-							*snapped = false;
-						return line;
-					}
-					previousLine = line;
-
-					if(line.line == viewport.textRenderer().presentation().document().numberOfLines() - 1 && line.subline == layout->numberOfLines() - 1)
-						break;
 				}
 
 				if(snapped != nullptr)
-					*snapped = true;
+					*snapped = snap;
 				return previousLine;
 			}
 
@@ -325,7 +272,7 @@ namespace ascension {
 			 */
 			Point modelToView(const TextViewport& viewport, const TextHit<kernel::Position>& position/*, bool fullSearchBpd*/) {
 				// compute alignment-point of the line
-				const BaselineIterator baseline(viewport, position/*, fullSearchBpd*/);
+				const BaselineIterator baseline(viewport, position, false/*fullSearchBpd*/);
 				Point p(baseline.positionInViewport());
 				if(baseline.line() == boost::none)
 					return p;	// 'position' is outside of the viewport and can't calculate more
@@ -435,6 +382,34 @@ namespace ascension {
 				viewport.scroll(delta);
 			}
 
+			/***/
+			NumericRange<Scalar> viewportContentExtent(const TextViewport& viewport) BOOST_NOEXCEPT {
+				const presentation::BlockFlowDirection blockFlowDirection = viewport.textRenderer().computedBlockFlowDirection();
+				const PhysicalFourSides<Scalar>& physicalSpaces = viewport.textRenderer().spaceWidths();
+				Scalar spaceBefore, spaceAfter;
+				switch(blockFlowDirection) {
+					case presentation::HORIZONTAL_TB:
+						spaceBefore = physicalSpaces.top();
+						spaceAfter = physicalSpaces.bottom();
+						break;
+					case presentation::VERTICAL_RL:
+						spaceBefore = physicalSpaces.right();
+						spaceAfter = physicalSpaces.left();
+						break;
+					case presentation::VERTICAL_LR:
+						spaceBefore = physicalSpaces.left();
+						spaceAfter = physicalSpaces.right();
+						break;
+					default:
+						ASCENSION_ASSERT_NOT_REACHED();
+				}
+				const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;	// TODO: Not implemented.
+				const Scalar before = spaceBefore + borderBefore + paddingBefore;
+				const Scalar after = (presentation::isHorizontal(blockFlowDirection) ?
+					geometry::dy(viewport.boundsInView()) : geometry::dx(viewport.boundsInView())) - spaceAfter - borderAfter - paddingBefore;
+				return nrange(before, after);
+			}
+
 			namespace {
 				inline Scalar mapViewportIpdToLineLayout(const TextViewport& viewport, const TextLayout& line, Scalar ipd) {
 					return ipd - viewport.scrollPositions().ipd() - lineStartEdge(line, viewport.contentMeasure());
@@ -453,7 +428,7 @@ namespace ascension {
 						return boost::none;
 					const TextLayout* const layout = viewport.textRenderer().layouts().at(line.line);
 					assert(layout != nullptr);
-					const BaselineIterator baseline(viewport, line);
+					const BaselineIterator baseline(viewport, line, false);
 					// locate the position in the line
 					const presentation::WritingMode wm(writingMode(*layout));
 					const bool horizontal = presentation::isHorizontal(wm.blockFlowDirection);
@@ -535,309 +510,6 @@ namespace ascension {
 					const Point& pointInView, kernel::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) {
 				return internalViewToModel(viewport, pointInView, true, snapPolicy);
 			}
-
-
-			// BaselineIterator ///////////////////////////////////////////////////////////////////////////////////////
-
-			/**
-			 * Constructor. Iterator will address the first visible visual line in the given viewport.
-			 * @param viewport The text viewport
-			 */
-			BaselineIterator::BaselineIterator(const TextViewport& viewport/*, bool trackOutOfViewport*/)
-					: viewport_(&viewport), tracksOutOfViewport_(false/*trackOutOfViewport*/) {
-				initializeWithFirstVisibleLine();
-			}
-
-			/**
-			 * Constructor.
-			 * @param viewport The text viewport
-			 * @param line The visual line this iterator addresses
-			 */
-			BaselineIterator::BaselineIterator(const TextViewport& viewport, const VisualLine& line/*, bool trackOutOfViewport*/)
-					: viewport_(&viewport), tracksOutOfViewport_(false/*trackOutOfViewport*/) {
-				initializeWithFirstVisibleLine();
-				internalAdvance(&line, boost::none);
-			}
-
-			/**
-			 * Constructor.
-			 * @param viewport The text viewport
-			 * @param position The position gives a visual line
-			 */
-			BaselineIterator::BaselineIterator(const TextViewport& viewport, const TextHit<kernel::Position>& position/*, bool trackOutOfViewport*/)
-					: viewport_(&viewport), tracksOutOfViewport_(false/*trackOutOfViewport*/) {
-				initializeWithFirstVisibleLine();
-				VisualLine line(position.characterIndex().line, 0);
-				if(line.line < this->viewport().firstVisibleLine().line)
-					internalAdvance(&line, boost::none);	// should go beyond before-edge
-				else if(line.line == this->viewport().firstVisibleLine().line) {
-					line.subline = this->viewport().textRenderer().layouts().at(line.line)->lineAt(position.insertionIndex().offsetInLine);
-					internalAdvance(&line, boost::none);
-				} else {
-					internalAdvance(&line, boost::none);
-					if(this->line() != boost::none)
-						std::advance(*this, this->viewport().textRenderer().layouts().at(line.line)->lineAt(position.insertionIndex().offsetInLine));
-				}
-			}
-
-			/// @see boost#iterator_facade#advance
-			void BaselineIterator::advance(BaselineIterator::difference_type n) {
-				return internalAdvance(nullptr, n);
-			}
-
-			/// @see boost#iterator_facade#decrement
-			void BaselineIterator::decrement() {
-				return advance(-1);
-			}
-
-			/// @see boost#iterator_facade#dereference
-			const BaselineIterator::reference BaselineIterator::dereference() const {
-				if(viewport_ == nullptr)
-					throw NoSuchElementException();
-				return distanceFromViewportBeforeEdge_;
-			}
-
-			/// @see boost#iterator_facade#equal
-			bool BaselineIterator::equal(const BaselineIterator& other) const {
-//				if(viewport_ == nullptr)
-//					return other.viewport_ == nullptr
-//						|| (other.line() != boost::none && boost::get(other.line()).line == other.viewport_->textRenderer().presentation().document().numberOfLines());
-//				if(other.viewport_ == nullptr)
-//					return viewport_ == nullptr
-//						|| (line() != boost::none && boost::get(line()).line == viewport_->textRenderer().presentation().document().numberOfLines());
-				if(viewport_ != other.viewport_)
-					throw std::invalid_argument("");
-				return line_ == other.line_;
-			}
-
-			/// @see boost#iterator_facade#increment
-			void BaselineIterator::increment() {
-				return advance(+1);
-			}
-
-			namespace {
-				template<typename Rectangle>
-				inline Point&& calculatePositionInViewport(presentation::BlockFlowDirection blockFlowDirection, const Rectangle& bounds, Scalar distanceFromViewportBeforeEdge) {
-					switch(blockFlowDirection) {
-						case presentation::HORIZONTAL_TB:
-							return geometry::make<Point>((geometry::_x = static_cast<Scalar>(0), geometry::_y = geometry::top(bounds) + distanceFromViewportBeforeEdge));
-							break;
-						case presentation::VERTICAL_RL:
-							return geometry::make<Point>((geometry::_x = geometry::right(bounds) - distanceFromViewportBeforeEdge, geometry::_y = static_cast<Scalar>(0)));
-							break;
-						case presentation::VERTICAL_LR:
-							return geometry::make<Point>((geometry::_x = geometry::left(bounds) + distanceFromViewportBeforeEdge, geometry::_y = static_cast<Scalar>(0)));
-							break;
-						default:
-							ASCENSION_ASSERT_NOT_REACHED();
-					}
-				}
-			}
-
-			/// @internal Moves this iterator to the first visible line in the viewport.
-			void BaselineIterator::initializeWithFirstVisibleLine() {
-				const VisualLine firstVisibleLine(viewport().firstVisibleLine());
-				const TextLayout* const layout = viewport().textRenderer().layouts().at(firstVisibleLine.line);
-				assert(layout != nullptr);
-				const Scalar baseline = layout->lineMetrics(firstVisibleLine.subline).ascent;
-				Point axis;
-				const Rectangle bounds(geometry::make<Rectangle>(boost::geometry::make_zero<Point>(), geometry::size(viewport().boundsInView())));
-				switch(viewport().textRenderer().computedBlockFlowDirection()) {
-					case presentation::HORIZONTAL_TB:
-						axis = geometry::make<Point>((geometry::_x = 0.0f, geometry::_y = geometry::top(bounds) + baseline));
-						break;
-					case presentation::VERTICAL_RL:
-						axis = geometry::make<Point>((geometry::_x = geometry::right(bounds) - baseline, geometry::_y = 0.0f));
-						break;
-					case presentation::VERTICAL_LR:
-						axis = geometry::make<Point>((geometry::_x = geometry::left(bounds) + baseline, geometry::_y = 0.0f));
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-
-				// commit
-				line_ = firstVisibleLine;
-				distanceFromViewportBeforeEdge_ = baseline;
-				positionInViewport_ = axis;
-			}
-
-			/// @internal Implements constructor and @c #advance method.
-			void BaselineIterator::internalAdvance(const VisualLine* to, const boost::optional<difference_type>& delta) {
-				bool forward;
-				if(to != nullptr) {
-					assert(delta == boost::none);
-					if(*to == line())
-						return;
-					forward = *to > line();
-				} else {
-					assert(delta != boost::none);
-					if(delta == 0)
-						return;
-					forward = delta > 0;
-				}
-				if(!tracksOutOfViewport()) {
-					if(forward && **this == std::numeric_limits<Scalar>::max()) {
-//						line_ = VisualLine(destination, 0);
-						return;	// already outside of after-edge of the viewport
-					} else if(!forward && **this == std::numeric_limits<Scalar>::min()) {
-//						line_ = VisualLine(destination, 0);
-						return;	// already outside of before-edge of the viewport
-					}
-				}
-
-				// calculate extent of the viewport (if needed)
-				const TextRenderer& renderer = viewport().textRenderer();
-				const presentation::BlockFlowDirection blockFlowDirection(renderer.computedBlockFlowDirection());
-				const NumericRange<Scalar> viewportExtent(viewportContentExtent(viewport()));
-
-				auto newLine(boost::get(line()));
-				auto newBaseline = **this;
-				difference_type n = 0;
-				const TextLayout* layout = /*tracksOutOfViewport() ? &renderer.layouts()[newLine.line] :*/ renderer.layouts().at(newLine.line);
-				TextLayout::LineMetricsIterator lineMetrics(*layout, newLine.subline);
-				bool negativeVertical = isNegativeVertical(*layout);
-				if(forward) {
-					while((to != nullptr && newLine < *to) || (delta != boost::none && n < delta)) {
-						if(newLine.subline == layout->numberOfLines() - 1 && newLine.line == renderer.presentation().document().numberOfLines() - 1)
-							throw std::overflow_error("");	// TODO: Is this suitable?
-						newBaseline += !negativeVertical ? lineMetrics.descent() : lineMetrics.ascent();
-						newBaseline += lineMetrics.leading();
-						if(!tracksOutOfViewport() && newBaseline >= *viewportExtent.end()) {
-							newBaseline = std::numeric_limits<decltype(newBaseline)>::max();	// over after-edge of the viewport
-							break;
-						}
-
-						// move to forward visual line
-						if(newLine.subline == layout->numberOfLines() - 1) {
-							layout = renderer.layouts().at(++newLine.line);
-							lineMetrics = TextLayout::LineMetricsIterator(*layout, newLine.subline = 0);
-							negativeVertical = isNegativeVertical(*layout);
-						} else {
-							++newLine.subline;
-							++lineMetrics;
-						}
-						++n;
-
-						newBaseline += !negativeVertical ? lineMetrics.ascent() : lineMetrics.descent();
-					}
-				} else {	// backward
-					while((to != nullptr && newLine > *to) || (delta != boost::none && n > delta)) {
-						if(newLine.subline == 0 && newLine.line == 0)
-							throw std::underflow_error("");	// TODO: Is this suitable?
-						newBaseline -= !negativeVertical ? lineMetrics.ascent() : lineMetrics.descent();
-						newBaseline -= lineMetrics.leading();
-						if(!tracksOutOfViewport() && newBaseline < *viewportExtent.begin()) {
-							newBaseline = std::numeric_limits<decltype(newBaseline)>::min();	// over before-edge of the viewport
-							break;
-						}
-
-						// move to backward visual line
-						if(newLine.subline == 0) {
-							layout = renderer.layouts().at(--newLine.line);
-							lineMetrics = TextLayout::LineMetricsIterator(*layout, newLine.subline = layout->numberOfLines() - 1);
-							negativeVertical = isNegativeVertical(*layout);
-						} else {
-							--newLine.subline;
-							--lineMetrics;
-						}
-						--n;
-
-						newBaseline -= !negativeVertical ? lineMetrics.descent() : lineMetrics.ascent();
-					}
-				}
-
-				// commit
-				positionInViewport_ = calculatePositionInViewport(blockFlowDirection, viewport().boundsInView(), newBaseline);
-				std::swap(line_, newLine);
-				std::swap(distanceFromViewportBeforeEdge_, newBaseline);
-			}
-
-			/// @internal Invalidates the iterator.
-			inline void BaselineIterator::invalidate() BOOST_NOEXCEPT {
-				geometry::x(positionInViewport_) = geometry::y(positionInViewport_) = 1;
-			}
-
-			/// @internal Returns @c true if the iterator is valid.
-			inline bool BaselineIterator::isValid() const BOOST_NOEXCEPT {
-				return geometry::x(positionInViewport_) != 0 && geometry::y(positionInViewport_) != 0;
-			}
-#if 0
-			void TextViewer::BaselineIterator::move(Index line) {
-				if(line >= viewer_.document().numberOfLines())
-					throw k::BadPositionException(k::Position(line, 0));
-				Scalar newBaseline;
-				if(!isValid()) {
-					Index firstVisibleLine, firstVisibleSubline;
-					viewer_.firstVisibleLine(&firstVisibleLine, nullptr, &firstVisibleSubline);
-					const PhysicalFourSides<Scalar> spaces(viewer_.spaceWidths());
-					Scalar spaceBefore;
-					switch(utils::writingMode(viewer_).blockFlowDirection) {
-						case WritingModeBase::HORIZONTAL_TB:
-							spaceBefore = spaces.top;
-							break;
-						case WritingModeBase::VERTICAL_RL:
-							spaceBefore = spaces.right;
-							break;
-						case WritingModeBase::VERTICAL_LR:
-							spaceBefore = spaces.left;
-							break;
-						default:
-							ASCENSION_ASSERT_NOT_REACHED();
-					}
-					if(line == firstVisibleLine) {
-						if(firstVisibleSubline == 0)
-							newBaseline = textRenderer().layouts()[line].lineMetrics(0).ascent();
-						else if(!tracksOutOfViewport())
-							newBaseline = numeric_limits<Scalar>::min();
-						else {
-							const TextLayout& layout = textRenderer().layouts()[line];
-							newBaseline = 0;
-							for(Index subline = firstVisibleSubline - 1; ; --subline) {
-								newBaseline -= layout.lineMetrics(subline).descent();
-								if(subline == 0)
-									break;
-								newBaseline -= layout.lineMetrics(subline).ascent();
-							}
-						}
-					} else if(line > firstVisibleLine) {
-						const NativeRectangle clientBounds(viewer_.bounds(false));
-						const Scalar viewportExtent = WritingModeBase::isHorizontal(utils::writingMode(viewer_).blockFlowDirection) ?
-							(geometry::dy(clientBounds) - spaces.top - spaces.bottom) : (geometry::dx(clientBounds) - spaces.left - spaces.right);
-						newBaseline = 0;
-						const TextLayout* layout = &viewer_.textRenderer().layouts()[firstVisibleLine];
-						for(Index ln = firstVisibleLine, subline = firstVisibleLine; ; ) {
-							newBaseline += layout->lineMetrics(subline).ascent();
-							if(ln == line && subline == 0)
-								break;
-							newBaseline += layout->lineMetrics(subline).descent();
-							if(!tracksOutOfViewport() && newBaseline >= viewportExtent) {
-								newBaseline = numeric_limits<Scalar>::max();
-								break;
-							}
-							if(++subline == layout->numberOfLines()) {
-								layout = &viewer_.textRenderer().layouts()[++ln];
-								subline = 0;
-							}
-						}
-					} else if(!tracksOutOfViewport())
-						newBaseline = numeric_limits<Scalar>::min();
-					else {
-						const TextLayout* layout = &viewer_.textRenderer().layouts()[firstVisibleLine];
-						for(Index ln = firstVisibleLine, subline = firstVisibleSubline; ; --subline) {
-							newBaseline -= layout->lineMetrics(subline).descent();
-							if(subline == 0 && ln == line)
-								break;
-							newBaseline -= layout->lineMetrics(subline).ascent();
-							if(subline == 0) {
-								layout = &viewer_.textRenderer().layouts()[--ln];
-								subline = layout->numberOfLines();
-							}
-						}
-					}
-				}
-			}
-#endif
 
 
 			// TextViewport ///////////////////////////////////////////////////////////////////////////////////////////
