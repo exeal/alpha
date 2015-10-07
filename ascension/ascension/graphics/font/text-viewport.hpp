@@ -116,6 +116,13 @@ namespace ascension {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				void updateDefaultLineExtent();
 #endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				void updateScrollPositions(
+					const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>& newScrollPositions,
+					const VisualLine& newFirstVisibleLine,
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+					ScrollOffset newBlockFlowScrollOffsetInFirstVisibleVisualLine,
+#endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
+					bool notifySignal) BOOST_NOEXCEPT;
 				// TextRenderer.DefaultFontChangedSignal
 				void defaultFontChanged(const TextRenderer& textRenderer);
 				// VisualLinesListener

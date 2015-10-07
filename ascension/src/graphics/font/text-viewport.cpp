@@ -526,6 +526,7 @@ namespace ascension {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 					fontRenderContext_(frc),
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
+					boundsInView_(boost::geometry::make_zero<Rectangle>()),
 					scrollPositions_(0, 0), firstVisibleLine_(0, 0), repairingLayouts_(false) {
 				documentAccessibleRegionChangedConnection_ =
 					this->textRenderer().presentation().document().accessibleRegionChangedSignal().connect(
@@ -560,6 +561,9 @@ namespace ascension {
 			 */
 			inline void TextViewport::adjustBpdScrollPositions() BOOST_NOEXCEPT {
 				auto newScrollPositions(scrollPositions());
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				auto newBlockFlowScrollOffsetInFirstVisibleVisualLine(blockFlowScrollOffsetInFirstVisibleVisualLine_);
+#endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 
 				decltype(firstVisibleLine_) newFirstVisibleLine;
 				const Index nlines = textRenderer().presentation().document().numberOfLines();
@@ -574,14 +578,17 @@ namespace ascension {
 				if(newFirstVisibleLine != firstVisibleLine()) {
 					newScrollPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-					boost::get(blockFlowScrollOffsetInFirstVisibleLogicalLine_) = 0;
+					newBlockFlowScrollOffsetInFirstVisibleVisualLine = 0;
 					// TODO: Not implemented.
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				}
 
-				using std::swap;
-				swap(newFirstVisibleLine, firstVisibleLine_);
-				swap(newScrollPositions, scrollPositions_);
+				// commit
+				updateScrollPositions(newScrollPositions, newFirstVisibleLine,
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+					newBlockFlowScrollOffsetInFirstVisibleVisualLine,
+#endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
+					false);
 			}
 
 			/**
@@ -776,12 +783,17 @@ namespace ascension {
 					LineLayoutVector& layouts = textRenderer().layouts();
 					VisualLine line(firstVisibleLine());
 					const TextLayout* layout = &layouts.at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-					Scalar bpd = (line.subline > 0) ? -static_cast<Scalar>(layout->extent(boost::irange(static_cast<Index>(0), line.subline)).size()) : static_cast<Scalar>(0);
+					Scalar bpd = 0;
 
-					for(const Index nlines = layouts.document().numberOfLines(); line.line < nlines && bpd < extent; layout = &layouts.at(++line.line, LineLayoutVector::USE_CALCULATED_LAYOUT)) {
+					// process the partially visible line
+					if(line.subline > 0)
+						bpd -= layout->extent(boost::irange(static_cast<Index>(0), line.subline)).size();
+
+					// repair the following lines
+					for(const Index nlines = layouts.document().numberOfLines(); ++line.line < nlines && bpd < extent; ) {
+						layout = &layouts.at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT);	// repair the line
 						const auto lineExtent(layout->extent());
-//						bpd += lineExtent.size();
-						bpd += *lineExtent.begin() - *lineExtent.end();
+						bpd += lineExtent.size();
 					}
 				}
 			}
@@ -985,15 +997,11 @@ namespace ascension {
 				}
 
 				// commit
-				swap(scrollPositions_, newPositions);
-				swap(firstVisibleLine_, newFirstVisibleLine);
+				updateScrollPositions(newPositions, newFirstVisibleLine,
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				swap(blockFlowScrollOffsetInFirstVisibleVisualLine_, newBlockFlowScrollOffsetInFirstVisibleVisualLine);
+					newBlockFlowScrollOffsetInFirstVisibleVisualLine,
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-
-				// notify
-				if(firstVisibleLine_ != newFirstVisibleLine)
-					fireScrollPositionChanged(newPositions, newFirstVisibleLine);
+					true);
 			}
 
 			/**
@@ -1063,15 +1071,11 @@ namespace ascension {
 					}
 
 					// commit
-					swap(scrollPositions_, newPositions);
-					swap(firstVisibleLine_, newFirstVisibleLine);
+					updateScrollPositions(newPositions, newFirstVisibleLine,
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-					swap(blockFlowScrollOffsetInFirstVisibleVisualLine_, newBlockFlowScrollOffsetInFirstVisibleVisualLine);
+						newBlockFlowScrollOffsetInFirstVisibleVisualLine,
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-
-					// notify
-					if(newFirstVisibleLine != firstVisibleLine_)
-						fireScrollPositionChanged(newPositions, newFirstVisibleLine);
+						true);
 				}
 			}
 
@@ -1090,8 +1094,10 @@ namespace ascension {
 
 				// inline dimension
 				if(positions.ipd() != boost::none) {
-					const auto range(scrollableRange<presentation::ReadingDirection>(*this));
-					newPositions.ipd() = std::min(std::max(newPositions.ipd(), *range.begin()), *range.end());
+					auto range(scrollableRange<presentation::ReadingDirection>(*this));
+					assert(!boost::empty(range));
+					range.advance_end(-1);
+					newPositions.ipd() = clamp(newPositions.ipd(), range);
 				}
 
 				// block dimension
@@ -1101,8 +1107,11 @@ namespace ascension {
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				if(positions.bpd() != boost::none) {
 //					TextViewportNotificationLocker notificationLockGuard(this);	// this code can't change the layouts, unlike #scroll
-					const auto range(scrollableRange<presentation::BlockFlowDirection>(*this));
-					newPositions.bpd() = std::min(std::max(newPositions.bpd(), *range.begin()), *range.end());
+					auto range(scrollableRange<presentation::BlockFlowDirection>(*this));
+					assert(!boost::empty(range));
+					range.advance_end(-1);
+					newPositions.bpd() = clamp(newPositions.bpd(), range);
+					range.advance_end(+1);
 
 					// locate the nearest visual line
 					const Index numberOfLogicalLines = textRenderer().presentation().document().numberOfLines();
@@ -1122,7 +1131,7 @@ namespace ascension {
 							line = firstVisibleLine();
 						}
 					} else {
-						if(newPositions.bpd() - scrollPositions().bpd() < *range.end() - newPositions.bpd()) {
+						if(newPositions.bpd() - scrollPositions().bpd() < *boost::const_end(range) - newPositions.bpd()) {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 							bpd = scrollPositions().bpd() - blockFlowScrollOffsetInFirstVisibleVisualLine();
 #else
@@ -1133,11 +1142,11 @@ namespace ascension {
 							if(const TextLayout* const lastLine = textRenderer().layouts().at(line.line = numberOfLogicalLines - 1)) {
 								line.subline = lastLine->numberOfLines() - 1;
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-								bpd = *range.end() - lastLine->extent(boost::irange(line.subline, line.subline + 1)).size();
+								bpd = *boost::const_end(range) - lastLine->extent(boost::irange(line.subline, line.subline + 1)).size();
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 							} else {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-								bpd = *range.end() - defaultLineExtent_;
+								bpd = *boost::const_end(range) - defaultLineExtent_;
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 								line.subline = 0;
 							}
@@ -1162,15 +1171,11 @@ namespace ascension {
 				}
 
 				// commit
-				swap(scrollPositions_, newPositions);
-				swap(firstVisibleLine_, newFirstVisibleLine);
+				updateScrollPositions(newPositions, newFirstVisibleLine,
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				swap(blockFlowScrollOffsetInFirstVisibleVisualLine_, newBlockFlowScrollOffsetInFirstVisibleVisualLine);
+					newBlockFlowScrollOffsetInFirstVisibleVisualLine,
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-
-				// notify
-				if(firstVisibleLine_ != newFirstVisibleLine)
-					fireScrollPositionChanged(newPositions, newFirstVisibleLine);
+					true);
 			}
 
 			/**
@@ -1192,8 +1197,10 @@ namespace ascension {
 			 */
 			void TextViewport::setBoundsInView(const graphics::Rectangle& bounds) {
 				const graphics::Rectangle oldBounds(boundsInView());
-				// TODO: not implemented.
-				listeners_.notify<const graphics::Rectangle&>(&TextViewportListener::viewportBoundsInViewChanged, oldBounds);
+				if(!boost::geometry::equals(bounds, oldBounds)) {
+					boost::geometry::assign(boundsInView_, bounds);
+					listeners_.notify<const graphics::Rectangle&>(&TextViewportListener::viewportBoundsInViewChanged, oldBounds);
+				}
 			}
 
 			/**
@@ -1239,6 +1246,25 @@ namespace ascension {
 				defaultLineExtent_ = textRenderer().defaultFont()->lineMetrics(String(), fontRenderContext_)->height();
 			}
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
+
+			inline void TextViewport::updateScrollPositions(
+					const presentation::FlowRelativeTwoAxes<TextViewportScrollOffset>& newScrollPositions,
+					const VisualLine& newFirstVisibleLine,
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+					ScrollOffset newBlockFlowScrollOffsetInFirstVisibleVisualLine,
+#endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
+					bool notifySignal) BOOST_NOEXCEPT {
+				if(notifySignal && newScrollPositions != scrollPositions_)
+					notifySignal = false;
+				scrollPositions_ = newScrollPositions;
+				firstVisibleLine_ = newFirstVisibleLine;
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				blockFlowScrollOffsetInFirstVisibleVisualLine_ = newBlockFlowScrollOffsetInFirstVisibleVisualLine);
+#endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
+
+				if(notifySignal)
+					fireScrollPositionChanged(scrollPositions_, firstVisibleLine_);
+			}
 
 			/// @see VisualLinesListener#visualLinesDeleted
 			void TextViewport::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
