@@ -9,8 +9,6 @@
 
 #ifndef ASCENSION_TEXT_VIEWPORT_HPP
 #define ASCENSION_TEXT_VIEWPORT_HPP
-
-//#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/detail/listeners.hpp>
 #include <ascension/corelib/detail/scope-guard.hpp>
 #include <ascension/graphics/physical-directions-dimensions.hpp>
@@ -20,8 +18,7 @@
 #include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/kernel/point.hpp>	// kernel.locations
-#include <ascension/presentation/writing-mode.hpp>
-#include <boost/iterator/iterator_facade.hpp>
+#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/optional.hpp>
 #include <boost/signals2/connection.hpp>
@@ -33,6 +30,7 @@ namespace ascension {
 	namespace presentation {
 		struct ComputedTextToplevelStyle;
 		class DeclaredTextToplevelStyle;
+		class Presentation;
 	}
 
 	namespace graphics {
@@ -172,46 +170,7 @@ namespace ascension {
 				TextViewport, &TextViewport::freezeNotification, &TextViewport::thawNotification
 			> TextViewportNotificationLocker;
 
-			class BaselineIterator : public boost::iterators::iterator_facade<
-				BaselineIterator, Scalar, boost::iterators::random_access_traversal_tag, Scalar, std::ptrdiff_t
-			> {
-			public:
-				explicit BaselineIterator(const TextViewport& viewport/*, bool trackOutOfViewport*/);
-				BaselineIterator(const TextViewport& viewport, const VisualLine& line/*, bool trackOutOfViewport*/);
-				BaselineIterator(const TextViewport& viewport, const TextHit<kernel::Position>& position/*, bool trackOutOfViewport*/);
-				boost::optional<VisualLine> line() const BOOST_NOEXCEPT;
-				const VisualLine& snappedLine() const BOOST_NOEXCEPT;
-//				Point positionInView() const;
-				const Point& positionInViewport() const;
-				const TextViewport& viewport() const BOOST_NOEXCEPT;
-				bool tracksOutOfViewport() const BOOST_NOEXCEPT;
-			private:
-				void internalAdvance(const VisualLine* to, const boost::optional<difference_type>& delta);
-				void initializeWithFirstVisibleLine();
-				void invalidate() BOOST_NOEXCEPT;
-				bool isValid() const BOOST_NOEXCEPT;
-#if 0
-				void move(Index line);
-#endif
-				void verifyNotDone() const {
-//					if(*this == BaselineIterator())
-//						throw NoSuchElementException();
-				}
-				// boost.iterator_facade
-				void advance(difference_type n);
-//				difference_type distance_to(const BaseIterator& other) const;
-				void decrement();
-				const reference dereference() const;
-				bool equal(const BaselineIterator& other) const;
-				void increment();
-				friend class boost::iterators::iterator_core_access;
-			private:
-				const TextViewport* viewport_;	// this is not a reference, for operator=
-				bool tracksOutOfViewport_;	// this is not const, for operator=. this is always false
-				VisualLine line_;
-				Scalar distanceFromViewportBeforeEdge_;
-				Point positionInViewport_;
-			};
+			NumericRange<Scalar> viewportContentExtent(const TextViewport& viewport) BOOST_NOEXCEPT;
 
 			/// @defgroup scrollable_ranges_in_viewport Scrollable Ranges in Viewport
 			/// @{
@@ -321,51 +280,6 @@ namespace ascension {
 			/// Returns @c TextRenderer object.
 			inline const TextRenderer& TextViewport::textRenderer() const BOOST_NOEXCEPT {
 				return textRenderer_;
-			}
-
-			/**
-			 * Returns the line the iterator addresses, or @c boost#none if out of the viewport.
-			 * @return The visual line this iterator addresses
-			 * @retval boost#none The iterator is out of the viewport
-			 * @see #snappedLine
-			 */
-			inline boost::optional<VisualLine> BaselineIterator::line() const BOOST_NOEXCEPT {
-				verifyNotDone();
-				if(**this == std::numeric_limits<Scalar>::min() || **this == std::numeric_limits<Scalar>::max())
-					return boost::none;
-				return line_;
-			}
-
-			/**
-			 * Returns the baseline position of the line the iterator addresses.
-			 * @return The point in view-local coordinates. If the writing mode is horizontal, x-coordinate of the
-			 *         point is zero, otherwise y-coordinate is zero
-			 */
-			inline const Point& BaselineIterator::positionInViewport() const BOOST_NOEXCEPT {
-				verifyNotDone();
-				return positionInViewport_;
-			}
-
-			/// Returns the viewport.
-			inline const TextViewport& BaselineIterator::viewport() const BOOST_NOEXCEPT {
-//				if(viewport_ == nullptr)
-//					throw NullPointerException("this");
-				return *viewport_;
-			}
-
-			/**
-			 * Returns the line the iterator addresses. Unlike @c #line method, this returns a line snapped within the
-			 * viewport.
-			 * @see #line
-			 */
-			inline const VisualLine& BaselineIterator::snappedLine() const BOOST_NOEXCEPT {
-				verifyNotDone();
-				return line_;
-			}
-
-			/// Returns @c true if
-			inline bool BaselineIterator::tracksOutOfViewport() const BOOST_NOEXCEPT {
-				return tracksOutOfViewport_;
 			}
 
 
