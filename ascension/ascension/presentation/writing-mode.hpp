@@ -182,6 +182,16 @@ namespace ascension {
 					return writingMode.textOrientation;
 			}
 		}
+
+		namespace detail {
+			inline bool isNegativeVertical(const WritingMode& writingMode) BOOST_NOEXCEPT {
+				if(writingMode.blockFlowDirection == VERTICAL_RL)
+					return resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
+				else if(writingMode.blockFlowDirection == VERTICAL_LR)
+					return resolveTextOrientation(writingMode) != SIDEWAYS_LEFT;
+				return false;
+			}
+		}
 	}
 } // namespace ascension.presentation
 
