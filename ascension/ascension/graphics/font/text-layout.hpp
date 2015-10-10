@@ -342,7 +342,7 @@ namespace ascension {
 			 * @throw BadPositionException @a line is greater than the count of lines
 			 */
 			inline Index TextLayout::lineLength(Index line) const {
-				return (line < numberOfLines_ - 1 ?
+				return (line < numberOfLines() - 1 ?
 					lineOffset(line + 1) : numberOfCharacters()) - lineOffset(line);
 			}
 

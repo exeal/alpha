@@ -1301,7 +1301,8 @@ namespace ascension {
 					if(index > numberOfGlyphs())
 						throw IndexOutOfBoundsException("index");
 					const Scalar logicalPosition = glyphLogicalPosition(index);
-					const GOFFSET& glyphOffset = glyphOffsets()[index];
+					static const GOFFSET zeroOffset = {0, 0};
+					const GOFFSET& glyphOffset = (index != numberOfGlyphs()) ? glyphOffsets()[index] : zeroOffset;
 					return geometry::make<Point>((
 						geometry::_x = static_cast<Scalar>(logicalPosition + glyphOffset.du), geometry::_y = static_cast<Scalar>(glyphOffset.dv)));
 				}
