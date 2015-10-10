@@ -474,7 +474,7 @@ namespace ascension {
 				static boost::optional<PhysicalFourSides<Scalar>> dummy;
 				if(!dummy) {
 					dummy = PhysicalFourSides<Scalar>();
-					BOOST_FOREACH(auto side, *dummy)
+					BOOST_FOREACH(auto& side, *dummy)
 						side = static_cast<Scalar>(0);
 				}
 				return *dummy;
