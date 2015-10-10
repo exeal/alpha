@@ -3302,7 +3302,7 @@ namespace ascension {
 
 					// if the run is a tab, expand and calculate actual width
 					if(run->expandTabCharacters(context, tabSize.get(), lengthContext,
-							textString_, (ipd1 < measure) ? ipd1 : 0, measure - (ipd1 < measure) ? ipd1 : 0)) {
+							textString_, (ipd1 < measure) ? ipd1 : 0, measure - ((ipd1 < measure) ? ipd1 : 0))) {
 						if(ipd1 < measure) {
 							ipd1 += allocationMeasure(*run);
 							runs.push_back(run);
@@ -3402,8 +3402,7 @@ namespace ascension {
 
 				// commit
 				decltype(runs_) newRuns(runs.size());
-				assert(numberOfLines() > 1);	// ???
-				firstRunsInLines_.reset(new RunVector::const_iterator[firstRunsInLines.size()]);
+				firstRunsInLines_.reset(new RunVector::const_iterator[numberOfLines_ = firstRunsInLines.size()]);
 
 				BOOST_FOREACH(RunVector::reference run, runs_)
 //				for(auto i(std::begin(runs_)), e(std::end(runs_)); i != e; ++i)

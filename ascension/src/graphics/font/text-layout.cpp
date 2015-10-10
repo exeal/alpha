@@ -506,6 +506,7 @@ namespace ascension {
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
 				const auto line(locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(presentation::blockRange(*bounds)) : boost::none));
 				const auto runsInLine(runsForLine(std::get<0>(line)));
+				assert(!boost::empty(runsInLine));
 				const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(std::get<0>(line)));
 				assert(characterRangeInLine.end() == runsInLine.end()[-1]->characterRange().end());
 
