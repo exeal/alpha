@@ -201,11 +201,6 @@ namespace ascension {
 
 			/// Destructor.
 			TextLayout::~TextLayout() BOOST_NOEXCEPT {
-//				for(std::size_t i = 0; i < numberOfRuns_; ++i)
-//					delete runs_[i];
-//				for(std::vector<const InlineArea*>::const_iterator i(inlineAreas_.begin()), e(inlineAreas_.end()); i != e; ++i)
-//					delete *i;
-				assert(numberOfLines() != 1 || firstRunsInLines_.get() == nullptr);
 			}
 #if 0
 			/**
