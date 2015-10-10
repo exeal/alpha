@@ -183,8 +183,8 @@ namespace ascension {
 				ActualTextEmphasis textEmphasis;
 //				ActualTextShadow textShadow;
 
-				explicit ActualTextRunStyleCore(
-					const presentation::ComputedTextRunStyle& computed, const presentation::styles::Length::Context& context);
+				explicit ActualTextRunStyleCore(const presentation::ComputedTextRunStyle& computed,
+					const presentation::styles::Length::Context& context, Scalar computedParentMeasure);
 				bool operator==(const ActualTextRunStyleCore& other) const {
 					return color == other.color && backgroundColor == other.backgroundColor
 						&& borders == other.borders && paddings == other.paddings

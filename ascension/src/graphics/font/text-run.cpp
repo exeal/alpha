@@ -17,13 +17,20 @@ namespace ascension {
 			 * @see #measure
 			 */
 			Scalar allocationMeasure(const TextRun& textRun) {
-				const presentation::FlowRelativeFourSides<ActualBorderSide>* const border = textRun.border();
-				const presentation::FlowRelativeFourSides<Scalar>* const margin = textRun.margin();
-				const presentation::FlowRelativeFourSides<Scalar>* const padding = textRun.padding();
-				return measure(textRun)
-					+ ((border != nullptr) ? border->start().actualWidth() + border->end().actualWidth() : 0)
-					+ ((margin != nullptr) ? margin->start() + margin->end() : 0)
-					+ ((padding != nullptr) ? padding->start() + padding->end() : 0);
+				Scalar result = measure(textRun);
+				if(const presentation::FlowRelativeFourSides<ActualBorderSide>* const border = textRun.border()) {
+					result += border->start().actualWidth();
+					result += border->end().actualWidth();
+				}
+				if(const presentation::FlowRelativeFourSides<Scalar>* const margin = textRun.margin()) {
+					result += margin->start();
+					result += margin->end();
+				}
+				if(const presentation::FlowRelativeFourSides<Scalar>* const padding = textRun.padding()) {
+					result += padding->start();
+					result += padding->end();
+				}
+				return result;
 			}
 
 			/**

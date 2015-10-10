@@ -2025,7 +2025,7 @@ namespace ascension {
 					static void generate(const StringPiece& textString,
 						const presentation::styles::ComputedValue<presentation::TextLineStyle>::type& lineStyle,
 						std::unique_ptr<presentation::ComputedStyledTextRunIterator> textRunStyles,
-						const presentation::styles::Length::Context& lengthContext,
+						const presentation::styles::Length::Context& lengthContext, Scalar measure,
 						const FontCollection& fontCollection, const FontRenderContext& frc,
 						const presentation::Pixels& parentFontSize, std::vector<TextRunImpl*>& textRuns,
 						std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>>& calculatedStyles);
@@ -2169,6 +2169,7 @@ namespace ascension {
 				 * @param lineStyle
 				 * @param textRunStyles
 				 * @param lengthContext
+				 * @param measure
 				 * @param fontCollection
 				 * @param frc
 				 * @param parentFontSize
@@ -2179,7 +2180,7 @@ namespace ascension {
 				void TextRunImpl::generate(const StringPiece& textString,
 						const presentation::styles::ComputedValue<presentation::TextLineStyle>::type& lineStyle,
 						std::unique_ptr<presentation::ComputedStyledTextRunIterator> textRunStyles,
-						const presentation::styles::Length::Context& lengthContext,
+						const presentation::styles::Length::Context& lengthContext, Scalar measure,
 						const FontCollection& fontCollection, const FontRenderContext& frc, const presentation::Pixels& parentFontSize,
 						std::vector<TextRunImpl*>& textRuns, std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>>& calculatedStyles) {
 					raiseIfNullOrEmpty(textString, "textString");
@@ -2327,7 +2328,7 @@ namespace ascension {
 							mergedTextRuns.push_back(new TextRunImpl(
 								makeStringPiece(previousPosition, nextPosition),
 								*scriptPointers[glyphRuns.size() - (lastGlyphRun - glyphRun)], std::move(*glyphRun),
-								ActualTextRunStyleCore(styleRun->attribute, lengthContext)));
+								ActualTextRunStyleCore(styleRun->attribute, lengthContext, measure)));
 							if(nextPosition == nextGlyphRunPosition)
 								++glyphRun;
 							if(nextPosition == nextStyleRunPosition)
@@ -2997,7 +2998,7 @@ namespace ascension {
 							x += run.totalWidth();
 						}
 					}
-					if(line == numberOfLines_ - 1
+					if(line == numberOfLines_() - 1
 							&& resolveTextAlignment(alignment(), writingMode().inlineFlowDirection) == ALIGN_RIGHT)
 						x = startX;
 				} // end of nonempty line case
@@ -3143,27 +3144,31 @@ namespace ascension {
 				// 6. justify each text runs if specified
 				// 7. stack the lines
 
-				const bool emptyLine = textString_.empty();
-				if(emptyLine) {	// handle logically empty line
-					numberOfLines_ = 1;
-					maximumMeasure_ = 0.0f;
-					assert(isEmpty());
-				}
-
-				// 2. split each script runs into text runs with StyledRunIterator
-				std::vector<TextRunImpl*> textRuns;
-				std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>> calculatedStyles;
-				if(!emptyLine) {
-					TextRunImpl::generate(textString_, style(), std::move(textRunStyles),
-						lengthContext, fontCollection, fontRenderContext, nominalFontSize, textRuns, calculatedStyles);
-//					runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
-//					std::copy(textRuns.begin(), textRuns.end(), runs_.get());
-//					shrinkToFit(styledRanges_);
-				}
-
-				// 3. generate glyphs for each text runs
 				const RenderingContext2D context(win32::detail::screenDC());
-				if(!emptyLine) {
+				if(!textString_.empty()) {
+					const auto computedMeasure(boost::fusion::at_key<presentation::styles::Measure>(style()));
+					Scalar actualMeasure;
+					if(const presentation::styles::Length* const length = boost::get<presentation::styles::Length>(&computedMeasure))
+						actualMeasure = length->value(lengthContext);
+					else {
+						presentation::styles::Percentage percentage;
+						if(const presentation::styles::Percentage* const computed = boost::get<presentation::styles::Percentage>(&computedMeasure))
+							percentage = *computed;
+						else
+							percentage = 1;	// 100% as default
+						if(presentation::isHorizontal(boost::fusion::at_key<presentation::styles::WritingMode>(parentStyle())))
+							actualMeasure = geometry::dx(parentContentArea) * boost::rational_cast<Scalar>(percentage);
+						else
+							actualMeasure = geometry::dy(parentContentArea) * boost::rational_cast<Scalar>(percentage);
+					}
+
+					// 2. split each script runs into text runs with StyledRunIterator
+					std::vector<TextRunImpl*> textRuns;
+					std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>> calculatedStyles;
+					TextRunImpl::generate(textString_, style(), std::move(textRunStyles),
+						lengthContext, actualMeasure, fontCollection, fontRenderContext, nominalFontSize, textRuns, calculatedStyles);
+
+					// 3. generate glyphs for each text runs
 					BOOST_FOREACH(TextRunImpl* run, textRuns)
 						run->shape(context.native());
 					TextRunImpl::substituteGlyphs(boost::make_iterator_range(textRuns));
@@ -3171,49 +3176,36 @@ namespace ascension {
 					// 4. position glyphs for each text runs
 					for(auto run(std::begin(textRuns)), b(std::begin(textRuns)), e(std::end(textRuns)); run != e; ++run)
 						(*run)->positionGlyphs(context.native(), calculatedStyles[run - b].attribute);
-				}
 
-				// 5. position each text runs
-				if(!emptyLine) {
+					// 5. position each text runs
 					const auto tabSize(boost::fusion::at_key<presentation::styles::TabSize>(style()));
 
 					// wrap into visual lines and reorder runs in each lines
-					if(runs_.empty() || !wrapsText(boost::fusion::at_key<presentation::styles::WhiteSpace>(style()))) {
+					if(textRuns.empty() || !wrapsText(boost::fusion::at_key<presentation::styles::WhiteSpace>(style()))) {
 						numberOfLines_ = 1;
 						assert(firstRunsInLines_.get() == nullptr);
 						// 5-1. expand horizontal tabs (with logical ordered runs)
 						{
 							Scalar ipd = 0;
-							// for each runs... (at this time, 'runs_' is in logical order)
-							BOOST_FOREACH(RunVector::const_reference p, runs_) {
-								TextRunImpl& run = *const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(p.get()));
-								run.expandTabCharacters(context, tabSize, lengthContext, textString_, ipd, boost::none);
-								ipd += allocationMeasure(run);
+							// for each runs... (at this time, 'textRuns' is in logical order)
+							BOOST_FOREACH(TextRunImpl* run, textRuns) {
+								run->expandTabCharacters(context, tabSize, lengthContext, textString_, ipd, boost::none);
+								ipd += allocationMeasure(*run);
 							}
 							maximumMeasure_ = ipd;
 						}
 						// 5-2. reorder each text runs
+						runs_.reserve(textRuns.size());
+						BOOST_FOREACH(TextRunImpl* run, textRuns)
+							runs_.push_back(std::unique_ptr<const TextRun>(run));
 						reorder();
 						// 5-3. reexpand horizontal tabs
 //						expandTabsWithoutWrapping();
 					} else {
-						const auto computedMeasure(boost::fusion::at_key<presentation::styles::Measure>(style()));
-						Scalar actualMeasure;
-						if(const presentation::styles::Length* const length = boost::get<presentation::styles::Length>(&computedMeasure))
-							actualMeasure = length->value(lengthContext);
-						else {
-							presentation::styles::Percentage percentage;
-							if(const presentation::styles::Percentage* const computed = boost::get<presentation::styles::Percentage>(&computedMeasure))
-								percentage = *computed;
-							else
-								percentage = 1;	// 100% as default
-							if(presentation::isHorizontal(boost::fusion::at_key<presentation::styles::WritingMode>(parentStyle())))
-								actualMeasure = geometry::dx(parentContentArea) * boost::rational_cast<Scalar>(percentage);
-							else
-								actualMeasure = geometry::dy(parentContentArea) * boost::rational_cast<Scalar>(percentage);
-						}
-
 						// 5-1. expand horizontal tabs and wrap into lines
+						runs_.reserve(textRuns.size());
+						BOOST_FOREACH(TextRunImpl* run, textRuns)
+							runs_.push_back(std::unique_ptr<const TextRun>(run));
 						wrap(context, TabSize(tabSize), lengthContext, actualMeasure);
 						// 5-2. reorder each text runs
 						reorder();
@@ -3224,6 +3216,11 @@ namespace ascension {
 						if(textJustification != TextJustification::NONE)
 							justify(actualMeasure, textJustification);
 					}
+				} else {
+					// handle logically empty line
+					numberOfLines_ = 1;
+					maximumMeasure_ = 0.0f;
+					assert(isEmpty());
 				}
 
 				// 7. stack the lines
@@ -3255,8 +3252,7 @@ namespace ascension {
 
 			/// Reorders the runs in visual order.
 			inline void TextLayout::reorder() {
-				if(isEmpty())
-					return;
+				assert(!runs_.empty());
 				std::vector<const TextRun*> reordered(runs_.size());
 				for(Index line = 0; line < numberOfLines(); ++line) {
 					const boost::iterator_range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
@@ -3289,7 +3285,7 @@ namespace ascension {
 			void TextLayout::wrap(const RenderingContext2D& context, const TabSize& tabSize,
 					const presentation::styles::Length::Context& lengthContext, Scalar measure) BOOST_NOEXCEPT {
 				assert(!isEmpty());
-				assert(numberOfLines_ == 0 && firstRunsInLines_.get() == nullptr);
+				assert(numberOfLines() == 0 && firstRunsInLines_.get() == nullptr);
 
 				std::vector<Index> firstRunsInLines;
 				firstRunsInLines.push_back(0);
