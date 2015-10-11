@@ -23,7 +23,6 @@ namespace ascension {
 		 * @param nativeObject The Win32 @c HDC value to hold
 		 */
 		RenderingContext2D::RenderingContext2D(win32::Handle<HDC>::Type nativeObject) : nativeObject_(nativeObject), hasCurrentSubpath_(false) {
-			savedStates_.push(State());
 			setFillStyle(std::make_shared<SolidColor>(Color::OPAQUE_BLACK));
 			setStrokeStyle(std::make_shared<SolidColor>(Color::OPAQUE_BLACK));
 
@@ -91,8 +90,8 @@ namespace ascension {
 			win32::Handle<HPEN>::Type oldPen(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())), boost::null_deleter());
 			if(oldPen.get() == nullptr)
 				throw makePlatformError();
-			savedStates_.top().pen = newPen;
-			swap(savedStates_.top().previousPen, oldPen);
+			currentState_.pen = newPen;
+			std::swap(currentState_.previousPen, oldPen);
 			return *this;
 		}
 
@@ -255,11 +254,11 @@ namespace ascension {
 		}
 
 		std::shared_ptr<const Paint> RenderingContext2D::fillStyle() const {
-			return savedStates_.top().fillStyle.first;
+			return currentState_.fillStyle.first;
 		}
 
 		std::shared_ptr<const font::Font> RenderingContext2D::font() const {
-			return savedStates_.top().font;
+			return currentState_.font;
 		}
 
 		namespace {
@@ -643,17 +642,18 @@ namespace ascension {
 		}
 
 		RenderingContext2D& RenderingContext2D::restore() {
-			if(savedStates_.size() > 1) {
+			if(!savedStates_.empty()) {
 				if(!win32::boole(::RestoreDC(nativeObject_.get(), savedStates_.top().cookie)))
 					throw makePlatformError();
+				currentState_ = savedStates_.top().state;
 				savedStates_.pop();
 				updatePenAndBrush();
 				win32::Handle<HPEN>::Type currentPen(static_cast<HPEN>(::GetCurrentObject(nativeObject_.get(), OBJ_PEN)), boost::null_deleter());
 				win32::Handle<HBRUSH>::Type currentBrush(static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH)), boost::null_deleter());
-				if(currentPen.get() != savedStates_.top().pen.get())
-					::SelectObject(nativeObject_.get(), savedStates_.top().pen.get());
-				if(currentBrush.get() != savedStates_.top().brush.get())
-					::SelectObject(nativeObject_.get(), savedStates_.top().brush.get());
+				if(currentPen.get() != currentState_.pen.get())
+					::SelectObject(nativeObject_.get(), currentState_.pen.get());
+				if(currentBrush.get() != currentState_.brush.get())
+					::SelectObject(nativeObject_.get(), currentState_.brush.get());
 			}
 //			else
 //				throw IllegalStateException("there is no state to back to.");
@@ -664,8 +664,7 @@ namespace ascension {
 			const int cookie = ::SaveDC(nativeObject_.get());
 			if(cookie == 0)
 				throw makePlatformError();
-			savedStates_.push(savedStates_.top());
-			savedStates_.top().cookie = cookie;
+			savedStates_.push(SavedState(currentState_, cookie));
 			return *this;
 		}
 #if 0
@@ -681,9 +680,9 @@ namespace ascension {
 			if(newBrush.get() != nullptr) {
 				win32::Handle<HBRUSH>::Type oldBrush(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())), boost::null_deleter());
 				if(oldBrush.get() != nullptr) {
-					swap(savedStates_.top().brush, newBrush);
-					swap(savedStates_.top().previousBrush, oldBrush);
-					savedStates_.top().fillStyle = std::make_pair(fillStyle, fillStyle->revisionNumber());
+					std::swap(currentState_.brush, newBrush);
+					std::swap(currentState_.previousBrush, oldBrush);
+					currentState_.fillStyle = std::make_pair(fillStyle, fillStyle->revisionNumber());
 					return *this;
 				}
 			}
@@ -694,7 +693,7 @@ namespace ascension {
 			if(font.get() == nullptr || font->native().get() == nullptr)
 				throw NullPointerException("font");
 			::SelectObject(nativeObject_.get(), font->native().get());
-			savedStates_.top().font = font;
+			currentState_.font = font;
 			return *this;
 		}
 
@@ -736,7 +735,7 @@ namespace ascension {
 			if(strokeStyle.get() == nullptr)
 				throw NullPointerException("strokeStyle");
 			changePen(createModifiedPen(&strokeStyle->native(), boost::none, boost::none, boost::none));
-			savedStates_.top().strokeStyle = std::make_pair(strokeStyle, strokeStyle->revisionNumber());
+			currentState_.strokeStyle = std::make_pair(strokeStyle, strokeStyle->revisionNumber());
 			return *this;
 		}
 
@@ -831,7 +830,7 @@ namespace ascension {
 		}
 
 		std::shared_ptr<const Paint> RenderingContext2D::strokeStyle() const {
-			return savedStates_.top().strokeStyle.first;
+			return currentState_.strokeStyle.first;
 		}
 
 		RenderingContext2D& RenderingContext2D::strokeText(const StringPiece& text,
@@ -880,20 +879,20 @@ namespace ascension {
 		void RenderingContext2D::updatePenAndBrush() {
 			win32::Handle<HPEN>::Type newPen;
 			win32::Handle<HBRUSH>::Type newBrush;
-			if(savedStates_.top().strokeStyle.second != savedStates_.top().strokeStyle.first->revisionNumber())
+			if(currentState_.strokeStyle.second != currentState_.strokeStyle.first->revisionNumber())
 				newPen = createModifiedPen(nullptr, boost::none, boost::none, boost::none);
-			if(savedStates_.top().fillStyle.second != savedStates_.top().fillStyle.first->revisionNumber())
-				newBrush.reset(::CreateBrushIndirect(&savedStates_.top().fillStyle.first->native()), &::DeleteObject);
+			if(currentState_.fillStyle.second != currentState_.fillStyle.first->revisionNumber())
+				newBrush.reset(::CreateBrushIndirect(&currentState_.fillStyle.first->native()), &::DeleteObject);
 
 			win32::Handle<HPEN>::Type oldPen;
 			win32::Handle<HBRUSH>::Type oldBrush;
 			if(newPen.get() != nullptr) {
-				oldPen.reset(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())));
+				oldPen.reset(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())), boost::null_deleter());
 				if(oldPen.get() == nullptr)
 					throw makePlatformError();
 			}
 			if(newBrush.get() != nullptr) {
-				oldBrush.reset(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())));
+				oldBrush.reset(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())), boost::null_deleter());
 				if(oldBrush.get() == nullptr) {
 					if(oldPen.get() != nullptr)
 						::SelectObject(nativeObject_.get(), oldPen.get());
@@ -902,24 +901,15 @@ namespace ascension {
 			}
 
 			if(oldPen.get() != nullptr) {
-				savedStates_.top().strokeStyle.second = savedStates_.top().strokeStyle.first->revisionNumber();
-				swap(savedStates_.top().pen, newPen);
-				swap(savedStates_.top().previousPen, oldPen);
+				currentState_.strokeStyle.second = currentState_.strokeStyle.first->revisionNumber();
+				std::swap(currentState_.pen, newPen);
+				std::swap(currentState_.previousPen, oldPen);
 			}
 			if(oldBrush.get() != nullptr) {
-				savedStates_.top().fillStyle.second = savedStates_.top().fillStyle.first->revisionNumber();
-				swap(savedStates_.top().brush, newBrush);
-				swap(savedStates_.top().previousBrush, oldBrush);
+				currentState_.fillStyle.second = savedStates_.top().state.fillStyle.first->revisionNumber();
+				std::swap(currentState_.brush, newBrush);
+				std::swap(currentState_.previousBrush, oldBrush);
 			}
-		}
-
-		RenderingContext2D::State::State() BOOST_NOEXCEPT {
-		}
-
-		RenderingContext2D::State::State(const State& other) BOOST_NOEXCEPT :
-				fillStyle(other.fillStyle), strokeStyle(other.strokeStyle),
-				pen(other.pen.get()), previousPen(other.previousPen.get()),
-				brush(other.brush.get()), previousBrush(other.previousBrush.get()) {
 		}
 	}
 }

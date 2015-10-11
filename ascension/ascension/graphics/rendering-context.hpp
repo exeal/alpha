@@ -840,15 +840,17 @@ namespace ascension {
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			win32::Handle<HDC>::Type nativeObject_;
 			struct State {
-				State();
-				State(const State& other);
-				int cookie;
 				std::pair<std::shared_ptr<const Paint>, std::size_t> fillStyle, strokeStyle;
 				win32::Handle<HPEN>::Type pen, previousPen;
 				win32::Handle<HBRUSH>::Type brush, previousBrush;
 				std::shared_ptr<const font::Font> font;
+			} currentState_;
+			struct SavedState {
+				SavedState(const State& state, int cookie) BOOST_NOEXCEPT : state(state), cookie(cookie) BOOST_NOEXCEPT {}
+				const State state;
+				const int cookie;
 			};
-			std::stack<State> savedStates_;
+			std::stack<SavedState> savedStates_;
 			bool hasCurrentSubpath_;
 			RenderingContext2D& changePen(win32::Handle<HPEN>::Type newPen);
 			win32::Handle<HPEN>::Type createModifiedPen(
