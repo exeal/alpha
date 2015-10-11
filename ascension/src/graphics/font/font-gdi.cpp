@@ -268,12 +268,13 @@ namespace ascension {
 				win32::Handle<HDC>::Type dc(win32::detail::screenDC());
 				const int cookie = ::SaveDC(dc.get());
 				const XFORM xform(graphics::toNative<XFORM>(frc.transform()));
+				std::unique_ptr<LineMetricsImpl> lm;
 				if(::SetGraphicsMode(dc.get(), GM_ADVANCED) != 0 && ::SetMapMode(dc.get(), MM_TEXT) != 0 && ::SetWorldTransform(dc.get(), &xform)) {
 					::SelectObject(dc.get(), native().get());
 					if(const UINT bytes = ::GetOutlineTextMetricsW(dc.get(), 0, nullptr)) {
 						OUTLINETEXTMETRICW* const otm = static_cast<OUTLINETEXTMETRICW*>(::operator new(bytes));
 						if(::GetOutlineTextMetricsW(dc.get(), bytes, otm) != 0) {
-							std::unique_ptr<LineMetricsImpl> lm(new LineMetricsImpl);
+							lm.reset(new LineMetricsImpl);
 							std::get<0>(lm->adl) = static_cast<Scalar>(otm->otmAscent);
 							std::get<1>(lm->adl) = static_cast<Scalar>(otm->otmDescent);
 							std::get<2>(lm->adl) = static_cast<Scalar>(otm->otmTextMetrics.tmInternalLeading);
@@ -285,7 +286,7 @@ namespace ascension {
 					} else {
 						TEXTMETRICW tm;
 						if(win32::boole(::GetTextMetricsW(dc.get(), &tm))) {
-							std::unique_ptr<LineMetricsImpl> lm(new LineMetricsImpl);
+							lm.reset(new LineMetricsImpl);
 							std::get<0>(lm->adl) = static_cast<Scalar>(tm.tmAscent);
 							std::get<1>(lm->adl) = static_cast<Scalar>(tm.tmDescent);
 							std::get<2>(lm->adl) = static_cast<Scalar>(tm.tmInternalLeading);
@@ -297,7 +298,10 @@ namespace ascension {
 					}
 				}
 				::RestoreDC(dc.get(), cookie);
-				throw makePlatformError();
+
+				if(lm.get() == nullptr)
+					throw makePlatformError();
+				return std::move(lm);
 			}
 
 			win32::Handle<HFONT>::Type Font::native() const BOOST_NOEXCEPT {
