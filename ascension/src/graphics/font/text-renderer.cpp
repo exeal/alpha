@@ -9,6 +9,8 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
+#include <ascension/corelib/numeric-range-algorithm/overlaps.hpp>
+#include <ascension/graphics/font/baseline-iterator.hpp>
 #include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
@@ -380,10 +382,19 @@ namespace ascension {
 			 * @param context The graphics context
 			 */
 			void TextRenderer::paint(PaintContext& context) const {
-				const Color c(boost::get_optional_value_or(SystemColors::get(SystemColors::WINDOW), Color::OPAQUE_WHITE));
-				auto p = std::make_shared<SolidColor>(c);
-				context.setFillStyle(p);
-				context.fillRectangle(context.boundsToPaint());
+				// scan lines in the text area
+				const bool horizontal = presentation::isHorizontal(computedBlockFlowDirection());
+				const auto bpdRange(horizontal ? geometry::range<1>(context.boundsToPaint()) : geometry::range<0>(context.boundsToPaint()));
+				boost::optional<Index> lineToPaint;
+				for(BaselineIterator baseline(*viewport(), true), e; baseline != e; ++baseline) {
+					if(overlaps(baseline.extentWithHalfLeadings(), bpdRange)) {
+						if(lineToPaint == boost::none || boost::get(baseline.line()).line != boost::get(lineToPaint)) {
+							const TextLayout& layout = const_cast<LineLayoutVector&>(layouts()).at(
+								boost::get(lineToPaint = boost::get(baseline.line()).line), LineLayoutVector::USE_CALCULATED_LAYOUT);
+							layout.draw(context, baseline.positionInViewport());
+						}
+					}
+				}
 			}
 
 			/**

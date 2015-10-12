@@ -66,7 +66,7 @@ namespace ascension {
 						return values_[index];
 					}
 					COLORREF serve(const boost::optional<Color>& color, int index) const {
-						return color ? color->as<COLORREF>() : get(index);
+						return (color != boost::none) ? toNative<COLORREF>(boost::get(color)) : get(index);
 					}
 					void update() BOOST_NOEXCEPT {
 						for(std::size_t i = 0; i < std::tuple_size<decltype(values_)>::value; ++i)
@@ -2575,12 +2575,12 @@ namespace ascension {
 					if(color.alpha() < 0xff)
 						throw std::invalid_argument("color");
 					LOGBRUSH brush;
-					brush.lbColor = color.as<COLORREF>();
+					brush.lbColor = toNative<COLORREF>(color);
 					brush.lbStyle = BS_SOLID;
 					HPEN pen = nullptr;
 					switch(style) {
 					case 1:	// solid
-						pen = (width == 1) ? ::CreatePen(PS_SOLID, 1, color.as<COLORREF>())
+						pen = (width == 1) ? ::CreatePen(PS_SOLID, 1, toNative<COLORREF>(color))
 							: ::ExtCreatePen(PS_GEOMETRIC | PS_SOLID | PS_ENDCAP_FLAT, width, &brush, 0, nullptr);
 					case 2:	// dashed
 						pen = ::ExtCreatePen(PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, width, &brush, 0, nullptr);
