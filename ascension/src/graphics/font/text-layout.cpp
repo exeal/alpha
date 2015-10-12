@@ -394,30 +394,6 @@ namespace ascension {
 #endif // _DEBUG
 
 			/**
-			 * Returns extent (block-progression-dimension) of the specified lines.
-			 * @param lines A range of the lines. This can be empty
-			 * @return A range of block-progression-dimension relative to the alignment-point
-			 * @throw IndexOutOfBoundsException
-			 * @see LineMetricsIterator#extent
-			 */
-			NumericRange<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
-				if(lines.empty()) {
-					const Scalar baseline = LineMetricsIterator(*this, *lines.begin()).baselineOffset();
-					return nrange(baseline, baseline);
-				} else if(lines.size() == 1)
-					return LineMetricsIterator(*this, lines.front()).extent();
-
-				const auto orderedLines(lines | adaptors::ordered());
-				if(*orderedLines.end() > numberOfLines())
-					throw IndexOutOfBoundsException("lines");
-
-				LineMetricsIterator i(*this, lines.front());
-				const NumericRange<Scalar> firstExtent(i.extent());
-				std::advance(i, lines.size() - 1);
-				return hull(firstExtent | adaptors::ordered(), i.extent() | adaptors::ordered());
-			}
-
-			/**
 			 * Returns a @c TextHit corresponding to the specified point. This method is a convenience overload of
 			 * @c #hitTestCharacter that uses the natural bounds of this @c TextLayout.
 			 * @param point The abstract point
@@ -494,6 +470,24 @@ namespace ascension {
 				ipd += lineStartEdge(line);
 
 				return presentation::FlowRelativeTwoAxes<Scalar>(presentation::_ipd = ipd, presentation::_bpd = LineMetricsIterator(*this, line).baselineOffset());
+			}
+
+			/// @internal Implements @c #extent and @c #extentWithHalfLeadings methods.
+			NumericRange<Scalar> TextLayout::internalExtent(const boost::integer_range<Index>& lines, bool includeHalfLeadings) const {
+				if(lines.empty()) {
+					const Scalar baseline = LineMetricsIterator(*this, *lines.begin()).baselineOffset();
+					return nrange(baseline, baseline);
+				} else if(lines.size() == 1)
+					return LineMetricsIterator(*this, lines.front()).extent();
+
+				const auto orderedLines(lines | adaptors::ordered());
+				if(*orderedLines.end() > numberOfLines())
+					throw IndexOutOfBoundsException("lines");
+
+				LineMetricsIterator i(*this, lines.front());
+				const NumericRange<Scalar> firstExtent(i.extent());
+				std::advance(i, lines.size() - 1);
+				return hull(firstExtent | adaptors::ordered(), i.extent() | adaptors::ordered());
 			}
 
 			/// @internal Implements @c #hitTestCharacter methods.

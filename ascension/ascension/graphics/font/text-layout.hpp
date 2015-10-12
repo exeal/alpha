@@ -170,6 +170,8 @@ namespace ascension {
 				LineMetricsIterator lineMetrics(Index line) const;
 				NumericRange<Scalar> extent() const;
 				NumericRange<Scalar> extent(const boost::integer_range<Index>& lines) const;
+				NumericRange<Scalar> extentWithHalfLeadings() const;
+				NumericRange<Scalar> extentWithHalfLeadings(const boost::integer_range<Index>& lines) const;
 				Scalar measure() const BOOST_NOEXCEPT;
 				Scalar measure(Index line) const;
 				/// @}
@@ -242,6 +244,7 @@ namespace ascension {
 				//       and 'per-inline-height-rectangle' for each 'line-area'?
 
 			private:
+				NumericRange<Scalar> internalExtent(const boost::integer_range<Index>& lines, bool includeHalfLeadings) const;
 				TextHit<> internalHitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const;
 //				void buildLineMetrics(Index line);
@@ -301,9 +304,43 @@ namespace ascension {
 			/**
 			 * Returns extent (block-progression-dimension) of the line.
 			 * @return A range of block-progression-dimension relative to the alignment-point
+			 * @see #extentWithHalfLeadings, LineMetricsIterator#extent
 			 */
 			inline NumericRange<Scalar> TextLayout::extent() const {
 				return extent(boost::irange(static_cast<Index>(0), numberOfLines()));
+			}
+
+			/**
+			 * Returns extent (block-progression-dimension) of the line.
+			 * @param lines A range of the lines. This can be empty
+			 * @return A range of block-progression-dimension relative to the alignment-point
+			 * @throw IndexOutOfBoundsException
+			 * @see #extentWithHalfLeadings, LineMetricsIterator#extent
+			 */
+			inline NumericRange<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
+				return internalExtent(lines, false);
+			}
+
+			/**
+			 * Returns extent (block-progression-dimension) of the specified lines with the leading. The leading is
+			 * processed as 'half-leading's described by CSS 2.1 (http://www.w3.org/TR/CSS21/visudet.html#leading).
+			 * @return A range of block-progression-dimension relative to the alignment-point
+			 * @see #extent, LineMetricsIterator#extentWithHalfLeadings
+			 */
+			inline NumericRange<Scalar> TextLayout::extentWithHalfLeadings() const {
+				return extentWithHalfLeadings(boost::irange(static_cast<Index>(0), numberOfLines()));
+			}
+
+			/**
+			 * Returns extent (block-progression-dimension) of the specified lines with the leading. The leading is
+			 * processed as 'half-leading's described by CSS 2.1 (http://www.w3.org/TR/CSS21/visudet.html#leading).
+			 * @param lines A range of the lines. This can be empty
+			 * @return A range of block-progression-dimension relative to the alignment-point
+			 * @throw IndexOutOfBoundsException
+			 * @see #extent, LineMetricsIterator#extentWithHalfLeadings
+			 */
+			inline NumericRange<Scalar> TextLayout::extentWithHalfLeadings(const boost::integer_range<Index>& lines) const {
+				return internalExtent(lines, true);
 			}
 
 			/**
