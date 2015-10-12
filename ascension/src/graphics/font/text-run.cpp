@@ -64,7 +64,7 @@ namespace ascension {
 				std::unique_ptr<const LineMetrics> lm(textRun.font()->lineMetrics(String(), textRun.fontRenderContext()));
 				return presentation::FlowRelativeFourSides<Scalar>(
 					presentation::_inlineStart = 0.0f, presentation::_inlineEnd = measure,
-					presentation::_blockStart = -lm->ascent(), presentation::_blockEnd = lm->descent() + lm->leading());
+					presentation::_blockStart = -lm->ascent(), presentation::_blockEnd = lm->descent());
 			}
 		}
 	}
