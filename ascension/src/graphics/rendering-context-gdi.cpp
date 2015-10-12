@@ -35,7 +35,7 @@ namespace ascension {
 			::SetBkMode(nativeObject_.get(), TRANSPARENT);
 			::SetGraphicsMode(nativeObject_.get(), GM_ADVANCED);
 			::SetPolyFillMode(nativeObject_.get(), WINDING);
-			::SetTextAlign(nativeObject_.get(), TA_LEFT | TA_BASELINE | TA_UPDATECP);
+			::SetTextAlign(nativeObject_.get(), TA_LEFT | TA_BASELINE | TA_NOUPDATECP);
 		}
 
 		namespace {
