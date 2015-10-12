@@ -233,7 +233,7 @@ namespace ascension {
 			switch(value) {
 #ifdef GTK_STYLE_CLASS_TITLEBAR
 				case ACTIVE_CAPTION:
-					return Color::from(context->get_background_color(Gtk::STATE_FLAG_ACTIVE));
+					return fromNative<Color>(context->get_background_color(Gtk::STATE_FLAG_ACTIVE));
 #endif
 				case BUTTON_FACE:
 				case INFO_BACKGROUND:
@@ -241,17 +241,17 @@ namespace ascension {
 				case SCROLLBAR:
 				case THREE_D_FACE:
 				case WINDOW:
-					return Color::from(context->get_background_color());
+					return fromNative<Color>(context->get_background_color());
 #ifdef GTK_STYLE_CLASS_TITLEBAR
 				case CAPTION_TEXT:
-					return Color::from(context->get_color(Gtk::STATE_FLAG_ACTIVE));
+					return fromNative<Color>(context->get_color(Gtk::STATE_FLAG_ACTIVE));
 #endif
 				case GRAY_TEXT:
-					return Color::from(context->get_color(Gtk::STATE_FLAG_INSENSITIVE));
+					return fromNative<Color>(context->get_color(Gtk::STATE_FLAG_INSENSITIVE));
 				case HIGHLIGHT:
-					return Color::from(context->get_background_color(Gtk::STATE_FLAG_SELECTED));
+					return fromNative<Color>(context->get_background_color(Gtk::STATE_FLAG_SELECTED));
 				case HIGHLIGHT_TEXT:
-					return Color::from(context->get_color(Gtk::STATE_FLAG_SELECTED));
+					return fromNative<Color>(context->get_color(Gtk::STATE_FLAG_SELECTED));
 #ifdef GTK_STYLE_CLASS_TITLEBAR
 				case INACTIVE_CAPTION:
 #endif
@@ -261,7 +261,7 @@ namespace ascension {
 				case INFO_TEXT:
 				case MENU_TEXT:
 				case WINDOW_TEXT:
-					return Color::from(context->get_color());
+					return fromNative<Color>(context->get_color());
 				default:
 					return boost::none;
 			}
