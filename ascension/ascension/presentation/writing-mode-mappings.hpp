@@ -235,9 +235,9 @@ namespace ascension {
 			if(isHorizontal(writingMode.blockFlowDirection))
 				return graphics::PhysicalFourSides<T>(
 					graphics::_top = from.blockStart(),
-					graphics::_right = ltr ? from.inlineStart() : from.inlineEnd(),
+					graphics::_right = ltr ? from.inlineEnd() : from.inlineStart(),
 					graphics::_bottom = from.blockEnd(),
-					graphics::_left = ltr ? from.inlineEnd() : from.inlineStart()
+					graphics::_left = ltr ? from.inlineStart() : from.inlineEnd()
 				);
 			else {
 				const bool verticalRl = writingMode.blockFlowDirection == VERTICAL_RL;
