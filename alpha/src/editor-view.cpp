@@ -12,6 +12,7 @@
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/log.hpp>
@@ -77,8 +78,8 @@ namespace alpha {
 			// get themed colors
 			if(Glib::RefPtr<Gtk::StyleContext> styleContext = get_style_context()) {
 				const Gtk::StateFlags state = Gtk::STATE_FLAG_ACTIVE | Gtk::STATE_FLAG_SELECTED;
-				gradient->addColorStop(0, ascension::graphics::Color::from(styleContext->get_background_color(state)));
-				gradient->addColorStop(1, ascension::graphics::Color::from(styleContext->get_color(state)));
+				gradient->addColorStop(0, ascension::graphics::fromNative<ascension::graphics::Color>(styleContext->get_background_color(state)));
+				gradient->addColorStop(1, ascension::graphics::fromNative<ascension::graphics::Color>(styleContext->get_color(state)));
 				context.setFillStyle(gradient);
 				context.fillRectangle(r);
 			}
