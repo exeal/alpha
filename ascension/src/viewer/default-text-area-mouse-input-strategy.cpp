@@ -129,9 +129,10 @@ namespace ascension {
 				// calculate the size of the image
 				namespace geometry = graphics::geometry;
 				using graphics::Scalar;
-				const TextViewer& viewer = caret.textArea().textViewer();
+				TextArea& textArea = caret.textArea();
+				const TextViewer& viewer = textArea.textViewer();
 				const graphics::Rectangle clientBounds(widgetapi::bounds(viewer, false));
-				graphics::font::TextRenderer& renderer = caret.textArea().textRenderer();
+				graphics::font::TextRenderer& renderer = textArea.textRenderer();
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(renderer.viewport());
 //				const graphics::font::TextViewportNotificationLocker lock(viewport.get());
 				auto selectionBounds(
@@ -259,7 +260,7 @@ namespace ascension {
 				// locate the hotspot of the image based on the cursor position
 				// TODO: This code can't handle vertical writing mode.
 				graphics::Point hotspot(cursorPosition);
-				geometry::x(hotspot) -= geometry::left(viewer.textAreaContentRectangle()) - viewport->scrollPositions().ipd() + geometry::left(selectionBounds);
+				geometry::x(hotspot) -= geometry::left(textArea.contentRectangle()) - viewport->scrollPositions().ipd() + geometry::left(selectionBounds);
 				geometry::y(hotspot) -= geometry::y(graphics::font::modelToView(*viewport,
 					graphics::font::TextHit<kernel::Position>::leading(kernel::Position(selectedRegion.beginning().line, 0))));
 
@@ -415,7 +416,7 @@ namespace ascension {
 			graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset> calculateDnDScrollOffset(const TextViewer& viewer) {
 				const graphics::Point p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
 				const graphics::Rectangle localBounds(widgetapi::bounds(viewer, false));
-				graphics::Rectangle inset(viewer.textAreaContentRectangle());
+				graphics::Rectangle inset(viewer.textArea().contentRectangle());
 				std::unique_ptr<const graphics::font::FontMetrics<graphics::Scalar>> fontMetrics(
 					widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textArea().textRenderer().defaultFont()));
 

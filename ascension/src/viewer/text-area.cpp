@@ -27,6 +27,7 @@
 #include <ascension/viewer/text-viewer.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
+#include <boost/geometry/algorithms/intersection.hpp>
 
 
 namespace ascension {
@@ -40,6 +41,18 @@ namespace ascension {
 		TextArea::~TextArea() BOOST_NOEXCEPT {
 			if(viewer_ != nullptr)
 				uninstall(*viewer_);
+		}
+
+		/**
+		 * Returns the 'allocation-rectangle' of the text area, in viewer-coordinates.
+		 * @see #textAreaContentRectangle
+		 */
+		graphics::Rectangle TextArea::allocationRectangle() const BOOST_NOEXCEPT {
+			if(viewer_ == nullptr || locator_ == nullptr)
+				return boost::geometry::make_zero<graphics::Rectangle>();
+			graphics::Rectangle requested(locator_->locateComponent(*this)), temp;
+			const bool b = boost::geometry::intersection(graphics::geometry::normalize(requested), widgetapi::bounds(*viewer_, false), temp);
+			return temp;
 		}
 
 		/// @see Caret#MotionSignal
@@ -90,6 +103,15 @@ namespace ascension {
 
 			if(changed && !textViewer().isFrozen())
 				widgetapi::redrawScheduledRegion(textViewer());
+		}
+
+		/**
+		 * Returns the 'content-rectangle' of the text area, in viewer-coordinates.
+		 * @see #bounds, #textAreaAllocationRectangle
+		 */
+		graphics::Rectangle TextArea::contentRectangle() const BOOST_NOEXCEPT {
+			// TODO: Consider 'padding-start' setting.
+			return allocationRectangle();
 		}
 
 		/// @see TextRenderer#DefaultFontChangedSignal
@@ -334,7 +356,7 @@ namespace ascension {
 			const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer(), false));
 			graphics::Rectangle boundsToRedraw(textRenderer().viewport()->boundsInView());
 			geometry::translate(boundsToRedraw, graphics::Dimension(geometry::_dx = geometry::left(viewerBounds), geometry::_dy = geometry::top(viewerBounds)));
-			assert(boost::geometry::equals(boundsToRedraw, textViewer().textAreaAllocationRectangle()));
+			assert(boost::geometry::equals(boundsToRedraw, allocationRectangle()));
 
 			BOOST_FOREACH(graphics::Scalar& edge, beforeAndAfter) {
 				switch(textRenderer().computedBlockFlowDirection()) {
@@ -373,7 +395,7 @@ namespace ascension {
 		/// @see TextViewerComponent#relocated
 		void TextArea::relocated() {
 			if(viewer_ != nullptr)
-				textRenderer().viewport()->setBoundsInView(textViewer().textAreaContentRectangle());
+				textRenderer().viewport()->setBoundsInView(contentRectangle());
 		}
 
 		/// @see Caret#SelectionShapeChangedSignal
@@ -621,7 +643,7 @@ namespace ascension {
 		 */
 		TextArea::Renderer::Renderer(TextViewer& viewer) :
 				TextRenderer(viewer.presentation(), widgetapi::createRenderingContext(viewer)->availableFonts(),
-				graphics::geometry::size(viewer.textAreaContentRectangle())), viewer_(viewer) {
+				graphics::geometry::size(viewer.textArea().contentRectangle())), viewer_(viewer) {
 			// TODO: other FontCollection object used?
 #if 0
 			// for test
@@ -646,8 +668,8 @@ namespace ascension {
 					viewer_.document().line(line),
 					presentation().computedTextToplevelStyle(), styles.first, std::move(styles.second),
 					presentation().computeTextRunStyleForLine(line),
-					presentation::styles::Length::Context(*renderingContext, graphics::geometry::size(viewer_.textAreaAllocationRectangle())),
-					graphics::geometry::size(viewer_.textAreaContentRectangle()), fontCollection(), renderingContext->fontRenderContext()));
+					presentation::styles::Length::Context(*renderingContext, graphics::geometry::size(viewer_.textArea().allocationRectangle())),
+					graphics::geometry::size(viewer_.textArea().contentRectangle()), fontCollection(), renderingContext->fontRenderContext()));
 		}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08

@@ -205,11 +205,10 @@ namespace ascension {
 			/// @}
 
 			/// @name Geometries
+			/// @see TextArea
 			/// @{
 			TextViewerComponent* hitTest(const graphics::Point& location) BOOST_NOEXCEPT;
 			virtual const TextViewerComponent* hitTest(const graphics::Point& location) const BOOST_NOEXCEPT;
-			graphics::Rectangle textAreaAllocationRectangle() const BOOST_NOEXCEPT;
-			graphics::Rectangle textAreaContentRectangle() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Signals

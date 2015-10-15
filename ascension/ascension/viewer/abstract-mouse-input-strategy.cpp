@@ -169,7 +169,7 @@ namespace ascension {
 				if(tracking_->autoScroll) {
 					const std::shared_ptr<graphics::font::TextViewport> viewport(viewer.textArea().textRenderer().viewport());
 					const graphics::Point p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
-					const graphics::Rectangle contentRectangle(viewer.textAreaContentRectangle());
+					const graphics::Rectangle contentRectangle(viewer.textArea().contentRectangle());
 					graphics::Dimension scrollUnits(
 						graphics::geometry::_dx = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
 						graphics::geometry::_dy = widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textArea().textRenderer().defaultFont())->linePitch());
@@ -203,7 +203,7 @@ namespace ascension {
 					graphics::Point p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
 
 					// snap cursor position into 'content-rectangle' of the text area
-					const graphics::Rectangle contentRectangle(viewer.textAreaContentRectangle());
+					const graphics::Rectangle contentRectangle(viewer.textArea().contentRectangle());
 					graphics::geometry::x(p) = clamp(static_cast<graphics::Scalar>(graphics::geometry::x(p)), graphics::geometry::range<0>(contentRectangle));
 					graphics::geometry::y(p) = clamp(static_cast<graphics::Scalar>(graphics::geometry::y(p)), graphics::geometry::range<1>(contentRectangle));
 
