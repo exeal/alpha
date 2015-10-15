@@ -192,6 +192,16 @@ namespace ascension {
 				boost::geometry::assign_values(rectangle, minimumX, minimumY, maximumX, maximumY);
 				return rectangle;
 			}
+
+			template<typename Point, typename Rectangle>
+			inline bool within(const Point& point, const Rectangle& rectangle,
+					typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr,
+					typename detail::EnableIfTagIs<Rectangle, boost::geometry::box_tag>::type* = nullptr) {
+				return boost::geometry::get<0>(point) >= boost::geometry::get<boost::geometry::min_corner, 0>(rectangle)
+					&& boost::geometry::get<0>(point) < boost::geometry::get<boost::geometry::max_corner, 0>(rectangle)
+					&& boost::geometry::get<1>(point) >= boost::geometry::get<boost::geometry::min_corner, 1>(rectangle)
+					&& boost::geometry::get<1>(point) < boost::geometry::get<boost::geometry::max_corner, 1>(rectangle);
+			}
 			/// @}
 
 			// fundamental operations

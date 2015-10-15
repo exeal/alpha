@@ -174,7 +174,7 @@ STDMETHODIMP AccessibleProxy::accHitTest(long xLeft, long yTop, VARIANT* pvarChi
 	ASCENSION_VERIFY_AVAILABILITY();
 	// this code does not support non-rectangular window
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pvarChild);
-	if(boost::geometry::within(widgetapi::mapFromGlobal(viewer_, Point(
+	if(graphics::geometry::within(widgetapi::mapFromGlobal(viewer_, Point(
 			geometry::_x = static_cast<Scalar>(xLeft), geometry::_y = static_cast<Scalar>(yTop))), widgetapi::bounds(viewer_, false))) {
 		pvarChild->vt = VT_I4;
 		pvarChild->lVal = CHILDID_SELF;

@@ -267,7 +267,7 @@ namespace ascension {
 				// TODO: Support RTL and vertical window layout.
 				graphics::geometry::y(location) +=
 					widgetapi::createRenderingContext(*this)->fontMetrics(textArea().textRenderer().defaultFont())->cellHeight() + 1;
-				if(!boost::geometry::within(location, textArea().contentRectangle()))
+				if(!graphics::geometry::within(location, textArea().contentRectangle()))
 					location = graphics::geometry::make<graphics::Point>((graphics::geometry::_x = 1.0f, graphics::geometry::_y = 1.0f));
 			} else {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -295,7 +295,7 @@ namespace ascension {
 
 			// ignore if the point is over the scroll bars
 			const graphics::Rectangle localBounds(widgetapi::bounds(*this, false));
-			if(!boost::geometry::within(location, localBounds))
+			if(!graphics::geometry::within(location, localBounds))
 				return;
 
 			return showContextMenu(widgetapi::event::LocatedUserInput(location, buttons, modifiers), nativeEvent);
@@ -585,8 +585,8 @@ namespace ascension {
 		 */
 		const TextViewerComponent* TextViewer::hitTest(const graphics::Point& location) const BOOST_NOEXCEPT {
 //			checkInitialization();
-//			if(boost::geometry::within(location, textArea().contentRectangle()))
-			if(boost::geometry::within(location, textArea().allocationRectangle()))
+//			if(graphics::geometry::within(location, textArea().contentRectangle()))
+			if(graphics::geometry::within(location, textArea().allocationRectangle()))
 				return &textArea();
 			return nullptr;
 		}
