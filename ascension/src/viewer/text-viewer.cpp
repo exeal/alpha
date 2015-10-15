@@ -28,8 +28,8 @@
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
-#include <boost/geometry/algorithms/intersection.hpp>
 #include <boost/geometry/algorithms/within.hpp>
+#include <boost/geometry/strategies/strategies.hpp>	// for boost.geometry.within
 #ifdef _DEBUG
 #	include <boost/log/trivial.hpp>
 //#	define ASCENSIOB_DIAGNOSE_INHERENT_DRAWING
@@ -42,7 +42,7 @@ namespace ascension {
 		namespace {
 			/// @internal Maps the given point in viewer-local coordinates into a point in text-area coordinates.
 			inline graphics::Point mapLocalToTextArea(const TextViewer& viewer, const graphics::Point& p) {
-				const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
+				const graphics::Rectangle textArea(viewer.textArea().allocationRectangle());
 				graphics::Point temp(p);
 				return graphics::geometry::translate(temp,
 					graphics::Dimension(
@@ -51,7 +51,7 @@ namespace ascension {
 			}
 			/// @internal Maps the given point in text-area coordinates into a point in viewer-local coordinates.
 			inline graphics::Point mapTextAreaToLocal(const TextViewer& viewer, const graphics::Point& p) {
-				const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
+				const graphics::Rectangle textArea(viewer.textArea().allocationRectangle());
 				graphics::Point temp(p);
 				return graphics::geometry::translate(temp,
 					graphics::Dimension(
@@ -267,7 +267,7 @@ namespace ascension {
 				// TODO: Support RTL and vertical window layout.
 				graphics::geometry::y(location) +=
 					widgetapi::createRenderingContext(*this)->fontMetrics(textArea().textRenderer().defaultFont())->cellHeight() + 1;
-				if(!boost::geometry::within(location, textAreaContentRectangle()))
+				if(!boost::geometry::within(location, textArea().contentRectangle()))
 					location = graphics::geometry::make<graphics::Point>((graphics::geometry::_x = 1.0f, graphics::geometry::_y = 1.0f));
 			} else {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -585,8 +585,8 @@ namespace ascension {
 		 */
 		const TextViewerComponent* TextViewer::hitTest(const graphics::Point& location) const BOOST_NOEXCEPT {
 //			checkInitialization();
-//			if(boost::geometry::within(location, textAreaContentRectangle()))
-			if(boost::geometry::within(location, textAreaAllocationRectangle()))
+//			if(boost::geometry::within(location, textArea().contentRectangle()))
+			if(boost::geometry::within(location, textArea().allocationRectangle()))
 				return &textArea();
 			return nullptr;
 		}
@@ -1438,7 +1438,7 @@ namespace ascension {
 			}
 			if(textArea_.get() == nullptr)
 				return;
-			static_cast<TextViewerComponent*>(textArea_.get())->relocated();
+			updateTextAreaAllocationRectangle();
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// notify the tooltip
 			win32::AutoZeroSize<TOOLINFOW> ti;
@@ -1545,25 +1545,6 @@ namespace ascension {
 			...
 		}
 #endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
-
-		/**
-		 * Returns the 'allocation-rectangle' of the text area, in local-coordinates.
-		 * @see #locateComponent, #textAreaContentRectangle
-		 */
-		graphics::Rectangle TextViewer::textAreaAllocationRectangle() const BOOST_NOEXCEPT {
-			graphics::Rectangle requested(locateComponent(textArea())), temp;
-			const bool b = boost::geometry::intersection(graphics::geometry::normalize(requested), widgetapi::bounds(*this, false), temp);
-			return temp;
-		}
-
-		/**
-		 * Returns the 'content-rectangle' of the text area, in local-coordinates.
-		 * @see #bounds, #textAreaAllocationRectangle
-		 */
-		graphics::Rectangle TextViewer::textAreaContentRectangle() const BOOST_NOEXCEPT {
-			// TODO: Consider 'padding-start' setting.
-			return textAreaAllocationRectangle();
-		}
 
 		/**
 		 * Revokes the frozen state of the viewer.

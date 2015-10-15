@@ -40,6 +40,8 @@ namespace ascension {
 
 			/// @name Text Viewer
 			/// @{
+			graphics::Rectangle allocationRectangle() const BOOST_NOEXCEPT;
+			graphics::Rectangle contentRectangle() const BOOST_NOEXCEPT;
 			BOOST_CONSTEXPR TextViewer& textViewer() BOOST_NOEXCEPT;
 			BOOST_CONSTEXPR const TextViewer& textViewer() const BOOST_NOEXCEPT;
 			/// @}
