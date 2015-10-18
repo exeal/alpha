@@ -14,6 +14,7 @@
 #include <ascension/kernel/point.hpp>
 #include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
+#include <ascension/graphics/geometry/common.hpp>
 #include <ascension/viewer/detail/weak-reference-for-points.hpp>
 
 namespace ascension {

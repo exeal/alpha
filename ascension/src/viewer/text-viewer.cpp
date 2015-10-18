@@ -156,7 +156,8 @@ namespace ascension {
 		TextViewer::TextViewer(presentation::Presentation& presentation) :
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
-				Glib::ObjectBase("ascension.viewer.TextViewer"),
+//				Glib::ObjectBase("ascension.viewer.TextViewer"),
+//				Gtk::Widget(),
 #	endif
 #endif
 				presentation_(presentation) {
@@ -364,7 +365,7 @@ namespace ascension {
 			if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
 				closeCompletionProposalsPopup(*this);
 */			texteditor::abortIncrementalSearch(document());
-			static_cast<detail::InputEventHandler&>(textArea().caret()).abortInput();
+			detail::resetInputMethod(*this);
 //			if(currentWin32WindowMessage().wParam != get()) {
 //				hideCaret();
 //				::DestroyCaret();
@@ -493,7 +494,7 @@ namespace ascension {
 				const graphics::font::TextRenderer& textRenderer = textViewer.textArea().textRenderer();
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer.viewport());
 				const presentation::WritingMode writingMode(textViewer.presentation().computeWritingMode());
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset> scrollPositions(viewport->scrollPositions());
+				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset> scrollPositions(viewport->scrollPositions());
 				widgetapi::NativeScrollPosition x, y;
 				switch(writingMode.blockFlowDirection) {
 					case presentation::HORIZONTAL_TB:
@@ -598,8 +599,25 @@ namespace ascension {
 			document().addListener(*this);
 			document().addRollbackListener(*this);
 
-			presentation().computedTextToplevelStyleChangedSignal().connect(
+			computedTextToplevelStyleChangedConnection_ = presentation().computedTextToplevelStyleChangedSignal().connect(
 				std::bind(&TextViewer::computedTextToplevelStyleChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+			auto viewport(textArea().textRenderer().viewport());
+			viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
+				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
+			});
+			viewportScrolledConnection_ = viewport->scrolledSignal().connect(
+				[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
+					assert(!this->isFrozen());
+					// update the scroll positions
+					this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(false, false));
+//					this->closeCompletionProposalsPopup(*this);
+					this->hideToolTip();
+				}
+			);
+			viewportScrollPropertiesChangedConnection_ = viewport->scrollPropertiesChangedSignal().connect([this](const presentation::FlowRelativeTwoAxes<bool>&) {
+				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
+			});
 //			updateScrollBars(FlowRelativeTwoAxes<bool>(true, true), FlowRelativeTwoAxes<bool>(true, true));
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
@@ -1713,11 +1731,6 @@ namespace ascension {
 			static_cast<TextViewerComponent&>(textArea()).relocated();
 		}
 
-		/// @see TextViewportListener#viewportBoundsInViewChanged
-		void TextViewer::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
-			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
-		}
-
 		namespace {
 			void scrollBarParameters(const TextViewer& viewer,
 					std::size_t coordinate, widgetapi::NativeScrollPosition* position,
@@ -1755,23 +1768,6 @@ namespace ascension {
 					*position = si.nPos;
 #endif
 			}
-		}
-
-		/// @see TextViewportListener#viewportScrollPositionChanged
-		void TextViewer::viewportScrollPositionChanged(
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
-				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
-			assert(!isFrozen());
-
-			// update the scroll positions
-			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(false, false));
-//			closeCompletionProposalsPopup(*this);
-			hideToolTip();
-		}
-
-		/// @see TextViewportListener#viewportScrollPropertiesChanged
-		void TextViewer::viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
-			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
 		}
 
 

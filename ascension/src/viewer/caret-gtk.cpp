@@ -17,8 +17,7 @@ namespace ascension {
 			// TODO: Not implemented.
 		}
 
-		void Caret::abortInput() {
-			// TODO: Not implemented.
+		void Caret::adjustInputMethodCompositionWindow() {
 		}
 
 		bool Caret::canPastePlatformData() const {

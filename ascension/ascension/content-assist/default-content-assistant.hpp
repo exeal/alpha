@@ -12,7 +12,6 @@
 #include <ascension/platforms.hpp>
 #include <ascension/content-assist/content-assist.hpp>
 #include <ascension/corelib/timer.hpp>
-#include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/liststore.h>
@@ -38,8 +37,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		class DefaultContentAssistant : public ContentAssistant,
-			public HasTimer<>, public kernel::DocumentListener,
-			public graphics::font::TextViewportListener, private ContentAssistant::CompletionProposalsUI {
+			public HasTimer<>, public kernel::DocumentListener, private ContentAssistant::CompletionProposalsUI {
 		public:
 			// constructors
 			DefaultContentAssistant() BOOST_NOEXCEPT;
@@ -70,13 +68,6 @@ namespace ascension {
 			void caretMoved(const viewer::Caret& caret, const kernel::Region& regionBeforeMotion);
 			// viewer.Caret.CharacterInputSignal
 			void characterInput(const viewer::Caret& caret, CodePoint c);
-			// graphics.font.TextViewportListener
-			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
-			void viewportScrollPositionChanged(
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
-				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
-			void viewportScrollPropertiesChanged(
-				const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
 			// ContentAssistant.CompletionProposalsUI
 			void close() override;
 			bool complete() override;
@@ -142,7 +133,8 @@ namespace ascension {
 				std::vector<std::shared_ptr<const CompletionProposal>> proposals_;
 			};
 			std::unique_ptr<CompletionProposalsPopup> proposalsPopup_;
-			boost::signals2::connection caretMotionConnection_, caretCharacterInputConnection_;
+			boost::signals2::connection textAreaContentRectangleChangedConnection_,
+				caretMotionConnection_, caretCharacterInputConnection_, viewportScrolledConnection_;
 		};
 	}
 } // namespace ascension.contentassist

@@ -9,7 +9,6 @@
 #define ASCENSION_LINE_NUMBER_RULER_HPP
 #include <ascension/graphics/font/number-substitution.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
-#include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
@@ -27,8 +26,8 @@ namespace ascension {
 	namespace viewer {
 		namespace source {
 			/// A ruler (column) displaying line numbers.
-			class LineNumberRuler : public AbstractRuler, public AbstractMouseInputStrategy,
-				public graphics::font::TextViewportListener, public graphics::font::VisualLinesListener {
+			class LineNumberRuler : public AbstractRuler,
+				public AbstractMouseInputStrategy, public graphics::font::VisualLinesListener {
 			public:
 				LineNumberRuler();
 
@@ -54,6 +53,9 @@ namespace ascension {
 				// Ruler
 				void paint(graphics::PaintContext& context) override;
 				graphics::Scalar width() const BOOST_NOEXCEPT override;
+				// AbstractRuler
+				void install(SourceViewer& viewer, const Locator& locator, RulerAllocationWidthSink& allocationWidthSink) override;
+				void uninstall(SourceViewer& viewer) override;
 				// MouseInputStrategy
 				void interruptMouseReaction(bool forKeyboardInput) override;
 				void mouseButtonInput(Action, widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) override;
@@ -61,13 +63,6 @@ namespace ascension {
 				bool showCursor(const graphics::Point& position) override;
 				// AbstractMouseInputStrategy
 				void trackedLocationChanged(const kernel::Position& position) override;
-				// graphics.font.TextViewportListener
-				void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
-				void viewportScrollPositionChanged(
-					const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
-					const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
-				void viewportScrollPropertiesChanged(
-					const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
 				// graphics.font.VisualLinesListener
 				void visualLinesDeleted(const boost::integer_range<Index>& lines,
 					Index sublines, bool longestLineChanged) BOOST_NOEXCEPT override;
@@ -86,6 +81,8 @@ namespace ascension {
 				boost::optional<std::uint8_t> numberOfDigits_;
 				boost::optional<graphics::Scalar> width_;
 				boost::optional<Index> lineSelectionAnchorLine_;
+				boost::signals2::connection viewportResizedConnection_,
+					viewportScrolledConnection_, viewportScrollPropertiesChangedConnection_;
 			};
 		}
 	}

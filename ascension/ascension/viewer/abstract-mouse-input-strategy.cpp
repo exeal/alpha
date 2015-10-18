@@ -176,23 +176,23 @@ namespace ascension {
 					if(isVertical(viewer.textArea().textRenderer().computedBlockFlowDirection()))
 						graphics::geometry::transpose(scrollUnits);
 
-					graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset> scrollOffsets(0, 0);
+					graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> scrollOffsets(0, 0);
 					// no rationale about these scroll amounts
 					if(graphics::geometry::y(p) < graphics::geometry::top(contentRectangle))
 						scrollOffsets.y() =
-							static_cast<graphics::font::TextViewportSignedScrollOffset>((graphics::geometry::y(p)
+							static_cast<graphics::font::TextViewport::SignedScrollOffset>((graphics::geometry::y(p)
 								- (graphics::geometry::top(contentRectangle))) / graphics::geometry::dy(scrollUnits) - 1);
 					else if(graphics::geometry::y(p) >= graphics::geometry::bottom(contentRectangle))
 						scrollOffsets.y() =
-							static_cast<graphics::font::TextViewportSignedScrollOffset>((graphics::geometry::y(p)
+							static_cast<graphics::font::TextViewport::SignedScrollOffset>((graphics::geometry::y(p)
 								- (graphics::geometry::bottom(contentRectangle))) / graphics::geometry::dy(scrollUnits) + 1);
 					else if(graphics::geometry::x(p) < graphics::geometry::left(contentRectangle))
 						scrollOffsets.x() =
-							static_cast<graphics::font::TextViewportSignedScrollOffset>((graphics::geometry::x(p)
+							static_cast<graphics::font::TextViewport::SignedScrollOffset>((graphics::geometry::x(p)
 								- (graphics::geometry::left(contentRectangle))) / graphics::geometry::dx(scrollUnits) - 1);
 					else if(graphics::geometry::x(p) >= graphics::geometry::right(contentRectangle))
 						scrollOffsets.x() =
-							static_cast<graphics::font::TextViewportSignedScrollOffset>((graphics::geometry::x(p)
+							static_cast<graphics::font::TextViewport::SignedScrollOffset>((graphics::geometry::x(p)
 								- (graphics::geometry::right(contentRectangle))) / graphics::geometry::dx(scrollUnits) + 1);
 					if(scrollOffsets.x() != 0 || scrollOffsets.y() != 0)
 						viewport->scroll(scrollOffsets);

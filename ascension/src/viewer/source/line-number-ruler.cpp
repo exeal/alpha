@@ -65,6 +65,30 @@ namespace ascension {
 				}
 			}
 
+			/// @see AbstractRuler#install
+			void LineNumberRuler::install(SourceViewer& viewer, const Locator& locator, RulerAllocationWidthSink& allocationWidthSink) {
+				AbstractRuler::install(viewer, locator, allocationWidthSink);
+				if(this->viewer() == &viewer) {
+					const auto viewport(viewer.textArea().textRenderer().viewport());
+					viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
+						// TODO: This implementation is adhoc.
+						invalidate();
+					});
+					viewportScrolledConnection_ = viewport->scrolledSignal().connect(
+						[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
+							if(SourceViewer* const sourceViewer = this->viewer()) { 
+//								widgetapi::scrollPixels(*sourceViewer);
+								widgetapi::redrawScheduledRegion(*sourceViewer);
+							}
+						}
+					);
+					viewportScrollPropertiesChangedConnection_ = viewport->scrollPropertiesChangedSignal().connect([this](const presentation::FlowRelativeTwoAxes<bool>&) {
+						// TODO: This implementation is adhoc.
+						invalidate();
+					});
+				}
+			}
+
 			/// @see MouseInputStrategy#interruptMouseReaction
 			void LineNumberRuler::interruptMouseReaction(bool forKeyboardInput) {
 				endLineSelection();
@@ -181,6 +205,17 @@ namespace ascension {
 				continueLineSelection(position);
 			}
 
+			/// @see AbstractRuler#uninstall
+			void LineNumberRuler::uninstall(SourceViewer& viewer) {
+				SourceViewer* const oldViewer = this->viewer();
+				AbstractRuler::uninstall(viewer);
+				if(this->viewer() == nullptr) {
+					viewportResizedConnection_.disconnect();
+					viewportScrolledConnection_.disconnect();
+					viewportScrollPropertiesChangedConnection_.disconnect();
+				}
+			}
+
 			/// @internal
 			inline bool LineNumberRuler::updateNumberOfDigits() BOOST_NOEXCEPT {
 				if(viewer() != nullptr) {
@@ -248,29 +283,6 @@ namespace ascension {
 					context.setFont(oldFont);
 					return presentation::isHorizontal(writingMode) ? graphics::geometry::dx(stringExtent) : graphics::geometry::dy(stringExtent);
 				}
-			}
-
-			/// @see graphics#font#TextViewportListener#viewportBoundsInViewChanged
-			void LineNumberRuler::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
-				// TODO: This implementation is adhoc.
-				invalidate();
-			}
-
-			/// @see graphics#font#TextViewportListener#viewportScrollPositionChanged
-			void LineNumberRuler::viewportScrollPositionChanged(
-					const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
-					const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
-				if(SourceViewer* const sourceViewer = viewer()) { 
-//					widgetapi::scrollPixels(*sourceViewer);
-					widgetapi::redrawScheduledRegion(*sourceViewer);
-				}
-			}
-
-			/// @see graphics#font#TextViewportListener#viewportScrollPropertiesChanged
-			void LineNumberRuler::viewportScrollPropertiesChanged(
-					const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
-				// TODO: This implementation is adhoc.
-				invalidate();
 			}
 
 			/// @see graphics#font#VisualLinesListener#visualLinesDeleted

@@ -132,7 +132,7 @@ namespace ascension {
 				const auto lineMetrics(layout->lineMetrics(firstVisibleLine.subline));
 				const Scalar baseline = -*boost::const_begin(lineMetrics.extentWithHalfLeadings());
 				Point axis;
-				const Rectangle bounds(geometry::make<Rectangle>(boost::geometry::make_zero<Point>(), geometry::size(viewport().boundsInView())));
+				const Rectangle bounds(geometry::make<Rectangle>(boost::geometry::make_zero<Point>(), viewport().size()));
 				switch(viewport().textRenderer().computedBlockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
 						axis = geometry::make<Point>((geometry::_x = 0.0f, geometry::_y = geometry::top(bounds) + baseline));

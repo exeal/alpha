@@ -32,6 +32,14 @@
 
 namespace ascension {
 	namespace viewer {
+		/**
+		 * @typedef ascension::viewer::TextArea::GeometryChangedSignal
+		 * The signal which gets emitted when the allocation- or content-rectangle of the @c TextArea was changed.
+		 * @param textArea The @c TextArea
+		 * @see #allocationRectangle, #allocationRectangleChangedSignal, #contentRectangle,
+		 *      #contentRectangleChangedSignal
+		 */
+
 		/// Default constructor.
 		TextArea::TextArea() : viewer_(nullptr), locator_(nullptr),
 				linesToRedraw_(boost::irange<Index>(0, 0)), mouseInputStrategyIsInstalled_(false) {
@@ -53,6 +61,11 @@ namespace ascension {
 			graphics::Rectangle requested(locator_->locateComponent(*this)), temp;
 			const bool b = boost::geometry::intersection(graphics::geometry::normalize(requested), widgetapi::bounds(*viewer_, false), temp);
 			return temp;
+		}
+
+		/// Returns the @c GeometryChangedSignal signal connector for the 'allocation-rectangle'.
+		SignalConnector<TextArea::GeometryChangedSignal> TextArea::allocationRectangleChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(allocationRectangleChangedSignal_);
 		}
 
 		/// @see Caret#MotionSignal
@@ -112,6 +125,11 @@ namespace ascension {
 		graphics::Rectangle TextArea::contentRectangle() const BOOST_NOEXCEPT {
 			// TODO: Consider 'padding-start' setting.
 			return allocationRectangle();
+		}
+
+		/// Returns the @c GeometryChangedSignal signal connector for the 'content-rectangle'.
+		SignalConnector<TextArea::GeometryChangedSignal> TextArea::contentRectangleChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(contentRectangleChangedSignal_);
 		}
 
 		/// @see TextRenderer#DefaultFontChangedSignal
@@ -225,7 +243,10 @@ namespace ascension {
 				std::bind(&TextArea::matchBracketsChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 			defaultFontChangedConnection_ =
 				renderer_->defaultFontChangedSignal().connect(std::bind(&TextArea::defaultFontChanged, this, std::placeholders::_1));
-			renderer_->viewport()->addListener(*this);
+			viewportResizedConnection_ =
+				renderer_->viewport()->resizedSignal().connect(std::bind(&TextArea::viewportResized, this, std::placeholders::_1));
+			viewportScrolledConnection_ =
+				renderer_->viewport()->scrolledSignal().connect(std::bind(&TextArea::viewportScrolled, this, std::placeholders::_1, std::placeholders::_2));
 			renderer_->layouts().addVisualLinesListener(*this);
 			if(mouseInputStrategy_.get() != nullptr) {
 				assert(!mouseInputStrategyIsInstalled_);
@@ -354,7 +375,7 @@ namespace ascension {
 
 			namespace geometry = graphics::geometry;
 			const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer(), false));
-			graphics::Rectangle boundsToRedraw(textRenderer().viewport()->boundsInView());
+			graphics::Rectangle boundsToRedraw(allocationRectangle());
 			geometry::translate(boundsToRedraw, graphics::Dimension(geometry::_dx = geometry::left(viewerBounds), geometry::_dy = geometry::top(viewerBounds)));
 			assert(boost::geometry::equals(boundsToRedraw, allocationRectangle()));
 
@@ -394,8 +415,10 @@ namespace ascension {
 
 		/// @see TextViewerComponent#relocated
 		void TextArea::relocated() {
+			allocationRectangleChangedSignal_(*this);
+			contentRectangleChangedSignal_(*this);
 			if(viewer_ != nullptr)
-				textRenderer().viewport()->setBoundsInView(contentRectangle());
+				textRenderer().viewport()->resize(graphics::geometry::size(contentRectangle()));
 		}
 
 		/// @see Caret#SelectionShapeChangedSignal
@@ -441,7 +464,8 @@ namespace ascension {
 				mouseInputStrategy_->uninstall();
 				mouseInputStrategyIsInstalled_ = false;
 				renderer_->layouts().removeVisualLinesListener(*this);
-				renderer_->viewport()->removeListener(*this);
+				viewportResizedConnection_.disconnect();
+				viewportScrolledConnection_.disconnect();
 				caretMotionConnection_.disconnect();
 				selectionShapeChangedConnection_.disconnect();
 				matchBracketsChangedConnection_.disconnect();
@@ -453,14 +477,14 @@ namespace ascension {
 			}
 		}
 
-		/// @see TextViewportListener#viewportBoundsInViewChanged
-		void TextArea::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
+		/// @see TextViewport#ResizedSignal
+		void TextArea::viewportResized(const graphics::Dimension& oldSize) BOOST_NOEXCEPT {
 //			textRenderer().setTextWrapping(textRenderer().textWrapping(), widgetapi::createRenderingContext(*this).get());
 		}
 
-		/// @see TextViewportListener#viewportScrollPositionChanged
-		void TextArea::viewportScrollPositionChanged(
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
+		/// @see TextViewport#ScrolledSignal
+		void TextArea::viewportScrolled(
+				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>& positionsBeforeScroll,
 				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
 			if(viewer_ == nullptr || textViewer().isFrozen())
 				return;
@@ -496,11 +520,11 @@ namespace ascension {
 				if(p != firstVisibleLineBeforeScroll)
 					layout = nullptr;
 				if(layout == nullptr)
-					abstractScrollOffsetInPixels.bpd() = std::numeric_limits<graphics::font::TextViewportSignedScrollOffset>::max();
+					abstractScrollOffsetInPixels.bpd() = std::numeric_limits<graphics::font::TextViewport::SignedScrollOffset>::max();
 			}
 			// 1-2. inline dimension
 			abstractScrollOffsetInPixels.ipd() = (abstractScrollOffsetInPixels.bpd() != std::numeric_limits<std::int32_t>::max()) ?
-				static_cast<graphics::font::TextViewportSignedScrollOffset>(
+				static_cast<graphics::font::TextViewport::SignedScrollOffset>(
 					inlineProgressionOffsetInViewerGeometry(*viewport, positionsBeforeScroll.ipd())
 						- inlineProgressionOffsetInViewerGeometry(*viewport, viewport->scrollPositions().ipd()))
 				: std::numeric_limits<std::int32_t>::max();
@@ -511,7 +535,7 @@ namespace ascension {
 					textViewer().presentation().computeWritingMode(), abstractScrollOffsetInPixels));
 
 				// 2. scroll the graphics device
-				const graphics::Rectangle& boundsToScroll = viewport->boundsInView();
+				const graphics::Rectangle boundsToScroll(contentRectangle());
 				if(std::abs(graphics::geometry::x(scrollOffsetsInPixels)) >= graphics::geometry::dx(boundsToScroll)
 						|| std::abs(graphics::geometry::y(scrollOffsetsInPixels)) >= graphics::geometry::dy(boundsToScroll))
 					widgetapi::scheduleRedraw(textViewer(), boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
@@ -572,9 +596,6 @@ namespace ascension {
 				// 3. repaint
 				widgetapi::redrawScheduledRegion(textViewer());
 			}
-		}
-
-		void TextArea::viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) {
 		}
 
 		/// @see VisualLinesListener#visualLinesDeleted

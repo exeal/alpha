@@ -413,7 +413,7 @@ namespace ascension {
 		}
 
 		namespace {
-			graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset> calculateDnDScrollOffset(const TextViewer& viewer) {
+			graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> calculateDnDScrollOffset(const TextViewer& viewer) {
 				const graphics::Point p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
 				const graphics::Rectangle localBounds(widgetapi::bounds(viewer, false));
 				graphics::Rectangle inset(viewer.textArea().contentRectangle());
@@ -428,7 +428,7 @@ namespace ascension {
 
 				// On Win32, oleidl.h defines the value named DD_DEFSCROLLINSET, but...
 
-				graphics::font::TextViewportSignedScrollOffset dx = 0, dy = 0;
+				graphics::font::TextViewport::SignedScrollOffset dx = 0, dy = 0;
 				if(includes(boost::irange(geometry::top(localBounds), geometry::top(inset)), geometry::y(p)))
 					dy = -1;
 				else if(includes(boost::irange(geometry::bottom(localBounds), geometry::bottom(inset)), geometry::y(p)))
@@ -437,7 +437,7 @@ namespace ascension {
 					dx = -3;
 				else if(includes(boost::irange(geometry::right(localBounds), geometry::right(inset)), geometry::y(p)))
 					dx = +3;
-				return graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(dx, dy);
+				return graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(dx, dy);
 			}
 		}
 
@@ -471,7 +471,7 @@ namespace ascension {
 
 			if(acceptable) {
 				dropAction = input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN) ? widgetapi::DROP_ACTION_COPY : widgetapi::DROP_ACTION_MOVE;
-				const graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset> scrollOffset(calculateDnDScrollOffset(viewer));
+				const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> scrollOffset(calculateDnDScrollOffset(viewer));
 				if(scrollOffset.x() != 0 || scrollOffset.y() != 0) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					dropAction |= widgetapi::DROP_ACTION_WIN32_SCROLL;
@@ -479,10 +479,10 @@ namespace ascension {
 					// only one direction to scroll
 					if(scrollOffset.x() != 0)
 						textArea_->textRenderer().viewport()->scroll(
-							graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(0, scrollOffset.y()));
+							graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(0, scrollOffset.y()));
 					else
 						textArea_->textRenderer().viewport()->scroll(
-							graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(scrollOffset.x(), 0));
+							graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(scrollOffset.x(), 0));
 				}
 			}
 			input.setDropAction(dropAction);
@@ -925,16 +925,16 @@ namespace ascension {
 				if(input.scrollType() == widgetapi::event::MouseWheelInput::WHEEL_UNIT_SCROLL) {
 					const auto units(input.unitsToScroll());
 					assert(units != boost::none);
-					const graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset> offsets(
-						graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(graphics::geometry::dx(*units)),
-						graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(graphics::geometry::dy(*units)));
+					const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> offsets(
+						graphics::_x = static_cast<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::dx(*units)),
+						graphics::_y = static_cast<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::dy(*units)));
 					viewport->scroll(offsets);
 					input.consume();
 				} else if(input.scrollType() == widgetapi::event::MouseWheelInput::WHEEL_BLOCK_SCROLL) {
-					const graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset> physicalPages(
-						graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(graphics::geometry::dx(input.wheelRotation())),
-						graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(graphics::geometry::dy(input.wheelRotation())));
-					presentation::FlowRelativeTwoAxes<graphics::font::TextViewportSignedScrollOffset> flowRelativePages(
+					const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> physicalPages(
+						graphics::_x = static_cast<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::dx(input.wheelRotation())),
+						graphics::_y = static_cast<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::dy(input.wheelRotation())));
+					presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::SignedScrollOffset> flowRelativePages(
 						presentation::mapPhysicalToFlowRelative(textArea_->textRenderer().presentation().computeWritingMode(), physicalPages));
 					if(flowRelativePages.bpd() != 0) {
 						viewport->scrollBlockFlowPage(flowRelativePages.bpd());
@@ -1033,7 +1033,7 @@ namespace ascension {
 
 					if(graphics::geometry::dy(scrollOffsets) != 0 /*&& abs(geometry::dy(scrollOffsets)) >= abs(geometry::dx(scrollOffsets))*/)
 						viewport->scroll(
-							graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
+							graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
 								0, (graphics::geometry::dy(scrollOffsets) > 0) ? +1 : -1));
 //					else if(graphics::geometry::dx(scrollOffsets) != 0)
 //						viewport->scroll(

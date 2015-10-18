@@ -428,7 +428,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-run.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport-listener.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport-base.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\visual-line.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\visual-lines-listener.hpp" />
@@ -495,6 +495,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\current-line-highlighter.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\default-caret-shaper.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\default-text-area-mouse-input-strategy.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\detail\input-method.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\detail\weak-reference-for-points.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\abstract-ruler.hpp" />
@@ -509,6 +510,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area-mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-component.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-model-conversion.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-utility.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\virtual-box.hpp" />

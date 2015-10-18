@@ -93,8 +93,9 @@ namespace ascension {
 		/// @see CompletionProposalsUI#close
 		void DefaultContentAssistant::close() {
 			if(completionSession_.get() != nullptr) {
-				// these connections were maken by startPopup() method
-				textViewer_->textArea().textRenderer().viewport()->removeListener(*this);
+				// these connections were made by startPopup() method
+				textAreaContentRectangleChangedConnection_.disconnect();
+				viewportScrolledConnection_.disconnect();
 				caretMotionConnection_.disconnect();
 				if(completionSession_->incremental)
 					textViewer_->document().removeListener(*this);
@@ -262,7 +263,14 @@ namespace ascension {
 			updatePopupBounds();
 
 			// these connections are revoke by close() method
-			textViewer_->textArea().textRenderer().viewport()->addListener(*this);
+			textAreaContentRectangleChangedConnection_ = textViewer_->textArea().contentRectangleChangedSignal().connect([this](const viewer::TextArea&) {
+				this->viewerBoundsChanged();
+			});
+			viewportScrolledConnection_ = textViewer_->textArea().textRenderer().viewport()->scrolledSignal().connect(
+				[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
+					this->viewerBoundsChanged();
+				}
+			);
 			caretMotionConnection_ = textViewer_->textArea().caret().motionSignal().connect(
 				std::bind(&DefaultContentAssistant::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
 			if(completionSession_->incremental)
@@ -362,23 +370,6 @@ namespace ascension {
 				updatePopupBounds();
 			} catch(...) {
 			}
-		}
-
-		/// @see graphics.font.TextViewportListener.viewportBoundsInViewChanged
-		void DefaultContentAssistant::viewportBoundsInViewChanged(const graphics::Rectangle&) BOOST_NOEXCEPT {
-			viewerBoundsChanged();
-		}
-
-		/// @see graphics.font.TextViewportListener.viewportScrollPositionChanged
-		void DefaultContentAssistant::viewportScrollPositionChanged(
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>&,
-				const graphics::font::VisualLine&) BOOST_NOEXCEPT {
-			viewerBoundsChanged();
-		}
-
-		/// @see graphics.font.TextViewportListener.viewportScrollPropertiesChanged
-		void DefaultContentAssistant::viewportScrollPropertiesChanged(
-				const presentation::FlowRelativeTwoAxes<bool>&) BOOST_NOEXCEPT {
 		}
 	}
 
