@@ -13,6 +13,7 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <ascension/viewer/virtual-box.hpp>
 
 namespace ascension {
@@ -97,22 +98,22 @@ namespace ascension {
 			graphics::Scalar ipd = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport);
 			switch(renderer.lineRelativeAlignment()) {
 				case TextRenderer::LEFT:
-					ipd = geometry::x(p) - geometry::left(viewport->boundsInView());
+					ipd = geometry::x(p) - geometry::left(textArea_.contentRectangle());
 					break;
 				case TextRenderer::RIGHT:
-					ipd = geometry::x(p) - geometry::right(viewport->boundsInView());
+					ipd = geometry::x(p) - geometry::right(textArea_.contentRectangle());
 					break;
 				case TextRenderer::HORIZONTAL_CENTER:
-					ipd = geometry::x(p) - (geometry::left(viewport->boundsInView())) + geometry::right(viewport->boundsInView()) / 2;
+					ipd = geometry::x(p) - (geometry::left(textArea_.contentRectangle())) + geometry::right(textArea_.contentRectangle()) / 2;
 					break;
 				case TextRenderer::TOP:
-					ipd = geometry::y(p) - geometry::top(viewport->boundsInView());
+					ipd = geometry::y(p) - geometry::top(textArea_.contentRectangle());
 					break;
 				case TextRenderer::BOTTOM:
-					ipd = geometry::y(p) - geometry::bottom(viewport->boundsInView());
+					ipd = geometry::y(p) - geometry::bottom(textArea_.contentRectangle());
 					break;
 				case TextRenderer::VERTICAL_CENTER:
-					ipd = geometry::y(p) - (geometry::top(viewport->boundsInView())) + geometry::bottom(viewport->boundsInView()) / 2;
+					ipd = geometry::y(p) - (geometry::top(textArea_.contentRectangle())) + geometry::bottom(textArea_.contentRectangle()) / 2;
 					break;
 				default:
 					ASCENSION_ASSERT_NOT_REACHED();
@@ -120,11 +121,8 @@ namespace ascension {
 			if(!ascension::includes(ipds_, ipd))
 				return false;
 
-			graphics::Point pointInViewport(p);
-			geometry::translate(pointInViewport, graphics::Dimension(
-				geometry::_dx = geometry::left(viewport->boundsInView()), geometry::_dy = geometry::top(viewport->boundsInView())));
-			const graphics::font::VisualLine line(locateLine(*viewport, pointInViewport));
-			return line >= *lines_.begin() && line <= *lines_.end();	// 'lines_' is inclusive
+			const graphics::font::VisualLine line(locateLine(textArea_.textViewer(), p));
+			return line >= *boost::const_begin(lines_) && line <= *boost::const_end(lines_);	// 'lines_' is inclusive
 		}
 
 		namespace {

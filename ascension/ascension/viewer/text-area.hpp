@@ -7,11 +7,13 @@
 
 #ifndef ASCENSION_TEXT_AREA_HPP
 #define ASCENSION_TEXT_AREA_HPP
+#include <ascension/corelib/signals.hpp>
 #include <ascension/corelib/timer.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
-#include <ascension/graphics/font/text-viewport-listener.hpp>
+#include <ascension/graphics/font/text-viewport-base.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/kernel/document-observers.hpp>
+#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <ascension/viewer/detail/weak-reference-for-points.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
 
@@ -31,8 +33,8 @@ namespace ascension {
 			class DropTarget;
 		}
 
-		class TextArea : public TextViewerComponent,
-			public graphics::font::TextViewportListener, public graphics::font::VisualLinesListener,
+		class TextArea :
+			public TextViewerComponent, public graphics::font::VisualLinesListener,
 			public kernel::DocumentListener, public detail::WeakReferenceForPoints<TextArea> {
 		public:
 			TextArea();
@@ -40,8 +42,6 @@ namespace ascension {
 
 			/// @name Text Viewer
 			/// @{
-			graphics::Rectangle allocationRectangle() const BOOST_NOEXCEPT;
-			graphics::Rectangle contentRectangle() const BOOST_NOEXCEPT;
 			BOOST_CONSTEXPR TextViewer& textViewer() BOOST_NOEXCEPT;
 			BOOST_CONSTEXPR const TextViewer& textViewer() const BOOST_NOEXCEPT;
 			/// @}
@@ -54,6 +54,15 @@ namespace ascension {
 			BOOST_CONSTEXPR bool hidesCaret() const BOOST_NOEXCEPT;
 			void setCaretShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
 			void showCaret() BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Geometry
+			/// @{
+			graphics::Rectangle allocationRectangle() const BOOST_NOEXCEPT;
+			graphics::Rectangle contentRectangle() const BOOST_NOEXCEPT;
+			typedef boost::signals2::signal<void(const TextArea&)> GeometryChangedSignal;
+			SignalConnector<GeometryChangedSignal> allocationRectangleChangedSignal() BOOST_NOEXCEPT;
+			SignalConnector<GeometryChangedSignal> contentRectangleChangedSignal() BOOST_NOEXCEPT;
 			/// @}
 
 			/**
@@ -130,12 +139,11 @@ namespace ascension {
 			void install(TextViewer& viewer, const Locator& locator) override;
 			void relocated() override;
 			void uninstall(TextViewer& viewer) override;
-			// graphics.font.TextViewportListener
-			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
-			void viewportScrollPositionChanged(
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
-				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
-			void viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) override;
+			// graphics.font.TextViewport signals
+			void viewportResized(const graphics::Dimension& oldSize) BOOST_NOEXCEPT;
+			void viewportScrolled(
+				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportBase::ScrollOffset>& positionsBeforeScroll,
+				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT;
 			// graphics.font.VisualLinesListener
 			void visualLinesDeleted(const boost::integer_range<Index>& lines,
 				Index sublines, bool longestLineChanged) BOOST_NOEXCEPT override;
@@ -170,6 +178,8 @@ namespace ascension {
 			std::shared_ptr<TextAreaMouseInputStrategy> mouseInputStrategy_;
 			bool mouseInputStrategyIsInstalled_;
 			std::shared_ptr<widgetapi::DropTarget> dropTargetHandler_;
+			GeometryChangedSignal allocationRectangleChangedSignal_, contentRectangleChangedSignal_;
+			boost::signals2::connection viewportResizedConnection_, viewportScrolledConnection_;
 			boost::signals2::scoped_connection caretMotionConnection_,
 				defaultFontChangedConnection_, matchBracketsChangedConnection_, selectionShapeChangedConnection_;
 		};

@@ -63,6 +63,7 @@ namespace alpha {
 int main(int argc, char* argv[]) {
 #ifdef _DEBUG
 	{
+		std::locale::global(std::locale("Japanese_Japan.932"));
 		auto loggingBackend(boost::make_shared<boost::log::sinks::debug_output_backend>());
 		auto loggingSink(boost::make_shared<boost::log::sinks::synchronous_sink<boost::log::sinks::debug_output_backend>>(loggingBackend));
 		loggingSink->set_formatter(

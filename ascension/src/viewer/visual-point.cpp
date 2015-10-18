@@ -57,11 +57,11 @@ namespace ascension {
 				const graphics::font::TextLayout& layout = renderer.layouts().at(
 					np.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);	// this call may change the layouts
 				const float visibleLines = viewport->numberOfVisibleLines();
-				presentation::FlowRelativeTwoAxes<boost::optional<graphics::font::TextViewportScrollOffset>> to;	// scroll destination
+				presentation::FlowRelativeTwoAxes<boost::optional<graphics::font::TextViewport::ScrollOffset>> to;	// scroll destination
 
 				// scroll if the point is outside of 'before-edge' or 'after-edge'
 				to.bpd() = std::min(p.visualLine().line, viewport->scrollPositions().bpd());
-				to.bpd() = std::max(p.visualLine().line - static_cast<graphics::font::TextViewportScrollOffset>(visibleLines) + 1, *to.bpd());
+				to.bpd() = std::max(p.visualLine().line - static_cast<graphics::font::TextViewport::ScrollOffset>(visibleLines) + 1, *to.bpd());
 
 				// scroll if the point is outside of 'start-edge' or 'end-edge'
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08

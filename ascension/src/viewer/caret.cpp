@@ -12,12 +12,14 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/image.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/text-editor/command.hpp>
 #include <ascension/text-editor/input-sequence-checker.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-caret-shaper.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/viewer/virtual-box.hpp>
 #include <boost/range/algorithm/binary_search.hpp>
 
@@ -251,6 +253,12 @@ namespace ascension {
 			endRectangleSelection();
 			context_.leaveAnchorNext = false;
 			moveTo(*this);
+		}
+
+		/// @see detail#InputMethodEvent#commitInputString
+		void Caret::commitInputString(const StringPiece& text) {
+//			if(!context_.inputMethodComposingCharacter)
+				texteditor::commands::TextInputCommand(textArea().textViewer(), text.to_string())();
 		}
 
 		/// @see kernel#DocumentListener#documentAboutToBeChanged
@@ -511,7 +519,17 @@ namespace ascension {
 			const bool installed = isInstalled();
 			VisualPoint::install(textArea);
 			if(!installed) {
-				textArea.textRenderer().viewport()->addListener(*this);
+#ifdef ASCENSION_USE_SYSTEM_CARET
+				viewportResizedConnection_ = textArea.textRenderer().viewport()->resizedSignal().connect([this](const graphics::Dimension&) {
+//					if(this->textViewer().rulerConfiguration().alignment != ALIGN_LEFT)
+						this->resetVisualization();
+				});
+				viewportScrolledConnection_ = textArea.textRenderer().viewport()->scrolledSignal().connect(
+					[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
+						this->updateLocation();
+					}
+				);
+#endif // ASCENSION_USE_SYSTEM_CARET
 				anchor_->install(textArea);
 				anchorMotionSignalConnection_ = anchor_->motionSignal().connect(
 					std::bind(&Caret::pointMoved, this, std::placeholders::_1, std::placeholders::_2));
@@ -561,6 +579,33 @@ namespace ascension {
 				document().insertUndoBoundary();
 				context_.lastTypedPosition = boost::none;
 			}
+		}
+
+		/// @see detail#InputMethodEvent#preeditChanged
+		void Caret::preeditChanged() {
+			// TODO: Not implemented.
+		}
+
+		/// @see detail#InputMethodEvent#preeditEnded
+		void Caret::preeditEnded() {
+			context_.inputMethodCompositionActivated = false;
+			updateVisualAttributes();
+		}
+
+		/// @see detail#InputMethodEvent#preeditStarted
+		void Caret::preeditStarted() {
+			context_.inputMethodCompositionActivated = true;
+			adjustInputMethodCompositionWindow();
+			utils::closeCompletionProposalsPopup(textArea().textViewer());
+		}
+
+		// @see detail#InputMethodQueryEvent#querySurroundingText
+		std::pair<const StringPiece, StringPiece::const_iterator> Caret::querySurroundingText() const {
+			const StringPiece lineString(document().line(kernel::line(*this)));
+			StringPiece::const_iterator position(lineString.cbegin());
+			if(kernel::line(*this) == kernel::line(anchor()))
+				position += kernel::offsetInLine(beginning());
+			return std::make_pair(lineString, position);
 		}
 
 		/**
@@ -711,8 +756,12 @@ namespace ascension {
 		/// @see VisualPoint#uninstall
 		void Caret::uninstall() BOOST_NOEXCEPT {
 			try {
-				if(!isTextAreaDisposed())
-					textArea().textRenderer().viewport()->removeListener(*this);
+#ifdef ASCENSION_USE_SYSTEM_CARET
+				if(!isTextAreaDisposed()) {
+					viewportResizedConnection_.disconnect();
+					viewportScrolledConnection_.disconnect();
+				}
+#endif // ASCENSION_USE_SYSTEM_CARET
 				anchor_->uninstall();
 				anchorMotionSignalConnection_.disconnect();
 				shapeCache_.image.reset();
@@ -749,7 +798,7 @@ namespace ascension {
 			assert(graphics::geometry::isNormalized(contentRectangle));
 
 			boost::geometry::model::d2::point_xy<int> newLocation(static_cast<int>(graphics::geometry::x(p)), static_cast<int>(graphics::geometry::y(p)));
-			if(!boost::geometry::within(p, contentRectangle)) {
+			if(!graphics::geometry::within(p, contentRectangle)) {
 				// "hide" the caret
 				const int linePitch = static_cast<int>(widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textRenderer().defaultFont())->linePitch());
 				if(isHorizontal(textViewer().textRenderer().computedBlockFlowDirection()))
@@ -777,27 +826,6 @@ namespace ascension {
 				utils::show(*this);
 			checkMatchBrackets();
 			context_.regionBeforeMoved = boost::none;
-		}
-
-		/// @see TextViewportListener#viewportBoundsInViewChanged
-		void Caret::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
-#ifdef ASCENSION_USE_SYSTEM_CARET
-//			if(textViewer().rulerConfiguration().alignment != ALIGN_LEFT)
-				resetVisualization();
-#endif
-		}
-
-		/// @see TextViewportListener#viewportScrollPositionChanged
-		void Caret::viewportScrollPositionChanged(
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>&,
-				const graphics::font::VisualLine&) BOOST_NOEXCEPT {
-#ifdef ASCENSION_USE_SYSTEM_CARET
-			updateLocation();
-#endif
-		}
-
-		/// @see TextViewportListener#viewportScrollPropertiesChanged
-		void Caret::viewportScrollPropertiesChanged(const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
 		}
 
 

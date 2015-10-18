@@ -934,9 +934,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\screen.hpp">
       <Filter>ascension\Header Files\viewer\widgetapi</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport-listener.hpp">
-      <Filter>ascension\Header Files\graphics\font</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\main-window.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1232,6 +1229,12 @@
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\font\baseline-iterator.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-model-conversion.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport-base.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
   </ItemGroup>

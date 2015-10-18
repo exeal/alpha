@@ -11,7 +11,6 @@
 #define ASCENSION_CARET_HPP
 #include <ascension/corelib/signals.hpp>
 #include <ascension/corelib/text/newline.hpp>
-#include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/viewer/detail/input-method.hpp>
 #include <ascension/viewer/visual-point.hpp>
@@ -53,8 +52,7 @@ namespace ascension {
 	namespace viewer {
 		// documentation is caret.cpp
 		class Caret : public VisualPoint,
-			public kernel::DocumentListener, public graphics::font::TextViewportListener,
-			public detail::InputMethodEvent, public detail::InputMethodQueryEvent {
+			public kernel::DocumentListener, public detail::InputMethodEvent, public detail::InputMethodQueryEvent {
 		public:
 			/// Mode of tracking match brackets.
 			enum MatchBracketsTrackingMode {
@@ -182,13 +180,6 @@ namespace ascension {
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
-			// graphics.font.TextViewportListener
-			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
-			void viewportScrollPositionChanged(
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
-				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
-			void viewportScrollPropertiesChanged(
-				const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
 			// detail.InputMethodEvent
 			void commitInputString(const StringPiece& text) override;
 			void preeditChanged() override;
@@ -221,6 +212,9 @@ namespace ascension {
 			MotionSignal motionSignal_;
 			SelectionShapeChangedSignal selectionShapeChangedSignal_;
 			boost::signals2::connection anchorMotionSignalConnection_;
+#ifdef ASCENSION_USE_SYSTEM_CARET
+			boost::signals2::connection viewportResizedConnection_, viewportScrolledConnection_;
+#endif // ASCENSION_USE_SYSTEM_CARET
 			bool overtypeMode_;
 			bool autoShow_;		// true if show itself when movements
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;

@@ -176,9 +176,9 @@ namespace ascension {
 				inline void scrollTextViewer(viewer::TextViewer& target, viewer::VisualDestinationProxy(*procedure)(const viewer::VisualPoint&, Direction, Index), Direction direction, long n) {
 					// TODO: consider the numeric prefix.
 					if(procedure == &kernel::locations::nextPage) {
-						graphics::font::TextViewportSignedScrollOffset offset = (direction == Direction::FORWARD) ? n : -n;
+						graphics::font::TextViewport::SignedScrollOffset offset = (direction == Direction::FORWARD) ? n : -n;
 						if(offset != 0) {
-							presentation::FlowRelativeTwoAxes<graphics::font::TextViewportSignedScrollOffset> delta;
+							presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::SignedScrollOffset> delta;
 							delta.bpd() = offset;
 							delta.ipd() = 0;
 							target.textArea().textRenderer().viewport()->scroll(delta);
@@ -376,6 +376,7 @@ namespace ascension {
 			 */
 			bool CharacterInputCommand::perform() {
 				if(numericPrefix() == 1) {
+#if 0
 					if(Session* const session = target().document().session()) {
 						if(session->incrementalSearcher().isRunning()) {
 							viewer::utils::closeCompletionProposalsPopup(target());
@@ -384,6 +385,7 @@ namespace ascension {
 							return true;
 						}
 					}
+#endif
 					try {
 						return target().textArea().caret().inputCharacter(c_);
 					} catch(const kernel::DocumentCantChangeException&) {
@@ -1114,14 +1116,14 @@ namespace ascension {
 				const NumericPrefix n(numericPrefix());
 				if(n == 0)
 					return true;
-
+#if 0
 				if(Session* const session = target().document().session()) {
 					if(session->incrementalSearcher().isRunning()) {
 						session->incrementalSearcher().addString((n > 1) ? multiplyString(text_, static_cast<std::size_t>(n)) : text_);
 						return true;
 					}
 				}
-
+#endif
 				ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //				ASCENSION_CHECK_GUI_EDITABILITY();
 				if(n > 1) {

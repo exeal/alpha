@@ -8,13 +8,17 @@
 #include <ascension/viewer/text-viewer.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 
+#include <ascension/corelib/text/utf-iterator.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/log.hpp>
+#include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
+
+#include <cairo/cairo-win32.h>
 
 namespace ascension {
 	namespace viewer {
@@ -62,29 +66,50 @@ namespace ascension {
 		}
 
 		/// @internal Handles "commit" signal of @c GtkIMContext.
-		void TextViewer::handleInputMethodContextCommitSignal(GtkIMContext* context, gchar* text, gpointer userData) {
+		void TextViewer::handleInputMethodContextCommitSignal(GtkIMContext*, gchar* text, gpointer userData) {
+			TextViewer& self = *static_cast<TextViewer*>(userData);
+			const Glib::ustring s(text);
+			static_cast<detail::InputMethodEvent&>(self.textArea().caret()).commitInputString(fromGlibUstring(s));
 		}
 
 		/// @internal Handles "preedit-changed" signal of @c GtkIMContext.
 		void TextViewer::handleInputMethodContextPreeditChangedSignal(GtkIMContext* context, gpointer userData) {
-			TextViewer& self = *static_cast<TextViewer*>(userData);
-			assert(context == self.inputMethodContext_.get());
+			static_cast<detail::InputMethodEvent&>(static_cast<TextViewer*>(userData)->textArea().caret()).preeditChanged();
+		}
 
-			gchar* text;
-			PangoAttrList* attributes;
-			gint cursorPosition;
-			::gtk_im_context_get_preedit_string(context, &text, &attributes, &cursorPosition);
-			::g_free(text);
-			::pango_attr_list_unref(attributes);
+		/// @internal Handles "preedit-end" signal of @c GtkIMContext.
+		void TextViewer::handleInputMethodContextPreeditEndSignal(GtkIMContext*, gpointer userData) {
+			static_cast<detail::InputMethodEvent&>(static_cast<TextViewer*>(userData)->textArea().caret()).preeditEnded();
+		}
+
+		/// @internal Handles "preedit-start" signal of @c GtkIMContext.
+		void TextViewer::handleInputMethodContextPreeditStartSignal(GtkIMContext*, gpointer userData) {
+			static_cast<detail::InputMethodEvent&>(static_cast<TextViewer*>(userData)->textArea().caret()).preeditStarted();
 		}
 
 		/// @internal Handles "delete-surrounding" signal of @c GtkIMContext.
 		gboolean TextViewer::handleInputMethodContextDeleteSurroundingSignal(GtkIMContext* context, gint offset, gint nchars, gpointer userData) {
+			// TODO: Not implemented.
 			return false;
 		}
 
 		/// @internal Handles "retrieve-surrounding" signal of @c GtkIMContext.
 		gboolean TextViewer::handleInputMethodContextRetrieveSurroundingSignal(GtkIMContext* context, gpointer userData) {
+			const TextViewer& self = *static_cast<TextViewer*>(userData);
+			const auto surrounding(static_cast<const detail::InputMethodQueryEvent&>(self.textArea().caret()).querySurroundingText());
+			if(surrounding.first.data() != nullptr) {
+				if(surrounding.first.cbegin() <= surrounding.first.cend()) {
+					const Glib::ustring utf8(toGlibUstring(std::get<0>(surrounding)));
+					if(surrounding.second >= surrounding.first.cbegin() && surrounding.second <= surrounding.first.cend()) {
+						// calculate byte offset of the cursor position
+						auto utf8Iterator(utf8.begin());
+						auto ucs4Iterator(text::utf::makeCharacterDecodeIterator(surrounding.first.cbegin(), surrounding.first.cend()));
+						for(; ucs4Iterator.tell() < surrounding.second; ++utf8Iterator, ++ucs4Iterator);
+						::gtk_im_context_set_surrounding(context, utf8.data(), utf8.bytes(), utf8Iterator.base() - utf8.begin().base());
+						return true;
+					}
+				}
+			}
 			return false;
 		}
 
@@ -100,8 +125,8 @@ namespace ascension {
 			if(const Glib::RefPtr<Gtk::Adjustment> hadjustment = get_hadjustment()) {
 				hadjustment->signal_value_changed().connect([this]() {
 					if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
-						viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
-							graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(
+						viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
+							graphics::_x = static_cast<graphics::font::TextViewport::SignedScrollOffset>(
 								this->property_hadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.x()),
 							graphics::_y = 0));
 //					this->scrollPositionsBeforeChanged_.x() = this->get_hadjustment()->get_value();
@@ -112,9 +137,9 @@ namespace ascension {
 			if(const Glib::RefPtr<Gtk::Adjustment> vadjustment = get_vadjustment()) {
 				vadjustment->signal_value_changed().connect([this]() {
 					if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
-						viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
+						viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
 							graphics::_x = 0,
-							graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(
+							graphics::_y = static_cast<graphics::font::TextViewport::SignedScrollOffset>(
 								this->property_vadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.y())));
 //					this->scrollPositionsBeforeChanged_.x() = this->get_hadjustment()->get_value();
 //					this->scrollPositionsBeforeChanged_.y() = this->get_vadjustment()->get_value();
@@ -130,6 +155,9 @@ namespace ascension {
 #endif
 			set_can_focus(true);
 			set_has_window(true);
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
+			set_double_buffered(false);
+#endif
 
 			inputMethodContext_.reset(::gtk_im_multicontext_new(), &::g_object_unref);
 			::g_signal_connect(inputMethodContext_.get(), "commit",
@@ -138,6 +166,10 @@ namespace ascension {
 				G_CALLBACK(TextViewer::handleInputMethodContextDeleteSurroundingSignal), this);
 			::g_signal_connect(inputMethodContext_.get(), "preedit-changed",
 				G_CALLBACK(TextViewer::handleInputMethodContextPreeditChangedSignal), this);
+			::g_signal_connect(inputMethodContext_.get(), "preedit-end",
+				G_CALLBACK(TextViewer::handleInputMethodContextPreeditEndSignal), this);
+			::g_signal_connect(inputMethodContext_.get(), "preedit-start",
+				G_CALLBACK(TextViewer::handleInputMethodContextPreeditStartSignal), this);
 			::g_signal_connect(inputMethodContext_.get(), "retrieve-surrounding",
 				G_CALLBACK(TextViewer::handleInputMethodContextRetrieveSurroundingSignal), this);
 		}
@@ -287,6 +319,7 @@ namespace ascension {
 
 #ifdef _DEBUG
 	bool TextViewer::on_event(GdkEvent* event) {
+#if 0
 		ASCENSION_LOG_TRIVIAL(debug)
 			<< "allocation = " << get_allocated_width() << "x" << get_allocated_height() << std::endl;
 		ASCENSION_LOG_TRIVIAL(debug)
@@ -307,6 +340,7 @@ namespace ascension {
 			<< "get_events = " << std::hex << get_events() << std::dec << std::endl;
 		if(event != nullptr)
 			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
+#endif
 		return Gtk::Widget::on_event(event);
 	}
 #endif
@@ -474,6 +508,16 @@ namespace ascension {
 
 		void TextViewer::showContextMenu(const widgetapi::event::LocatedUserInput& input, void* nativeEvent) {
 			// TODO: Not implemented.
+		}
+
+		namespace detail {
+			std::shared_ptr<GtkIMContext> inputMethodContext(TextViewer& textViewer) {
+				return textViewer.inputMethodContext_;
+			}
+
+			void resetInputMethod(TextViewer& textViewer) {
+				::gtk_im_context_reset(inputMethodContext(textViewer).get());
+			}
 		}
 	}
 }

@@ -11,13 +11,13 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/corelib/signals.hpp>
 #include <ascension/graphics/color.hpp>
-#include <ascension/graphics/font/text-viewport-listener.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 #	include <ascension/graphics/physical-directions-dimensions.hpp>
 #endif
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/point.hpp>
+#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
@@ -69,6 +69,7 @@ namespace ascension {
 		class Caret;
 		class CaretShaper;
 		class TextArea;
+		class TextViewer;
 		class VirtualBox;
 		class VisualPoint;
 
@@ -93,6 +94,10 @@ namespace ascension {
 				virtual void dispose() = 0;
 			};
 #endif
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			std::shared_ptr<GtkIMContext> inputMethodContext(TextViewer& textViewer);
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		}
 
 		class TextViewer :
@@ -101,10 +106,10 @@ namespace ascension {
 				// QPlainTextEdit and QTextEdit inherit QAbstractScrollArea.
 				// NSTextView inherits NSText (which inherits NSView).
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				public Gtk::Widget,
 #	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 				public Gtk::Scrollable,
 #	endif
-				public Gtk::Widget,
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				public QAbstractScrollArea,
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
@@ -116,8 +121,7 @@ namespace ascension {
 				>,
 #endif
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
-				public graphics::font::TextViewportListener, protected TextViewerComponent::Locator,
-				protected MouseInputStrategy::TargetLocker,
+				protected TextViewerComponent::Locator, protected MouseInputStrategy::TargetLocker,
 				private detail::MouseVanish<TextViewer> {
 		public:
 			/**
@@ -354,13 +358,6 @@ namespace ascension {
 			void fireMouseReleased(widgetapi::event::MouseButtonInput& input);
 			void fireMouseTripleClicked(widgetapi::event::MouseButtonInput& input);
 			void fireMouseWheelChanged(widgetapi::event::MouseWheelInput& input);
-			// graphics.font.TextViewportListener
-			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
-			void viewportScrollPositionChanged(
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
-				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
-			void viewportScrollPropertiesChanged(
-				const presentation::FlowRelativeTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
 
 			// window system-related private methods
 		private:
@@ -369,6 +366,8 @@ namespace ascension {
 			static void handleInputMethodContextCommitSignal(GtkIMContext* context, gchar* text, gpointer userData);
 			static gboolean handleInputMethodContextDeleteSurroundingSignal(GtkIMContext* context, gint offset, gint nchars, gpointer userData);
 			static void handleInputMethodContextPreeditChangedSignal(GtkIMContext* context, gpointer userData);
+			static void handleInputMethodContextPreeditEndSignal(GtkIMContext* context, gpointer userData);
+			static void handleInputMethodContextPreeditStartSignal(GtkIMContext* context, gpointer userData);
 			static gboolean handleInputMethodContextRetrieveSurroundingSignal(GtkIMContext* context, gpointer userData);
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// base.Widget
@@ -403,7 +402,8 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			win32::com::SmartPointer<detail::AbstractAccessibleProxy> accessibleProxy_;
 #endif
-			boost::signals2::scoped_connection computedTextToplevelStyleChangedConnection_;
+			boost::signals2::scoped_connection computedTextToplevelStyleChangedConnection_,
+				viewportResizedConnection_, viewportScrolledConnection_, viewportScrollPropertiesChangedConnection_;
 
 			// modes
 			struct ModeState {
@@ -437,6 +437,7 @@ namespace ascension {
 			boost::value_initialized<std::size_t> mouseInputDisabledCount_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			std::shared_ptr<GtkIMContext> inputMethodContext_;
+			friend std::shared_ptr<GtkIMContext> detail::inputMethodContext(TextViewer&);
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			win32::com::SmartPointer<IDropTargetHelper> dropTargetHelper_;
 			win32::com::SmartPointer<IDataObject> draggingData_;
