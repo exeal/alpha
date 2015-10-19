@@ -548,7 +548,7 @@ namespace ascension {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 					fontRenderContext_(frc),
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-					size_(geometry::_dx = 0, geometry::_dy = 0),
+					size_(boost::geometry::make_zero<Dimension>()),
 					scrollPositions_(0, 0), firstVisibleLine_(0, 0), repairingLayouts_(false) {
 				documentAccessibleRegionChangedConnection_ =
 					this->textRenderer().presentation().document().accessibleRegionChangedSignal().connect(
@@ -807,7 +807,7 @@ namespace ascension {
 			 */
 			void TextViewport::resize(const graphics::Dimension& newSize) {
 				const graphics::Dimension oldSize(size());
-				if(!boost::geometry::equals(newSize, oldSize)) {
+				if(!geometry::equals(newSize, oldSize)) {
 					boost::geometry::assign(size_, newSize);
 					resizedSignal_(oldSize);
 				}
