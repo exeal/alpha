@@ -106,17 +106,17 @@ namespace ascension {
 			}
 
 			namespace {
-				template<typename Rectangle>
-				inline Point calculatePositionInViewport(presentation::BlockFlowDirection blockFlowDirection, const Rectangle& bounds, Scalar distanceFromViewportBeforeEdge) {
+				template<typename T>
+				inline Point calculatePositionInViewport(presentation::BlockFlowDirection blockFlowDirection, const T& bounds, Scalar distanceFromViewportBeforeEdge) {
 					switch(blockFlowDirection) {
 						case presentation::HORIZONTAL_TB:
-							return geometry::make<Point>((geometry::_x = static_cast<Scalar>(0), geometry::_y = geometry::top(bounds) + distanceFromViewportBeforeEdge));
+							return geometry::make<Point>((geometry::_x = static_cast<Scalar>(0), geometry::_y = distanceFromViewportBeforeEdge));
 							break;
 						case presentation::VERTICAL_RL:
-							return geometry::make<Point>((geometry::_x = geometry::right(bounds) - distanceFromViewportBeforeEdge, geometry::_y = static_cast<Scalar>(0)));
+							return geometry::make<Point>((geometry::_x = geometry::dx(bounds) - distanceFromViewportBeforeEdge, geometry::_y = static_cast<Scalar>(0)));
 							break;
 						case presentation::VERTICAL_LR:
-							return geometry::make<Point>((geometry::_x = geometry::left(bounds) + distanceFromViewportBeforeEdge, geometry::_y = static_cast<Scalar>(0)));
+							return geometry::make<Point>((geometry::_x = distanceFromViewportBeforeEdge, geometry::_y = static_cast<Scalar>(0)));
 							break;
 						default:
 							ASCENSION_ASSERT_NOT_REACHED();
@@ -250,7 +250,7 @@ namespace ascension {
 				}
 
 				// commit
-				positionInViewport_ = calculatePositionInViewport(blockFlowDirection, viewport().boundsInView(), newBaseline);
+				positionInViewport_ = calculatePositionInViewport(blockFlowDirection, viewport().size(), newBaseline);
 				std::swap(line_, newLine);
 				extent_ = lineMetrics.extent() + newBaseline;
 				extentWithHalfLeadings_ = lineMetrics.extentWithHalfLeadings() + newBaseline;

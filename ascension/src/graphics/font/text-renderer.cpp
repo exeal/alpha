@@ -238,8 +238,7 @@ namespace ascension {
 				const presentation::ComputedTextLineStyle&,
 				std::unique_ptr<presentation::ComputedStyledTextRunIterator>
 			> TextRenderer::buildLineLayoutConstructionParameters(Index line, const RenderingContext2D& graphics2D) const {
-				const Dimension viewportSize(geometry::size(viewport()->boundsInView()));
-				const presentation::styles::Length::Context lengthContext(graphics2D, viewportSize);
+				const presentation::styles::Length::Context lengthContext(graphics2D, viewport()->size());
 				return std::pair<
 					const presentation::ComputedTextLineStyle&,
 					std::unique_ptr<presentation::ComputedStyledTextRunIterator>
