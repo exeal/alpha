@@ -10,7 +10,17 @@
 #define ASCENSION_GEOMETRY_DIMENSION_HPP
 
 #include <ascension/graphics/geometry/common.hpp>
+#include <boost/geometry/algorithms/detail/assign_values.hpp>	// oops...
+#include <boost/geometry/core/access.hpp>
+#include <boost/geometry/core/closure.hpp>
+#include <boost/geometry/core/coordinate_dimension.hpp>
 #include <boost/geometry/core/coordinate_type.hpp>
+#include <boost/geometry/core/cs.hpp>
+#include <boost/geometry/core/geometry_id.hpp>
+#include <boost/geometry/core/is_areal.hpp>
+#include <boost/geometry/core/point_order.hpp>
+#include <boost/geometry/core/point_type.hpp>
+#include <boost/geometry/geometries/concepts/check.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/parameter.hpp>
 
@@ -142,17 +152,84 @@ namespace boost {
 		}
 
 		namespace core_dispatch {
+			template<typename Geometry, typename Coordinate, std::size_t dimension>
+			struct access<ascension::graphics::geometry::DimensionTag, Geometry, Coordinate, dimension, boost::false_type> {
+				static Coordinate get(const Geometry& g) {
+					return get(g, std::integral_constant<std::size_t, dimension>());
+				}
+				static void set(Geometry& g, const Coordinate& value) {
+					return set(g, value, std::integral_constant<std::size_t, dimension>());
+				}
+			private:
+				static Coordinate get(const Geometry& g, std::integral_constant<std::size_t, 0>) {
+					return ascension::graphics::geometry::dx(g);
+				}
+				static Coordinate get(const Geometry& g, std::integral_constant<std::size_t, 1>) {
+					return ascension::graphics::geometry::dy(g);
+				}
+				static void set(Geometry& g, const Coordinate& value, std::integral_constant<std::size_t, 0>) {
+					ascension::graphics::geometry::dx(g) = value;
+				}
+				static void set(Geometry& g, const Coordinate& value, std::integral_constant<std::size_t, 1>) {
+					ascension::graphics::geometry::dy(g) = value;
+				}
+			};
+			template<typename Geometry>
+			struct closure<ascension::graphics::geometry::DimensionTag, Geometry> {
+				static const closure_selector value = closure_undertermined;
+			};
+			template<typename Geometry>
+			struct coordinate_system<ascension::graphics::geometry::DimensionTag, Geometry> {
+				typedef cs::cartesian type;
+			};
 			template<typename Coordinate>
 			struct coordinate_type<ascension::graphics::geometry::DimensionTag, ascension::graphics::geometry::BasicDimension<Coordinate>> {
 				typedef void point_type;
 				typedef Coordinate type;
 			};
+			template<typename Geometry>
+			struct dimension<ascension::graphics::geometry::DimensionTag, Geometry> : boost::mpl::int_<2> {};
+			template<>
+			struct geometry_id<ascension::graphics::geometry::DimensionTag> : boost::mpl::int_<493875> {};
+			template<>
+			struct is_areal<ascension::graphics::geometry::DimensionTag> : boost::true_type {};
+			template<typename Geometry>
+			struct point_order<ascension::graphics::geometry::DimensionTag, Geometry> {
+				static const order_selector value = order_undetermined;
+			};
+			template<typename Geometry>
+			struct point_type<ascension::graphics::geometry::DimensionTag, Geometry> {
+				typedef void/*boost::geometry::model::d2::point_xy<typename geometry::coordinate_type<Geometry>::type>*/ type;
+			};
+		}
+
+		namespace dispatch {
+			template<typename Geometry>
+			struct assign_zero<ascension::graphics::geometry::DimensionTag, Geometry> {
+				static void apply(Geometry& dimension) {
+					geometry::assign_value(dimension, 0);
+				}
+			};
+			template<typename Geometry, bool isConst>
+			struct check<Geometry, ascension::graphics::geometry::DimensionTag, isConst> /*: check<Geometry, point_tag, isConst>*/ {};
 		}
 	}
 }	// boost.geometry.traits
 
 namespace ascension {
 	namespace graphics {
+		namespace geometry {
+			/// @def geometry_dimension_specific_algorithms @c Dimension Specific Algorithms
+			/// @{
+			template<typename Geometry1, typename Geometry2>
+			inline bool equals(const Geometry1& dimension1, const Geometry2& dimension2,
+					typename detail::EnableIfTagIs<Geometry1, DimensionTag>::type* = nullptr,
+					typename detail::EnableIfTagIs<Geometry2, DimensionTag>::type* = nullptr) {
+				return dx(dimension1) == dx(dimension2) && dy(dimension1) == dy(dimension2);
+			}
+			/// @}
+		}
+
 		typedef geometry::BasicDimension<Scalar> Dimension;
 	}
 }
