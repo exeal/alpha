@@ -110,8 +110,8 @@ namespace ascension {
 
 		RenderingContext2D& RenderingContext2D::closePath() {
 			if(endPath()) {
-				if(!win32::boole(::CloseFigure(nativeObject_.get())))
-					throw makePlatformError();
+//				if(!win32::boole(::CloseFigure(nativeObject_.get())))
+//					throw makePlatformError();
 			}
 			return *this;
 		}
