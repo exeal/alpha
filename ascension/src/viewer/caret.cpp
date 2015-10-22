@@ -793,7 +793,7 @@ namespace ascension {
 
 			const std::shared_ptr<const graphics::font::TextViewport> viewport(textViewer().textRenderer().viewport());
 //			graphics::font::TextViewportNotificationLocker lock(viewport.get());
-			graphics::Point p(modelToView(*viewport, graphics::font::TextHit<kernel::Position>::leading(*this)));
+			graphics::Point p(modelToView(textViewer(), graphics::font::TextHit<kernel::Position>::leading(*this)));
 			const graphics::Rectangle contentRectangle(viewer.textAreaContentRectangle());
 			assert(graphics::geometry::isNormalized(contentRectangle));
 

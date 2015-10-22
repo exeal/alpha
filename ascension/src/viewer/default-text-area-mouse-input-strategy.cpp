@@ -29,6 +29,7 @@
 #include <ascension/viewer/default-text-area-mouse-input-strategy.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
@@ -261,7 +262,7 @@ namespace ascension {
 				// TODO: This code can't handle vertical writing mode.
 				graphics::Point hotspot(cursorPosition);
 				geometry::x(hotspot) -= geometry::left(textArea.contentRectangle()) - viewport->scrollPositions().ipd() + geometry::left(selectionBounds);
-				geometry::y(hotspot) -= geometry::y(graphics::font::modelToView(*viewport,
+				geometry::y(hotspot) -= geometry::y(modelToView(viewer,
 					graphics::font::TextHit<kernel::Position>::leading(kernel::Position(selectedRegion.beginning().line, 0))));
 
 				// calculate 'dimensions'
@@ -450,7 +451,7 @@ namespace ascension {
 
 			if((dragAndDrop_ != boost::none) && !viewer.document().isReadOnly() && viewer.allowsMouseInput()) {
 				const graphics::Point caretPoint(widgetapi::mapFromGlobal(viewer, input.location()));
-				const kernel::Position p(viewToModel(*textArea_->textRenderer().viewport(), caretPoint).characterIndex());
+				const kernel::Position p(viewToModel(viewer, caretPoint).characterIndex());
 //				viewer.setCaretPosition(viewer.localPointForCharacter(p, true, TextLayout::LEADING));
 
 				// drop rectangle text into bidirectional line is not supported...
@@ -501,7 +502,7 @@ namespace ascension {
 			const std::shared_ptr<graphics::font::TextViewport> viewport(textArea_->textRenderer().viewport());
 			const graphics::font::TextViewportNotificationLocker lock(viewport.get());
 			const graphics::Point caretPoint(input.location());
-			const kernel::Position destination(graphics::font::viewToModel(*viewport, caretPoint).characterIndex());
+			const kernel::Position destination(viewToModel(viewer, caretPoint).characterIndex());
 
 			if(!document.accessibleRegion().includes(destination))
 				return input.ignore();
@@ -670,8 +671,7 @@ namespace ascension {
 				bool hyperlinkInvoked = false;
 				if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN)) {
 					if(!isPointOverSelection(caret, input.location())) {
-						if(const boost::optional<graphics::font::TextHit<kernel::Position>> p =
-								viewToModelInBounds(*textArea_->textRenderer().viewport(), input.location())) {
+						if(const boost::optional<graphics::font::TextHit<kernel::Position>> p = viewToModelInBounds(viewer, input.location())) {
 							if(const presentation::hyperlink::Hyperlink* link = utils::getPointedHyperlink(viewer, p->characterIndex())) {
 								link->invoke();
 								hyperlinkInvoked = true;
@@ -686,8 +686,7 @@ namespace ascension {
 					// shift => keep the anchor and move the caret to the cursor position
 					// ctrl  => begin word selection
 					// alt   => begin rectangle selection
-					if(const boost::optional<graphics::font::TextHit<kernel::Position>> to =
-							viewToModelInBounds(*textArea_->textRenderer().viewport(), input.location())) {
+					if(const boost::optional<graphics::font::TextHit<kernel::Position>> to = viewToModelInBounds(viewer, input.location())) {
 						if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN | widgetapi::event::UserInput::SHIFT_DOWN)) {
 							const bool shift = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN);
 							if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN)) {	// begin word selection
@@ -724,7 +723,7 @@ namespace ascension {
 					&& (dragAndDrop_->state == DragAndDrop::APPROACHING || dragAndDrop_->state == DragAndDrop::PROCESSING_AS_SOURCE)) {
 				// TODO: Should this handle only case APPROACHING_DND?
 				dragAndDrop_ = boost::none;
-				textArea_->caret().moveTo(viewToModel(*textArea_->textRenderer().viewport(), input.location()).characterIndex());
+				textArea_->caret().moveTo(viewToModel(textArea_->textViewer(), input.location()).characterIndex());
 				::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
 			}
 
@@ -978,8 +977,7 @@ namespace ascension {
 #endif
 			else {
 				// on a hyperlink?
-				if(const boost::optional<graphics::font::TextHit<kernel::Position>> p =
-						viewToModelInBounds(*textArea_->textRenderer().viewport(), position, kernel::locations::UTF16_CODE_UNIT))
+				if(const boost::optional<graphics::font::TextHit<kernel::Position>> p = viewToModelInBounds(viewer, position, kernel::locations::UTF16_CODE_UNIT))
 					newlyHoveredHyperlink = utils::getPointedHyperlink(viewer, p->characterIndex());
 				if(newlyHoveredHyperlink != nullptr && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)

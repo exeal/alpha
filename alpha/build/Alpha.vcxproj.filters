@@ -554,6 +554,9 @@
     <ClCompile Include="..\..\ascension\src\graphics\font\baseline-iterator.cpp">
       <Filter>ascension\Source Files\graphics\font</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer-model-conversion.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">

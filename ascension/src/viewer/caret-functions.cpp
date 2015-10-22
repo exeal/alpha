@@ -17,6 +17,7 @@
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <ascension/viewer/virtual-box.hpp>
 #include <boost/range/algorithm/find.hpp>
 
@@ -201,7 +202,7 @@ namespace ascension {
 					const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer, false));
 					if(graphics::geometry::x(p) <= graphics::geometry::right(viewerBounds) && graphics::geometry::y(p) <= graphics::geometry::bottom(viewerBounds)) {
 						const std::shared_ptr<const graphics::font::TextViewport> viewport(textArea.textRenderer().viewport());
-						const boost::optional<graphics::font::TextHit<kernel::Position>> hit(viewToModelInBounds(*viewport, p));
+						const boost::optional<graphics::font::TextHit<kernel::Position>> hit(viewToModelInBounds(textViewer, p));
 						return hit != boost::none && hit->characterIndex() >= caret.beginning() && hit->characterIndex() <= caret.end();
 					}
 				}

@@ -24,6 +24,7 @@
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
@@ -263,8 +264,7 @@ namespace ascension {
 			// invoked by the keyboard
 			if(byKeyboard) {
 				// MSDN says "the application should display the context menu at the location of the current selection."
-				location = graphics::font::modelToView(
-					*textArea().textRenderer().viewport(), graphics::font::TextHit<kernel::Position>::leading(textArea().caret()));
+				location = modelToView(*this, graphics::font::TextHit<kernel::Position>::leading(textArea().caret()));
 				// TODO: Support RTL and vertical window layout.
 				graphics::geometry::y(location) +=
 					widgetapi::createRenderingContext(*this)->fontMetrics(textArea().textRenderer().defaultFont())->cellHeight() + 1;
@@ -601,23 +601,6 @@ namespace ascension {
 
 			computedTextToplevelStyleChangedConnection_ = presentation().computedTextToplevelStyleChangedSignal().connect(
 				std::bind(&TextViewer::computedTextToplevelStyleChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-
-			auto viewport(textArea().textRenderer().viewport());
-			viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
-				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
-			});
-			viewportScrolledConnection_ = viewport->scrolledSignal().connect(
-				[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
-					assert(!this->isFrozen());
-					// update the scroll positions
-					this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(false, false));
-//					this->closeCompletionProposalsPopup(*this);
-					this->hideToolTip();
-				}
-			);
-			viewportScrollPropertiesChangedConnection_ = viewport->scrollPropertiesChangedSignal().connect([this](const presentation::FlowRelativeTwoAxes<bool>&) {
-				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
-			});
 //			updateScrollBars(FlowRelativeTwoAxes<bool>(true, true), FlowRelativeTwoAxes<bool>(true, true));
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
@@ -818,6 +801,24 @@ namespace ascension {
 		void TextViewer::initializeGraphics() {
 			textArea_.reset(new TextArea());
 			static_cast<TextViewerComponent*>(textArea_.get())->install(*this, *this);
+
+			auto viewport(textArea().textRenderer().viewport());
+			viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
+				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
+			});
+			viewportScrolledConnection_ = viewport->scrolledSignal().connect(
+				[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
+					assert(!this->isFrozen());
+					// update the scroll positions
+					this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(false, false));
+//					this->closeCompletionProposalsPopup(*this);
+					this->hideToolTip();
+				}
+			);
+			viewportScrollPropertiesChangedConnection_ = viewport->scrollPropertiesChangedSignal().connect([this](const presentation::FlowRelativeTwoAxes<bool>&) {
+				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
+			});
+
 			initializeNativeObjects();
 		}
 #if 0

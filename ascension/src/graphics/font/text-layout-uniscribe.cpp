@@ -2707,12 +2707,17 @@ namespace ascension {
 			void TextLayout::draw(PaintContext& context,
 					const Point& origin, const TextPaintOverride* paintOverride /* = nullptr */,
 					const InlineObject* endOfLine/* = nullptr */, const InlineObject* lineWrappingMark /* = nullptr */) const {
-
 #if defined(_DEBUG) && defined(ASCENSION_DIAGNOSE_INHERENT_DRAWING)
 				ASCENSION_LOG_TRIVIAL(debug) << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
 #endif
-
-				if(isEmpty() || geometry::dy(context.boundsToPaint()) == 0)
+				if(!isVertical(*this)) {
+					if(geometry::dy(context.boundsToPaint()) == 0)
+						return;
+				} else {
+					if(geometry::dx(context.boundsToPaint()) == 0)
+						return;
+				}
+				if(isEmpty())
 					return;
 
 				// this code paints the line in the following steps:
@@ -2924,6 +2929,9 @@ namespace ascension {
 
 				// 3. for each text runs
 				BOOST_FOREACH(auto& textRun, textRunsToPaint) {
+					::SetTextColor(context.native().get(), toNative<COLORREF>(std::get<0>(textRun).get().style().color));
+					::SetBkMode(context.native().get(),TRANSPARENT);
+					std::get<0>(textRun).get().fillGlyphs(context, std::get<2>(textRun));
 
 #if 0
 					// draw outside of the selection

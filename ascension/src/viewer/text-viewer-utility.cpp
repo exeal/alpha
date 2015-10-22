@@ -15,6 +15,7 @@
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 
@@ -115,9 +116,8 @@ namespace ascension {
 			 */
 			boost::optional<kernel::Region> getPointedIdentifier(const TextViewer& viewer) {
 //				if(viewer.isWindow()) {
-					return getNearestIdentifier(
-						viewer.document(), viewToModel(*viewer.textArea().textRenderer().viewport(),
-						widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position())).characterIndex());
+					return getNearestIdentifier(viewer.document(),
+						viewToModel(viewer, widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position())).characterIndex());
 //				}
 				return boost::none;
 			}
