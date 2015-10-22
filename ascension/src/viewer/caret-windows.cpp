@@ -394,11 +394,10 @@ void Caret::adjustInputMethodCompositionWindow() {
 		return;
 	if(win32::Handle<HIMC>::Type imc = inputMethod(textViewer())) {
 		// composition window placement
-		const shared_ptr<const font::TextViewport> viewport(textViewer().textRenderer().viewport());
 		COMPOSITIONFORM cf;
 		cf.rcArea = textViewer().textAreaContentRectangle();
 		cf.dwStyle = CFS_POINT;
-		cf.ptCurrentPos = modelToView(*viewport, font::TextHit<k::Position>::leading(beginning()), false);
+		cf.ptCurrentPos = modelToView(textViewer(), font::TextHit<k::Position>::leading(beginning()), false);
 		if(cf.ptCurrentPos.y == numeric_limits<Scalar>::max() || cf.ptCurrentPos.y == numeric_limits<Scalar>::min())
 			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == numeric_limits<Scalar>::min()) ? cf.rcArea.top : cf.rcArea.bottom;
 		else

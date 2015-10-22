@@ -20,6 +20,7 @@
 #include <ascension/viewer/source/source-viewer.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>
+#include <ascension/viewer/text-viewer-model-conversion.hpp>
 
 namespace ascension {
 	namespace viewer {
@@ -106,7 +107,7 @@ namespace ascension {
 						if(action == PRESSED) {
 							// select line(s)
 							Caret& caret = viewer()->textArea().caret();
-							const kernel::Position to(viewToModel(*viewer()->textArea().textRenderer().viewport(), input.location()).insertionIndex());
+							const kernel::Position to(viewToModel(*viewer(), input.location()).insertionIndex());
 							const bool extend = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN) && to.line != kernel::line(caret.anchor());
 							lineSelectionAnchorLine_ = extend ? kernel::line(caret.anchor()) : to.line;
 							caret.endRectangleSelection();

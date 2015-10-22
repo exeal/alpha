@@ -24,7 +24,10 @@
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
+#include <ascension/presentation/writing-mode-mappings.hpp>
+#include <boost/core/null_deleter.hpp>
 #include <boost/foreach.hpp>
+#include <boost/geometry/algorithms/intersection.hpp>
 
 namespace ascension {
 	namespace graphics {
@@ -375,12 +378,26 @@ namespace ascension {
 					return d;
 			}
 
+			inline Color alphaBlend(const Color& background, const Color& foreground) BOOST_NOEXCEPT {
+				// TODO: This code is adhoc.
+				const Byte a = foreground.alpha() + background.alpha() - foreground.alpha() * background.alpha() / 255;
+				return Color(
+					(foreground.red() * foreground.alpha() + background.red() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
+					(foreground.green() * foreground.alpha() + background.green() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
+					(foreground.blue() * foreground.alpha() + background.blue() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
+					a);
+			}
+
 			/**
 			 * Paints the specified output device with text layout. The line rendering options provided by
 			 * @c #setLineRenderingOptions method is considered.
 			 * @param context The graphics context
 			 */
 			void TextRenderer::paint(PaintContext& context) const {
+				const Color computedToplevelBackgroundColor(
+					boost::fusion::at_key<presentation::styles::BackgroundColor>(presentation().computedTextRunStyle().backgroundsAndBorders));
+				const Color actualToplevelBackgroundColor(alphaBlend(Color::OPAQUE_WHITE, computedToplevelBackgroundColor));
+
 				// scan lines in the text area
 				const bool horizontal = presentation::isHorizontal(computedBlockFlowDirection());
 				const auto bpdRange(horizontal ? geometry::range<1>(context.boundsToPaint()) : geometry::range<0>(context.boundsToPaint()));
@@ -390,6 +407,25 @@ namespace ascension {
 						if(lineToPaint == boost::none || boost::get(baseline.line()).line != boost::get(lineToPaint)) {
 							const TextLayout& layout = const_cast<LineLayoutVector&>(layouts()).at(
 								boost::get(lineToPaint = boost::get(baseline.line()).line), LineLayoutVector::USE_CALCULATED_LAYOUT);
+							// calculate the background area
+							const auto lineExtent(layout.extentWithHalfLeadings());
+							const presentation::FlowRelativeFourSides<Scalar> abstractLineArea(
+								presentation::_blockStart = *boost::const_begin(lineExtent), presentation::_blockEnd = *boost::const_end(lineExtent),
+								presentation::_inlineStart = std::numeric_limits<Scalar>::min(), presentation::_inlineEnd = std::numeric_limits<Scalar>::max());
+							auto physicalLineArea(geometry::make<Rectangle>(presentation::mapFlowRelativeToPhysical(writingMode(layout), abstractLineArea)));
+							boost::geometry::intersection(physicalLineArea, context.boundsToPaint(), physicalLineArea);
+							// paint the background
+							boost::optional<Color> foregroundOverride, backgroundOverride;
+							presentation().textLineColors(boost::get(baseline.line()).line, foregroundOverride, backgroundOverride);
+							const Color usedLineBackgroundColor(
+								boost::get_optional_value_or(
+									backgroundOverride,
+									boost::fusion::at_key<presentation::styles::BackgroundColor>(layout.defaultRunStyle().backgroundsAndBorders)));
+							const Color actualLineBackgroundColor(alphaBlend(actualToplevelBackgroundColor, usedLineBackgroundColor));
+							const SolidColor background(actualLineBackgroundColor);
+							context.setFillStyle(std::shared_ptr<const Paint>(&background, boost::null_deleter()));
+							context.fillRectangle(physicalLineArea);
+							// paint the text content
 							layout.draw(context, baseline.positionInViewport());
 						}
 					}

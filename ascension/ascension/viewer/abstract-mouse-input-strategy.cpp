@@ -14,6 +14,7 @@
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>	// utils.closeCompletionProposalsPopup
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-button-input.hpp>
@@ -207,7 +208,7 @@ namespace ascension {
 					graphics::geometry::x(p) = clamp(static_cast<graphics::Scalar>(graphics::geometry::x(p)), graphics::geometry::range<0>(contentRectangle));
 					graphics::geometry::y(p) = clamp(static_cast<graphics::Scalar>(graphics::geometry::y(p)), graphics::geometry::range<1>(contentRectangle));
 
-					trackedLocationChanged(graphics::font::viewToModel(*viewer.textArea().textRenderer().viewport(), p).characterIndex());
+					trackedLocationChanged(viewToModel(viewer, p).characterIndex());
 				}
 			}
 		}
