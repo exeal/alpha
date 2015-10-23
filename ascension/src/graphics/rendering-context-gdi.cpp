@@ -103,8 +103,12 @@ namespace ascension {
 		}
 
 		RenderingContext2D& RenderingContext2D::clip() {
-			if(!win32::boole(::SelectClipPath(nativeObject_.get(), RGN_AND)))
-				throw makePlatformError();
+			closePath();
+			if(!win32::boole(::SelectClipPath(nativeObject_.get(), RGN_AND))) {
+				const auto e(makePlatformError());
+				if(e.code().value() != ERROR_CAN_NOT_COMPLETE)
+					throw e;
+			}
 			return *this;
 		}
 
