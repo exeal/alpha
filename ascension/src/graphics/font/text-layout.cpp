@@ -19,6 +19,9 @@
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-run.hpp>
+#include <ascension/graphics/geometry/rectangle-corners.hpp>
+#include <ascension/graphics/geometry/rectangle-range.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>

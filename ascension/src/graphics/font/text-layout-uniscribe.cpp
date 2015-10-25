@@ -28,6 +28,11 @@
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-paint-override.hpp>
 #include <ascension/graphics/font/text-run.hpp>
+#include <ascension/graphics/geometry/native-conversions.hpp>
+#include <ascension/graphics/geometry/point-xy.hpp>
+#include <ascension/graphics/geometry/rectangle-odxdy.hpp>
+#include <ascension/graphics/geometry/rectangle-range.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/log.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>

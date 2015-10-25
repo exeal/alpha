@@ -8,6 +8,7 @@
 #include <ascension/graphics/font/actual-text-styles.hpp>
 #include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/text-run.hpp>
+#include <ascension/graphics/geometry/point-xy.hpp>
 
 namespace ascension {
 	namespace graphics {

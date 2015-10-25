@@ -9,6 +9,7 @@
 
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-run.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>

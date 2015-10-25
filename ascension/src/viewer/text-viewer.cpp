@@ -12,6 +12,11 @@
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/geometry/point-xy.hpp>
+#include <ascension/graphics/geometry/rectangle-sides.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
+#include <ascension/graphics/geometry/algorithms/normalize.hpp>
+#include <ascension/graphics/geometry/algorithms/size.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/presentation/presentation.hpp>

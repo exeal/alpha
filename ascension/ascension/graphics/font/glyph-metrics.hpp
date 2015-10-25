@@ -11,10 +11,9 @@
 
 #ifndef ASCENSION_GLYPH_METRICS_HPP
 #define ASCENSION_GLYPH_METRICS_HPP
-
-#include <ascension/graphics/geometry/algorithm.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/rectangle.hpp>
+#include <ascension/graphics/geometry/rectangle-sides.hpp>
 
 namespace ascension {
 	namespace graphics {

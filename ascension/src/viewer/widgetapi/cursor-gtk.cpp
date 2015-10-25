@@ -5,7 +5,8 @@
  */
 
 #include <ascension/viewer/widgetapi/cursor.hpp>
-#include <ascension/graphics/geometry/algorithm.hpp>
+#include <ascension/graphics/geometry/point-xy.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #include <ascension/graphics/image.hpp>
 #include <gdkmm/device.h>

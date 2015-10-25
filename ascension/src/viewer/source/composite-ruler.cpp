@@ -6,6 +6,10 @@
  */
 
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
+#include <ascension/graphics/geometry/point-xy.hpp>
+#include <ascension/graphics/geometry/rectangle-odxdy.hpp>
+#include <ascension/graphics/geometry/rectangle-range.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/viewer/source/composite-ruler.hpp>
 #include <ascension/viewer/source/source-viewer.hpp>
 #include <boost/foreach.hpp>

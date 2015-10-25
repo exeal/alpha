@@ -9,6 +9,10 @@
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/geometry/point-xy.hpp>
+#include <ascension/graphics/geometry/rectangle-range.hpp>
+#include <ascension/graphics/geometry/rectangle-sides.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/text-editor/session.hpp>	// texteditor.endIncrementalSearch
 #include <ascension/viewer/text-area.hpp>

@@ -10,6 +10,7 @@
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 
 #include <ascension/graphics/image.hpp>
+#include <ascension/graphics/geometry/point-xy.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/find.hpp>
 

@@ -8,6 +8,7 @@
 #define ASCENSION_AFFINE_TRANSFORM_HPP
 
 #include <ascension/graphics/geometry/common.hpp>
+#include <ascension/graphics/geometry/named-parameters.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/geometry/strategies/transform/matrix_transformers.hpp>
 #include <boost/operators.hpp>
@@ -54,15 +55,6 @@ namespace ascension {
 			/// Returns the Y coordinate translation element.
 			inline double translateY(const AffineTransform& tx) BOOST_NOEXCEPT {return tx.matrix()(1, 2);}
 			/// @}
-
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
-			BOOST_PARAMETER_NAME(sx)
-			BOOST_PARAMETER_NAME(shy)
-			BOOST_PARAMETER_NAME(shx)
-			BOOST_PARAMETER_NAME(sy)
-			BOOST_PARAMETER_NAME(tx)
-			BOOST_PARAMETER_NAME(ty)
-#endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 			/**
 			 * @defgroup affine_transform_instances

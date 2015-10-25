@@ -8,8 +8,12 @@
 #define ASCENSION_WIDGET_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
 #include <ascension/corelib/detail/scope-guard.hpp>
-#include <ascension/graphics/geometry/geometry.hpp>
+#include <ascension/graphics/geometry/dimension.hpp>
+#include <ascension/graphics/geometry/rectangle.hpp>
 #include <ascension/viewer/widgetapi/widget-proxy.hpp>
+#include <boost/geometry/algorithms/make.hpp>
+#include <boost/geometry/core/access.hpp>
+#include <boost/geometry/core/point_type.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/widget.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
@@ -362,9 +366,7 @@ namespace ascension {
 					throw IllegalStateException("The widget passed to widgetapi.mapFromGlobal does not have a window.");
 				int rootOriginX, rootOriginY;
 				window->get_root_origin(rootOriginX, rootOriginY);
-				return graphics::geometry::make<Point>((
-					graphics::geometry::_x = graphics::geometry::x(position) - rootOriginX,
-					graphics::geometry::_y = graphics::geometry::y(position) - rootOriginY));
+				return boost::geometry::make<Point>(boost::geometry::get<0>(position) - rootOriginX, boost::geometry::get<1>(position) - rootOriginY);
 			}
 
 			template<typename Point>
@@ -373,10 +375,10 @@ namespace ascension {
 				const Glib::RefPtr<const Gdk::Window> window(widget->get_window());
 				if(!window)
 					throw IllegalStateException("The widget passed to widgetapi.mapToGlobal does not have a window.");
-				const int localX = static_cast<int>(graphics::geometry::x(position)), localY = static_cast<int>(graphics::geometry::x(position));
+				const int localX = static_cast<int>(boost::geometry::get<0>(position)), localY = static_cast<int>(boost::geometry::get<1>(position));
 				int rootX, rootY;
 				Glib::RefPtr<Gdk::Window>::cast_const(window)->get_root_coords(localX, localX, rootX, rootY);	// damn! why is this method not const???
-				return graphics::geometry::make<Point>((graphics::geometry::_x = rootX, graphics::geometry::_y = rootY));
+				return boost::geometry::make<Point>(rootX, rootY);
 			}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)

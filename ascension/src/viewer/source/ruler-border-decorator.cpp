@@ -6,6 +6,9 @@
  */
 
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/geometry/rectangle-range.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
+#include <ascension/graphics/geometry/algorithms/normalize.hpp>
 #include <ascension/viewer/source/ruler-allocation-width-sink.hpp>
 #include <ascension/viewer/source/ruler-border-decorator.hpp>
 #include <ascension/viewer/source/source-viewer.hpp>

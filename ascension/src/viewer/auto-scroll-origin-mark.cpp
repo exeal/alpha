@@ -11,6 +11,7 @@
 #include <ascension/graphics/image.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
 //#include <ascension/viewer/default-mouse-input-strategy.hpp>

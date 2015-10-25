@@ -10,6 +10,10 @@
 #include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/geometry/algorithm.hpp>
+#include <ascension/graphics/geometry/native-conversions.hpp>
+#include <ascension/graphics/geometry/point-xy.hpp>
+#include <ascension/graphics/geometry/rectangle-odxdy.hpp>
+#include <ascension/graphics/geometry/rectangle-sides.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <boost/core/null_deleter.hpp>
