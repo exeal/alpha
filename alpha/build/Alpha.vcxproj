@@ -183,6 +183,7 @@
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\ascension\ascension\graphics\rendering-context.cpp" />
     <ClCompile Include="..\..\ascension\ascension\viewer\abstract-mouse-input-strategy.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\content-assist-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\content-assist-windows.cpp" />
@@ -435,10 +436,20 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\visual-lines-listener.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\affine-transform.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithm.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\make.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\normalize.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\size.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\common.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\dimension.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\geometry.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\named-parameters.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\native-conversions.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\point-xy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\point.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle-corners.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle-odxdy.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle-range.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle-sides.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\image.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\native-conversion.hpp" />

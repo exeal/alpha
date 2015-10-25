@@ -15,7 +15,6 @@
 namespace ascension {
 	namespace graphics {
 		namespace geometry {
-
 			/**
 			 * @defgroup geometric_primitives Geometric Primitives
 			 * Basic primitives of @c ascension#graphics#geometry.
@@ -23,7 +22,15 @@ namespace ascension {
 			 */
 			/// A scalar value is a length in user space which is "logical coordinates" in Win32 GDI.
 			typedef float Scalar;
+
+			/// The tag type for dimensional geometry (@c BasicDimension class template).
+			struct DimensionTag {};
 			/// @}
+
+			/**
+			 * @defgroup geometry_additional_accessors Geometry Additional Accessors
+			 * Additional free functions for &lt;boost/geometry/core/access.hpp&gt;.
+			 */
 
 			namespace detail {
 				template<typename Geometry, typename GeometryTag, typename T = void>
@@ -31,7 +38,16 @@ namespace ascension {
 					std::is_same<
 						typename boost::geometry::tag<typename std::remove_cv<Geometry>::type>::type,
 						GeometryTag
-					>::value, T> {};
+					>::value, T
+				> {};
+
+				template<typename Geometry, typename GeometryTag, typename T = void>
+				struct DisableIfTagIs : std::enable_if<
+					!std::is_same<
+						typename boost::geometry::tag<typename std::remove_cv<Geometry>::type>::type,
+						GeometryTag
+					>::value, T
+				> {};
 			}
 		}
 

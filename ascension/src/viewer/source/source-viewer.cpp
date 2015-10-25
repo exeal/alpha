@@ -8,6 +8,9 @@
 #include <ascension/corelib/numeric-range-algorithm/clamp.hpp>
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/graphics/geometry/rectangle-corners.hpp>
+#include <ascension/graphics/geometry/rectangle-range.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>

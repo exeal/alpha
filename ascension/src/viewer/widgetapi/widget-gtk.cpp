@@ -10,6 +10,10 @@
 #	include <ascension/graphics/color.hpp>
 #	include <ascension/graphics/native-conversion.hpp>
 #	include <ascension/graphics/rendering-context.hpp>
+#	include <ascension/graphics/geometry/point-xy.hpp>
+#	include <ascension/graphics/geometry/rectangle-odxdy.hpp>
+#	include <ascension/graphics/geometry/rectangle-sides.hpp>
+#	include <ascension/graphics/geometry/native-conversions.hpp>
 #	include <ascension/viewer/widgetapi/cursor.hpp>
 #	include <boost/core/null_deleter.hpp>
 #	include <gtkmm/button.h>

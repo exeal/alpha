@@ -15,6 +15,10 @@
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/geometry/rectangle-odxdy.hpp>
+#include <ascension/graphics/geometry/rectangle-range.hpp>
+#include <ascension/graphics/geometry/rectangle-sides.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/log.hpp>
 #include <ascension/text-editor/command.hpp>	// ascension.texteditor.commands.IncrementalSearchCommand
 #include <ascension/viewer/caret.hpp>

@@ -12,6 +12,13 @@
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/geometry/point-xy.hpp>
+#include <ascension/graphics/geometry/rectangle-corners.hpp>
+#include <ascension/graphics/geometry/rectangle-odxdy.hpp>
+#include <ascension/graphics/geometry/rectangle-sides.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
+#include <ascension/graphics/geometry/algorithms/normalize.hpp>
+#include <ascension/graphics/geometry/algorithms/size.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document.hpp>
@@ -302,6 +309,8 @@ namespace ascension {
 
 			// paint the text area
 			textRenderer().paint(context);
+			if(narrowed)
+				context.restore();
 
 			// paint the caret(s)
 			paintCaret(context);

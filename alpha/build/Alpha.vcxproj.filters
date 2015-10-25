@@ -150,6 +150,9 @@
     <Filter Include="ascension\Header Files\viewer\detail">
       <UniqueIdentifier>{d3185af3-5e29-4655-8bad-84a7b315dcec}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\graphics\geometry\algorithms">
+      <UniqueIdentifier>{f56f726d-54a0-4b16-a893-1803b9cdc642}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -556,6 +559,9 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-model-conversion.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\ascension\graphics\rendering-context.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1239,6 +1245,36 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport-base.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\size.hpp">
+      <Filter>ascension\Header Files\graphics\geometry\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\normalize.hpp">
+      <Filter>ascension\Header Files\graphics\geometry\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\named-parameters.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\point-xy.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle-range.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle-odxdy.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle-corners.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle-sides.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\make.hpp">
+      <Filter>ascension\Header Files\graphics\geometry\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\native-conversions.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

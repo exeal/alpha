@@ -8,8 +8,8 @@
 
 #ifndef ASCENSION_GEOMETRY_DIMENSION_HPP
 #define ASCENSION_GEOMETRY_DIMENSION_HPP
-
 #include <ascension/graphics/geometry/common.hpp>
+#include <ascension/graphics/geometry/named-parameters.hpp>
 #include <boost/geometry/algorithms/detail/assign_values.hpp>	// oops...
 #include <boost/geometry/core/access.hpp>
 #include <boost/geometry/core/closure.hpp>
@@ -27,14 +27,8 @@
 namespace ascension {
 	namespace graphics {
 		namespace geometry {
-
 			/// @addtogroup geometric_primitives
 			/// @{
-
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
-			BOOST_PARAMETER_NAME(dx)
-			BOOST_PARAMETER_NAME(dy)
-#endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 			template<typename Coordinate>
 			class BasicDimensionBase : private boost::equality_comparable<BasicDimensionBase<Coordinate>> {
@@ -106,8 +100,6 @@ namespace ascension {
 				template<typename T> friend Coordinate& dy(BasicDimension<T>&);
 				template<typename T> friend Coordinate dy(const BasicDimension<T>&);
 			};
-
-			struct DimensionTag {};
 			/// @}
 
 			/// @addtogroup geometry_additional_aceessors

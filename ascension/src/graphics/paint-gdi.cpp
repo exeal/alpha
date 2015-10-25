@@ -8,6 +8,7 @@
 
 #include <ascension/graphics/paint.hpp>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
+#include <ascension/graphics/native-conversion.hpp>
 
 namespace ascension {
 	namespace graphics {
@@ -43,7 +44,7 @@ namespace ascension {
 		SolidColor::SolidColor(const Color& color) : color_(color) {
 			LOGBRUSH brush;
 			brush.lbStyle = BS_SOLID;
-			brush.lbColor = color.as<COLORREF>();
+			brush.lbColor = toNative<COLORREF>(color);
 			reset(std::move(brush));
 		}
 

@@ -732,13 +732,7 @@ namespace ascension {
 			 *                    units
 			 * @see #getImageData
 			 */
-			RenderingContext2D& putImageData(const ImageData& image, const Point& destination) {
-				return putImageData(image, destination, geometry::make<Rectangle>(
-					boost::geometry::make_zero<Point>(),
-					Dimension(
-						geometry::_dx = static_cast<Scalar>(image.width()),
-						geometry::_dy = static_cast<Scalar>(image.height()))));
-			}
+			RenderingContext2D& putImageData(const ImageData& image, const Point& destination);
 			/**
 			 * Paints the data from the specified @c ImageData object onto the canvas. Only the pixels from
 			 * @a dirtyRectangle are painted. The @c #globalAlpha and @c #globalCompositeOperation attributes, as well

@@ -11,6 +11,7 @@
 #include <ascension/corelib/text/utf-iterator.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/log.hpp>
 #include <ascension/viewer/caret.hpp>
