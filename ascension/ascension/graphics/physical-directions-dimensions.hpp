@@ -10,11 +10,15 @@
 #ifndef ASCENSION_PHYSICAL_DIRECTIONS_DIMENSIONS_HPP
 #define ASCENSION_PHYSICAL_DIRECTIONS_DIMENSIONS_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
+#include <ascension/corelib/numeric-range.hpp>
 #include <ascension/corelib/detail/decay-or-refer.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
-#include <ascension/graphics/geometry/algorithm.hpp>
+#include <ascension/graphics/geometry/point-xy.hpp>
+#include <ascension/graphics/geometry/rectangle-sides.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <array>
 #include <type_traits>
+#include <boost/geometry/algorithms/assign.hpp>
 #include <boost/operators.hpp>
 #include <boost/parameter.hpp>
 #include <boost/range/irange.hpp>

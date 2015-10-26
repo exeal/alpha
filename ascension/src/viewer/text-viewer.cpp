@@ -17,6 +17,7 @@
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/geometry/algorithms/normalize.hpp>
 #include <ascension/graphics/geometry/algorithms/size.hpp>
+#include <ascension/graphics/geometry/algorithms/translate.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/presentation/presentation.hpp>
@@ -49,20 +50,20 @@ namespace ascension {
 			/// @internal Maps the given point in viewer-local coordinates into a point in text-area coordinates.
 			inline graphics::Point mapLocalToTextArea(const TextViewer& viewer, const graphics::Point& p) {
 				const graphics::Rectangle textArea(viewer.textArea().allocationRectangle());
-				graphics::Point temp(p);
-				return graphics::geometry::translate(temp,
-					graphics::Dimension(
-						graphics::geometry::_dx = -graphics::geometry::left(textArea),
-						graphics::geometry::_dy = -graphics::geometry::top(textArea)));
+				graphics::Point result;
+				graphics::geometry::translate((
+					graphics::geometry::_from = p, graphics::geometry::_to = result,
+					graphics::geometry::_dx = -graphics::geometry::left(textArea), graphics::geometry::_dy = -graphics::geometry::top(textArea)));
+				return result;
 			}
 			/// @internal Maps the given point in text-area coordinates into a point in viewer-local coordinates.
 			inline graphics::Point mapTextAreaToLocal(const TextViewer& viewer, const graphics::Point& p) {
 				const graphics::Rectangle textArea(viewer.textArea().allocationRectangle());
-				graphics::Point temp(p);
-				return graphics::geometry::translate(temp,
-					graphics::Dimension(
-						graphics::geometry::_dx = +graphics::geometry::left(textArea),
-						graphics::geometry::_dy = +graphics::geometry::top(textArea)));
+				graphics::Point result;
+				graphics::geometry::translate((
+					graphics::geometry::_from = p, graphics::geometry::_to = result,
+					graphics::geometry::_dx = +graphics::geometry::left(textArea), graphics::geometry::_dy = +graphics::geometry::top(textArea)));
+				return result;
 			}
 		}	// namespace @0
 
@@ -1450,7 +1451,13 @@ namespace ascension {
 			graphics::Rectangle scheduledBounds(context.boundsToPaint());
 			if(graphics::geometry::isEmpty(graphics::geometry::normalize(scheduledBounds)))	// skip if the region to paint is empty
 				return;
+
+			const auto canvas(textArea().allocationRectangle());
+			context.save();
+			context.beginPath().rectangle(canvas).clip();
+			context.beginPath().translate(graphics::geometry::left(canvas), graphics::geometry::top(canvas));
 			textArea().paint(context);
+			context.restore();
 		}
 
 		/// @see Widget#resized

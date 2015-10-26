@@ -8,7 +8,7 @@
 
 #ifndef ASCENSION_MOUSE_WHEEL_INPUT_HPP
 #define ASCENSION_MOUSE_WHEEL_INPUT_HPP
-
+#include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/viewer/widgetapi/event/located-user-input.hpp>
 
 namespace ascension {

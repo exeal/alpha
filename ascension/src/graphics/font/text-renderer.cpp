@@ -483,9 +483,13 @@ namespace ascension {
 				const int left = max(geometry::left(context.boundsToPaint()), geometry::left(clipRect));
 				const int right = min(geometry::right(context.boundsToPaint()), geometry::right(clipRect));
 				const Scalar x = geometry::x(origin) - left;
-				NativeRectangle offsetedPaintRect(paintRect), offsetedClipRect(clipRect);
-				geometry::translate(offsetedPaintRect, geometry::make<NativeSize>(-left, -y));
-				geometry::translate(offsetedClipRect, geometry::make<NativeSize>(-left, -y));
+				NativeRectangle offsetedPaintRect, offsetedClipRect;
+				geometry::translate((
+					geometry::_from = paintRect, geometry::_to = offsetedPaintRect,
+					geometry::_dx = -left, geometry::_dy = -y));
+				geometry::translate((
+					geometry::_from = clipRect, geometry::_to = offsetedClipRect,
+					geometry::_dx = -left, geometry::_dy = -y));
 				for(; subline < layout.numberOfLines() && geometry::bottom(offsetedPaintRect) >= 0; ++subline, y += dy,
 						geometry::translate(offsetedPaintRect, geometry::make<NativeSize>(0, -dy)),
 						geometry::translate(offsetedClipRect, geometry::make<NativeSize>(0, -dy))) {

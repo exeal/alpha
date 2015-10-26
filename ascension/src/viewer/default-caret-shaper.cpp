@@ -12,6 +12,7 @@
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <ascension/graphics/geometry/rectangle-corners.hpp>
+#include <ascension/graphics/geometry/algorithms/scale.hpp>
 #include <ascension/graphics/geometry/algorithms/size.hpp>
 #include <ascension/graphics/image.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
@@ -126,7 +127,9 @@ namespace ascension {
 			shape.image = createSolidCaretImage(
 				static_cast<graphics::geometry::BasicDimension<std::uint32_t>>(graphics::geometry::size(bounds)),
 				boost::get_optional_value_or(color, graphics::Color::OPAQUE_BLACK));
-			boost::geometry::assign(shape.alignmentPoint, graphics::geometry::negate(graphics::geometry::topLeft(bounds)));
+			graphics::geometry::scale((
+				graphics::geometry::_from = graphics::geometry::topLeft(bounds), graphics::geometry::_to = shape.alignmentPoint,
+				graphics::geometry::_dx = -1, graphics::geometry::_dy = -1));
 			return shape;
 		}
 

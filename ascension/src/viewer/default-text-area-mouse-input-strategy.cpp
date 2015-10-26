@@ -24,7 +24,9 @@
 #include <ascension/graphics/geometry/rectangle-range.hpp>
 #include <ascension/graphics/geometry/rectangle-sides.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
+#include <ascension/graphics/geometry/algorithms/scale.hpp>
 #include <ascension/graphics/geometry/algorithms/size.hpp>
+#include <ascension/graphics/geometry/algorithms/translate.hpp>
 #include <ascension/graphics/image.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
@@ -198,8 +200,9 @@ namespace ascension {
 								range = boost::irange(*range->begin(), std::min(viewer.document().lineLength(line), *range->end()));
 								boost::geometry::model::multi_polygon<boost::geometry::model::polygon<graphics::Point>> region;
 								layout.blackBoxBounds(*range, region);
-								geometry::translate(region,
-									graphics::Dimension(geometry::_dx = indent - geometry::left(selectionBounds), geometry::_dy = y - geometry::top(selectionBounds)));
+								geometry::translate((
+									geometry::_from = region, geometry::_to = region,
+									geometry::_dx = indent - geometry::left(selectionBounds), geometry::_dy = y - geometry::top(selectionBounds)));
 								context->setFillStyle(std::make_shared<graphics::SolidColor>(graphics::Color::OPAQUE_WHITE));
 								BOOST_FOREACH(const auto& polygon, region) {
 									context->beginPath();
@@ -224,9 +227,10 @@ namespace ascension {
 				std::unique_ptr<graphics::Image> image(new graphics::Image(size, graphics::Image::ARGB32));
 				{
 					// render the lines
-					graphics::Rectangle selectionExtent(selectionBounds);
-					geometry::translate(selectionExtent,
-						geometry::negate(graphics::Dimension(geometry::_dx = geometry::left(selectionExtent), geometry::_dy = geometry::top(selectionExtent))));
+					graphics::Rectangle selectionExtent;
+					graphics::geometry::translate((
+						graphics::geometry::_from = selectionBounds, graphics::geometry::_to = selectionExtent,
+						graphics::geometry::_dx = -geometry::left(selectionExtent), graphics::geometry::_dy = -geometry::top(selectionExtent)));
 					graphics::PaintContext context(move(image->createRenderingContext()), selectionExtent);
 					Scalar y = geometry::top(selectionBounds);
 					for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
@@ -267,15 +271,20 @@ namespace ascension {
 
 				// locate the hotspot of the image based on the cursor position
 				// TODO: This code can't handle vertical writing mode.
-				graphics::Point hotspot(cursorPosition);
-				geometry::x(hotspot) -= geometry::left(textArea.contentRectangle()) - viewport->scrollPositions().ipd() + geometry::left(selectionBounds);
-				geometry::y(hotspot) -= geometry::y(modelToView(viewer,
-					graphics::font::TextHit<kernel::Position>::leading(kernel::Position(selectedRegion.beginning().line, 0))));
+				std::decay<decltype(cursorPosition)>::type hotspot;
+				graphics::geometry::translate((
+					graphics::geometry::_from = cursorPosition, graphics::geometry::_to = hotspot,
+					graphics::geometry::_dx = -(geometry::left(textArea.contentRectangle()) - viewport->scrollPositions().ipd() + geometry::left(selectionBounds)),
+					graphics::geometry::_dy = -geometry::y(modelToView(viewer,
+						graphics::font::TextHit<kernel::Position>::leading(kernel::Position(selectedRegion.beginning().line, 0))))));
 
 				// calculate 'dimensions'
+				graphics::geometry::scale((
+					graphics::geometry::_from = hotspot, graphics::geometry::_to = hotspot,
+					graphics::geometry::_dx = static_cast<graphics::Scalar>(-1), graphics::geometry::_dy = static_cast<graphics::Scalar>(-1)));
 				boost::geometry::assign(dimensions,
 					geometry::make<boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::uint16_t>>>(
-						geometry::negate(hotspot), static_cast<geometry::BasicDimension<std::uint16_t>>(size)));
+						hotspot, static_cast<geometry::BasicDimension<std::uint16_t>>(size)));
 
 				return image;
 			}
@@ -302,7 +311,9 @@ namespace ascension {
 			boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>> imageDimensions;
 			std::unique_ptr<graphics::Image> image(createSelectionImage(caret, dragAndDrop_->approachedPosition, true, imageDimensions));
 			boost::geometry::model::d2::point_xy<std::uint32_t> hotspot;
-			boost::geometry::assign(hotspot, graphics::geometry::negate(graphics::geometry::topLeft(imageDimensions)));
+			graphics::geometry::scale((
+				graphics::geometry::_from = graphics::geometry::topLeft(imageDimensions), graphics::geometry::_to = hotspot,
+				graphics::geometry::_dx = -1, graphics::geometry::_dy = -1));
 			d.setImage(*image, hotspot);
 
 			widgetapi::DropAction possibleActions = widgetapi::DROP_ACTION_COPY;

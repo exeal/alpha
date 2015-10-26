@@ -1276,6 +1276,12 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\native-conversions.hpp">
       <Filter>ascension\Header Files\graphics\geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\scale.hpp">
+      <Filter>ascension\Header Files\graphics\geometry\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\translate.hpp">
+      <Filter>ascension\Header Files\graphics\geometry\algorithms</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

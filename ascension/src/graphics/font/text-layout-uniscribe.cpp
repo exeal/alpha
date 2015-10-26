@@ -33,6 +33,7 @@
 #include <ascension/graphics/geometry/rectangle-odxdy.hpp>
 #include <ascension/graphics/geometry/rectangle-range.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
+#include <ascension/graphics/geometry/algorithms/translate.hpp>
 #include <ascension/log.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
@@ -1363,8 +1364,10 @@ namespace ascension {
 					Scalar originX = glyphLogicalPosition(index);
 					const GlyphMetrics gm(glyphMetrics(index));
 					const GOFFSET& offset = glyphOffsets()[index];
-					graphics::Rectangle temp(gm.bounds());
-					return geometry::translate(temp, Dimension(geometry::_dx = static_cast<Scalar>(originX + offset.du), geometry::_dy = static_cast<Scalar>(offset.dv)));
+					graphics::Rectangle result;
+//					return geometry::translate(temp, Dimension(geometry::_dx = static_cast<Scalar>(originX + offset.du), geometry::_dy = static_cast<Scalar>(offset.dv)));
+					geometry::translate((geometry::_from = gm.bounds(), geometry::_to = result, geometry::_dx = static_cast<Scalar>(originX + offset.du), geometry::_dy = static_cast<Scalar>(offset.dv)));
+					return result;
 				}
 
 #if 0
@@ -2748,10 +2751,10 @@ namespace ascension {
 				const presentation::WritingMode wm(writingMode(*this));
 				boost::integer_range<Index> linesToPaint(0, numberOfLines());
 				{
-					Dimension originDistance(geometry::_dx = geometry::x(origin), geometry::_dy = geometry::y(origin));
-					geometry::negate(originDistance);
-					graphics::Rectangle boundsToPaint(context.boundsToPaint());
-					geometry::translate(boundsToPaint, originDistance);
+					graphics::Rectangle boundsToPaint;
+					geometry::translate((
+						geometry::_from = context.boundsToPaint(), geometry::_to = boundsToPaint,
+						geometry::_dx = -geometry::x(origin), geometry::_dy = -geometry::y(origin)));
 					const presentation::FlowRelativeFourSides<Scalar> abstractBoundsToPaint(	// relative to the alignment point of this layout
 						presentation::mapPhysicalToFlowRelative<Scalar>(wm, PhysicalFourSides<Scalar>(boundsToPaint)));
 					for(LineMetricsIterator line(*this, linesToPaint.front()); line.line() != *linesToPaint.end(); ++line) {

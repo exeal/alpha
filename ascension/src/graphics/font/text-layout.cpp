@@ -22,6 +22,7 @@
 #include <ascension/graphics/geometry/rectangle-corners.hpp>
 #include <ascension/graphics/geometry/rectangle-range.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
+#include <ascension/graphics/geometry/algorithms/translate.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
@@ -127,36 +128,35 @@ namespace ascension {
 						context.setLineWidth(boost::fusion::at_key<presentation::styles::BorderWidth>(*side));
 //						context.setStrokeDashArray();
 //						context.setStrokeDashOffset();
-						context.beginPath();
+
+						Point from, to;
+						auto delta(boost::geometry::make_zero<Dimension>());
 						switch(boost::native_value(static_cast<PhysicalDirection>(side - std::begin(border)))) {
 							case PhysicalDirection::TOP:
-								context
-									.moveTo(geometry::topLeft(rectangle))
-									.lineTo(geometry::translate(
-										geometry::topRight(rectangle), Dimension(geometry::_dx = 1.0f, geometry::_dy = 0.0f)));
+								boost::geometry::assign(from, geometry::topLeft(rectangle));
+								boost::geometry::assign(to, geometry::topRight(rectangle));
+								geometry::dx(delta) = 1;
 								break;
 							case PhysicalDirection::RIGHT:
-								context
-									.moveTo(geometry::topRight(rectangle))
-									.lineTo(geometry::translate(
-										geometry::bottomRight(rectangle), Dimension(geometry::_dx = 0.0f, geometry::_dy = 1.0f)));
+								boost::geometry::assign(from, geometry::topRight(rectangle));
+								boost::geometry::assign(to, geometry::bottomRight(rectangle));
+								geometry::dy(delta) = 1;
 								break;
 							case PhysicalDirection::BOTTOM:
-								context
-									.moveTo(geometry::bottomLeft(rectangle))
-									.lineTo(geometry::translate(
-										geometry::bottomRight(rectangle), Dimension(geometry::_dx = 1.0f, geometry::_dy = 0.0f)));
+								boost::geometry::assign(from, geometry::bottomLeft(rectangle));
+								boost::geometry::assign(to, geometry::bottomRight(rectangle));
+								geometry::dx(delta) = 1;
 								break;
 							case PhysicalDirection::LEFT:
-								context
-									.moveTo(geometry::topLeft(rectangle))
-									.lineTo(geometry::translate(
-										geometry::bottomLeft(rectangle), Dimension(geometry::_dx = 0.0f, geometry::_dy = 1.0f)));
+								boost::geometry::assign(from, geometry::topLeft(rectangle));
+								boost::geometry::assign(to, geometry::bottomLeft(rectangle));
+								geometry::dy(delta) = 1;
 								break;
 							default:
 								ASCENSION_ASSERT_NOT_REACHED();
 						}
-						context.stroke();
+						geometry::translate((geometry::_from = to, geometry::_to = to), delta);
+						context.beginPath().moveTo(from).lineTo(to).stroke();
 					}
 				}
 			}	// namespace detail

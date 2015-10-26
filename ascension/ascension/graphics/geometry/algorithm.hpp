@@ -41,21 +41,6 @@ namespace ascension {
 				return temp;
 			}
 
-
-			template<typename Geometry>
-			inline Geometry& negate(Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
-				x(point) = -x(point);
-				y(point) = -y(point);
-				return point;
-			}
-
-			template<typename Coordinate>
-			inline BasicDimension<Coordinate>& negate(BasicDimension<Coordinate>& dimension) {
-				dx(dimension) = -dx(dimension);
-				dy(dimension) = -dy(dimension);
-				return dimension;
-			}
-
 			template<typename Point, typename Rectangle>
 			inline bool within(const Point& point, const Rectangle& rectangle,
 					typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr,
@@ -84,12 +69,6 @@ namespace ascension {
 				return size1;
 			}
 #endif
-			template<typename Geometry, typename DimensionCoordinate>
-			inline Geometry& translate(Geometry& g, const BasicDimension<DimensionCoordinate>& offset) {
-				typedef typename boost::geometry::point_type<Geometry>::type PointType;
-				boost::geometry::transform(g, g, boost::geometry::strategy::transform::translate_transformer<DimensionCoordinate, 2, 2>(dx(offset), dy(offset)));
-				return g;
-			}
 
 			// writing to standard output stream
 
@@ -137,24 +116,6 @@ namespace ascension {
 
 			template<typename Geometry, typename DimensionCoordinate>
 			inline Geometry& resize(Geometry& rectangle, const BasicDimension<DimensionCoordinate>& size);
-
-			/**
-			 * Scales this object to the given rectangle, preserving aspect ratio.
-			 * @code
-			 * Dimension<int> d1(20, 30);
-			 * d2.scale(Dimension<int>(60, 60), false); // -> 40x60
-			 * Dimension<int> d2(20, 30);
-			 * d1.scale(Dimension<int>(60, 60), true);  // -> 60x90
-			 * @endcode
-			 * @param size
-			 * @param keepAspectRatioByExpanding If @c true, this dimension is scaled to a
-			 *                                   rectangle as small as possible outside @a size.
-			 *                                   If @c false, this dimension is scaled to a
-			 *                                   rectangle as large as possible inside @a size
-			 * @return This object
-			 */
-			template<typename Coordinate>
-			BasicDimension<Coordinate>& scale(const BasicDimension<Coordinate>& dimension, bool keepAspectRatioByExpanding);
 
 			/**
 			 * Swaps the x and y values.

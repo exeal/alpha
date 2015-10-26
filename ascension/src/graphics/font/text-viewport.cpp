@@ -17,6 +17,7 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
+#include <ascension/graphics/geometry/algorithms/translate.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/text-line-style.hpp>
@@ -280,7 +281,9 @@ namespace ascension {
 				if(baseline.line() == boost::none)
 					return p;	// 'position' is outside of the viewport and can't calculate more
 				const Point lineStart(lineStartEdge(viewport, VisualLine(position.characterIndex().line, 0)));
-				geometry::translate(p, Dimension(geometry::_dx = geometry::x(lineStart), geometry::_dy = geometry::y(lineStart)));
+				geometry::translate((
+					geometry::_from = p, geometry::_to = p,
+					geometry::_dx = geometry::x(lineStart), geometry::_dy = geometry::y(lineStart)));
 				const bool horizontal = isHorizontal(viewport.textRenderer().computedBlockFlowDirection());
 
 				// compute offset in the line layout
@@ -293,7 +296,7 @@ namespace ascension {
 				const PhysicalTwoAxes<Scalar> physicalOffset(presentation::mapFlowRelativeToPhysical(writingMode(*layout), abstractOffset));
 
 				// compute the result
-				geometry::translate(p, Dimension(geometry::_dx = physicalOffset.x(), geometry::_dy = physicalOffset.y()));
+				geometry::translate((geometry::_from = p, geometry::_to = p, geometry::_dx = physicalOffset.x(), geometry::_dy = physicalOffset.y()));
 
 				return p;
 			}
