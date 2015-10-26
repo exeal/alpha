@@ -9,7 +9,6 @@
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 #include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
-#include <ascension/graphics/geometry/algorithm.hpp>
 #include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <ascension/graphics/geometry/rectangle-odxdy.hpp>

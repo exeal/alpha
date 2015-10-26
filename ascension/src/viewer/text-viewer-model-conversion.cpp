@@ -7,6 +7,8 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <ascension/graphics/geometry/rectangle-odxdy.hpp>
+#include <ascension/graphics/geometry/algorithms/scale.hpp>
+#include <ascension/graphics/geometry/algorithms/translate.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/text-viewer-model-conversion.hpp>
@@ -23,12 +25,12 @@ namespace ascension {
 				Point pointInViewer(pointInViewport);
 				auto offset(graphics::geometry::origin(textViewer.textArea().contentRectangle()));
 				if(!toViewer)
-					graphics::geometry::negate(offset);
-				graphics::geometry::translate(
-					pointInViewer,
-					graphics::geometry::BasicDimension<typename boost::geometry::coordinate_type<Point>::type>(
-						graphics::geometry::_dx = graphics::geometry::x(offset),
-						graphics::geometry::_dy = graphics::geometry::y(offset)));
+					graphics::geometry::scale((
+					graphics::geometry::_from = offset, graphics::geometry::_to = offset,
+					graphics::geometry::_dx = static_cast<graphics::geometry::Scalar>(-1), graphics::geometry::_dy = static_cast<graphics::geometry::Scalar>(-1)));
+				graphics::geometry::translate((
+					graphics::geometry::_from = pointInViewer, graphics::geometry::_to = pointInViewer,
+					graphics::geometry::_dx = graphics::geometry::x(offset), graphics::geometry::_dy = graphics::geometry::y(offset)));
 				return pointInViewer;
 			}
 

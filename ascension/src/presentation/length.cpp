@@ -9,7 +9,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
-#include <ascension/graphics/geometry/algorithm.hpp>
+#include <ascension/graphics/geometry/rectangle-odxdy.hpp>
 #include <ascension/presentation/absolute-length.hpp>
 #include <ascension/presentation/styles/length.hpp>
 

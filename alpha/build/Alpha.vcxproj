@@ -438,7 +438,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithm.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\make.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\normalize.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\scale.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\size.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\translate.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\common.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\dimension.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\geometry.hpp" />
