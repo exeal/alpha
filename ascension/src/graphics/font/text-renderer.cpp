@@ -402,35 +402,69 @@ namespace ascension {
 				// scan lines in the text area
 				const bool horizontal = presentation::isHorizontal(computedBlockFlowDirection());
 				const auto bpdRange(horizontal ? geometry::range<1>(context.boundsToPaint()) : geometry::range<0>(context.boundsToPaint()));
-				boost::optional<Index> lineToPaint;
-				for(BaselineIterator baseline(*viewport(), true), e; baseline != e; ++baseline) {
-					if(overlaps(baseline.extentWithHalfLeadings(), bpdRange)) {
-						if(lineToPaint == boost::none || boost::get(baseline.line()).line != boost::get(lineToPaint)) {
-							const TextLayout& layout = const_cast<LineLayoutVector&>(layouts()).at(
-								boost::get(lineToPaint = boost::get(baseline.line()).line), LineLayoutVector::USE_CALCULATED_LAYOUT);
-							// calculate the background area
-							const auto lineExtent(layout.extentWithHalfLeadings());
-							const presentation::FlowRelativeFourSides<Scalar> abstractLineArea(
-								presentation::_blockStart = *boost::const_begin(lineExtent), presentation::_blockEnd = *boost::const_end(lineExtent),
-								presentation::_inlineStart = std::numeric_limits<Scalar>::min(), presentation::_inlineEnd = std::numeric_limits<Scalar>::max());
-							auto physicalLineArea(geometry::make<Rectangle>(presentation::mapFlowRelativeToPhysical(writingMode(layout), abstractLineArea)));
-							boost::geometry::intersection(physicalLineArea, context.boundsToPaint(), physicalLineArea);
-							// paint the background
-							boost::optional<Color> foregroundOverride, backgroundOverride;
-							presentation().textLineColors(boost::get(baseline.line()).line, foregroundOverride, backgroundOverride);
-							const Color usedLineBackgroundColor(
-								boost::get_optional_value_or(
-									backgroundOverride,
-									boost::fusion::at_key<presentation::styles::BackgroundColor>(layout.defaultRunStyle().backgroundsAndBorders)));
-							const Color actualLineBackgroundColor(alphaBlend(actualToplevelBackgroundColor, usedLineBackgroundColor));
-							const SolidColor background(actualLineBackgroundColor);
-							context.setFillStyle(std::shared_ptr<const Paint>(&background, boost::null_deleter()));
-							context.fillRectangle(physicalLineArea);
-							// paint the text content
-							layout.draw(context, baseline.positionInViewport());
+				struct LineToPaint {
+					Index lineNumber;
+					graphics::Scalar baseline;
+					NumericRange<graphics::Scalar> extent;
+				};
+				std::deque<LineToPaint> linesToPaint;
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				static_assert(false, "Not implemented.");
+#else
+				BaselineIterator baseline(*viewport(), true);
+				const BaselineIterator lastBaseline;
+				for(Index logicalLine; baseline != lastBaseline; ++baseline) {
+					assert(baseline.line() != boost::none);
+					logicalLine = boost::get(baseline.line()).line;
+					const TextLayout& layout = const_cast<LineLayoutVector&>(layouts()).at(logicalLine, LineLayoutVector::USE_CALCULATED_LAYOUT);
+					if(overlaps(baseline.extentWithHalfLeadings(), bpdRange)) {	// this logical line should be painted
+						LineToPaint lineToPaint;
+						lineToPaint.lineNumber = logicalLine;
+						if(boost::get(baseline.line()).subline == 0)
+							lineToPaint.baseline = *baseline;
+						else {
+							BaselineIterator i(baseline);
+							while(boost::get(i.line()).subline > 0)
+								--i;
+							lineToPaint.baseline = *i;
 						}
+						lineToPaint.extent = layout.extentWithHalfLeadings();
+						lineToPaint.extent.advance_begin(lineToPaint.baseline);
+						lineToPaint.extent.advance_end(lineToPaint.baseline);
+						linesToPaint.push_back(lineToPaint);
+						while(boost::get(baseline.line()).subline < layout.numberOfLines() - 1)	// skip to the next logical line
+							++baseline;
 					}
 				}
+
+				// paint marked logical lines
+				BOOST_FOREACH(const LineToPaint& lineToPaint, linesToPaint) {
+					const TextLayout& layout = const_cast<LineLayoutVector&>(layouts()).at(lineToPaint.lineNumber, LineLayoutVector::USE_CALCULATED_LAYOUT);
+					// calculate the background area
+					const presentation::FlowRelativeFourSides<Scalar> abstractLineArea(
+						presentation::_blockStart = *boost::const_begin(lineToPaint.extent), presentation::_blockEnd = *boost::const_end(lineToPaint.extent),
+						presentation::_inlineStart = std::numeric_limits<Scalar>::lowest(), presentation::_inlineEnd = std::numeric_limits<Scalar>::max());
+					auto physicalLineArea(geometry::make<Rectangle>(presentation::mapFlowRelativeToPhysical(writingMode(layout), abstractLineArea)));
+					boost::geometry::intersection(physicalLineArea, context.boundsToPaint(), physicalLineArea);
+					// paint the background
+					boost::optional<Color> foregroundOverride, backgroundOverride;
+					presentation().textLineColors(lineToPaint.lineNumber, foregroundOverride, backgroundOverride);
+					const Color usedLineBackgroundColor(
+						boost::get_optional_value_or(
+							backgroundOverride,
+							boost::fusion::at_key<presentation::styles::BackgroundColor>(layout.defaultRunStyle().backgroundsAndBorders)));
+					const Color actualLineBackgroundColor(alphaBlend(actualToplevelBackgroundColor, usedLineBackgroundColor));
+					const SolidColor background(actualLineBackgroundColor);
+					context.setFillStyle(std::shared_ptr<const Paint>(&background, boost::null_deleter()));
+					context.fillRectangle(physicalLineArea);
+					// paint the text content
+					const graphics::PhysicalTwoAxes<graphics::Scalar> p(
+						presentation::mapFlowRelativeToPhysical(
+							writingMode(layout),
+							presentation::makeFlowRelativeTwoAxes((presentation::_bpd = lineToPaint.baseline, presentation::_ipd = static_cast<graphics::Scalar>(0)))));
+					layout.draw(context, graphics::geometry::make<graphics::Point>(p));
+				}
+#endif
 			}
 
 			/**
