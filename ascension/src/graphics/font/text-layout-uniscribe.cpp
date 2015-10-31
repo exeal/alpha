@@ -1498,9 +1498,9 @@ namespace ascension {
 				 * @param onlyStroke If @c true, this method only strokes the glyphs without filling
 				 */
 				void GlyphVectorImpl::paintGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<std::size_t>> range*/, bool onlyStroke) const {
-//					if(!range)
+//					if(range == boost::none)
 //						return paintGlyphs(context, origin, *this, onlyStroke);
-//					else if(range->empty())
+//					else if(boost::get(range).empty())
 //						return;
 
 					context.setFont(font());

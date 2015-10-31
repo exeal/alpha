@@ -531,22 +531,22 @@ namespace ascension {
 			template<std::size_t physicalCoordinate>
 			inline widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer) {return 1;}	// TODO: Not implemented.
 			void configureScrollBar(TextViewer& viewer, std::size_t coordinate, const boost::optional<widgetapi::NativeScrollPosition>& position,
-					const boost::optional<boost::integer_range<widgetapi::NativeScrollPosition>>& range, const boost::optional<widgetapi::NativeScrollPosition>& pageSize) {
+					const boost::optional<NumericRange<widgetapi::NativeScrollPosition>>& range, const boost::optional<widgetapi::NativeScrollPosition>& pageSize) {
 				assert(coordinate <= 1);
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 				Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
-				if(range) {
-					adjustment->set_lower(*range->begin());
-					adjustment->set_upper(*range->end());
+				if(range != boost::none) {
+					adjustment->set_lower(*boost::const_begin(boost::get(range)));
+					adjustment->set_upper(*boost::const_end(boost::get(range)));
 				}
 				adjustment->set_step_increment((coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer));
 				if(pageSize != boost::none) {
-					adjustment->set_page_increment(*pageSize);
-					adjustment->set_page_size(*pageSize);
+					adjustment->set_page_increment(boost::get(pageSize));
+					adjustment->set_page_size(boost::get(pageSize));
 				}
 				if(position != boost::none)
-					adjustment->set_value(*position);
+					adjustment->set_value(boost::get(position));
 #endif
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QScrollBar* const scrollBar = (coordinate == 0) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
@@ -1455,7 +1455,7 @@ namespace ascension {
 			const auto canvas(textArea().allocationRectangle());
 			context.save();
 			context.beginPath().rectangle(canvas).clip();
-			context.beginPath().translate(graphics::geometry::left(canvas), graphics::geometry::top(canvas));
+			context.translate(graphics::geometry::left(canvas), graphics::geometry::top(canvas));
 			textArea().paint(context);
 			context.restore();
 		}
@@ -1645,14 +1645,14 @@ namespace ascension {
 			if(positions.ipd() || properties.ipd()) {
 				const auto viewportRange(graphics::font::scrollableRange<presentation::ReadingDirection>(*viewport));
 				boost::optional<widgetapi::NativeScrollPosition> position, size;
-				boost::optional<boost::integer_range<widgetapi::NativeScrollPosition>> range;
+				boost::optional<NumericRange<widgetapi::NativeScrollPosition>> range;
 				if(positions.ipd())
 					// TODO: Use reverseScrollPosition().
 					position = (writingMode.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
 						viewport->scrollPositions().ipd() : (*viewportRange.end() - viewport->scrollPositions().ipd() - 1);
 				if(properties.ipd()) {
-					range = boost::irange<widgetapi::NativeScrollPosition>(*viewportRange.begin(), *viewportRange.end());
 					size = graphics::font::pageSize<presentation::ReadingDirection>(*viewport);
+					range = nrange<widgetapi::NativeScrollPosition>(*boost::const_begin(viewportRange), *boost::const_end(viewportRange) + boost::get(size) - 1);
 				}
 				configureScrollBar(*this, presentation::isHorizontal(writingMode.blockFlowDirection) ? 0 : 1, position, range, size);
 			}
@@ -1661,14 +1661,14 @@ namespace ascension {
 			if(positions.bpd() || properties.bpd()) {
 				const auto viewportRange(graphics::font::scrollableRange<presentation::BlockFlowDirection>(*viewport));
 				boost::optional<widgetapi::NativeScrollPosition> position, size;
-				boost::optional<boost::integer_range<widgetapi::NativeScrollPosition>> range;
+				boost::optional<NumericRange<widgetapi::NativeScrollPosition>> range;
 				if(positions.bpd())
 					// TODO: Use reverseScrollPosition().
 					position = (writingMode.blockFlowDirection != presentation::VERTICAL_RL) ?
 						viewport->scrollPositions().bpd() : (*viewportRange.end() - viewport->scrollPositions().bpd() - 1);
 				if(properties.bpd()) {
-					range = boost::irange<widgetapi::NativeScrollPosition>(*viewportRange.begin(), *viewportRange.end());
 					size = graphics::font::pageSize<presentation::BlockFlowDirection>(*viewport);
+					range = nrange<widgetapi::NativeScrollPosition>(*boost::const_begin(viewportRange), *boost::const_end(viewportRange) + boost::get(size) - 1);
 				}
 				configureScrollBar(*this, presentation::isHorizontal(writingMode.blockFlowDirection) ? 1 : 0, position, range, size);
 			}
@@ -1682,8 +1682,8 @@ namespace ascension {
 				_x = static_cast<widgetapi::NativeScrollPosition>(layouts.maximumMeasure()),
 				_y = static_cast<widgetapi::NativeScrollPosition>(layouts.numberOfVisualLines()));
 #else
-				_x = static_cast<widgetapi::NativeScrollPosition>(*scrollableRange<0>(*viewport).end()),
-				_y = static_cast<widgetapi::NativeScrollPosition>(*scrollableRange<1>(*viewport).end()));
+				_x = static_cast<widgetapi::NativeScrollPosition>(*boost::const_end(scrollableRange<0>(*viewport))),
+				_y = static_cast<widgetapi::NativeScrollPosition>(*boost::const_end(scrollableRange<1>(*viewport))));
 #endif
 			ScrollPositions pageSizes(
 				_x = static_cast<widgetapi::NativeScrollPosition>(pageSize<0>(*viewport)),
@@ -1710,7 +1710,7 @@ namespace ascension {
 			assert(calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSizes)) > 0 || geometry::x(positions) == 0);
 			if(!isFrozen())
 				configureScrollBar(*this, 0, geometry::x(positions),
-					boost::irange<widgetapi::NativeScrollPosition>(0, geometry::x(endPositions)),
+					nrange<widgetapi::NativeScrollPosition>(0, geometry::x(endPositions) + geometry::x(pageSizes)),
 					boost::make_optional<widgetapi::NativeScrollPosition>(geometry::x(pageSizes)));
 
 			// about vertical scroll bar
@@ -1729,7 +1729,7 @@ namespace ascension {
 			assert(calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSteps)) > 0 || geometry::y(positions) == 0);
 			if(!isFrozen())
 				configureScrollBar(*this, 1, geometry::y(positions),
-					boost::irange<widgetapi::NativeScrollPosition>(0, geometry::y(endPositions)),
+					nrange<widgetapi::NativeScrollPosition>(0, geometry::y(endPositions)),
 					static_cast<widgetapi::NativeScrollPosition>(geometry::y(pageSizes)));
 
 			scrolls_.changed = isFrozen();

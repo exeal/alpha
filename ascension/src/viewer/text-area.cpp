@@ -19,6 +19,7 @@
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/geometry/algorithms/normalize.hpp>
 #include <ascension/graphics/geometry/algorithms/size.hpp>
+#include <ascension/graphics/geometry/algorithms/translate.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document.hpp>
@@ -308,6 +309,13 @@ namespace ascension {
 //			Timer tm(L"TextViewer.paint");
 
 			// paint the text area
+			const auto cr(contentRectangle()), ar(allocationRectangle());
+			const bool narrowed = !boost::geometry::equals(cr, ar);
+			if(narrowed) {
+				context.save();
+				context.translate(graphics::geometry::left(cr) - graphics::geometry::left(ar), graphics::geometry::top(cr) - graphics::geometry::top(ar));
+				context.rectangle(graphics::geometry::make<graphics::Rectangle>(boost::geometry::make_zero<graphics::Point>(), graphics::geometry::size(cr))).clip();
+			}
 			textRenderer().paint(context);
 			if(narrowed)
 				context.restore();
@@ -385,7 +393,9 @@ namespace ascension {
 			namespace geometry = graphics::geometry;
 			const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer(), false));
 			graphics::Rectangle boundsToRedraw(allocationRectangle());
-			geometry::translate(boundsToRedraw, graphics::Dimension(geometry::_dx = geometry::left(viewerBounds), geometry::_dy = geometry::top(viewerBounds)));
+			geometry::translate((
+				geometry::_from = allocationRectangle(), geometry::_to = boundsToRedraw,
+				geometry::_dx = geometry::left(viewerBounds), geometry::_dy = geometry::top(viewerBounds)));
 			assert(boost::geometry::equals(boundsToRedraw, allocationRectangle()));
 
 			BOOST_FOREACH(graphics::Scalar& edge, beforeAndAfter) {
