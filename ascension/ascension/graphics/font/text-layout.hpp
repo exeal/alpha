@@ -14,13 +14,16 @@
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
-#include <ascension/graphics/geometry/geometry.hpp>
+//#include <ascension/graphics/geometry/dimension.hpp>
+#include <ascension/graphics/geometry/point.hpp>
+#include <ascension/graphics/geometry/rectangle.hpp>
 #include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/multi/geometries/multi_polygon.hpp>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
+#include <boost/range/irange.hpp>
 #include <vector>
 
 namespace ascension {
