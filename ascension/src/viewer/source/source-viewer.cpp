@@ -11,6 +11,7 @@
 #include <ascension/graphics/geometry/rectangle-corners.hpp>
 #include <ascension/graphics/geometry/rectangle-range.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
+#include <ascension/graphics/geometry/algorithms/within.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>

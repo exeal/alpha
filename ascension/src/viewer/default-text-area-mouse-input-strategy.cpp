@@ -1039,7 +1039,7 @@ namespace ascension {
 						graphics::geometry::_dy =
 							widgetapi::createRenderingContext(viewer)->fontMetrics(textArea_->textRenderer().defaultFont())->linePitch());
 					if(presentation::isVertical(textArea_->textRenderer().computedBlockFlowDirection()))
-						graphics::geometry::transpose(scrollUnits);
+						std::swap(graphics::geometry::dx(scrollUnits), graphics::geometry::dy(scrollUnits));
 					const graphics::Dimension scrollOffsets(
 						graphics::geometry::_dx =
 							(graphics::geometry::x(p) - graphics::geometry::x(dragAndDrop_->approachedPosition)) / graphics::geometry::dx(scrollUnits),

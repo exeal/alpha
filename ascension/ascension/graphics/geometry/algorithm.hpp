@@ -40,16 +40,6 @@ namespace ascension {
 					std::max(*xrange1.end(), *xrange2.end()), std::max(*yrange1.end(), *yrange2.end()));
 				return temp;
 			}
-
-			template<typename Point, typename Rectangle>
-			inline bool within(const Point& point, const Rectangle& rectangle,
-					typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr,
-					typename detail::EnableIfTagIs<Rectangle, boost::geometry::box_tag>::type* = nullptr) {
-				return boost::geometry::get<0>(point) >= boost::geometry::get<boost::geometry::min_corner, 0>(rectangle)
-					&& boost::geometry::get<0>(point) < boost::geometry::get<boost::geometry::max_corner, 0>(rectangle)
-					&& boost::geometry::get<1>(point) >= boost::geometry::get<boost::geometry::min_corner, 1>(rectangle)
-					&& boost::geometry::get<1>(point) < boost::geometry::get<boost::geometry::max_corner, 1>(rectangle);
-			}
 			/// @}
 
 			// fundamental operations
@@ -116,7 +106,7 @@ namespace ascension {
 
 			template<typename Geometry, typename DimensionCoordinate>
 			inline Geometry& resize(Geometry& rectangle, const BasicDimension<DimensionCoordinate>& size);
-
+#if 0
 			/**
 			 * Swaps the x and y values.
 			 * @return @
@@ -135,6 +125,7 @@ namespace ascension {
 			inline BasicDimension<Coordinate>& transpose(BasicDimension<Coordinate>& dimension) {
 				return dimension = BasicDimension<Coordinate>(_dx = dy(dimension), _dy = dx(dimension));
 			}
+#endif
 		}
 	}
 }

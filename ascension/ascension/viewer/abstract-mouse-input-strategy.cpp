@@ -179,7 +179,7 @@ namespace ascension {
 						graphics::geometry::_dx = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
 						graphics::geometry::_dy = widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textArea().textRenderer().defaultFont())->linePitch());
 					if(isVertical(viewer.textArea().textRenderer().computedBlockFlowDirection()))
-						graphics::geometry::transpose(scrollUnits);
+						std::swap(graphics::geometry::dx(scrollUnits), graphics::geometry::dy(scrollUnits));
 
 					graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> scrollOffsets(0, 0);
 					// no rationale about these scroll amounts

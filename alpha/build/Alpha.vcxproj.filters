@@ -1282,6 +1282,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\translate.hpp">
       <Filter>ascension\Header Files\graphics\geometry\algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\within.hpp">
+      <Filter>ascension\Header Files\graphics\geometry\algorithms</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
