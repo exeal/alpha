@@ -161,8 +161,8 @@ namespace ascension {
 			if(viewer_ != nullptr) {
 				// slide the frozen lines to be drawn
 				if(textViewer().isFrozen() && !boost::empty(linesToRedraw_)) {
-					Index b = *linesToRedraw_.begin();
-					Index e = *linesToRedraw_.end();
+					Index b = *boost::const_begin(linesToRedraw_);
+					Index e = *boost::const_end(linesToRedraw_);
 					if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
 						const Index first = change.erasedRegion().first.line + 1, last = change.erasedRegion().second.line;
 						if(b > last)
@@ -351,7 +351,7 @@ namespace ascension {
 		 * @see This method only schedule redrawing, and does not repaint the canvas.
 		 */
 		void TextArea::redrawLines(const boost::integer_range<Index>& lines) {
-		//	checkInitialization();
+//			checkInitialization();
 
 			if(viewer_ != nullptr || lines.empty())
 				return;
@@ -395,7 +395,7 @@ namespace ascension {
 
 			namespace geometry = graphics::geometry;
 			const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer(), false));
-			graphics::Rectangle boundsToRedraw(allocationRectangle());
+			graphics::Rectangle boundsToRedraw;
 			geometry::translate((
 				geometry::_from = allocationRectangle(), geometry::_to = boundsToRedraw,
 				geometry::_dx = geometry::left(viewerBounds), geometry::_dy = geometry::top(viewerBounds)));
@@ -627,8 +627,8 @@ namespace ascension {
 //				scrolls_.firstVisibleLine.line -= length(lines);
 //				scrolls_.vertical.position -= static_cast<int>(sublines);
 //				scrolls_.vertical.maximum -= static_cast<int>(sublines);
-			} else if(*lines.begin() > viewport->firstVisibleLine().line	// deleted the first visible line and/or after it
-					|| (*lines.begin() == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
+			} else if(*boost::const_begin(lines) > viewport->firstVisibleLine().line	// deleted the first visible line and/or after it
+					|| (*boost::const_begin(lines) == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //				scrolls_.vertical.maximum -= static_cast<int>(sublines);
 				redrawLine(*lines.begin(), true);
 			} else {	// deleted lines contain the first visible line
@@ -645,8 +645,8 @@ namespace ascension {
 //				scrolls_.firstVisibleLine.line += length(lines);
 //				scrolls_.vertical.position += static_cast<int>(length(lines));
 //				scrolls_.vertical.maximum += static_cast<int>(length(lines));
-			} else if(*lines.begin() > viewport->firstVisibleLine().line	// inserted at or after the first visible line
-					|| (*lines.begin() == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
+			} else if(*boost::const_begin(lines) > viewport->firstVisibleLine().line	// inserted at or after the first visible line
+					|| (*boost::const_begin(lines) == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //				scrolls_.vertical.maximum += static_cast<int>(length(lines));
 				redrawLine(*lines.begin(), true);
 			} else {	// inserted around the first visible line
@@ -666,8 +666,8 @@ namespace ascension {
 				if(*lines.end() < viewport->firstVisibleLine().line) {	// changed before visible area
 //					scrolls_.vertical.position += sublinesDifference;
 //					scrolls_.vertical.maximum += sublinesDifference;
-				} else if(*lines.begin() > viewport->firstVisibleLine().line	// changed at or after the first visible line
-						|| (*lines.begin() == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
+				} else if(*boost::const_begin(lines) > viewport->firstVisibleLine().line	// changed at or after the first visible line
+						|| (*boost::const_begin(lines) == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //					scrolls_.vertical.maximum += sublinesDifference;
 					redrawLine(*lines.begin(), true);
 				} else {	// changed lines contain the first visible line
