@@ -41,6 +41,13 @@
 
 namespace ascension {
 	namespace viewer {
+		namespace {
+			inline void redrawIfNotFrozen(TextArea& textArea) {
+				if(!textArea.textViewer().isFrozen())
+					widgetapi::redrawScheduledRegion(textArea.textViewer());
+			}
+		}
+
 		/**
 		 * @typedef ascension::viewer::TextArea::GeometryChangedSignal
 		 * The signal which gets emitted when the allocation- or content-rectangle of the @c TextArea was changed.
@@ -82,49 +89,47 @@ namespace ascension {
 			if(viewer_ == nullptr || !widgetapi::isVisible(textViewer()))
 				return;
 			const kernel::Region newRegion(self.selectedRegion());
-			bool changed = false;
 
 			// redraw the selected region
+			boost::optional<boost::integer_range<Index>> linesToRedraw;
 			if(self.isSelectionRectangle()) {	// rectangle
 				if(!oldRegion.isEmpty())
-					redrawLines(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
+					linesToRedraw = boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1);
 				if(!newRegion.isEmpty())
-					redrawLines(boost::irange(newRegion.beginning().line, newRegion.end().line + 1));
+					linesToRedraw = boost::irange(newRegion.beginning().line, newRegion.end().line + 1);
 			} else if(newRegion != oldRegion) {	// the selection actually changed
 				if(oldRegion.isEmpty()) {	// the selection was empty...
 					if(!newRegion.isEmpty())	// the selection is not empty now
-						redrawLines(boost::irange(newRegion.beginning().line, newRegion.end().line + 1));
+						linesToRedraw = boost::irange(newRegion.beginning().line, newRegion.end().line + 1);
 				} else {	// ...if the there is selection
-					if(newRegion.isEmpty()) {	// the selection became empty
-						redrawLines(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
-						if(!textViewer().isFrozen())
-							widgetapi::redrawScheduledRegion(textViewer());
-					} else if(oldRegion.beginning() == newRegion.beginning()) {	// the beginning point didn't change
+					if(newRegion.isEmpty())	// the selection became empty
+						linesToRedraw = boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1);
+					else if(oldRegion.beginning() == newRegion.beginning()) {	// the beginning point didn't change
 						const Index i[2] = {oldRegion.end().line, newRegion.end().line};
-						redrawLines(boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1));
+						linesToRedraw = boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1);
 					} else if(oldRegion.end() == newRegion.end()) {	// the end point didn't change
 						const Index i[2] = {oldRegion.beginning().line, newRegion.beginning().line};
-						redrawLines(boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1));
+						linesToRedraw = boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1);
 					} else {	// the both points changed
 						if((oldRegion.beginning().line >= newRegion.beginning().line && oldRegion.beginning().line <= newRegion.end().line)
 								|| (oldRegion.end().line >= newRegion.beginning().line && oldRegion.end().line <= newRegion.end().line)) {
 							const Index i[2] = {
 								std::min(oldRegion.beginning().line, newRegion.beginning().line), std::max(oldRegion.end().line, newRegion.end().line)
 							};
-							redrawLines(boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1));
+							linesToRedraw = boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1);
 						} else {
 							redrawLines(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
-							if(!textViewer().isFrozen())
-								widgetapi::redrawScheduledRegion(textViewer());
-							redrawLines(boost::irange(newRegion.beginning().line, newRegion.end().line + 1));
+							redrawIfNotFrozen(*this);
+							linesToRedraw = boost::irange(newRegion.beginning().line, newRegion.end().line + 1);
 						}
 					}
 				}
-				changed = true;
 			}
 
-			if(changed && !textViewer().isFrozen())
-				widgetapi::redrawScheduledRegion(textViewer());
+			if(linesToRedraw != boost::none) {
+				redrawLines(boost::get(linesToRedraw));
+				redrawIfNotFrozen(*this);
+			}
 		}
 
 		/**
@@ -194,7 +199,7 @@ namespace ascension {
 			if(&viewer == &textViewer()) {
 				// repaint the lines where the caret places
 				redrawLines(boost::irange(kernel::line(caret().beginning()), kernel::line(caret().end()) + 1));
-				widgetapi::redrawScheduledRegion(textViewer());
+				redrawIfNotFrozen(*this);
 			}
 		}
 
@@ -273,18 +278,15 @@ namespace ascension {
 			const boost::optional<std::pair<kernel::Position, kernel::Position>>& newPair = caret.matchBrackets();
 			if(newPair) {
 				redrawLine(newPair->first.line);
-				if(!textViewer().isFrozen())
-					widgetapi::redrawScheduledRegion(textViewer());
+				redrawIfNotFrozen(*this);
 				if(newPair->second.line != newPair->first.line) {
 					redrawLine(newPair->second.line);
-					if(!textViewer().isFrozen())
-						widgetapi::redrawScheduledRegion(textViewer());
+					redrawIfNotFrozen(*this);
 				}
 				if(previouslyMatchedBrackets	// clear the previous highlight
 						&& previouslyMatchedBrackets->first.line != newPair->first.line && previouslyMatchedBrackets->first.line != newPair->second.line) {
 					redrawLine(previouslyMatchedBrackets->first.line);
-					if(!textViewer().isFrozen())
-						widgetapi::redrawScheduledRegion(textViewer());
+					redrawIfNotFrozen(*this);
 				}
 				if(previouslyMatchedBrackets && previouslyMatchedBrackets->second.line != newPair->first.line
 						&& previouslyMatchedBrackets->second.line != newPair->second.line && previouslyMatchedBrackets->second.line != previouslyMatchedBrackets->first.line)
@@ -292,8 +294,7 @@ namespace ascension {
 			} else {
 				if(previouslyMatchedBrackets) {	// clear the previous highlight
 					redrawLine(previouslyMatchedBrackets->first.line);
-					if(!textViewer().isFrozen())
-						widgetapi::redrawScheduledRegion(textViewer());
+					redrawIfNotFrozen(*this);
 					if(previouslyMatchedBrackets->second.line != previouslyMatchedBrackets->first.line)
 						redrawLine(previouslyMatchedBrackets->second.line);
 				}
@@ -378,15 +379,25 @@ namespace ascension {
 			using graphics::Scalar;
 			const presentation::WritingMode writingMode(textViewer().presentation().computeWritingMode());
 			std::array<Scalar, 2> beforeAndAfter;	// in viewport (distances from before-edge of the viewport)
-			graphics::font::BaselineIterator baseline(*textRenderer().viewport(), graphics::font::VisualLine(*boost::const_begin(lines), 0), false);
-			std::get<0>(beforeAndAfter) = *baseline;
-			if(std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::min() && std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::max())
-				std::get<0>(beforeAndAfter) -= *graphics::font::TextLayout::LineMetricsIterator(*textRenderer().layouts().at(baseline.line()->line), 0).extent().begin();
-			baseline = graphics::font::BaselineIterator(*textRenderer().viewport(), graphics::font::VisualLine(*lines.end(), 0), false);
-			std::get<1>(beforeAndAfter) = *baseline;
-			if(std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::min() && std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::max())
-				std::get<1>(beforeAndAfter) += *graphics::font::TextLayout::LineMetricsIterator(*textRenderer().layouts().at(baseline.line()->line), 0).extent().end();
-			assert(std::get<0>(beforeAndAfter) <= std::get<1>(beforeAndAfter));
+			{
+				graphics::font::BaselineIterator baseline(*textRenderer().viewport(), graphics::font::VisualLine(*boost::const_begin(lines), 0), false);
+				std::get<0>(beforeAndAfter) = *baseline;
+				if(std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::min() && std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::max()) {
+					const graphics::font::TextLayout* const layout = textRenderer().layouts().at(baseline.line()->line);
+					// TODO: Handle the case if the layout is null, by using the default line metrics.
+					assert(layout != nullptr);
+					std::get<0>(beforeAndAfter) += *boost::const_begin(layout->lineMetrics(0).extent());
+				}
+				baseline = graphics::font::BaselineIterator(*textRenderer().viewport(), graphics::font::VisualLine(*lines.end() - 1, 0), false);
+				std::get<1>(beforeAndAfter) = *baseline;
+				if(std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::min() && std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::max()) {
+					const graphics::font::TextLayout* const layout = textRenderer().layouts().at(baseline.line()->line);
+					// TODO: Handle the case if the layout is null, by using the default line metrics.
+					assert(layout != nullptr);
+					std::get<1>(beforeAndAfter) += *boost::const_end(layout->lineMetrics(layout->numberOfLines() - 1).extent());
+				}
+				assert(std::get<0>(beforeAndAfter) <= std::get<1>(beforeAndAfter));
+			}
 
 			namespace geometry = graphics::geometry;
 			const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer(), false));
@@ -618,56 +629,73 @@ namespace ascension {
 		/// @see VisualLinesListener#visualLinesDeleted
 		void TextArea::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
 			const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer().viewport());
-			if(*lines.end() < viewport->firstVisibleLine().line) {	// deleted before visible area
+			boost::optional<Index> firstLineToDraw;
+			if(*boost::const_end(lines) < viewport->firstVisibleLine().line) {	// deleted before visible area
 //				scrolls_.firstVisibleLine.line -= length(lines);
 //				scrolls_.vertical.position -= static_cast<int>(sublines);
 //				scrolls_.vertical.maximum -= static_cast<int>(sublines);
 			} else if(*boost::const_begin(lines) > viewport->firstVisibleLine().line	// deleted the first visible line and/or after it
 					|| (*boost::const_begin(lines) == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //				scrolls_.vertical.maximum -= static_cast<int>(sublines);
-				redrawLine(*lines.begin(), true);
+				firstLineToDraw = *boost::const_begin(lines);
 			} else {	// deleted lines contain the first visible line
 //				scrolls_.firstVisibleLine.line = lines.beginning();
 //				scrolls_.updateVertical(*this);
-				redrawLine(*lines.begin(), true);
+				firstLineToDraw = *boost::const_begin(lines);
+			}
+			if(firstLineToDraw != boost::none) {
+				redrawLine(boost::get(firstLineToDraw), true);
+				redrawIfNotFrozen(*this);
 			}
 		}
 
 		/// @see VisualLinesListener#visualLinesInserted
 		void TextArea::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
 			const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer().viewport());
-			if(*lines.end() < viewport->firstVisibleLine().line) {	// inserted before visible area
+			boost::optional<Index> firstLineToDraw;
+			if(*boost::const_end(lines) < viewport->firstVisibleLine().line) {	// inserted before visible area
 //				scrolls_.firstVisibleLine.line += length(lines);
 //				scrolls_.vertical.position += static_cast<int>(length(lines));
 //				scrolls_.vertical.maximum += static_cast<int>(length(lines));
 			} else if(*boost::const_begin(lines) > viewport->firstVisibleLine().line	// inserted at or after the first visible line
 					|| (*boost::const_begin(lines) == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //				scrolls_.vertical.maximum += static_cast<int>(length(lines));
-				redrawLine(*lines.begin(), true);
+				firstLineToDraw = *boost::const_begin(lines);
 			} else {	// inserted around the first visible line
 //				scrolls_.firstVisibleLine.line += length(lines);
 //				scrolls_.updateVertical(*this);
-				redrawLine(*lines.begin(), true);
+				firstLineToDraw = *boost::const_begin(lines);
+			}
+			if(firstLineToDraw != boost::none) {
+				redrawLine(boost::get(firstLineToDraw), true);
+				redrawIfNotFrozen(*this);
 			}
 		}
 
 		/// @see VisualLinesListener#visualLinesModified
 		void TextArea::visualLinesModified(const boost::integer_range<Index>& lines,
 				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT {
-			if(sublinesDifference == 0)	// number of visual lines was not changed
+			boost::optional<Index> firstLineToDraw;
+			if(sublinesDifference == 0) {	// number of visual lines was not changed
 				redrawLines(lines);
-			else {
+				redrawIfNotFrozen(*this);
+			} else {
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer().viewport());
-				if(*lines.end() < viewport->firstVisibleLine().line) {	// changed before visible area
+				boost::optional<Index> firstLineToDraw;
+				if(*boost::const_end(lines) < viewport->firstVisibleLine().line) {	// changed before visible area
 //					scrolls_.vertical.position += sublinesDifference;
 //					scrolls_.vertical.maximum += sublinesDifference;
 				} else if(*boost::const_begin(lines) > viewport->firstVisibleLine().line	// changed at or after the first visible line
 						|| (*boost::const_begin(lines) == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //					scrolls_.vertical.maximum += sublinesDifference;
-					redrawLine(*lines.begin(), true);
+					firstLineToDraw = *boost::const_begin(lines);
 				} else {	// changed lines contain the first visible line
 //					scrolls_.updateVertical(*this);
-					redrawLine(*lines.begin(), true);
+					firstLineToDraw = *boost::const_begin(lines);
+				}
+				if(firstLineToDraw != boost::none) {
+					redrawLine(boost::get(firstLineToDraw), true);
+					redrawIfNotFrozen(*this);
 				}
 			}
 		}
