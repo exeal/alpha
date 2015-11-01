@@ -353,20 +353,15 @@ namespace ascension {
 		void TextArea::redrawLines(const boost::integer_range<Index>& lines) {
 //			checkInitialization();
 
-			if(viewer_ != nullptr || lines.empty())
+			if(viewer_ == nullptr || lines.empty())
 				return;
 
 			const auto orderedLines(lines | adaptors::ordered());
-			if(*boost::const_end(orderedLines) != std::numeric_limits<Index>::max() && *boost::const_end(orderedLines) >= textViewer().document().numberOfLines())
+			if(*boost::const_end(orderedLines) != std::numeric_limits<Index>::max() && *boost::const_end(orderedLines) > textViewer().document().numberOfLines())
 				throw IndexOutOfBoundsException("lines");
 
 			if(textViewer().isFrozen()) {
-				if(boost::empty(linesToRedraw_))
-					linesToRedraw_ = orderedLines;
-				else
-					linesToRedraw_ = hull(orderedLines, linesToRedraw_);
-//					linesToRedraw_ = boost::irange(
-//						std::min(*orderedLines.begin(), *linesToRedraw_.begin()), std::max(*orderedLines.end(), *linesToRedraw_.end()));
+				linesToRedraw_ = boost::empty(linesToRedraw_) ? orderedLines : hull(orderedLines, linesToRedraw_);
 				return;
 			}
 
