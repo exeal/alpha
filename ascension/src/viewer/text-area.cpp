@@ -5,6 +5,7 @@
  * @date 2015-03-18 Created.
  */
 
+#include <ascension/corelib/numeric-range-algorithm/hull.hpp>
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/baseline-iterator.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
@@ -347,6 +348,7 @@ namespace ascension {
 		 *              redrawn. If this value is @c std#numeric_limits<Index>#max(), this method redraws the first
 		 *              line (@a lines.beginning()) and the following all lines
 		 * @throw IndexOutOfBoundsException @a lines intersects outside of the document
+		 * @see This method only schedule redrawing, and does not repaint the canvas.
 		 */
 		void TextArea::redrawLines(const boost::integer_range<Index>& lines) {
 		//	checkInitialization();
@@ -354,16 +356,17 @@ namespace ascension {
 			if(viewer_ != nullptr || lines.empty())
 				return;
 
-			const boost::integer_range<Index> orderedLines(lines | adaptors::ordered());
-			if(*orderedLines.end() != std::numeric_limits<Index>::max() && *orderedLines.end() >= textViewer().document().numberOfLines())
+			const auto orderedLines(lines | adaptors::ordered());
+			if(*boost::const_end(orderedLines) != std::numeric_limits<Index>::max() && *boost::const_end(orderedLines) >= textViewer().document().numberOfLines())
 				throw IndexOutOfBoundsException("lines");
 
 			if(textViewer().isFrozen()) {
 				if(boost::empty(linesToRedraw_))
 					linesToRedraw_ = orderedLines;
 				else
-					linesToRedraw_ = boost::irange(
-						std::min(*orderedLines.begin(), *linesToRedraw_.begin()), std::max(*orderedLines.end(), *linesToRedraw_.end()));
+					linesToRedraw_ = hull(orderedLines, linesToRedraw_);
+//					linesToRedraw_ = boost::irange(
+//						std::min(*orderedLines.begin(), *linesToRedraw_.begin()), std::max(*orderedLines.end(), *linesToRedraw_.end()));
 				return;
 			}
 
@@ -380,7 +383,7 @@ namespace ascension {
 			using graphics::Scalar;
 			const presentation::WritingMode writingMode(textViewer().presentation().computeWritingMode());
 			std::array<Scalar, 2> beforeAndAfter;	// in viewport (distances from before-edge of the viewport)
-			graphics::font::BaselineIterator baseline(*textRenderer().viewport(), graphics::font::VisualLine(*lines.begin(), 0), false);
+			graphics::font::BaselineIterator baseline(*textRenderer().viewport(), graphics::font::VisualLine(*boost::const_begin(lines), 0), false);
 			std::get<0>(beforeAndAfter) = *baseline;
 			if(std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::min() && std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::max())
 				std::get<0>(beforeAndAfter) -= *graphics::font::TextLayout::LineMetricsIterator(*textRenderer().layouts().at(baseline.line()->line), 0).extent().begin();
