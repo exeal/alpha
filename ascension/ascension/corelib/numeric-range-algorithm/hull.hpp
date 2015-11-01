@@ -41,9 +41,11 @@ namespace ascension {
 		 */
 		template<typename NumericRange, typename BinaryPredicate>
 		inline NumericRange hull(const NumericRange& range1, const NumericRange& range2, BinaryPredicate pred) {
+			assert(*boost::const_begin(range1) <= *boost::const_end(range1));
+			assert(*boost::const_begin(range2) <= *boost::const_end(range2));
 			return NumericRange(
 				std::min(*boost::const_begin(range1), *boost::const_begin(range2), pred),
-				std::min(*boost::const_end(range1), *boost::const_end(range2), pred));
+				std::max(*boost::const_end(range1), *boost::const_end(range2), pred));
 		}
 
 #if 0
