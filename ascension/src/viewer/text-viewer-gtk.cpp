@@ -125,11 +125,11 @@ namespace ascension {
 #ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 			if(const Glib::RefPtr<Gtk::Adjustment> hadjustment = get_hadjustment()) {
 				hadjustment->signal_value_changed().connect([this]() {
-					if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
-						viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
-							graphics::_x = static_cast<graphics::font::TextViewport::SignedScrollOffset>(
-								this->property_hadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.x()),
-							graphics::_y = 0));
+					if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport()) {
+						graphics::PhysicalTwoAxes<boost::optional<graphics::font::TextViewport::ScrollOffset>> destination;
+						destination.x() = static_cast<graphics::font::TextViewport::ScrollOffset>(this->property_hadjustment().get_value()->get_value());
+						viewport->scrollTo(destination);
+					}
 //					this->scrollPositionsBeforeChanged_.x() = this->get_hadjustment()->get_value();
 //					this->scrollPositionsBeforeChanged_.y() = this->get_vadjustment()->get_value();
 				});
@@ -137,11 +137,11 @@ namespace ascension {
 
 			if(const Glib::RefPtr<Gtk::Adjustment> vadjustment = get_vadjustment()) {
 				vadjustment->signal_value_changed().connect([this]() {
-					if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
-						viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
-							graphics::_x = 0,
-							graphics::_y = static_cast<graphics::font::TextViewport::SignedScrollOffset>(
-								this->property_vadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.y())));
+					if(const std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport()) {
+						graphics::PhysicalTwoAxes<boost::optional<graphics::font::TextViewport::ScrollOffset>> destination;
+						destination.y() = static_cast<graphics::font::TextViewport::ScrollOffset>(this->property_vadjustment().get_value()->get_value());
+						viewport->scrollTo(destination);
+					}
 //					this->scrollPositionsBeforeChanged_.x() = this->get_hadjustment()->get_value();
 //					this->scrollPositionsBeforeChanged_.y() = this->get_vadjustment()->get_value();
 				});
