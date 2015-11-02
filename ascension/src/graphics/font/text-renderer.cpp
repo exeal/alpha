@@ -432,8 +432,8 @@ namespace ascension {
 						lineToPaint.extent.advance_begin(lineToPaint.baseline);
 						lineToPaint.extent.advance_end(lineToPaint.baseline);
 						linesToPaint.push_back(lineToPaint);
-						while(boost::get(baseline.line()).subline < layout.numberOfLines() - 1)	// skip to the next logical line
-							++baseline;
+						if(boost::get(baseline.line()).subline < layout.numberOfLines() - 1)
+							std::advance(baseline, layout.numberOfLines() - 1 - boost::get(baseline.line()).subline);	// skip to the next logical line
 					}
 				}
 
