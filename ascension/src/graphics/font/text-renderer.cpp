@@ -461,7 +461,9 @@ namespace ascension {
 					const graphics::PhysicalTwoAxes<graphics::Scalar> p(
 						presentation::mapFlowRelativeToPhysical(
 							writingMode(layout),
-							presentation::makeFlowRelativeTwoAxes((presentation::_bpd = lineToPaint.baseline, presentation::_ipd = static_cast<graphics::Scalar>(0)))));
+							presentation::makeFlowRelativeTwoAxes((
+								presentation::_bpd = lineToPaint.baseline,
+								presentation::_ipd = -inlineProgressionOffsetInViewerGeometry(*viewport())))));
 					layout.draw(context, graphics::geometry::make<graphics::Point>(p));
 				}
 #endif
