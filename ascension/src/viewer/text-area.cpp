@@ -13,6 +13,7 @@
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <ascension/graphics/geometry/rectangle-corners.hpp>
 #include <ascension/graphics/geometry/rectangle-odxdy.hpp>
@@ -577,7 +578,7 @@ namespace ascension {
 					textViewer().get_window()->move_region(regionToScroll,
 						graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels));
 #else
-					Cairo::Region regionToScroll(::cairo_region_create(), false);
+					Cairo::Region regionToScroll(::cairo_region_create_rectangle(&graphics::toNative<Cairo::RectangleInt>(boundsToScroll)), false);
 					::gdk_window_move_region(textViewer().get_window()->gobj(), regionToScroll.cobj(),
 						graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels));
 #endif
