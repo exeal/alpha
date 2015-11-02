@@ -1274,8 +1274,10 @@ namespace ascension {
 					ScrollOffset newBlockFlowScrollOffsetInFirstVisibleVisualLine,
 #endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
 					bool notifySignal) BOOST_NOEXCEPT {
-				if(notifySignal && newScrollPositions != scrollPositions_)
+				if(notifySignal && newScrollPositions == scrollPositions_)
 					notifySignal = false;
+				std::decay<decltype(scrollPositions_)>::type scrollPositionsBeforeScroll(scrollPositions_);
+				std::decay<decltype(firstVisibleLine_)>::type firstVisibleLineBeforeScroll(firstVisibleLine_);
 				scrollPositions_ = newScrollPositions;
 				firstVisibleLine_ = newFirstVisibleLine;
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -1283,7 +1285,7 @@ namespace ascension {
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 
 				if(notifySignal)
-					emitScrolled(scrollPositions_, firstVisibleLine_);
+					emitScrolled(scrollPositionsBeforeScroll, firstVisibleLineBeforeScroll);
 			}
 
 			/// @see VisualLinesListener#visualLinesDeleted
