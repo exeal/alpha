@@ -250,6 +250,8 @@ namespace ascension {
 			renderer_.reset(new Renderer(viewer));
 			caret().install(*this);
 			textViewer().document().addListener(*this);
+			viewerFrozenStateChangedConnection_ = textViewer().frozenStateChangedSignal().connect(
+				std::bind(&TextArea::frozenStateChanged, this, std::placeholders::_1));
 			caretMotionConnection_ = caret().motionSignal().connect(
 				std::bind(&TextArea::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
 			selectionShapeChangedConnection_ = caret().selectionShapeChangedSignal().connect(
@@ -493,6 +495,7 @@ namespace ascension {
 				mouseInputStrategy_->uninstall();
 				mouseInputStrategyIsInstalled_ = false;
 				renderer_->layouts().removeVisualLinesListener(*this);
+				viewerFrozenStateChangedConnection_.disconnect();
 				viewportResizedConnection_.disconnect();
 				viewportScrolledConnection_.disconnect();
 				caretMotionConnection_.disconnect();

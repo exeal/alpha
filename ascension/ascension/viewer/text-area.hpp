@@ -180,7 +180,7 @@ namespace ascension {
 			std::shared_ptr<widgetapi::DropTarget> dropTargetHandler_;
 			GeometryChangedSignal allocationRectangleChangedSignal_, contentRectangleChangedSignal_;
 			boost::signals2::connection viewportResizedConnection_, viewportScrolledConnection_;
-			boost::signals2::scoped_connection caretMotionConnection_,
+			boost::signals2::scoped_connection viewerFrozenStateChangedConnection_, caretMotionConnection_,
 				defaultFontChangedConnection_, matchBracketsChangedConnection_, selectionShapeChangedConnection_;
 		};
 		
