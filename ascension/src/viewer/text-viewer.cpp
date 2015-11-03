@@ -18,6 +18,7 @@
 #include <ascension/graphics/geometry/algorithms/normalize.hpp>
 #include <ascension/graphics/geometry/algorithms/size.hpp>
 #include <ascension/graphics/geometry/algorithms/translate.hpp>
+#include <ascension/graphics/geometry/algorithms/within.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/presentation/presentation.hpp>
@@ -35,8 +36,6 @@
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
-#include <boost/geometry/algorithms/within.hpp>
-#include <boost/geometry/strategies/strategies.hpp>	// for boost.geometry.within
 #ifdef _DEBUG
 #	include <boost/log/trivial.hpp>
 //#	define ASCENSIOB_DIAGNOSE_INHERENT_DRAWING
@@ -418,6 +417,11 @@ namespace ascension {
 				throw std::overflow_error("");
 			if(++frozenCount_ == 1)
 				frozenStateChangedSignal_(*this);
+		}
+
+		/// Returns the @c FrozenStateChangedSignal signal connector.
+		SignalConnector<TextViewer::FrozenStateChangedSignal> TextViewer::frozenStateChangedSignal() {
+			return SignalConnector<FrozenStateChangedSignal>(frozenStateChangedSignal_);
 		}
 
 #if 0
@@ -1637,7 +1641,6 @@ namespace ascension {
 			if(viewport.get() == nullptr)
 				return;
 
-#if 1
 			const presentation::WritingMode writingMode(presentation().computeWritingMode());
 			assert(!isFrozen());
 
@@ -1672,68 +1675,6 @@ namespace ascension {
 				}
 				configureScrollBar(*this, presentation::isHorizontal(writingMode.blockFlowDirection) ? 1 : 0, position, range, size);
 			}
-
-#else
-			const LineLayoutVector& layouts = textRenderer().layouts();
-			typedef PhysicalTwoAxes<widgetapi::NativeScrollPosition> ScrollPositions;
-			const ScrollPositions positions(physicalScrollPosition(*this));
-			ScrollPositions endPositions(
-#if 0
-				_x = static_cast<widgetapi::NativeScrollPosition>(layouts.maximumMeasure()),
-				_y = static_cast<widgetapi::NativeScrollPosition>(layouts.numberOfVisualLines()));
-#else
-				_x = static_cast<widgetapi::NativeScrollPosition>(*boost::const_end(scrollableRange<0>(*viewport))),
-				_y = static_cast<widgetapi::NativeScrollPosition>(*boost::const_end(scrollableRange<1>(*viewport))));
-#endif
-			ScrollPositions pageSizes(
-				_x = static_cast<widgetapi::NativeScrollPosition>(pageSize<0>(*viewport)),
-				_y = static_cast<widgetapi::NativeScrollPosition>(pageSize<1>(*viewport)));
-			if(isVertical(writingMode.blockFlowDirection)) {
-#if 0
-				geometry::transpose(endPositions);
-#endif
-				geometry::transpose(pageSizes);
-			}
-
-			// about horizontal scroll bar
-			bool wasNeededScrollbar = calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSizes)) > 0;
-			// scroll to leftmost/rightmost before the scroll bar vanishes
-			widgetapi::NativeScrollPosition minimum = calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSizes));
-			if(wasNeededScrollbar && minimum <= 0) {
-//				scrolls_.horizontal.position = 0;
-				if(!isFrozen()) {
-					widgetapi::scheduleRedraw(*this, false);
-					caret().updateLocation();
-				}
-			} else if(geometry::x(positions) > minimum)
-				viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>(minimum, boost::none));
-			assert(calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSizes)) > 0 || geometry::x(positions) == 0);
-			if(!isFrozen())
-				configureScrollBar(*this, 0, geometry::x(positions),
-					nrange<widgetapi::NativeScrollPosition>(0, geometry::x(endPositions) + geometry::x(pageSizes)),
-					boost::make_optional<widgetapi::NativeScrollPosition>(geometry::x(pageSizes)));
-
-			// about vertical scroll bar
-			wasNeededScrollbar = calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSizes)) > 0;
-			minimum = calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSizes));
-			// validate scroll position
-			if(minimum <= 0) {
-//				scrolls_.vertical.position = 0;
-//				scrolls_.firstVisibleLine = VisualLine(0, 0);
-				if(!isFrozen()) {
-					widgetapi::scheduleRedraw(*this, false);
-					caret().updateLocation();
-				}
-			} else if(static_cast<widgetapi::NativeScrollPosition>(geometry::y(positions)) > minimum)
-				viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>(boost::none, minimum));
-			assert(calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSteps)) > 0 || geometry::y(positions) == 0);
-			if(!isFrozen())
-				configureScrollBar(*this, 1, geometry::y(positions),
-					nrange<widgetapi::NativeScrollPosition>(0, geometry::y(endPositions)),
-					static_cast<widgetapi::NativeScrollPosition>(geometry::y(pageSizes)));
-
-			scrolls_.changed = isFrozen();
-#endif
 		}
 
 		/**
