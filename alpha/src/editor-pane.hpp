@@ -7,12 +7,12 @@
 
 #ifndef ALPHA_EDITOR_PANE_HPP
 #define ALPHA_EDITOR_PANE_HPP
-#include <list>
-#include <memory>
 #include <boost/core/noncopyable.hpp>
 #include <gtkmm/box.h>
 #include <gtkmm/scrolledwindow.h>
 #include <gtkmm/stack.h>
+#include <list>
+#include <memory>
 
 namespace alpha {
 	class Buffer;
@@ -52,6 +52,7 @@ namespace alpha {
 #ifdef _DEBUG
 		bool on_event(GdkEvent* event) override;
 		void on_realize() override;
+		void on_size_allocate(Gtk::Allocation& allocation) override;
 #endif
 		void split(Gtk::Orientation orientation);
 		void touch(const EditorView& viewer);

@@ -28,6 +28,7 @@ namespace alpha {
 
 	/// Constructor.
 	EditorPane::EditorPane(std::unique_ptr<EditorView> initialViewer /* = std::unique_ptr<EditorView> */) {
+		set_homogeneous(false);
 		if(initialViewer.get() != nullptr)
 			add(std::move(initialViewer));
 	}
@@ -65,10 +66,11 @@ namespace alpha {
 		children_.push_back(Child());
 		Child& newChild = children_.back();
 		try {
-			box->add(*scroller);
+			box->pack_start(*scroller, Gtk::PACK_EXPAND_WIDGET);
 			std::get<1>(newChild) = Glib::RefPtr<Gtk::ScrolledWindow>(scroller.release());
 			std::get<1>(newChild)->add(*viewer);
 			std::get<2>(newChild) = std::move(viewer);
+//			box->pack_end(*modeLine, Gtk::PACK_SHRINK);
 		} catch(...) {
 			children_.pop_back();
 			throw;
@@ -92,6 +94,12 @@ namespace alpha {
 
 	void EditorPane::on_realize() {
 		return Gtk::Stack::on_realize();
+	}
+
+	void EditorPane::on_size_allocate(Gtk::Allocation& allocation) {
+		if(Gtk::Widget* const child = get_visible_child())
+			child->size_allocate(allocation);
+		return Gtk::Stack::on_size_allocate(allocation);
 	}
 #endif
 
