@@ -12,7 +12,7 @@
 #include "editor-panes.hpp"
 //#include "search.hpp"	// ui.SearchDialog
 #include "status-bar.hpp"
-#include <gtkmm/hvbox.h>
+#include <gtkmm/box.h>
 #include <gtkmm/window.h>
 #include <memory>	// std.unique_ptr
 
@@ -40,7 +40,7 @@ namespace alpha {
 #endif
 			bool on_focus_in_event(GdkEventFocus* event) override;
 		private:
-			Gtk::VBox vbox_;
+			Gtk::Box box_;	// TODO: Replace by Gtk.Grid.
 			EditorPanes editorPanes_;
 //			std::unique_ptr<ui::SearchDialog> searchDialog_;
 			StatusBar statusBar_;

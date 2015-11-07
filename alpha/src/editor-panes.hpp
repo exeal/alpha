@@ -91,6 +91,7 @@ namespace alpha {
 #ifdef _DEBUG
 		bool on_event(GdkEvent* event) override;
 		void on_realize() override;
+		void on_size_allocate(Gtk::Allocation& allocation) override;
 #endif
 
 	private:

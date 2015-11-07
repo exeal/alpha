@@ -147,6 +147,10 @@ namespace alpha {
 		set_events(oldMask | Gdk::FOCUS_CHANGE_MASK);
 		return Gtk::Paned::on_realize();
 	}
+
+	void EditorPanes::on_size_allocate(Gtk::Allocation& allocation) {
+		return Gtk::Paned::on_size_allocate(allocation);
+	}
 #endif
 
 	/**

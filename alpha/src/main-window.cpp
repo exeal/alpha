@@ -14,15 +14,15 @@
 namespace alpha {
 	namespace ui {
 		/// Default constructor.
-		MainWindow::MainWindow() /*: Gtk::Window(Gtk::WINDOW_TOPLEVEL)*/ {
+		MainWindow::MainWindow() : /*Gtk::Window(Gtk::WINDOW_TOPLEVEL), */ box_(Gtk::ORIENTATION_VERTICAL) {
 			bufferSelectionChangedConnection_ = editorPanes_.bufferSelectionChangedSignal().connect([this](EditorPanes&) {
 				this->updateTitle();
 			});
 
-			add(vbox_);
-			vbox_.pack_start(editorPanes());
-//			vbox_.pack_start(statusBar(), Gtk::PACK_SHRINK);
-//			vbox_.show_all_children();
+			add(box_);
+			box_.pack_start(editorPanes(), Gtk::PACK_EXPAND_WIDGET);
+			box_.pack_end(statusBar(), Gtk::PACK_SHRINK);
+//			box_.show_all_children();
 			show_all_children();
 		}
 
