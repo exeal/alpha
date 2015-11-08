@@ -580,11 +580,6 @@ namespace ascension {
 						throw std::invalid_argument(parameterName);
 				}
 
-				template<typename Range, typename Iterator>
-				BOOST_CONSTEXPR inline bool rangeIncludes(const Range& range, Iterator i) {
-					return i >= boost::const_begin(range) && i < boost::const_end(range);
-				}
-
 				/// @internal A character range with the @a Attribute.
 				template<typename Attribute>
 				struct AttributedCharacterRange {
@@ -896,7 +891,7 @@ namespace ascension {
 					if(leading.glyphs_.get() == nullptr)
 						throw std::invalid_argument("'leading' has not been shaped");
 					raiseIfNull(beginningOfNewRun, "beginningOfNewRun");
-					if(rangeIncludes(leading.characterRange(), beginningOfNewRun))
+					if(beginningOfNewRun <= boost::const_begin(leading.characterRange()) || beginningOfNewRun >= boost::const_end(leading.characterRange()))
 						throw std::out_of_range("beginningOfNewRun");
 
 					// compute 'glyphRange_'
@@ -916,7 +911,7 @@ namespace ascension {
 				 */
 				std::unique_ptr<GlyphVectorImpl> GlyphVectorImpl::breakAt(StringPiece::const_iterator at) {
 					raiseIfNull(at, "at");
-					if(!rangeIncludes(*this, at))
+					if(at <= boost::const_begin(*this) || at >= boost::const_end(*this))
 						throw std::out_of_range("at");
 					else if(glyphs_->clusters[at - begin()] == glyphs_->clusters[at - begin() - 1])
 						throw std::invalid_argument("at");
