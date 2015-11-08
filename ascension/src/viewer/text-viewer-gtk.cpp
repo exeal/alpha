@@ -250,17 +250,6 @@ namespace ascension {
 			return input.isConsumed() || Gtk::Widget::on_button_release_event(event);
 		}
 
-		/**
-		 * Invokes @c #resized method.
-		 * @see Gtk#Widget#on_configure_event
-		 */
-		bool TextViewer::on_configure_event(GdkEventConfigure* event) {
-			resized(graphics::Dimension(
-				graphics::geometry::_dx = static_cast<graphics::Scalar>(event->width),
-				graphics::geometry::_dy = static_cast<graphics::Scalar>(event->height)));
-			return false;
-		}
-
 		/// @see Gtk#Widget#on_drag_drop
 		bool TextViewer::on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) {
 			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock()) {
@@ -425,7 +414,8 @@ namespace ascension {
 				| Gdk::EXPOSURE_MASK | Gdk::FOCUS_CHANGE_MASK
 				| Gdk::KEY_PRESS_MASK | Gdk::KEY_RELEASE_MASK
 				| Gdk::POINTER_MOTION_MASK | Gdk::POINTER_MOTION_HINT_MASK
-				| Gdk::SCROLL_MASK | Gdk::SMOOTH_SCROLL_MASK;
+				| Gdk::SCROLL_MASK | Gdk::SMOOTH_SCROLL_MASK
+				| Gdk::STRUCTURE_MASK;	// to receive signal_configure_event() signal
 //			attributes.visual = ::gtk_widget_get_visual(gobj());
 			attributes.window_type = GDK_WINDOW_CHILD;
 			attributes.wclass = GDK_INPUT_OUTPUT;
@@ -474,7 +464,10 @@ namespace ascension {
 			return input.isConsumed();
 		}
 
-		/// @see Gtk#Widget#on_size_allocate
+		/**
+		 * Invokes @c #resized method.
+		 * @see Gtk#Widget#on_size_allocate
+		 */
 		void TextViewer::on_size_allocate(Gtk::Allocation& allocation) {
 			set_allocation(allocation);
 #if 0
@@ -498,6 +491,10 @@ namespace ascension {
 			if(window_)
 				window_->move_resize(allocation.get_x(), allocation.get_y(), allocation.get_width(), allocation.get_height());
 #endif
+			resized(graphics::Dimension(
+				graphics::geometry::_dx = static_cast<graphics::Scalar>(allocation.get_width()),
+				graphics::geometry::_dy = static_cast<graphics::Scalar>(allocation.get_height())));
+			return Gtk::Widget::on_size_allocate(allocation);
 		}
 
 		/// @see Gtk#Widget#on_unrealize

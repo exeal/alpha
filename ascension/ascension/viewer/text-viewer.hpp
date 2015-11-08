@@ -296,7 +296,6 @@ namespace ascension {
 			//
 			virtual bool on_button_press_event(GdkEventButton* event) override;
 			virtual bool on_button_release_event(GdkEventButton* event) override;
-			virtual bool on_configure_event(GdkEventConfigure* event) override;
 			virtual void on_drag_leave(const Glib::RefPtr<Gdk::DragContext>& context, guint time) override;
 			virtual bool on_drag_motion(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) override;
 			virtual bool on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) override;
