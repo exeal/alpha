@@ -3417,11 +3417,13 @@ namespace ascension {
 				firstRunsInLines_.reset(new RunVector::const_iterator[numberOfLines_ = firstRunsInLines.size()]);
 
 				BOOST_FOREACH(RunVector::reference run, runs_)
-//				for(auto i(std::begin(runs_)), e(std::end(runs_)); i != e; ++i)
+					run.release();
+				BOOST_FOREACH(auto& run, createdRuns)
 					run.release();
 				for(RunVector::size_type i = 0, c = runs.size(); i < c; ++i)
 					newRuns[i].reset(runs[i]);
-				runs_ = std::move(newRuns);
+//				runs_ = std::move(newRuns);
+				std::swap(runs_, newRuns);
 				for(std::vector<Index>::size_type i = 0, c = firstRunsInLines.size(); i < c; ++i)
 					firstRunsInLines_[i] = std::begin(runs_) + firstRunsInLines[i];
 			}
