@@ -498,15 +498,22 @@ namespace ascension {
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
 				const auto line(locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(presentation::blockRange(*bounds)) : boost::none));
 				const auto runsInLine(runsForLine(std::get<0>(line)));
-				assert(!boost::empty(runsInLine));
-				const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(std::get<0>(line)));
-				assert(characterRangeInLine.end() == runsInLine.end()[-1]->characterRange().end());
-
 				const Scalar lineStart = lineStartEdge(std::get<0>(line));
+
+				if(boost::empty(runsInLine)) {
+					assert(isEmpty());
+					if(outOfBounds != nullptr)
+						*outOfBounds = point.ipd() == lineStart;
+					return TextHit<>::leading(0);
+				}
+
+				const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(std::get<0>(line)));
+				assert(boost::const_end(characterRangeInLine) == boost::const_end(runsInLine.back()->characterRange()));
+
 				if(point.ipd() < lineStart || (bounds != nullptr && point.ipd() < std::min(bounds->start(), bounds->end()))) {	// beyond 'start-edge' of line ?
 					if(outOfBounds != nullptr)
 						*outOfBounds = true;
-					return TextHit<>::leading(characterRangeInLine.cbegin() - textString_.data());
+					return TextHit<>::leading(boost::const_begin(characterRangeInLine) - textString_.data());
 				}
 				const bool outsideInIpd = point.ipd() >= lineStart + measure(std::get<0>(line))
 					|| (bounds != nullptr && point.ipd() >= std::max(bounds->start(), bounds->end()));	// beyond 'end-edge' of line ?
@@ -523,7 +530,7 @@ namespace ascension {
 						if(runLineRight > x) {
 							const TextHit<> hitInRun(run->hitTestCharacter(
 								x - runLineLeft - lineRelativeGlyphContentOffset(*run, wm.inlineFlowDirection), boost::none, nullptr));
-							const Index position = run->characterRange().begin() - textString_.data() + hitInRun.characterIndex();
+							const Index position = boost::const_begin(run->characterRange()) - textString_.data() + hitInRun.characterIndex();
 							return hitInRun.isLeadingEdge() ? TextHit<>::leading(position) : TextHit<>::trailing(position);
 						}
 						runLineLeft = runLineRight;
