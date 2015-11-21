@@ -133,7 +133,7 @@ namespace ascension {
 				const TextLayout* const layout = viewport().textRenderer().layouts().at(firstVisibleLine.line);
 				assert(layout != nullptr);
 				const auto lineMetrics(layout->lineMetrics(firstVisibleLine.subline));
-				const Scalar baseline = -*boost::const_begin(lineMetrics.extentWithHalfLeadings());
+				const Scalar baseline = lineMetrics.baselineOffset() - *boost::const_begin(lineMetrics.extentWithHalfLeadings());
 				Point axis;
 				const Rectangle bounds(geometry::make<Rectangle>(boost::geometry::make_zero<Point>(), viewport().size()));
 				switch(viewport().textRenderer().computedBlockFlowDirection()) {
