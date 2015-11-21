@@ -160,9 +160,12 @@ namespace ascension {
 
 			/// @internal Implements constructor and @c #advance method.
 			void BaselineIterator::internalAdvance(const VisualLine* to, const boost::optional<difference_type>& delta) {
+				assert(viewport_ != nullptr);
 				bool forward;
 				if(to != nullptr) {
 					assert(delta == boost::none);
+					if(to->line >= viewport().textRenderer().layouts().document().numberOfLines())
+						throw IndexOutOfBoundsException("*to");
 					if(*to == line())
 						return;
 					forward = *to > line();
