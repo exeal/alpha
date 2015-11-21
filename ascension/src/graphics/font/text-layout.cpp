@@ -1113,9 +1113,9 @@ namespace ascension {
 					newLineMetrics[line].descent = textDepth;
 #endif
 					newLineMetrics[line].leading = 0;
-
-					std::swap(newLineMetrics, lineMetrics_);
 				}
+
+				std::swap(newLineMetrics, lineMetrics_);
 			}
 #if 0
 			/**
