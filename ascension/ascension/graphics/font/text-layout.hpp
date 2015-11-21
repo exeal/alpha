@@ -373,7 +373,7 @@ namespace ascension {
 					return 0;
 				std::vector<Index> offsets;
 				lineOffsets(offsets);
-				return *ascension::detail::searchBound(std::begin(offsets), std::end(offsets) - 1, offset);
+				return ascension::detail::searchBound(std::begin(offsets), std::end(offsets) - 1, offset) - std::begin(offsets);
 			}
 			/**
 			 * Returns the length of the specified visual line.
