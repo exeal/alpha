@@ -45,6 +45,7 @@
 #include <boost/flyweight/key_value.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/find.hpp>
+#include <boost/range/algorithm/for_each.hpp>
 #include <boost/range/numeric.hpp>	// boost.accumulate
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
@@ -190,7 +191,7 @@ namespace ascension {
 
 					static std::map<int, const String> associations;
 					static const WCHAR MS_P_GOTHIC[] = L"\xff2d\xff33 \xff30\x30b4\x30b7\x30c3\x30af";	// "ＭＳ Ｐゴシック"
-					if(associations.empty()) {
+					if(boost::empty(associations)) {
 						associations.insert(std::make_pair(Script::ARABIC, L"Microsoft Sans Serif"));
 						associations.insert(std::make_pair(Script::CYRILLIC, L"Microsoft Sans Serif"));
 						associations.insert(std::make_pair(Script::GREEK, L"Microsoft Sans Serif"));
@@ -260,14 +261,14 @@ namespace ascension {
 							}
 							break;
 						}
-						if(associations.find(Script::HAN) != associations.end()) {
+						if(associations.find(Script::HAN) != boost::const_end(associations)) {
 							associations.insert(make_pair(Script::HIRAGANA, associations[Script::HAN]));
 							associations.insert(make_pair(Script::KATAKANA, associations[Script::HAN]));
 						}
 					}
 
 					std::map<int, const String>::const_iterator i(associations.find(script));
-					return (i != associations.end()) ? i->second : String();
+					return (i != boost::const_end(associations)) ? i->second : String();
 				}
 
 				/**
@@ -406,7 +407,7 @@ namespace ascension {
 						std::array<SCRIPT_ITEM, 4> items;
 						int numberOfItems;
 						if(SUCCEEDED(::ScriptItemize(text.c_str(), static_cast<int>(text.length()),
-								items.size(), nullptr, nullptr, items.data(), &numberOfItems)) && numberOfItems == 1)
+								boost::size(items), nullptr, nullptr, items.data(), &numberOfItems)) && numberOfItems == 1)
 							supports = true;
 						checked = true;
 					}
@@ -480,20 +481,31 @@ namespace ascension {
 					return width.abcA < 0 || width.abcC < 0;
 				}
 
-				class LogicalClusterIterator : public boost::iterators::iterator_facade<LogicalClusterIterator, std::nullptr_t, boost::iterators::bidirectional_traversal_tag> {
+				struct LogicalCluster : boost::iterator_range<const WORD*> {
+					boost::iterator_range<const WORD*> glyphs;
+					explicit LogicalCluster(const boost::iterator_range<const WORD*>& base) : boost::iterator_range<const WORD*>(base) {
+					}
+					WORD glyphIndex() const BOOST_NOEXCEPT {
+						return glyphs.front();
+					}
+				};
+
+				class LogicalClusterIterator : public boost::iterators::iterator_facade<
+					LogicalClusterIterator, LogicalCluster, boost::iterators::bidirectional_traversal_tag, LogicalCluster
+				> {
 				public:
-					LogicalClusterIterator() : clusters_(nullptr, nullptr), glyphIndices_(nullptr, nullptr), currentCluster_(nullptr, nullptr) {
+					LogicalClusterIterator() : clusters_(nullptr, nullptr), glyphIndices_(nullptr, nullptr), current_(nullptr, nullptr) {
 					}
 					LogicalClusterIterator(const boost::iterator_range<const WORD*>& clusters,
 							const boost::iterator_range<const WORD*>& glyphIndices, std::size_t position) : clusters_(clusters), glyphIndices_(glyphIndices) {
-						if(clusters.empty())
+						if(boost::empty(clusters))
 							throw std::invalid_argument("clusters");
-						if(glyphIndices.empty())
+						if(boost::empty(glyphIndices))
 							throw std::invalid_argument("glyphIndices");
-						if(position > static_cast<std::size_t>(clusters_.size()))
+						if(position > static_cast<std::size_t>(boost::size(clusters_)))
 							throw std::out_of_range("position");
-						if(position < static_cast<std::size_t>(clusters_.size())) {
-							currentCluster_ = boost::make_iterator_range(clusters_.begin() + position, clusters_.begin() + position + 1);
+						if(position < static_cast<std::size_t>(boost::size(clusters_))) {
+							current_ = boost::make_iterator_range_n(boost::const_begin(clusters_) + position, 1);
 							decrement();
 							increment();
 						} else
@@ -522,9 +534,9 @@ namespace ascension {
 						return readingDirection(clusters_);
 					}
 					static presentation::ReadingDirection readingDirection(const boost::iterator_range<const WORD*>& clusters) {
-						if(clusters.begin() == nullptr || clusters.end() == nullptr)
+						if(boost::const_begin(clusters) == nullptr || boost::const_end(clusters) == nullptr)
 							throw NullPointerException("clusters");
-						if(clusters.begin() >= clusters.end())
+						if(boost::const_begin(clusters) >= boost::const_end(clusters))
 							throw std::invalid_argument("clusters");
 						return (clusters.front() <= clusters.back()) ? presentation::LEFT_TO_RIGHT : presentation::RIGHT_TO_LEFT;
 					}
@@ -534,7 +546,7 @@ namespace ascension {
 						assert(!currentCluster().empty());
 					}
 					void assertNotInvalid() const BOOST_NOEXCEPT {
-						assert(!glyphIndices_.empty() && glyphIndices_.begin() != nullptr && glyphIndices_.end() != nullptr);
+						assert(!boost::empty(glyphIndices_) && boost::const_begin(glyphIndices_) != nullptr && boost::const_end(glyphIndices_) != nullptr);
 					}
 					void decrement() {
 						assert(currentCluster().end() > clusters_.begin());
@@ -574,9 +586,9 @@ namespace ascension {
 						throw NullPointerException(parameterName);
 				}
 				inline void raiseIfNullOrEmpty(const StringPiece& textString, const char parameterName[]) {
-					if(textString.cbegin() == nullptr)
+					if(boost::const_begin(textString) == nullptr)
 						throw NullPointerException(parameterName);
-					else if(textString.empty())
+					else if(boost::empty(textString))
 						throw std::invalid_argument(parameterName);
 				}
 
@@ -732,21 +744,28 @@ namespace ascension {
 					GlyphVectorImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script, std::unique_ptr<RawGlyphVector> glyphs);
 					GlyphVectorImpl(GlyphVectorImpl& leading, StringPiece::const_iterator beginningOfNewRun);
 					boost::iterator_range<const int*> advances() const BOOST_NOEXCEPT {
-						if(const int* const p = glyphs_->advances.get())
-							return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
+						if(const int* const p = glyphs_->advances.get()) {
+							const auto range(glyphRange());
+							return boost::make_iterator_range(p + *boost::const_begin(range), p + *boost::const_end(range));
+						}
 						return boost::make_iterator_range<const int*>(nullptr, nullptr);
 					}
 					boost::iterator_range<const WORD*> clusters() const BOOST_NOEXCEPT {
 						if(const WORD* const p = glyphs_->clusters.get())
-							return boost::make_iterator_range(p + (begin() - glyphs_->position), p + (end() - glyphs_->position));
+							return boost::make_iterator_range_n(p + (boost::const_begin(*this) - glyphs_->position), boost::size(*this));
 						return boost::make_iterator_range<const WORD*>(nullptr, nullptr);
 					}
 					std::size_t countMissingGlyphs(const RenderingContext2D& context) const;
 					boost::iterator_range<const int*> effectiveAdvances() const BOOST_NOEXCEPT {
-						if(const int* const p = glyphs_->justifiedAdvances.get())
-							return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
-						else if(const int* const p = glyphs_->advances.get())
-							return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
+						if(justified_) {
+							const int* const p = glyphs_->justifiedAdvances.get();
+							assert(p != nullptr);
+							const auto range(glyphRange());
+							return boost::make_iterator_range(p + *boost::const_begin(range), p + *boost::const_end(range));
+						} else if(const int* const p = glyphs_->advances.get()) {
+							const auto range(glyphRange());
+							return boost::make_iterator_range(p + *boost::const_begin(range), p + *boost::const_end(range));
+						}
 						return boost::make_iterator_range<const int*>(nullptr, nullptr);
 					}
 					static void generateDefaultGlyphs(win32::Handle<HDC>::Type dc,
@@ -755,13 +774,17 @@ namespace ascension {
 						const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs);
 					Scalar glyphLogicalPosition(std::size_t index) const;
 					boost::iterator_range<const WORD*> glyphs() const BOOST_NOEXCEPT {
-						if(const WORD* const p = glyphs_->indices.get())
-							return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
+						if(const WORD* const p = glyphs_->indices.get()) {
+							const auto range(glyphRange());
+							return boost::make_iterator_range(p + *boost::const_begin(range), p + *boost::const_end(range));
+						}
 						return boost::make_iterator_range<const WORD*>(nullptr, nullptr);
 					}
 					boost::iterator_range<const GOFFSET*> glyphOffsets() const BOOST_NOEXCEPT {
-						if(const GOFFSET* const p = glyphs_->offsets.get())
-							return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
+						if(const GOFFSET* const p = glyphs_->offsets.get()) {
+							const auto range(glyphRange());
+							return boost::make_iterator_range(p + *boost::const_begin(range), p + *boost::const_end(range));
+						}
 						return boost::make_iterator_range<const GOFFSET*>(nullptr, nullptr);
 					}
 					boost::integer_range<std::size_t> glyphRange(const StringPiece& characterRange = StringPiece()) const;
@@ -782,8 +805,10 @@ namespace ascension {
 					void paintGlyphs(PaintContext& context, const Point& origin/*,
 						boost::optional<boost::integer_range<std::size_t>> range*/, bool onlyStroke) const;
 					boost::iterator_range<const SCRIPT_VISATTR*> visualAttributes() const BOOST_NOEXCEPT {
-						if(const SCRIPT_VISATTR* const p = glyphs_->visualAttributes.get())
-							return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
+						if(const SCRIPT_VISATTR* const p = glyphs_->visualAttributes.get()) {
+							const auto range(glyphRange());
+							return boost::make_iterator_range(p + *boost::const_begin(range), p + *boost::const_end(range));
+						}
 						return boost::make_iterator_range<const SCRIPT_VISATTR*>(nullptr, nullptr);
 					}
 
@@ -855,7 +880,8 @@ namespace ascension {
 				GlyphVectorImpl::GlyphVectorImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
 						std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeLayoutTag scriptTag)
 						: StringPiece(characterRange), analysis_(script),
-						glyphs_(new RawGlyphVector(characterRange.cbegin(), font, frc, scriptTag)) {	// may throw NullPointerException for 'font'
+						glyphs_(new RawGlyphVector(boost::const_begin(characterRange), font, frc, scriptTag)),	// may throw NullPointerException for 'font'
+						justified_(false), clusterOffset_(0) {
 					raiseIfNullOrEmpty(characterRange, "characterRange");
 //					raiseIfNull(font.get(), "font");
 				}
@@ -881,18 +907,21 @@ namespace ascension {
 				 * @param leading The original @c GlyphVectorImpl object
 				 * @param beginningOfNewRun The beginning position of the newly created vector
 				 * @throw std#invalid_argument @a leading has not been shaped
+				 * @throw std#invalid_argument @a beginningOfNewRun intervenes a glyph
 				 * @throw NullPointerException @a beginningOfNewRun is @c null
 				 * @throw std#out_of_range @a beginningOfNewRun is outside of the character range @a leading covers
 				 * @see #breakAt, breakIfTooLong
 				 * @note This constructor is called by only @c #breakAt.
 				 */
 				GlyphVectorImpl::GlyphVectorImpl(GlyphVectorImpl& leading, StringPiece::const_iterator beginningOfNewRun) :
-						StringPiece(makeStringPiece(beginningOfNewRun, leading.end())), analysis_(leading.analysis_), glyphs_(leading.glyphs_) {
+						StringPiece(makeStringPiece(beginningOfNewRun, boost::const_end(leading))), analysis_(leading.analysis_), glyphs_(leading.glyphs_), justified_(false) {
 					if(leading.glyphs_.get() == nullptr)
 						throw std::invalid_argument("'leading' has not been shaped");
 					raiseIfNull(beginningOfNewRun, "beginningOfNewRun");
-					if(beginningOfNewRun <= boost::const_begin(leading.characterRange()) || beginningOfNewRun >= boost::const_end(leading.characterRange()))
+					if(beginningOfNewRun <= boost::const_begin(leading) || beginningOfNewRun >= boost::const_end(leading))
 						throw std::out_of_range("beginningOfNewRun");
+					else if(leading.cluster(beginningOfNewRun) == leading.cluster(beginningOfNewRun - 1))
+						throw std::invalid_argument("beginningOfNewRun");
 
 					// compute 'glyphRange_'
 
@@ -907,6 +936,7 @@ namespace ascension {
 				 * Breaks this vector into two vectors at the specified position.
 				 * @param at The position at which break this vector
 				 * @return The new vector following this one
+				 * @throw ... Any exception thrown by the pseudo copy-constructor
 				 * @note This method is called by only @c #wrap.
 				 */
 				std::unique_ptr<GlyphVectorImpl> GlyphVectorImpl::breakAt(StringPiece::const_iterator at) {
@@ -959,7 +989,7 @@ namespace ascension {
 					followingRange.remove_prefix(opportunity);
 					std::unique_ptr<GlyphVectorImpl> following(new GlyphVectorImpl(
 						followingRange, analysis_, glyphs_->font.get().font(), glyphs_->font.get().fontRenderContext(), glyphs_->scriptTag));
-					static_cast<StringPiece&>(*this) = StringPiece(begin(), opportunity);
+					static_cast<StringPiece&>(*this) = StringPiece(boost::const_begin(*this), opportunity);
 					analysis_.fLinkAfter = following->analysis_.fLinkBefore = 0;
 					return following;
 				}
@@ -970,7 +1000,7 @@ namespace ascension {
 				}
 
 				void GlyphVectorImpl::charactersBounds(const boost::integer_range<Index>& characterRange, std::vector<graphics::Rectangle>& result) const {
-					if(characterRange.empty()) {
+					if(boost::empty(characterRange)) {
 						result.clear();
 						return;
 					}
@@ -982,7 +1012,7 @@ namespace ascension {
 					const bool rtl = LogicalClusterIterator::readingDirection(clusters()) == presentation::RIGHT_TO_LEFT;
 					LogicalClusterIterator cluster(clusters(), glyphs(), !rtl ? characterRange.front() : characterRange.back());
 					Scalar x = 0;
-					for(std::size_t i = 0, firstGlyph = cluster.currentGlyphRange().begin() - glyphIndices.begin(); i < firstGlyph; ++i)
+					for(std::size_t i = 0, firstGlyph = boost::const_begin(cluster->glyphs) - boost::const_begin(glyphIndices); i < firstGlyph; ++i)
 						x += glyphAdvances[i];
 
 					std::vector<graphics::Rectangle> bounds;
@@ -996,9 +1026,9 @@ namespace ascension {
 					const boost::iterator_range<const GOFFSET*> glyphOffsets2D(glyphOffsets());
 					for(const LogicalClusterIterator e; cluster != e; !rtl ? ++cluster : --cluster) {
 						Scalar left = std::numeric_limits<Scalar>::max(), top = std::numeric_limits<Scalar>::max(),
-							right = std::numeric_limits<Scalar>::min(), bottom = std::numeric_limits<Scalar>::min();
-						const boost::iterator_range<const WORD*> glyphRange(cluster.currentGlyphRange());
-						for(std::size_t i = 0; i < static_cast<std::size_t>(glyphRange.size()); ++i, x += glyphAdvances[i]) {
+							right = std::numeric_limits<Scalar>::lowest(), bottom = std::numeric_limits<Scalar>::lowest();
+						const auto glyphRange(cluster->glyphs);
+						for(std::size_t i = 0; i < static_cast<std::size_t>(boost::size(glyphRange)); ++i, x += glyphAdvances[i]) {
 							GLYPHMETRICS gm;
 							if(GDI_ERROR == ::GetGlyphOutlineW(context.native().get(), glyphRange[i], GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix)) {
 								lastError = ::GetLastError();
@@ -1040,7 +1070,7 @@ namespace ascension {
 					std::size_t c = 0;
 					for(text::StringCharacterIterator i(*this); i.hasNext(); ++i) {
 						if(!text::ucd::BinaryProperty::is<text::ucd::BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(*i)) {
-							const WORD glyph = glyphs_->indices[glyphs_->clusters[i.tell() - i.beginning()]];
+							const WORD glyph = glyphs_->indices[cluster(i.tell())];
 							if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
 								++c;
 							else if(glyphs_->visualAttributes[i.tell() - i.beginning()].fZeroWidth == 1
@@ -1090,7 +1120,7 @@ namespace ascension {
 
 					const std::unique_ptr<const FontMetrics<Scalar>> fontMetrics(context.fontMetrics(glyphs_->font.get().font()));
 					const auto tabExpander(makeFixedWidthTabExpander(tabSize, *fontMetrics, lengthContext));
-					glyphs_->advances[0] = static_cast<int>(tabExpander.get().nextTabStop(ipd, begin() - layoutString.data()));
+					glyphs_->advances[0] = static_cast<int>(tabExpander.get().nextTabStop(ipd, boost::const_begin(*this) - layoutString.data()));
 					if(maximumMeasure != boost::none)
 						glyphs_->advances[0] = std::min(glyphs_->advances[0], static_cast<int>(boost::get(maximumMeasure)));
 					glyphs_->justifiedAdvances.reset();
@@ -1201,7 +1231,7 @@ namespace ascension {
 						indices.reset(new WORD[numberOfGlyphs]);
 						visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
 						hr = ::ScriptShape(dc.get(), &fontCache,
-							text.cbegin(), static_cast<int>(text.length()),
+							boost::const_begin(text), static_cast<int>(boost::size(text)),
 							numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis),
 							indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
 						if(hr != E_OUTOFMEMORY)
@@ -1233,9 +1263,10 @@ namespace ascension {
 					const auto glyphIndices = glyphs();
 					const LogicalClusterIterator e;
 					for(LogicalClusterIterator i(clusters(), glyphIndices, 0); i != e; ++i) {
-						if(index >= static_cast<std::size_t>(i.currentGlyphRange().begin() - glyphIndices.begin())
-								&& index < static_cast<std::size_t>(i.currentGlyphRange().end() - glyphIndices.begin()))
-							return i.currentCluster().front();
+						const auto cluster(*i);
+						if(index >= static_cast<std::size_t>(boost::const_begin(cluster.glyphs) - boost::const_begin(glyphIndices))
+								&& index < static_cast<std::size_t>(boost::const_end(cluster.glyphs) - boost::const_begin(glyphIndices)))
+							return cluster.front();
 					}
 					return length();
 				}
@@ -1254,14 +1285,14 @@ namespace ascension {
 					const Scalar x = glyphLogicalPosition(index);
 					const auto yrange = logicalExtents();
 					return graphics::geometry::make<graphics::Rectangle>((
-						geometry::_top = *yrange.begin(), geometry::_bottom = *yrange.end(),
+						geometry::_top = *boost::const_begin(yrange), geometry::_bottom = *boost::const_end(yrange),
 						geometry::_left = x, geometry::_right = static_cast<Scalar>(x + effectiveAdvances()[index])));
 				}
 
 				inline Scalar GlyphVectorImpl::glyphLogicalPosition(std::size_t index) const {
 					assert(index <= numberOfGlyphs());
 					const boost::iterator_range<const int*> glyphAdvances(effectiveAdvances());
-					assert(glyphAdvances.begin() != nullptr);
+					assert(boost::const_begin(glyphAdvances) != nullptr);
 					int x = 0;
 					for(std::size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
 						if(i == index)
@@ -1315,7 +1346,7 @@ namespace ascension {
 						throw IndexOutOfBoundsException("range");
 
 					std::vector<Point> positions;
-					positions.reserve(range.size());
+					positions.reserve(boost::size(range));
 					for(std::size_t i = *std::begin(orderedRange); i < *std::end(orderedRange); ++i) {
 						const Scalar logicalPosition = glyphLogicalPosition(i);
 						const GOFFSET& glyphOffset = glyphOffsets()[i];
@@ -1329,23 +1360,27 @@ namespace ascension {
 					assert(glyphs_.get() != nullptr);
 					assert(analysis_.fLogicalOrder == 0);
 					const StringPiece characterRange((range != StringPiece()) ? range : *this);
-					assert(includes(*this, characterRange));
-					assert(characterRange.cbegin() == cbegin() || characterRange.cbegin() == cend()
-						|| glyphs_->clusters[characterRange.cbegin() - cbegin()] != glyphs_->clusters[characterRange.cbegin() - cbegin() - 1]);
-					assert(characterRange.end() == cbegin() || characterRange.end() == cend()
-						|| glyphs_->clusters[characterRange.cend() - cbegin()] != glyphs_->clusters[characterRange.cend() - cbegin() + 1]);
+					assert(boost::const_begin(characterRange) >= boost::const_begin(*this) && boost::const_end(characterRange) <= boost::const_end(*this));
+					assert(boost::const_begin(characterRange) == boost::const_begin(*this)
+						|| boost::const_begin(characterRange) == boost::const_end(*this)
+						|| cluster(boost::const_begin(characterRange)) != cluster(boost::const_begin(characterRange) - 1));
+					assert(boost::const_end(characterRange) == boost::const_begin(*this)
+						|| boost::const_end(characterRange) == boost::const_end(*this)
+						|| cluster(boost::const_end(characterRange)) != cluster(boost::const_end(characterRange) + 1));
 
-					boost::optional<std::size_t> b, e;
+					boost::optional<StringPiece::const_iterator> b, e;
 					if(analysis_.fRTL == 0) {	// LTR
-						if(characterRange.cbegin() < cend())
-							b = characterRange.cbegin() - cbegin();
-						if(characterRange.cend() < cend())
-							e = characterRange.cend() - cbegin() + 1;
+						b = boost::const_begin(characterRange);
+						e = boost::const_end(characterRange);
+						if(b >= boost::const_end(*this))
+							b = boost::none;;
+						if(e >= boost::const_end(*this))
+							e = boost::none;
 					} else {					// RTL
-						if(characterRange.cend() > cbegin())
-							b = characterRange.cend() - cbegin() - 1;
-						if(characterRange.cbegin() > cbegin())
-							e = characterRange.cbegin() - cbegin() - 1;
+						if(boost::const_end(characterRange) > boost::const_begin(*this))
+							b = boost::const_end(characterRange) - 1;
+						if(boost::const_begin(characterRange) > boost::const_begin(*this))
+							e = boost::const_begin(characterRange) - 1;
 					}
 					return boost::irange(
 						(b != boost::none) ? glyphs_->clusters[boost::get(b)] : glyphs_->numberOfGlyphs,
@@ -1381,17 +1416,18 @@ namespace ascension {
 				/// @see TextRun#hitTestCharacter
 				TextHit<> GlyphVectorImpl::hitTestCharacter(Scalar position, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const {
 					bool beyondLineLeft = false, beyondLineRight = false;
-					if(bounds) {
-						if(position < std::min(*bounds->begin(), *bounds->end()))
+					if(bounds != boost::none) {
+						const auto b(boost::get(bounds));
+						if(position < std::min(*boost::const_begin(b), *boost::const_end(b)))
 							beyondLineLeft = true;
-						else if(position >= std::max(*bounds->begin(), *bounds->end()))
+						else if(position >= std::max(*boost::const_begin(b), *boost::const_end(b)))
 							beyondLineRight = true;
 					}
 
 					if(!beyondLineLeft && !beyondLineRight) {
 						int cp, trailing;
 						const HRESULT hr = ::ScriptXtoCP(static_cast<int>(position), static_cast<int>(length()), numberOfGlyphs(),
-							clusters().begin(), visualAttributes().begin(), effectiveAdvances().begin(), &analysis_, &cp, &trailing);
+							boost::const_begin(clusters()), boost::const_begin(visualAttributes()), boost::const_begin(effectiveAdvances()), &analysis_, &cp, &trailing);
 						if(FAILED(hr))
 							throw makePlatformError(hr);
 						if(cp == -1)
@@ -1415,10 +1451,12 @@ namespace ascension {
 				Scalar GlyphVectorImpl::hitToLogicalPosition(const TextHit<>& hit) const {
 					if(hit.insertionIndex() > characterRange().length())
 						throw IndexOutOfBoundsException("hit");
+					auto c(boost::const_begin(clusters()));
+					auto va(boost::const_begin(visualAttributes()));
+					auto ea(boost::const_begin(effectiveAdvances()));
 					int logicalPosition;
 					const HRESULT hr = ::ScriptCPtoX(static_cast<int>(hit.characterIndex()), !hit.isLeadingEdge(),
-						static_cast<int>(length()), numberOfGlyphs(), clusters().begin(), visualAttributes().begin(),
-						effectiveAdvances().begin(), &analysis_, &logicalPosition);
+						static_cast<int>(length()), numberOfGlyphs(), c, va, ea, &analysis_, &logicalPosition);
 					if(FAILED(hr))
 						throw makePlatformError(hr);
 					// TODO: handle letter-spacing correctly.
@@ -1428,7 +1466,10 @@ namespace ascension {
 				}
 
 				inline HRESULT GlyphVectorImpl::justify(int width) {
-					assert(glyphs_->indices.get() != nullptr && advances().begin() != nullptr);
+					assert(glyphs_->indices.get() != nullptr);
+					assert(boost::const_begin(advances()) != nullptr);
+					assert(glyphs_->justifiedAdvances.get() != nullptr);
+
 					HRESULT hr = S_OK;
 					const int totalAdvances = boost::accumulate(advances(), 0);
 					if(width != totalAdvances) {
@@ -1442,13 +1483,13 @@ namespace ascension {
 
 				inline HRESULT GlyphVectorImpl::logicalAttributes(SCRIPT_LOGATTR attributes[]) const {
 					raiseIfNull(attributes, "attributes");
-					return ::ScriptBreak(begin(), static_cast<int>(length()), &analysis_, attributes);
+					return ::ScriptBreak(boost::const_begin(*this), static_cast<int>(length()), &analysis_, attributes);
 				}
 
 				/// @see GlyphVector#logicalBounds
 				graphics::Rectangle GlyphVectorImpl::logicalBounds() const {
 					const auto xs = effectiveAdvances();
-					Scalar left = std::numeric_limits<Scalar>::max(), right = std::numeric_limits<Scalar>::min();
+					Scalar left = std::numeric_limits<Scalar>::max(), right = std::numeric_limits<Scalar>::lowest();
 					for(std::size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
 						const Scalar x = glyphLogicalPosition(i);
 						left = std::min(x, left);
@@ -1459,8 +1500,8 @@ namespace ascension {
 
 				inline HRESULT GlyphVectorImpl::logicalWidths(int widths[]) const {
 					raiseIfNull(widths, "widths");
-					return ::ScriptGetLogicalWidths(&analysis_, static_cast<int>(length()),
-						numberOfGlyphs(), advances().begin(), clusters().begin(), visualAttributes().begin(), widths);
+					return ::ScriptGetLogicalWidths(&analysis_, static_cast<int>(length()), numberOfGlyphs(),
+						boost::const_begin(advances()), boost::const_begin(clusters()), boost::const_begin(visualAttributes()), widths);
 				}
 
 				/// @see GlyphVector#numberOfGlyphs
@@ -1495,7 +1536,7 @@ namespace ascension {
 				void GlyphVectorImpl::paintGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<std::size_t>> range*/, bool onlyStroke) const {
 //					if(range == boost::none)
 //						return paintGlyphs(context, origin, *this, onlyStroke);
-//					else if(boost::get(range).empty())
+//					else if(boost::empty(boost::get(range)))
 //						return;
 
 					context.setFont(font());
@@ -1507,13 +1548,11 @@ namespace ascension {
 					assert(analysis_.fLogicalOrder == 0);
 					// paint glyphs
 					const RECT boundsToPaint(toNative<RECT>(context.boundsToPaint()));
-					const boost::iterator_range<const int*> justifiedGlyphAdvances(justifiedAdvances());
 					const HRESULT hr = ::ScriptTextOut(context.native().get(), &glyphs_->fontCache,
 						static_cast<int>(geometry::x(origin)), static_cast<int>(geometry::y(origin)),
 						0, &boundsToPaint, &analysis_, nullptr, 0,
-						glyphs().begin(), numberOfGlyphs(), advances().begin(),
-						(justifiedGlyphAdvances.begin() != nullptr) ? justifiedGlyphAdvances.begin() : nullptr,
-						glyphOffsets().begin());
+						boost::const_begin(glyphs()), numberOfGlyphs(), boost::const_begin(advances()),
+						boost::const_begin(effectiveAdvances()), boost::const_begin(glyphOffsets()));
 					if(onlyStroke)
 						::EndPath(context.native().get());
 					if(FAILED(hr))
@@ -1526,10 +1565,13 @@ namespace ascension {
 				 * Positions the glyphs in the vector.
 				 * @param dc The device context
 				 * @see #substituteGlyphs, TextRunImpl#positionGlyphs
+				 * @note This method should be called after shaping and before breaking.
 				 */
 				void GlyphVectorImpl::positionGlyphs(win32::Handle<HDC>::Type dc) {
-					assert(glyphs_.get() != nullptr && glyphs_.unique());
-					assert(glyphs_->indices.get() != nullptr && glyphs_->advances.get() == nullptr);
+					assert(glyphs_.get() != nullptr);
+					assert(glyphs_.unique());
+					assert(glyphs_->indices.get() != nullptr);
+					assert(glyphs_->advances.get() == nullptr);
 
 					std::unique_ptr<int[]> advances(new int[numberOfGlyphs()]);
 					std::unique_ptr<GOFFSET[]> offsets(new GOFFSET[numberOfGlyphs()]);
@@ -1556,7 +1598,7 @@ namespace ascension {
 					if(index > numberOfGlyphs())
 						throw IndexOutOfBoundsException("index");
 					const Scalar logicalPosition = glyphLogicalPosition(index);
-					GOFFSET& glyphOffset = glyphs_->offsets[glyphOffsets().begin() - glyphs_->offsets.get()];
+					GOFFSET& glyphOffset = glyphs_->offsets[boost::const_begin(glyphOffsets()) - glyphs_->offsets.get()];
 					glyphOffset.du = static_cast<LONG>(geometry::x(position) - logicalPosition);
 					glyphOffset.dv = static_cast<LONG>(geometry::y(position));
 				}
@@ -1715,14 +1757,14 @@ namespace ascension {
 		safeString.get() + length(), surrogates::isSurrogate, REPLACEMENT_CHARACTER);	\
 	textString = safeString.get();
 
-#define ASCENSION_CHECK_FAILED_FONTS()										\
-	bool skip = false;														\
-	for(FailedFonts::const_iterator											\
-			i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {	\
-		if(i->first == font_) {												\
-			skip = true;													\
-			break;															\
-		}																	\
+#define ASCENSION_CHECK_FAILED_FONTS()																\
+	bool skip = false;																				\
+	for(FailedFonts::const_iterator																	\
+			i(boost::const_begin(failedFonts)), e(boost::const_end(failedFonts)); i != e; ++i) {	\
+		if(i->first == font_) {																		\
+			skip = true;																			\
+			break;																					\
+		}																							\
 	}
 
 						// ScriptShape may crash if the shaping is disabled (see Mozilla bug 341500).
@@ -1850,7 +1892,7 @@ namespace ascension {
 							}
 							if(hr != S_OK) {
 								// select the font which generated the least missing glyphs
-								assert(!failedFonts.empty());
+								assert(!boost::empty(failedFonts));
 								FailedFonts::const_iterator bestFont(std::begin(failedFonts));
 								for(FailedFonts::const_iterator i(bestFont + 1), e(std::end(failedFonts)); i != e; ++i) {
 									if(i->second < bestFont->second)
@@ -1917,7 +1959,7 @@ namespace ascension {
 								std::begin(layoutString) + nextRun->beginning(), std::begin(layoutString) + nextRun->beginning() + 2);
 							if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 								const CodePoint baseCharacter = surrogates::decodeLast(
-									layoutString.data() + beginning(), layoutString.data() + end());
+									layoutString.data() + beginning(), layoutString.data() + boost::const_end(*this));
 								if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(
 										baseCharacter, variationSelector, glyphs_->indices[glyphs_->clusters[length() - 1]]))
 									nextRun->analysis_.fLogicalOrder = 1;
@@ -1961,14 +2003,14 @@ namespace ascension {
 							// process IVSes in a glyph run
 							if(run.analysis_.eScript != SCRIPT_UNDEFINED && run.length() > 3
 									&& text::surrogates::isHighSurrogate(run[0]) && text::surrogates::isLowSurrogate(run[1])) {
-								for(text::StringCharacterIterator i(run, run.begin() + 2); i.hasNext(); ++i) {
+								for(text::StringCharacterIterator i(run, boost::const_begin(run) + 2); i.hasNext(); ++i) {
 									const CodePoint variationSelector = *i;
 									if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 										text::StringCharacterIterator baseCharacter(i);
 										--baseCharacter;
 										if(run.font()->ivsGlyph(
 												*baseCharacter, variationSelector,
-												run.glyphs_->indices[run.glyphs_->clusters[baseCharacter.tell() - run.begin()]])) {
+												run.glyphs_->indices[run.glyphs_->clusters[baseCharacter.tell() - boost::const_begin(run)]])) {
 											run.glyphs_->vanish(*run.font(), i.tell());
 											run.glyphs_->vanish(*run.font(), i.tell() + 1);
 										}
@@ -1977,15 +2019,15 @@ namespace ascension {
 							}
 
 							// process an IVS across two glyph runs
-							if(i + 1 != runs.end() && i[1]->length() > 1) {
+							if(i + 1 != boost::const_end(runs) && i[1]->length() > 1) {
 								GlyphVectorImpl& next = *i[1];
-								const CodePoint variationSelector = text::utf::decodeFirst(next.begin(), next.begin() + 2);
+								const CodePoint variationSelector = text::utf::decodeFirst(boost::const_begin(next), boost::const_begin(next) + 2);
 								if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-									const CodePoint baseCharacter = text::utf::decodeLast(run.begin(), run.end());
+									const CodePoint baseCharacter = text::utf::decodeLast(boost::const_begin(run), boost::const_end(run));
 									if(run.font()->ivsGlyph(baseCharacter, variationSelector,
-											run.glyphs_->indices[run.glyphs_->clusters[run.length() - 1]])) {
-										next.glyphs_->vanish(*run.font(), next.begin());
-										next.glyphs_->vanish(*run.font(), next.begin() + 1);
+											run.glyphs_->indices[run.glyphs_->clusters[boost::size(run) - 1]])) {
+										next.glyphs_->vanish(*run.font(), boost::const_begin(next));
+										next.glyphs_->vanish(*run.font(), boost::const_begin(next) + 1);
 									}
 								}
 							}
@@ -2244,94 +2286,95 @@ namespace ascension {
 					scriptPointers.reserve(numberOfScriptRuns);
 					std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>> styleRuns;
 					{
-						StringPiece::const_iterator lastGlyphRunEnd = nullptr;
+						StringPiece::const_iterator lastGlyphRunEnd(nullptr);
 						// script cursors
 						AttributedCharacterRange<const SCRIPT_ITEM*>
-							scriptRun(std::begin(textString) + scriptRuns[0].iCharPos, &scriptRuns[0]),
+							scriptRun(boost::const_begin(textString) + scriptRuns[0].iCharPos, &scriptRuns[0]),
 							nextScriptRun((numberOfScriptRuns > 1) ?
-								textString.cbegin() + scriptRuns[1].iCharPos : textString.cend(), scriptRun.attribute + 1);
+								boost::const_begin(textString) + scriptRuns[1].iCharPos : boost::const_end(textString), scriptRun.attribute + 1);
 						// style cursors
 						AttributedCharacterRange<presentation::ComputedTextRunStyle> styleRun, nextStyleRun;
 						styleRun.attribute = textRunStyles->style();
-						styleRun.position = textString.cbegin() + textRunStyles->position().offsetInLine;
+						styleRun.position = boost::const_begin(textString) + textRunStyles->position().offsetInLine;
 						textRunStyles->next();
 						if(!textRunStyles->isDone()) {
 							nextStyleRun.attribute = textRunStyles->style();
-							nextStyleRun.position = textString.cbegin() + textRunStyles->position().offsetInLine;
+							nextStyleRun.position = boost::const_begin(textString) + textRunStyles->position().offsetInLine;
 						} else
-							nextStyleRun.position = textString.cend();
+							nextStyleRun.position = boost::const_end(textString);
 						styleRuns.push_back(AttributedCharacterRange<presentation::ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
 
 						ActualFontSpecification fontSpecification;
 						do {
-							const StringPiece::const_iterator next = std::min(nextScriptRun.position, nextStyleRun.position);
+							const StringPiece::const_iterator next(std::min(nextScriptRun.position, nextStyleRun.position));
 							const bool advanceScriptRun = next == nextScriptRun.position;
 							const bool advanceStyleRun = next == nextStyleRun.position;
 
 							if(advanceScriptRun) {
 								const StringPiece subRange(scriptRun.position, next - scriptRun.position);
-								assert(glyphRuns.empty() || subRange.cbegin() == lastGlyphRunEnd);
+								assert(boost::empty(glyphRuns) || boost::const_begin(subRange) == lastGlyphRunEnd);
 								buildActualFontSpecification(styleRun.attribute.fonts, lengthContext, parentFontSize, fontSpecification);
 								glyphRuns.push_back(
 									std::unique_ptr<RawGlyphVector>(
-										new RawGlyphVector(subRange.cbegin(),
+										new RawGlyphVector(boost::const_begin(subRange),
 											selectFont(subRange, fontCollection, fontSpecification),
 											frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
 								scriptPointers.push_back(&scriptRuns[scriptRun.attribute - scriptRuns.get()].a);
-								assert(nextScriptRun.position <= textString.cend());
+								assert(nextScriptRun.position <= boost::const_end(textString));
 								scriptRun = nextScriptRun;
-								if(scriptRun.position != textString.cend()) {
+								if(scriptRun.position != boost::const_end(textString)) {
 									if(++nextScriptRun.attribute < scriptRuns.get() + numberOfScriptRuns)
-										nextScriptRun.position = textString.cbegin() + nextScriptRun.attribute->iCharPos;
+										nextScriptRun.position = boost::const_begin(textString) + nextScriptRun.attribute->iCharPos;
 									else
-										nextScriptRun.position = textString.cend();
+										nextScriptRun.position = boost::const_end(textString);
 								}
 							}
 							if(advanceStyleRun) {
 								if(!advanceScriptRun) {
-									const StringPiece subRange(makeStringPiece(!glyphRuns.empty() ? lastGlyphRunEnd : textString.cbegin(), next));
+									const StringPiece subRange(makeStringPiece(!boost::empty(glyphRuns) ? lastGlyphRunEnd : boost::const_begin(textString), next));
 									buildActualFontSpecification(styleRun.attribute.fonts, lengthContext, parentFontSize, fontSpecification);
 									glyphRuns.push_back(
 										std::unique_ptr<RawGlyphVector>(
-											new RawGlyphVector(subRange.cbegin(),
+											new RawGlyphVector(boost::const_begin(subRange),
 												selectFont(subRange, fontCollection, fontSpecification),
 												frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
 								}
-								assert(nextStyleRun.position <= textString.cend());
+								assert(nextStyleRun.position <= boost::const_end(textString));
 								styleRun = std::move(nextStyleRun);	// C2668 if included <boost/log/trivial.hpp> without 'std::' ???
 								styleRuns.push_back(AttributedCharacterRange<presentation::ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
 								if(!textRunStyles->isDone()) {
 									textRunStyles->next();
 									if(!textRunStyles->isDone()) {
 										nextStyleRun.attribute = textRunStyles->style();
-										nextStyleRun.position = textString.cbegin() + textRunStyles->position().offsetInLine;
+										nextStyleRun.position = boost::const_begin(textString) + textRunStyles->position().offsetInLine;
 									} else
-										nextStyleRun.position = textString.cend();
+										nextStyleRun.position = boost::const_end(textString);
 								}
 							}
 							lastGlyphRunEnd = next;
-						} while(scriptRun.position < textString.cend() || styleRun.position < textString.cend());
-						assert(glyphRuns.size() == scriptPointers.size());
+						} while(scriptRun.position < boost::const_end(textString) || styleRun.position < boost::const_end(textString));
+						assert(boost::size(glyphRuns) == boost::size(scriptPointers));
 					}
 
 					// 3. merge script runs and style runs into TextRunImpls
 					std::vector<TextRunImpl*> mergedTextRuns;
-					mergedTextRuns.reserve(glyphRuns.size() + styleRuns.size());
+					mergedTextRuns.reserve(boost::size(glyphRuns) + boost::size(styleRuns));
 					{
-						auto glyphRun(std::begin(glyphRuns)), lastGlyphRun(std::end(glyphRuns));
-						auto styleRun(std::begin(styleRuns)), lastStyleRun(std::end(styleRuns));
+						auto glyphRun(std::begin(glyphRuns));
+						auto lastGlyphRun(boost::const_end(glyphRuns));
+						auto styleRun(boost::const_begin(styleRuns)), lastStyleRun(boost::const_end(styleRuns));
 						do {
 							auto nextGlyphRun(glyphRun + 1);
 							auto nextStyleRun(styleRun + 1);
 							const StringPiece::const_iterator
-								nextGlyphRunPosition((nextGlyphRun != lastGlyphRun) ? (*nextGlyphRun)->position : textString.cend()),
-								nextStyleRunPosition((nextStyleRun != lastStyleRun) ? nextStyleRun->position : textString.cend());
+								nextGlyphRunPosition((nextGlyphRun != lastGlyphRun) ? (*nextGlyphRun)->position : boost::const_end(textString)),
+								nextStyleRunPosition((nextStyleRun != lastStyleRun) ? nextStyleRun->position : boost::const_end(textString));
 							const StringPiece::const_iterator nextPosition(std::min(nextGlyphRunPosition, nextStyleRunPosition));
-							const StringPiece::const_iterator previousPosition(!mergedTextRuns.empty() ? mergedTextRuns.back()->end() : textString.cbegin());
+							const StringPiece::const_iterator previousPosition(!boost::empty(mergedTextRuns) ? mergedTextRuns.back()->end() : boost::const_begin(textString));
 
 							mergedTextRuns.push_back(new TextRunImpl(
 								makeStringPiece(previousPosition, nextPosition),
-								*scriptPointers[glyphRuns.size() - (lastGlyphRun - glyphRun)], std::move(*glyphRun),
+								*scriptPointers[boost::size(glyphRuns) - (lastGlyphRun - glyphRun)], std::move(*glyphRun),
 								ActualTextRunStyleCore(styleRun->attribute, lengthContext, measure)));
 							if(nextPosition == nextGlyphRunPosition)
 								++glyphRun;
@@ -2401,7 +2444,7 @@ namespace ascension {
 					AttributedCharacterRange<const SCRIPT_ITEM*> nextScriptRun;
 					nextScriptRun.attribute = scriptRuns + 1;
 					nextScriptRun.position = (nextScriptRun.attribute < scriptRuns + numberOfScriptRuns) ?
-						layoutString.beginning() + nextScriptRun.attribute->iCharPos : layoutString.end();
+						layoutString.beginning() + nextScriptRun.attribute->iCharPos : boost::const_end(layoutString);
 
 					// style cursors
 					detail::ComputedStyledTextRunEnumerator styleEnumerator(layoutString, std::move(styles));
@@ -2416,7 +2459,7 @@ namespace ascension {
 						nextStyleRun.position = styleEnumerator.position();
 						styleEnumerator.style(nextStyleRun.attribute);
 					} else
-						nextStyleRun.position = layoutString.end();
+						nextStyleRun.position = boost::const_end(layoutString);
 
 					assert(scriptRun.position == layoutString.beginning());
 					assert(styleRun.position == layoutString.beginning());
@@ -2425,9 +2468,9 @@ namespace ascension {
 					do {
 						const StringPiece::const_pointer previousRunEnd = max(scriptRun.position, styleRun.position);
 						assert(
-							(previousRunEnd == layoutString.beginning() && calculatedRuns.empty() && calculatedStyles.empty())
-							|| (!calculatedRuns.empty() && previousRunEnd == calculatedRuns.back()->end())
-							|| (!calculatedStyles.empty() && previousRunEnd == styleRun.position));
+							(previousRunEnd == layoutString.beginning() && boost::empty(calculatedRuns) && boost::empty(calculatedStyles))
+							|| (!boost::empty(calculatedRuns) && previousRunEnd == calculatedRuns.back()->end())
+							|| (!boost::empty(calculatedStyles) && previousRunEnd == styleRun.position));
 						StringPiece::const_pointer newRunEnd;
 						bool forwardScriptRun = false, forwardStyleRun = false, forwardGlyphRun = false;
 
@@ -2462,29 +2505,29 @@ namespace ascension {
 							if(breakScriptRun)
 								const_cast<SCRIPT_ITEM*>(scriptRun.attribute)->a.fLinkAfter = 0;
 							calculatedRuns.push_back(
-								new TextRunImpl(Range<Index>(!calculatedRuns.empty() ? calculatedRuns.back()->end() : 0, newRunEnd - layoutString.beginning()),
+								new TextRunImpl(Range<Index>(!boost::empty(calculatedRuns) ? calculatedRuns.back()->end() : 0, newRunEnd - layoutString.beginning()),
 									scriptRun.attribute->a, font,
 									(scriptTags != nullptr) ? scriptTags[scriptRun.attribute - scriptRuns] : SCRIPT_TAG_UNKNOWN));	// TODO: 'DFLT' is preferred?
-							calculatedStylesIndices.push_back(calculatedStyles.size());
+							calculatedStylesIndices.push_back(boost::size(calculatedStyles));
 							while(true) {
 								std::unique_ptr<TextRunImpl> piece(calculatedRuns.back()->breakIfTooLong());
 								if(piece.get() == nullptr)
 									break;
 								calculatedRuns.push_back(piece.release());
-								calculatedStylesIndices.push_back(calculatedStyles.size());
+								calculatedStylesIndices.push_back(boost::size(calculatedStyles));
 							}
 							if(breakScriptRun)
 								const_cast<SCRIPT_ITEM*>(scriptRun.attribute)->a.fLinkBefore = 0;
 						}
 						if(forwardScriptRun) {
-							assert(nextScriptRun.position < layoutString.end());
+							assert(nextScriptRun.position < boost::const_end(layoutString));
 							scriptRun = nextScriptRun;
 							nextScriptRun.position =
 								(++nextScriptRun.attribute < scriptRuns + numberOfScriptRuns) ?
-									layoutString.beginning() + nextScriptRun.attribute->iCharPos : layoutString.end();
+									layoutString.beginning() + nextScriptRun.attribute->iCharPos : boost::const_end(layoutString);
 						}
 						if(forwardStyleRun) {
-							assert(nextStyleRun.position < layoutString.end());
+							assert(nextStyleRun.position < boost::const_end(layoutString));
 							styleRun = std::move(nextStyleRun);
 							calculatedStyles.push_back(styleRun.attribute);
 							assert(!styleEnumerator.isDone());
@@ -2493,12 +2536,12 @@ namespace ascension {
 								nextStyleRun.position = styleEnumerator.position();
 								styleEnumerator.style(nextStyleRun.attribute);
 							} else
-								nextStyleRun.position = layoutString.end();
+								nextStyleRun.position = boost::const_end(layoutString);
 						}
-					} while(scriptRun.position < layoutString.end() || styleRun.position < layoutString.end());
+					} while(scriptRun.position < boost::const_end(layoutString) || styleRun.position < boost::const_end(layoutString));
 
-					assert(calculatedRuns.size() == calculatedStylesIndices.size());
-					assert(!calculatedStyles.empty());
+					assert(boost::size(calculatedRuns) == boost::size(calculatedStylesIndices));
+					assert(!boost::empty(calculatedStyles));
 
 					// commit
 					using std::swap;
@@ -2622,8 +2665,8 @@ namespace ascension {
 			 */
 			void TextLayout::blackBoxBounds(const boost::integer_range<Index>& characterRange,
 					boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>& bounds) const {
-				const Index firstCharacter = std::min(*characterRange.begin(), *characterRange.end());
-				const Index lastCharacter = std::max(*characterRange.begin(), *characterRange.end());
+				const Index firstCharacter = std::min(*boost::const_begin(characterRange), *boost::const_end(characterRange));
+				const Index lastCharacter = std::max(*boost::const_begin(characterRange), *boost::const_end(characterRange));
 				if(lastCharacter > numberOfCharacters())
 					throw IndexOutOfBoundsException("characterRange");
 				std::remove_reference<decltype(bounds)>::type result;
@@ -2646,13 +2689,13 @@ namespace ascension {
 						geometry::y(runTypographicOrigin) = geometry::y(ll);
 
 					const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line));
-					for(RunVector::const_iterator run(runs.begin()); run != runs.end(); ++run, ++lm) {
+					for(RunVector::const_iterator run(boost::const_begin(runs)); run != boost::const_end(runs); ++run, ++lm) {
 						const boost::integer_range<Index> runRange = boost::irange<Index>(
-							(*run)->characterRange().begin() - textString_.data(), (*run)->characterRange().end() - textString_.data());
+							boost::const_begin((*run)->characterRange()) - textString_.data(), boost::const_end((*run)->characterRange()) - textString_.data());
 						const auto intersection = ascension::intersection(runRange, characterRange);
 						if(intersection != boost::none) {
-							const std::ptrdiff_t beginningOfRun = (*run)->characterRange().begin() - textString_.data();
-							const boost::integer_range<Index> offsetsInRun = boost::irange(*intersection->begin() - beginningOfRun, *intersection->end() - beginningOfRun);
+							const std::ptrdiff_t beginningOfRun = boost::const_begin((*run)->characterRange()) - textString_.data();
+							const boost::integer_range<Index> offsetsInRun = boost::irange(*boost::const_begin(boost::get(intersection)) - beginningOfRun, *boost::const_end(boost::get(intersection)) - beginningOfRun);
 							std::vector<graphics::Rectangle> runBlackBoxBounds;
 							static_cast<const TextRunImpl&>(**run).charactersBounds(offsetsInRun, runBlackBoxBounds);
 							AffineTransform typographicalToPhysicalMapping(geometry::makeTranslationTransform(
@@ -2752,14 +2795,14 @@ namespace ascension {
 						geometry::_dx = -geometry::x(origin), geometry::_dy = -geometry::y(origin)));
 					const presentation::FlowRelativeFourSides<Scalar> abstractBoundsToPaint(	// relative to the alignment point of this layout
 						presentation::mapPhysicalToFlowRelative<Scalar>(wm, PhysicalFourSides<Scalar>(boundsToPaint)));
-					for(LineMetricsIterator line(*this, linesToPaint.front()); line.line() != *linesToPaint.end(); ++line) {
+					for(LineMetricsIterator line(*this, linesToPaint.front()); line.line() != *boost::const_end(linesToPaint); ++line) {
 						const Scalar bpd = line.baselineOffset();
 						const Scalar lineBeforeEdge = bpd - line.ascent();
 						const Scalar lineAfterEdge = bpd + line.descent();
 						if(lineBeforeEdge <= abstractBoundsToPaint.before() && lineAfterEdge > abstractBoundsToPaint.before())
-							linesToPaint = boost::irange(line.line(), *linesToPaint.end());
+							linesToPaint = boost::irange(line.line(), *boost::const_end(linesToPaint));
 						if(lineBeforeEdge <= abstractBoundsToPaint.after() && lineAfterEdge > abstractBoundsToPaint.after()) {
-							linesToPaint = boost::irange(*linesToPaint.begin(), line.line() + 1);
+							linesToPaint = boost::irange(*boost::const_begin(linesToPaint), line.line() + 1);
 							break;
 						}
 					}
@@ -2768,7 +2811,7 @@ namespace ascension {
 				// calculate inline area range to draw
 				const Range<const RunVector::const_iterator> textRunsToPaint(
 					firstRunInLine(linesToPaint.beginning()),
-					(linesToPaint.end() < numberOfLines()) ? firstRunInLine(linesToPaint.end()) : runs_.end());
+					(boost::const_end(linesToPaint) < numberOfLines()) ? firstRunInLine(boost::const_end(linesToPaint)) : boost::const_end(runs_));
 				AbstractTwoAxes<Scalar> alignmentPoint;	// alignment-point of text run relative to this layout
 #endif
 				context.save();
@@ -2779,7 +2822,7 @@ namespace ascension {
 				// 2. paint backgrounds and borders
 				const bool horizontalLayout = isHorizontal(wm.blockFlowDirection);
 				std::vector<std::tuple<const std::reference_wrapper<const TextRunImpl>, const graphics::Rectangle, const Point>> textRunsToPaint;
-				for(LineMetricsIterator line(*this, linesToPaint.front()); line.line() != *linesToPaint.end(); ++line) {
+				for(LineMetricsIterator line(*this, linesToPaint.front()); line.line() != *boost::const_end(linesToPaint); ++line) {
 					Point p(origin);	// a point at which baseline and (logical) 'line-left' edge of 'allocation-rectangle' of text run
 					Scalar over, under;		// 'over' and 'under' edges of this line (x for vertical layout or y for horizontal layout)
 
@@ -2954,7 +2997,7 @@ namespace ascension {
 							foreground = defaultForeground;
 						if(line[run.beginning()] != L'\t') {
 							if(selection == nullptr /*|| run.overhangs()*/
-									|| !(run.beginning() >= selectedRange.beginning() && run.end() <= selectedRange.end())) {
+									|| !(run.beginning() >= selectedRange.beginning() && boost::const_end(run) <= boost::const_end(selectedRange))) {
 								dc.setTextColor(foreground);
 								runRect.left = x;
 								runRect.right = runRect.left + run.totalWidth();
@@ -2977,7 +3020,7 @@ namespace ascension {
 							TextRun& run = *runs_[i];
 							// text
 							if(selection != nullptr && line[run.beginning()] != L'\t'
-									&& (/*run.overhangs() ||*/ (run.beginning() < selectedRange.end() && run.end() > selectedRange.beginning()))) {
+									&& (/*run.overhangs() ||*/ (run.beginning() < selectedRange.end() && boost::const_end(run) > selectedRange.beginning()))) {
 								dc.setTextColor(selection->color().foreground.asCOLORREF());
 								runRect.left = x;
 								runRect.right = runRect.left + run.totalWidth();
@@ -3193,7 +3236,7 @@ namespace ascension {
 					const auto tabSize(boost::fusion::at_key<presentation::styles::TabSize>(style()));
 
 					// wrap into visual lines and reorder runs in each lines
-					if(textRuns.empty() || !wrapsText(boost::fusion::at_key<presentation::styles::WhiteSpace>(style()))) {
+					if(boost::empty(textRuns) || !wrapsText(boost::fusion::at_key<presentation::styles::WhiteSpace>(style()))) {
 						numberOfLines_ = 1;
 						assert(firstRunsInLines_.get() == nullptr);
 						// 5-1. expand horizontal tabs (with logical ordered runs)
@@ -3207,7 +3250,7 @@ namespace ascension {
 							maximumMeasure_ = ipd;
 						}
 						// 5-2. reorder each text runs
-						runs_.reserve(textRuns.size());
+						runs_.reserve(boost::size(textRuns));
 						BOOST_FOREACH(TextRunImpl* run, textRuns)
 							runs_.push_back(std::unique_ptr<const TextRun>(run));
 						reorder();
@@ -3264,26 +3307,25 @@ namespace ascension {
 
 			/// Reorders the runs in visual order.
 			inline void TextLayout::reorder() {
-				assert(!runs_.empty());
-				std::vector<const TextRun*> reordered(runs_.size());
+				assert(!boost::empty(runs_));
+				std::vector<const TextRun*> reordered(boost::size(runs_));
 				for(Index line = 0; line < numberOfLines(); ++line) {
-					const boost::iterator_range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
-					const std::unique_ptr<BYTE[]> levels(new BYTE[runsInLine.size()]);
-					for(RunVector::const_iterator i(runsInLine.begin()); i != runsInLine.end(); ++i)
-						levels[i - runsInLine.begin()] = static_cast<BYTE>((*i)->characterLevel() & 0x1f);
-					const std::unique_ptr<int[]> log2vis(new int[runsInLine.size()]);
-					const HRESULT hr = ::ScriptLayout(static_cast<int>(runsInLine.size()), levels.get(), nullptr, log2vis.get());
+					const boost::iterator_range<RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
+					const std::unique_ptr<BYTE[]> levels(new BYTE[boost::size(runsInLine)]);
+					for(RunVector::const_iterator i(boost::const_begin(runsInLine)); i != boost::const_end(runsInLine); ++i)
+						levels[i - boost::const_begin(runsInLine)] = static_cast<BYTE>((*i)->characterLevel() & 0x1f);
+					const std::unique_ptr<int[]> log2vis(new int[boost::size(runsInLine)]);
+					const HRESULT hr = ::ScriptLayout(static_cast<int>(boost::size(runsInLine)), levels.get(), nullptr, log2vis.get());
 					if(FAILED(hr))
 						throw makePlatformError(hr);
-					for(RunVector::const_iterator i(runsInLine.begin()); i != runsInLine.end(); ++i)
-						reordered[runsInLine.begin() - std::begin(runs_) + log2vis[i - runsInLine.begin()]] = i->get();
+					for(RunVector::const_iterator i(boost::const_begin(runsInLine)); i != boost::const_end(runsInLine); ++i)
+						reordered[boost::const_begin(runsInLine) - boost::const_begin(runs_) + log2vis[i - boost::const_begin(runsInLine)]] = i->get();
 				}
 
 				// commit
 				BOOST_FOREACH(RunVector::reference run, runs_)
-//				for(RunVector::iterator i(std::begin(runs_)), e(std::end(runs_)); i != e; ++i)
 					run.release();
-				for(RunVector::size_type i = 0, c(runs_.size()); i < c; ++i)
+				for(RunVector::size_type i = 0, c(boost::size(runs_)); i < c; ++i)
 					runs_[i].reset(reordered[i]);
 			}
 
@@ -3306,7 +3348,7 @@ namespace ascension {
 				std::unique_ptr<SCRIPT_LOGATTR[]> logicalAttributes;
 				Index longestRunLength = 0;	// for efficient allocation
 				std::vector<TextRun*> runs;
-				runs.reserve(runs_.size() * 3 / 2);
+				runs.reserve(boost::size(runs_) * 3 / 2);
 				std::vector<std::unique_ptr<TextRunImpl>> createdRuns;	// for only exception safety
 				// for each runs... (at this time, 'runs_' is in logical order)
 				BOOST_FOREACH(RunVector::const_reference p, runs_) {
@@ -3321,7 +3363,7 @@ namespace ascension {
 						} else {
 							ipd1 = allocationMeasure(*run);
 							runs.push_back(run);
-							firstRunsInLines.push_back(runs.size());
+							firstRunsInLines.push_back(boost::size(runs));
 						}
 						continue;
 					}
@@ -3335,30 +3377,30 @@ namespace ascension {
 					}
 					HRESULT hr = run->logicalWidths(logicalWidths.get());
 					hr = run->logicalAttributes(logicalAttributes.get());
-					const String::const_pointer originalRunPosition = run->begin();
+					const String::const_pointer originalRunPosition = boost::const_begin(*run);
 					Scalar measureInThisRun = 0;
-					String::const_pointer lastBreakable = run->begin(), lastGlyphEnd = run->begin();
+					String::const_pointer lastBreakable = boost::const_begin(*run), lastGlyphEnd = boost::const_begin(*run);
 					Scalar lastBreakableIpd = ipd1, lastGlyphEndIpd = ipd1;
 					// for each characters in the run...
-					for(StringPiece::const_iterator j = run->begin(); j < run->end(); ) {	// j is position in the LOGICAL line
+					for(StringPiece::const_iterator j = boost::const_begin(*run); j < boost::const_end(*run); ) {	// j is position in the LOGICAL line
 						const Scalar ipd2 = ipd1 + measureInThisRun;
 						// remember this opportunity
-						if(logicalAttributes[j - run->begin()].fCharStop != 0) {
+						if(logicalAttributes[j - boost::const_begin(*run)].fCharStop != 0) {
 							lastGlyphEnd = j;
 							lastGlyphEndIpd = ipd2;
-							if(logicalAttributes[j - run->begin()].fSoftBreak != 0
-									|| logicalAttributes[j - run->begin()].fWhiteSpace != 0) {
+							if(logicalAttributes[j - boost::const_begin(*run)].fSoftBreak != 0
+									|| logicalAttributes[j - boost::const_begin(*run)].fWhiteSpace != 0) {
 								lastBreakable = j;
 								lastBreakableIpd = ipd2;
 							}
 						}
 						// break if the width of the visual line overs the wrap width
-						if(ipd2 + logicalWidths[j - run->begin()] > measure) {
+						if(ipd2 + logicalWidths[j - boost::const_begin(*run)] > measure) {
 							// the opportunity is the start of this run
-							if(lastBreakable == run->begin()) {
+							if(lastBreakable == boost::const_begin(*run)) {
 								// break at the last glyph boundary if no opportunities
-								if(firstRunsInLines.empty() || firstRunsInLines.back() == runs.size()) {
-									if(lastGlyphEnd == run->begin()) {	// break here if no glyph boundaries
+								if(boost::size(firstRunsInLines) || firstRunsInLines.back() == boost::size(runs)) {
+									if(lastGlyphEnd == boost::const_begin(*run)) {	// break here if no glyph boundaries
 										lastBreakable = j;
 										lastBreakableIpd = ipd2;
 									} else {
@@ -3369,16 +3411,16 @@ namespace ascension {
 							}
 
 							// case 1: break at the start of the run
-							if(lastBreakable == run->begin()) {
-								assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
-								firstRunsInLines.push_back(runs.size());
+							if(lastBreakable == boost::const_begin(*run)) {
+								assert(boost::empty(firstRunsInLines) || boost::size(runs) != firstRunsInLines.back());
+								firstRunsInLines.push_back(boost::size(runs));
 //								ASCENSION_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run start.\n";
 							}
 							// case 2: break at the end of the run
-							else if(lastBreakable == run->end()) {
+							else if(lastBreakable == boost::const_end(*run)) {
 								if(lastBreakable < textString_.data() + numberOfCharacters()) {
-									assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
-									firstRunsInLines.push_back(runs.size() + 1);
+									assert(boost::empty(firstRunsInLines) || boost::size(runs) != firstRunsInLines.back());
+									firstRunsInLines.push_back(boost::size(runs) + 1);
 //									ASCENSION_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run end.\n";
 								}
 								break;
@@ -3387,8 +3429,8 @@ namespace ascension {
 							else {
 								std::unique_ptr<TextRunImpl> followingRun(run->breakAt(lastBreakable));
 								runs.push_back(run);
-								assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
-								firstRunsInLines.push_back(runs.size());
+								assert(boost::empty(firstRunsInLines) || boost::size(runs) != firstRunsInLines.back());
+								firstRunsInLines.push_back(boost::size(runs));
 //								ASCENSION_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run meddle.\n";
 								createdRuns.push_back(std::move(followingRun));	// C2668 if included <boost/log/trivial.hpp> without 'std::' ???
 								run = createdRuns.back().get();	// continue the process about this run
@@ -3406,26 +3448,25 @@ namespace ascension {
 				}
 //				ASCENSION_LOG_TRIVIAL(debug) << L"...broke the all lines.\n";
 #if 0
-				if(runs.empty())
+				if(boost::empty(runs))
 					runs.push_back(nullptr);
 #else
-				assert(!runs.empty());
+				assert(!boost::empty(runs));
 #endif
 
 				// commit
-				decltype(runs_) newRuns(runs.size());
-				firstRunsInLines_.reset(new RunVector::const_iterator[numberOfLines_ = firstRunsInLines.size()]);
+				decltype(runs_) newRuns(boost::size(runs));
+				firstRunsInLines_.reset(new RunVector::const_iterator[numberOfLines_ = boost::size(firstRunsInLines)]);
 
 				BOOST_FOREACH(RunVector::reference run, runs_)
 					run.release();
 				BOOST_FOREACH(auto& run, createdRuns)
 					run.release();
-				for(RunVector::size_type i = 0, c = runs.size(); i < c; ++i)
+				for(RunVector::size_type i = 0, c = boost::size(runs); i < c; ++i)
 					newRuns[i].reset(runs[i]);
-//				runs_ = std::move(newRuns);
 				std::swap(runs_, newRuns);
-				for(std::vector<Index>::size_type i = 0, c = firstRunsInLines.size(); i < c; ++i)
-					firstRunsInLines_[i] = std::begin(runs_) + firstRunsInLines[i];
+				for(std::vector<Index>::size_type i = 0, c = boost::size(firstRunsInLines); i < c; ++i)
+					firstRunsInLines_[i] = boost::const_begin(runs_) + firstRunsInLines[i];
 			}
 
 
