@@ -216,7 +216,7 @@ namespace ascension {
 			const Gtk::StateFlags state = get_state_flags();
 			assert(get_visible());
 			assert(is_visible());
-			assert(has_visible_focus());
+//			assert(has_visible_focus());
 			if(::gdk_event_triggers_context_menu(reinterpret_cast<GdkEvent*>(event)) != 0) {
 				doShowContextMenu(event);
 				return true;
