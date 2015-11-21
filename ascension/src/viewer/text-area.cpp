@@ -343,14 +343,12 @@ namespace ascension {
 		 * @param following Set @c true to redraw also the all lines follow to @a line
 		 */
 		void TextArea::redrawLine(Index line, bool following) {
-			redrawLines(boost::irange(line, following ? std::numeric_limits<Index>::max() : line + 1));
+			redrawLines(boost::irange(line, following ? textViewer().document().numberOfLines() : line + 1));
 		}
 
 		/**
 		 * Redraws the specified lines on the view. If the viewer is frozen, redraws after unfrozen.
-		 * @param lines The lines to be redrawn. The last line (@a lines.end()) is exclusive and this line will not be
-		 *              redrawn. If this value is @c std#numeric_limits<Index>#max(), this method redraws the first
-		 *              line (@a lines.beginning()) and the following all lines
+		 * @param lines The lines to be redrawn
 		 * @throw IndexOutOfBoundsException @a lines intersects outside of the document
 		 * @see This method only schedule redrawing, and does not repaint the canvas.
 		 */
@@ -361,7 +359,7 @@ namespace ascension {
 				return;
 
 			const auto orderedLines(lines | adaptors::ordered());
-			if(*boost::const_end(orderedLines) != std::numeric_limits<Index>::max() && *boost::const_end(orderedLines) > textViewer().document().numberOfLines())
+			if(*boost::const_end(orderedLines) > textViewer().document().numberOfLines())
 				throw IndexOutOfBoundsException("lines");
 
 			if(textViewer().isFrozen()) {
