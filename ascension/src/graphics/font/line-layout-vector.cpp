@@ -49,7 +49,7 @@ namespace ascension {
 						break;
 				}
 
-				if(i != end(layouts_)) {
+				if(i != std::end(layouts_)) {
 #if defined(ASCENSION_TRACE_LAYOUT_CACHES) && defined(_DEBUG)
 					ASCENSION_LOG_TRIVIAL(debug) << "... cache found\n";
 #endif
@@ -65,7 +65,7 @@ namespace ascension {
 #ifdef ASCENSION_TRACE_LAYOUT_CACHES
 					dout << "... cache not found\n";
 #endif
-					if(layouts_.size() == bufferSize_) {
+					if(boost::size(layouts_) == bufferSize_) {
 						// delete the last
 						NumberedLayout temp(std::move(self.layouts_.back()));
 						self.layouts_.pop_back();
@@ -114,24 +114,24 @@ namespace ascension {
 			 *               @c #layoutModified. Otherwise calls @c #layoutDeleted
 			 */
 			void LineLayoutVector::clearCaches(const boost::integer_range<Index>& lines, bool repair) {
-				const boost::integer_range<Index> orderedLines(lines | adaptors::ordered());
+				const auto orderedLines(lines | adaptors::ordered());
 				if(false /*|| *orderedLines.end() > document().numberOfLines()*/)
 					throw IndexOutOfBoundsException("lines");
 				if(documentChangePhase_ == ABOUT_TO_CHANGE) {
 					pendingCacheClearance_ = boost::irange(
 						!pendingCacheClearance_ ?
-							*boost::begin(orderedLines) : std::min(*boost::begin(orderedLines), *boost::begin(boost::get(pendingCacheClearance_))),
+							*boost::const_begin(orderedLines) : std::min(*boost::const_begin(orderedLines), *boost::const_begin(boost::get(pendingCacheClearance_))),
 						!pendingCacheClearance_ ?
-							*orderedLines.end() : std::max(*boost::end(orderedLines), *boost::end(boost::get(pendingCacheClearance_))));
+							*boost::const_end(orderedLines) : std::max(*boost::const_end(orderedLines), *boost::const_end(boost::get(pendingCacheClearance_))));
 					return;
 				}
-				if(orderedLines.empty())
+				if(boost::empty(orderedLines))
 					return;
 
 //				const std::size_t originalSize = layouts_.size();
 				Index oldSublines = 0, cachedLines = 0;
 				if(repair) {
-					Index newSublines = 0, actualFirst = *boost::end(orderedLines), actualLast = *boost::begin(orderedLines);
+					Index newSublines = 0, actualFirst = *boost::const_end(orderedLines), actualLast = *boost::const_begin(orderedLines);
 					BOOST_FOREACH(NumberedLayout& layout, layouts_) {
 						if(includes(orderedLines, layout.lineNumber)) {
 							oldSublines += layout.layout->numberOfLines();
@@ -143,13 +143,13 @@ namespace ascension {
 							actualLast = std::max(actualLast, layout.lineNumber);
 						}
 					}
-					if(actualFirst == *boost::end(orderedLines))	// no lines cleared
+					if(actualFirst == *boost::const_end(orderedLines))	// no lines cleared
 						return;
 					++actualLast;
 					fireVisualLinesModified(boost::irange(actualFirst, actualLast), newSublines += actualLast - actualFirst - cachedLines,
 						oldSublines += actualLast - actualFirst - cachedLines, documentChangePhase_ == CHANGING);
 				} else {
-					for(auto i(std::begin(layouts_)); i != std::end(layouts_); ) {
+					for(auto i(boost::const_begin(layouts_)); i != boost::const_end(layouts_); ) {
 						if(includes(orderedLines, i->lineNumber)) {
 							oldSublines += i->layout->numberOfLines();
 							i = layouts_.erase(i);
@@ -224,7 +224,7 @@ namespace ascension {
 			}
 
 			void LineLayoutVector::fireVisualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
-				numberOfVisualLines_ += lines.size();
+				numberOfVisualLines_ += boost::size(lines);
 				listeners_.notify<const boost::integer_range<Index>&>(&VisualLinesListener::visualLinesInserted, lines);
 			}
 
@@ -308,7 +308,13 @@ namespace ascension {
 					if(i->lineNumber == line) {
 						const Index oldSublines = i->layout->numberOfLines();
 						if(autoRepair_) {
+#if 0
+							std::unique_ptr<const TextLayout> newLayout(layoutGenerator_->generate(line));
+							std::swap(i->layout, newLayout);
+#else
+							i->layout.reset();
 							i->layout = layoutGenerator_->generate(line);
+#endif
 							fireVisualLinesModified(boost::irange(line, line + 1),
 								i->layout->numberOfLines(), oldSublines, documentChangePhase_ == CHANGING);
 						} else {
@@ -369,52 +375,6 @@ namespace ascension {
 				}
 			}
 
-#if 0
-			/**
-			 * Returns the logical line number and the visual subline number of the specified visual line.
-			 * @param line The visual line
-			 * @param[out] subline The visual subline of @a line. can be @c null if not needed
-			 * @return The logical line
-			 * @throw kernel#BadPositionException @a line is outside of the document
-			 * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
-			 */
-			Index LineLayoutVector::mapVisualLineToLogicalLine(Index line, Index* subline) const {
-				if(!getTextViewer().getConfiguration().lineWrap.wraps()) {
-					if(subline != nullptr)
-						*subline = 0;
-					return line;
-				}
-				Index c = getCacheFirstLine();
-				for(Index i = getCacheFirstLine(); ; ++i) {
-					if(c + getNumberOfSublinesOfLine(i) > line) {
-						if(subline != nullptr)
-							*subline = line - c;
-						return i;
-					}
-					c += getNumberOfSublinesOfLine(i);
-				}
-				assert(false);
-				return getCacheLastLine();	// ここには来ない
-			}
-
-			/**
-			 * Returns the logical line number and the offset in the logical line of the specified visual
-			 * position.
-			 * @param position The visual coordinates of the position to be mapped
-			 * @return The logical coordinates of @a position
-			 * @throw kernel#BadPositionException @a position is outside of the document
-			 * @see #mapLogicalPositionToVisualPosition, #mapVisualLineToLogicalLine
-			 */
-			kernel::Position LineLayoutVector::mapVisualPositionToLogicalPosition(const kernel::Position& position) const {
-				if(!getTextViewer().getConfiguration().lineWrap.wraps())
-					return position;
-				kernel::Position result;
-				Index subline;
-				result.line = mapVisualLineToLogicalLine(position.line, &subline);
-				result.offsetInLine = getLineLayout(result.line).getSublineOffset(subline) + position.offsetInLine;
-				return result;
-			}
-#endif // 0
 			/**
 			 * Returns the number of sublines of the specified line.
 			 * If the layout of the line is not calculated, this method returns 1.
