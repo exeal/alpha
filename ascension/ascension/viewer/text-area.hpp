@@ -166,8 +166,8 @@ namespace ascension {
 			std::shared_ptr<widgetapi::DropTarget> dropTargetHandler_;
 			GeometryChangedSignal allocationRectangleChangedSignal_, contentRectangleChangedSignal_;
 			boost::signals2::connection viewportResizedConnection_, viewportScrolledConnection_;
-			boost::signals2::scoped_connection viewerFrozenStateChangedConnection_, caretMotionConnection_,
-				defaultFontChangedConnection_, matchBracketsChangedConnection_, selectionShapeChangedConnection_;
+			boost::signals2::scoped_connection viewerFocusChangedConnection_, viewerFrozenStateChangedConnection_,
+				caretMotionConnection_, defaultFontChangedConnection_, matchBracketsChangedConnection_, selectionShapeChangedConnection_;
 		};
 		
 		/// Returns the caret.

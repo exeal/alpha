@@ -89,9 +89,14 @@ namespace ascension {
 		void TextArea::caretMoved(const Caret& self, const kernel::Region& oldRegion) {
 			if(viewer_ == nullptr || !widgetapi::isVisible(textViewer()))
 				return;
-			const kernel::Region newRegion(self.selectedRegion());
+
+			if(caretBlinker_.get() != nullptr) {
+				caretBlinker_->resetTimer();
+				caretBlinker_->pend();
+			}
 
 			// redraw the selected region
+			const kernel::Region newRegion(self.selectedRegion());
 			boost::optional<boost::integer_range<Index>> linesToRedraw;
 			if(self.isSelectionRectangle()) {	// rectangle
 				if(!oldRegion.isEmpty())
@@ -201,6 +206,11 @@ namespace ascension {
 				// repaint the lines where the caret places
 				redrawLines(boost::irange(kernel::line(caret().beginning()), kernel::line(caret().end()) + 1));
 				redrawIfNotFrozen(*this);
+				if(caretBlinker_.get() != nullptr/* && !viewer.isFrozen()*/) {
+					caretBlinker_->resetTimer();
+					if(widgetapi::hasFocus(viewer))
+						caretBlinker_->update();
+				}
 			}
 		}
 
@@ -250,6 +260,8 @@ namespace ascension {
 			renderer_.reset(new Renderer(viewer));
 			caret().install(*this);
 			textViewer().document().addListener(*this);
+			viewerFocusChangedConnection_ = textViewer().focusChangedSignal().connect(
+				std::bind(&TextArea::focusChanged, this, std::placeholders::_1));
 			viewerFrozenStateChangedConnection_ = textViewer().frozenStateChangedSignal().connect(
 				std::bind(&TextArea::frozenStateChanged, this, std::placeholders::_1));
 			caretMotionConnection_ = caret().motionSignal().connect(
@@ -494,6 +506,7 @@ namespace ascension {
 				mouseInputStrategy_->uninstall();
 				mouseInputStrategyIsInstalled_ = false;
 				renderer_->layouts().removeVisualLinesListener(*this);
+				viewerFocusChangedConnection_.disconnect();
 				viewerFrozenStateChangedConnection_.disconnect();
 				viewportResizedConnection_.disconnect();
 				viewportScrolledConnection_.disconnect();
