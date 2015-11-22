@@ -8,12 +8,12 @@
 #ifndef ASCENSION_TEXT_AREA_HPP
 #define ASCENSION_TEXT_AREA_HPP
 #include <ascension/corelib/signals.hpp>
-#include <ascension/corelib/timer.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport-base.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/presentation/flow-relative-directions-dimensions.hpp>
+#include <ascension/viewer/detail/caret-blinker.hpp>
 #include <ascension/viewer/detail/weak-reference-for-points.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
 
@@ -154,25 +154,11 @@ namespace ascension {
 			void documentAboutToBeChanged(const kernel::Document& document) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 		private:
-			class CaretBlinker : private HasTimer<> {
-			public:
-				explicit CaretBlinker(Caret& caret) BOOST_NOEXCEPT;
-				bool isVisible() const BOOST_NOEXCEPT;
-				void pend();
-				void stop();
-				void update();
-			private:
-				void setVisible(bool visible);
-				void timeElapsed(Timer<>& timer);
-				Caret& caret_;
-				Timer<> timer_;
-				bool visible_;
-			};
 			TextViewer* viewer_;
 			const Locator* locator_;
 			std::unique_ptr<Caret> caret_;
 			std::shared_ptr<CaretShaper> caretShaper_;
-			std::unique_ptr<CaretBlinker> caretBlinker_;	// null when the caret is set to invisible
+			std::unique_ptr<detail::CaretBlinker> caretBlinker_;	// null when the caret is set to invisible
 			std::unique_ptr<Renderer> renderer_;
 			boost::integer_range<Index> linesToRedraw_;
 			std::shared_ptr<TextAreaMouseInputStrategy> mouseInputStrategy_;
