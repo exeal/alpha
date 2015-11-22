@@ -642,10 +642,10 @@ namespace ascension {
 					if(line == ln.line) {
 						// TODO: Consider *rate* of scroll.
 						newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ?
-							layout->extent(boost::irange<Index>(0, ln.subline)).size() : (defaultLineExtent_ * ln.subline));
+							boost::size(layout->extent(boost::irange<Index>(0, ln.subline))) : (defaultLineExtent_ * ln.subline));
 						break;
 					} else
-						newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ? layout->extent().size() : defaultLineExtent_);
+						newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ? boost::size(layout->extent()) : defaultLineExtent_);
 				}
 #else
 				return textRenderer().layouts().mapLogicalLineToVisualLine(ln.line) + ln.subline;
@@ -794,13 +794,13 @@ namespace ascension {
 
 					// process the partially visible line
 					if(line.subline > 0)
-						bpd -= layout->extent(boost::irange(static_cast<Index>(0), line.subline)).size();
+						bpd -= boost::size(layout->extent(boost::irange(static_cast<Index>(0), line.subline)));
 
 					// repair the following lines
 					for(const Index nlines = layouts.document().numberOfLines(); ++line.line < nlines && bpd < extent; ) {
 						layout = &layouts.at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT);	// repair the line
 						const auto lineExtent(layout->extent());
-						bpd += lineExtent.size();
+						bpd += boost::size(lineExtent);
 					}
 				}
 			}
@@ -863,7 +863,7 @@ namespace ascension {
 								if(layout == nullptr)
 									layout = !dontModifyLayout ? &layouts.at(line.line) : layouts.atIfCached(line.line);
 								line.subline = (layout != nullptr) ? layout->numberOfLines() - 1 : 0;
-								const Scalar lastLineExtent = (layout != nullptr) ? layout->extent(boost::irange(line.subline, line.subline + 1)).size() : defaultLineExtent;
+								const Scalar lastLineExtent = (layout != nullptr) ? boost::size(layout->extent(boost::irange(line.subline, line.subline + 1))) : defaultLineExtent;
 								const Scalar pageSize = isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ? geometry::dy(viewport.boundsInView()) : geometry::dx(viewport.boundsInView());
 								offsetInVisualLine = (lastLineExtent > pageSize) ? lastLineExtent - pageSize : 0;
 								return;
@@ -871,11 +871,11 @@ namespace ascension {
 							if((layout = !dontModifyLayout ? &layouts.at(line.line) : layouts.atIfCached(line.line)) != nullptr) {
 								const auto locatedLine(layout->locateLine(bpdToEat, boost::none));
 								if(locatedLine.second == boost::none) {	// found in this layout
-									offsetInVisualLine = bpdToEat - layout->extent(boost::irange<Index>(0, line.subline = locatedLine.first)).size();
+									offsetInVisualLine = bpdToEat - boost::size(layout->extent(boost::irange<Index>(0, line.subline = locatedLine.first)));
 									return;
 								}
 								assert(boost::get(locatedLine.second) == Direction::FORWARD);
-								bpdToEat -= layout->extent().size();
+								bpdToEat -= boost::size(layout->extent());
 							} else {
 								if(defaultLineExtent > bpdToEat) {	// found in this line
 									line.subline = 0;
@@ -917,12 +917,12 @@ namespace ascension {
 							}
 							--line.line;
 							layout = !dontModifyLayout ? &layouts.at(line.line) : layouts.atIfCached(line.line);
-							const Scalar logicalLineExtent = (layout != nullptr) ? layout->extent().size() : defaultLineExtent;
+							const Scalar logicalLineExtent = (layout != nullptr) ? boost::size(layout->extent()) : defaultLineExtent;
 							if(logicalLineExtent > bpdToEat) {	// found in this logical line
 								if(layout != nullptr) {
 									const auto locatedLine(layout->locateLine(logicalLineExtent - bpdToEat, boost::none));
 									assert(locatedLine.second == boost::none);
-									offsetInVisualLine = logicalLineExtent - bpdToEat - layout->extent(boost::irange<Index>(0, line.subline = locatedLine.first)).size();
+									offsetInVisualLine = logicalLineExtent - bpdToEat - boost::size(layout->extent(boost::irange<Index>(0, line.subline = locatedLine.first)));
 								} else {
 									line.subline = 0;
 									offsetInVisualLine = logicalLineExtent - bpdToEat;
@@ -1177,7 +1177,7 @@ namespace ascension {
 							if(const TextLayout* const lastLine = textRenderer().layouts().at(line.line = numberOfLogicalLines - 1)) {
 								line.subline = lastLine->numberOfLines() - 1;
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-								bpd = *boost::const_end(range) - lastLine->extent(boost::irange(line.subline, line.subline + 1)).size();
+								bpd = *boost::const_end(range) - boost::size(lastLine->extent(boost::irange(line.subline, line.subline + 1)));
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 							} else {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -1292,8 +1292,8 @@ namespace ascension {
 			void TextViewport::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
 				// see also TextViewer.visualLinesDeleted
 
-				if(*lines.end() < firstVisibleLine_.line) {	// deleted logical lines before visible area
-					firstVisibleLine_.line -= lines.size();
+				if(*boost::const_end(lines) < firstVisibleLine_.line) {	// deleted logical lines before visible area
+					firstVisibleLine_.line -= boost::size(lines);
 					scrollPositions_.bpd() -= sublines;
 				} else if(includes(lines, firstVisibleLine_.line)) {	// deleted logical lines contain the first visible line
 					firstVisibleLine_.subline = 0;
@@ -1306,11 +1306,11 @@ namespace ascension {
 			void TextViewport::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
 				// see also TextViewer.visualLinesInserted
 
-				if(*lines.end() < firstVisibleLine_.line) {	// inserted before visible area
-					firstVisibleLine_.line += lines.size();
-					scrollPositions_.bpd() += lines.size();
-				} else if(*lines.begin() == firstVisibleLine_.line && firstVisibleLine_.subline > 0) {	// inserted around the first visible line
-					firstVisibleLine_.line += lines.size();
+				if(*boost::const_end(lines) < firstVisibleLine_.line) {	// inserted before visible area
+					firstVisibleLine_.line += boost::size(lines);
+					scrollPositions_.bpd() += boost::size(lines);
+				} else if(*boost::const_begin(lines) == firstVisibleLine_.line && firstVisibleLine_.subline > 0) {	// inserted around the first visible line
+					firstVisibleLine_.line += boost::size(lines);
 					adjustBpdScrollPositions();
 				}
 				emitScrollPropertiesChanged(presentation::FlowRelativeTwoAxes<bool>(presentation::_ipd = true/*longestLineChanged*/, presentation::_bpd = true));
@@ -1323,7 +1323,7 @@ namespace ascension {
 				// see also TextViewer.visualLinesModified
 
 				if(sublinesDifference != 0)	 {
-					if(*lines.end() < firstVisibleLine_.line)	// changed before visible area
+					if(*boost::const_end(lines) < firstVisibleLine_.line)	// changed before visible area
 						scrollPositions_.bpd() += sublinesDifference;
 					else if(includes(lines, firstVisibleLine_.line) && firstVisibleLine_.subline > 0) {	// changed lines contain the first visible line
 //						firstVisibleLine_.subline = 0;
