@@ -381,6 +381,11 @@ namespace ascension {
 			return event.consume();
 		}
 
+		/// Returns the @c FocusChangedSignal signal connector.
+		SignalConnector<TextViewer::FocusChangedSignal> TextViewer::focusChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(focusChangedSignal_);
+		}
+
 		/// Invoked when the widget gained the keyboard focus.
 		void TextViewer::focusGained(widgetapi::event::Event& event) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
