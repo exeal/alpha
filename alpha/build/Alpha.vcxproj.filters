@@ -153,6 +153,9 @@
     <Filter Include="ascension\Header Files\graphics\geometry\algorithms">
       <UniqueIdentifier>{f56f726d-54a0-4b16-a893-1803b9cdc642}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Source Files\viewer\detail">
+      <UniqueIdentifier>{e4a83762-ab8d-45ab-a1ea-778abc3f868e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -401,9 +404,6 @@
     <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\caret-blinker.cpp">
-      <Filter>ascension\Source Files\viewer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\cursor-windows.cpp">
       <Filter>ascension\Source Files\viewer\widgetapi</Filter>
     </ClCompile>
@@ -562,6 +562,9 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\ascension\graphics\rendering-context.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\detail\caret-blinker.cpp">
+      <Filter>ascension\Source Files\viewer\detail</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1284,6 +1287,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\within.hpp">
       <Filter>ascension\Header Files\graphics\geometry\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\detail\caret-blinker.hpp">
+      <Filter>ascension\Header Files\viewer\detail</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

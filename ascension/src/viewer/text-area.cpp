@@ -271,6 +271,7 @@ namespace ascension {
 			} else
 				setMouseInputStrategy(std::unique_ptr<TextAreaMouseInputStrategy>());
 			relocated();
+			showCaret();
 		}
 
 		/// @see Caret#MatchBracketsChangedSignal
@@ -484,7 +485,7 @@ namespace ascension {
 		 */
 		void TextArea::showCaret() BOOST_NOEXCEPT {
 			if(hidesCaret())
-				caretBlinker_.reset(new CaretBlinker(caret()));
+				caretBlinker_.reset(new detail::CaretBlinker(caret()));
 		}
 
 		/// @see TextViewerComponent#uninstall
