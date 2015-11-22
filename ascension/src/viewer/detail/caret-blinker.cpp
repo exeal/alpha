@@ -16,12 +16,45 @@ namespace ascension {
 	namespace viewer {
 		namespace detail {
 			namespace {
+				const int BLINK_RATE_DIVIDER = 3;
+				const int BLINK_RATE_PENDING_MULTIPLIER = BLINK_RATE_DIVIDER;
+				const int BLINK_RATE_SHOWING_MULTIPLIER = 2;
+				const int BLINK_RATE_HIDING_MULTIPLIER = BLINK_RATE_PENDING_MULTIPLIER - BLINK_RATE_SHOWING_MULTIPLIER;
+
+				inline bool isCaretBlinkable(const Caret& caret) {
+					// TODO: Check if the text viewer is also editable.
+					return widgetapi::hasFocus(caret.textArea().textViewer());
+				}
+
 				inline boost::optional<boost::chrono::milliseconds> systemBlinkTime(const Caret& caret) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #ifndef GTKMM_DISABLE_DEPRECATED
 					const Glib::RefPtr<const Gtk::Settings> settings(caret.textArea().textViewer().get_settings());
 					if(settings->property_gtk_cursor_blink().get_value())
 						return boost::chrono::milliseconds(settings->property_gtk_cursor_blink_time().get_value());
+#endif // !GTKMM_DISABLE_DEPRECATED
+					return boost::none;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+					const UINT ms = ::GetCaretBlinkTime();
+					if(ms == 0)
+						throw makePlatformError();
+					return (ms != INFINITE) ? boost::chrono::milliseconds(ms) : boost::none;
+#else
+					ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+				}
+
+				inline boost::optional<boost::chrono::milliseconds> systemBlinkTimeout(const Caret& caret) {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#ifndef GTKMM_DISABLE_DEPRECATED
+					const Glib::RefPtr<const Gtk::Settings> settings(caret.textArea().textViewer().get_settings());
+					if(settings->property_gtk_cursor_blink_timeout().get_value()) {
+						const int seconds = settings->property_gtk_cursor_blink_time().get_value();
+						if(seconds > 0)
+							return boost::chrono::seconds(seconds);
+					}
 #endif // !GTKMM_DISABLE_DEPRECATED
 					return boost::none;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
@@ -42,16 +75,22 @@ namespace ascension {
 			 * @param caret The caret this object is associated with
 			 */
 			CaretBlinker::CaretBlinker(Caret& caret) : caret_(caret) {
+				update();
 			}
 
 			/// Pends blinking of the caret(s).
 			void CaretBlinker::pend() {
-				if(widgetapi::hasFocus(caret_.textArea().textViewer())) {
-					stop();
-					setVisible(true);
-					if(const boost::optional<boost::chrono::milliseconds> blinkTime = systemBlinkTime(caret_))
-						timer_.start(boost::get(blinkTime), *this);
+				if(isCaretBlinkable(caret_)) {
+					if(const boost::optional<boost::chrono::milliseconds> interval = systemBlinkTime(caret_)) {
+						timer_.stop();
+						timer_.start(boost::get(interval) * BLINK_RATE_PENDING_MULTIPLIER / BLINK_RATE_DIVIDER, *this);
+						setVisible(true);
+					}
 				}
+			}
+
+			void CaretBlinker::resetTimer() {
+				elapsedTimeFromLastUserInput_ = boost::chrono::milliseconds::zero();
 			}
 
 			inline void CaretBlinker::setVisible(bool visible) {
@@ -61,38 +100,43 @@ namespace ascension {
 				caret_.textArea().redrawLine(kernel::line(caret_));	// TODO: This code is not efficient.
 			}
 
-			/// Stops blinking of the caret(s).
-			void CaretBlinker::stop() {
-				timer_.stop();
-			}
-
 			/// @see HasTimer#timeElapsed
 			void CaretBlinker::timeElapsed(Timer<>&) {
-				if(!widgetapi::hasFocus(caret_.textArea().textViewer())) {
-					timer_.stop();
+				timer_.stop();
+				const auto interval(systemBlinkTime(caret_));
+				if(interval == boost::none || !widgetapi::hasFocus(caret_.textArea().textViewer())) {
 					update();
 					return;
 				}
 
-				setVisible(!visible_);
+				const auto timeout(systemBlinkTimeout(caret_));
+				if(timeout != boost::none && boost::get(timeout) > elapsedTimeFromLastUserInput_) {
+					// stop blinking
+					setVisible(true);
+				} else if(isVisible()) {
+					setVisible(false);
+					timer_.start(boost::get(interval) * BLINK_RATE_HIDING_MULTIPLIER / BLINK_RATE_DIVIDER, *this);
+				} else {
+					setVisible(true);
+					elapsedTimeFromLastUserInput_ += boost::get(interval);
+					timer_.start(boost::get(interval) * BLINK_RATE_SHOWING_MULTIPLIER / BLINK_RATE_DIVIDER, *this);
+				}
 			}
 
 			/// Checks and updates state of blinking of the caret.
 			void CaretBlinker::update() {
-				if(widgetapi::hasFocus(caret_.textArea().textViewer())) {
-					if(const boost::optional<boost::chrono::milliseconds> blinkTime = systemBlinkTime(caret_)) {
+				if(isCaretBlinkable(caret_)) {
+					if(const boost::optional<boost::chrono::milliseconds> interval = systemBlinkTime(caret_)) {
 						if(!timer_.isActive()) {
 							setVisible(true);
-							timer_.start(boost::get(blinkTime) / 2, *this);
+							timer_.start(boost::get(interval) * BLINK_RATE_SHOWING_MULTIPLIER / BLINK_RATE_DIVIDER, *this);
+							return;
 						}
-					} else {
-						stop();
-						setVisible(true);
 					}
-				} else {
-					stop();
-					setVisible(false);
 				}
+				
+				timer_.stop();
+				visible_ = true;
 			}
 		}
 	}
