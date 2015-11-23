@@ -32,8 +32,10 @@ namespace ascension {
 					const Glib::RefPtr<const Gtk::Settings> settings(caret.textArea().textViewer().get_settings());
 					if(settings->property_gtk_cursor_blink().get_value())
 						return boost::chrono::milliseconds(settings->property_gtk_cursor_blink_time().get_value());
-#endif // !GTKMM_DISABLE_DEPRECATED
 					return boost::none;
+#else
+					return boost::chrono::milliseconds(1200);	// CURSOR_BLINK_TIME
+#endif // !GTKMM_DISABLE_DEPRECATED
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -55,15 +57,14 @@ namespace ascension {
 						if(seconds > 0)
 							return boost::chrono::seconds(seconds);
 					}
-#endif // !GTKMM_DISABLE_DEPRECATED
 					return boost::none;
+#else
+					return boost::chrono::seconds(10);	// CURSOR_BLINK_TIMEOUT_SEC
+#endif // !GTKMM_DISABLE_DEPRECATED
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-					const UINT ms = ::GetCaretBlinkTime();
-					if(ms == 0)
-						throw makePlatformError();
-					return (ms != INFINITE) ? boost::chrono::milliseconds(ms) : boost::none;
+					return boost::none;
 #else
 					ASCENSION_CANT_DETECT_PLATFORM();
 #endif
@@ -110,7 +111,7 @@ namespace ascension {
 				}
 
 				const auto timeout(systemBlinkTimeout(caret_));
-				if(timeout != boost::none && boost::get(timeout) > elapsedTimeFromLastUserInput_) {
+				if(timeout != boost::none && elapsedTimeFromLastUserInput_ > boost::get(timeout)) {
 					// stop blinking
 					setVisible(true);
 				} else if(isVisible()) {
