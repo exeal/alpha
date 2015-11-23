@@ -563,7 +563,7 @@
     <ClCompile Include="..\..\ascension\ascension\graphics\rendering-context.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\detail\caret-blinker.cpp">
+    <ClCompile Include="..\..\ascension\src\viewer\detail\caret-painter.cpp">
       <Filter>ascension\Source Files\viewer\detail</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1288,7 +1288,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\within.hpp">
       <Filter>ascension\Header Files\graphics\geometry\algorithms</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\detail\caret-blinker.hpp">
+    <ClInclude Include="..\..\ascension\ascension\viewer\detail\caret-painter.hpp">
       <Filter>ascension\Header Files\viewer\detail</Filter>
     </ClInclude>
   </ItemGroup>
