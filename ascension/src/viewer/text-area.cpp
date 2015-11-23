@@ -90,11 +90,6 @@ namespace ascension {
 			if(viewer_ == nullptr || !widgetapi::isVisible(textViewer()))
 				return;
 
-			if(caretBlinker_.get() != nullptr) {
-				caretBlinker_->resetTimer();
-				caretBlinker_->pend();
-			}
-
 			// redraw the selected region
 			const kernel::Region newRegion(self.selectedRegion());
 			boost::optional<boost::integer_range<Index>> linesToRedraw;
@@ -206,11 +201,6 @@ namespace ascension {
 				// repaint the lines where the caret places
 				redrawLines(boost::irange(kernel::line(caret().beginning()), kernel::line(caret().end()) + 1));
 				redrawIfNotFrozen(*this);
-				if(caretBlinker_.get() != nullptr/* && !viewer.isFrozen()*/) {
-					caretBlinker_->resetTimer();
-					if(widgetapi::hasFocus(viewer))
-						caretBlinker_->update();
-				}
 			}
 		}
 
@@ -246,10 +236,8 @@ namespace ascension {
 		 * @see #hidesCaret, #showCaret
 		 */
 		void TextArea::hideCaret() BOOST_NOEXCEPT {
-			if(!hidesCaret()) {
-				caretBlinker_.reset();
-				redrawLine(kernel::line(caret()));
-			}
+			if(caretPainter_.get() != nullptr)
+				caretPainter_->hide();
 		}
 
 		/// @see TextViewerComponent#install
@@ -257,6 +245,7 @@ namespace ascension {
 			viewer_ = &viewer;
 			locator_ = &locator;
 			caret_.reset(new Caret(viewer.document()));
+			caretPainter_.reset(new detail::CaretPainter(*caret_));
 			renderer_.reset(new Renderer(viewer));
 			caret().install(*this);
 			textViewer().document().addListener(*this);
@@ -282,9 +271,8 @@ namespace ascension {
 				mouseInputStrategy_->install(*this);
 			} else
 				setMouseInputStrategy(std::unique_ptr<TextAreaMouseInputStrategy>());
-			relocated();
-			setCaretShaper(std::shared_ptr<CaretShaper>());
 			showCaret();
+			relocated();
 		}
 
 		/// @see Caret#MatchBracketsChangedSignal
@@ -341,13 +329,6 @@ namespace ascension {
 
 			// paint the caret(s)
 			paintCaret(context);
-		}
-
-		/**
-		 * @internal Paints the caret(s).
-		 * @param context The graphic context
-		 */
-		void TextArea::paintCaret(graphics::PaintContext& context) {
 		}
 
 		/**
@@ -493,12 +474,12 @@ namespace ascension {
 		}
 
 		/**
-		 * Shows the hidden caret.
+		 * Shows (and begins blinking) the hidden caret.
 		 * @see #hideCaret, #hidesCaret
 		 */
 		void TextArea::showCaret() BOOST_NOEXCEPT {
-			if(hidesCaret())
-				caretBlinker_.reset(new detail::CaretBlinker(caret()));
+			if(caretPainter_.get() != nullptr)
+				caretPainter_->show();
 		}
 
 		/// @see TextViewerComponent#uninstall
@@ -517,6 +498,8 @@ namespace ascension {
 				defaultFontChangedConnection_.disconnect();
 				textViewer().document().removeListener(*this);
 				renderer_.reset();
+				caretPainter_.reset();
+				caret_.reset();
 				locator_ = nullptr;
 				viewer_ = nullptr;
 			}

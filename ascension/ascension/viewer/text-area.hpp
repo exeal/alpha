@@ -13,7 +13,7 @@
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/presentation/flow-relative-directions-dimensions.hpp>
-#include <ascension/viewer/detail/caret-blinker.hpp>
+#include <ascension/viewer/detail/caret-painter.hpp>
 #include <ascension/viewer/detail/weak-reference-for-points.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
 
@@ -25,8 +25,6 @@ namespace ascension {
 	}
 
 	namespace viewer {
-		class Caret;
-		class CaretShaper;
 		class TextAreaMouseInputStrategy;
 
 		namespace widgetapi {
@@ -51,9 +49,9 @@ namespace ascension {
 			BOOST_CONSTEXPR Caret& caret() BOOST_NOEXCEPT;
 			BOOST_CONSTEXPR const Caret& caret() const BOOST_NOEXCEPT;
 			void hideCaret() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR bool hidesCaret() const BOOST_NOEXCEPT;
 			void setCaretShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
 			void showCaret() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR bool showsCaret() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Geometry
@@ -79,6 +77,7 @@ namespace ascension {
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				void rewrapAtWindowEdge();
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
+				void setCaretShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
 				// TextRenderer
 				std::unique_ptr<const graphics::font::TextLayout> createLineLayout(Index line) const;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -87,6 +86,7 @@ namespace ascension {
 
 			private:
 				TextViewer& viewer_;
+				boost::signals2::scoped_connection viewerFocusChangedConnection_, caretMotionConnection_;
 				bool displaysShapingControls_;
 			};
 			BOOST_CONSTEXPR Renderer& textRenderer() BOOST_NOEXCEPT;
@@ -134,7 +134,6 @@ namespace ascension {
 			/// @}
 
 		private:
-			void paintCaret(graphics::PaintContext& context);
 			// TextViewerComponent
 			void install(TextViewer& viewer, const Locator& locator) override;
 			void relocated() override;
@@ -157,9 +156,8 @@ namespace ascension {
 			TextViewer* viewer_;
 			const Locator* locator_;
 			std::unique_ptr<Caret> caret_;
-			std::shared_ptr<CaretShaper> caretShaper_;
-			std::unique_ptr<detail::CaretBlinker> caretBlinker_;	// null when the caret is set to invisible
 			std::unique_ptr<Renderer> renderer_;
+			std::unique_ptr<detail::CaretPainter> caretPainter_;
 			boost::integer_range<Index> linesToRedraw_;
 			std::shared_ptr<TextAreaMouseInputStrategy> mouseInputStrategy_;
 			bool mouseInputStrategyIsInstalled_;
@@ -181,11 +179,11 @@ namespace ascension {
 		}
 
 		/**
-		 * Returns @c true if the caret is hidden.
+		 * Returns @c true if the caret is shown.
 		 * @see #hideCaret, showCaret
 		 */
-		inline BOOST_CONSTEXPR bool TextArea::hidesCaret() const BOOST_NOEXCEPT {
-			return caretBlinker_.get() == nullptr;
+		inline BOOST_CONSTEXPR bool TextArea::showsCaret() const BOOST_NOEXCEPT {
+			return caretPainter_.get() != nullptr && caretPainter_->shows();
 		}
 		
 		/// Returns the text renderer.

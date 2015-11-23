@@ -1,14 +1,16 @@
 /**
- * @file caret-blinker.cpp
- * Implements @c CaretBlinker internal class.
+ * @file caret-painter.cpp
+ * Implements @c CaretPainter internal class.
  * @date 2014-01-29 Created.
  * @date 2015-11-22 Moved from ascension/src/viewer.
+ * @date 2015-11-23 Renamed from caret-blinker.cpp.
  */
 
 #include <ascension/viewer/caret.hpp>
+#include <ascension/viewer/detail/caret-painter.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && !defined(GTKMM_DISABLE_DEPRECATED)
 #	include <gtkmm/settings.h>
 #endif
 
@@ -75,12 +77,36 @@ namespace ascension {
 			 * Constructor.
 			 * @param caret The caret this object is associated with
 			 */
-			CaretBlinker::CaretBlinker(Caret& caret) : caret_(caret) {
+			CaretPainter::CaretPainter(Caret& caret) : caret_(caret) {
+				caretMotionConnection_ = caret_.motionSignal().connect([this](const Caret& caret, const kernel::Region&) {
+					if(&caret == &this->caret_ && this->shows() && widgetapi::isVisible(this->caret_.textArea().textViewer())) {
+						this->resetTimer();
+						this->pend();
+					}
+				});
+
+				viewerFocusChangedConnection_ = caret_.textArea().textViewer().focusChangedSignal().connect([this](const TextViewer& viewer) {
+					if(&viewer == &this->caret_.textArea().textViewer()/* && !viewer.isFrozen()*/) {
+						this->resetTimer();
+						if(widgetapi::hasFocus(viewer))
+							this->update();
+					}
+				});
+
 				update();
 			}
 
+			/// Hides the cursor.
+			void CaretPainter::hide() {
+				if(visible_ != boost::none) {
+					timer_.stop();
+					setVisible(false);
+					visible_ = boost::none;
+				}
+			}
+
 			/// Pends blinking of the caret(s).
-			void CaretBlinker::pend() {
+			void CaretPainter::pend() {
 				if(isCaretBlinkable(caret_)) {
 					if(const boost::optional<boost::chrono::milliseconds> interval = systemBlinkTime(caret_)) {
 						timer_.stop();
@@ -90,19 +116,26 @@ namespace ascension {
 				}
 			}
 
-			void CaretBlinker::resetTimer() {
+			void CaretPainter::resetTimer() {
 				elapsedTimeFromLastUserInput_ = boost::chrono::milliseconds::zero();
 			}
 
-			inline void CaretBlinker::setVisible(bool visible) {
+			inline void CaretPainter::setVisible(bool visible) {
 				if(visible == visible_)
 					return;
 				visible_ = visible;
 				caret_.textArea().redrawLine(kernel::line(caret_));	// TODO: This code is not efficient.
 			}
 
+			/// Shows and begins blinking the caret.
+			void CaretPainter::show() {
+				resetTimer();
+				if(widgetapi::hasFocus(caret_.textArea().textViewer()))
+					update();
+			}
+
 			/// @see HasTimer#timeElapsed
-			void CaretBlinker::timeElapsed(Timer<>&) {
+			void CaretPainter::timeElapsed(Timer<>&) {
 				timer_.stop();
 				const auto interval(systemBlinkTime(caret_));
 				if(interval == boost::none || !widgetapi::hasFocus(caret_.textArea().textViewer())) {
@@ -125,7 +158,7 @@ namespace ascension {
 			}
 
 			/// Checks and updates state of blinking of the caret.
-			void CaretBlinker::update() {
+			void CaretPainter::update() {
 				if(isCaretBlinkable(caret_)) {
 					if(const boost::optional<boost::chrono::milliseconds> interval = systemBlinkTime(caret_)) {
 						if(!timer_.isActive()) {
