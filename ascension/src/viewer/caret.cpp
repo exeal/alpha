@@ -724,10 +724,11 @@ namespace ascension {
 
 		/**
 		 * Sets the caret shaper.
-		 * @param shaper The new caret shaper to set
+		 * @param shaper The new caret shaper to set. If this parameter is @c null, the @c TextArea instance uses
+		 *               @c DefaultCaretShaper object instead
 		 */
 		void TextArea::setCaretShaper(std::shared_ptr<CaretShaper> shaper) {
-			if(shaper == caretShaper_)
+			if(shaper == caretShaper_ && shaper.get() != nullptr)
 				return;
 			if(caretShaper_.get() != nullptr)
 				caretShaper_->uninstall(caret());	// TODO: Support multiple carets.
