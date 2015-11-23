@@ -283,6 +283,7 @@ namespace ascension {
 			} else
 				setMouseInputStrategy(std::unique_ptr<TextAreaMouseInputStrategy>());
 			relocated();
+			setCaretShaper(std::shared_ptr<CaretShaper>());
 			showCaret();
 		}
 
