@@ -153,9 +153,6 @@
     <Filter Include="ascension\Header Files\graphics\geometry\algorithms">
       <UniqueIdentifier>{f56f726d-54a0-4b16-a893-1803b9cdc642}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ascension\Source Files\viewer\detail">
-      <UniqueIdentifier>{e4a83762-ab8d-45ab-a1ea-778abc3f868e}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -563,8 +560,8 @@
     <ClCompile Include="..\..\ascension\ascension\graphics\rendering-context.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\detail\caret-painter.cpp">
-      <Filter>ascension\Source Files\viewer\detail</Filter>
+    <ClCompile Include="..\..\ascension\src\viewer\caret-painter.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1288,7 +1285,10 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithms\within.hpp">
       <Filter>ascension\Header Files\graphics\geometry\algorithms</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\detail\caret-painter.hpp">
+    <ClInclude Include="..\..\ascension\ascension\viewer\caret-painter.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\detail\caret-painter-base.hpp">
       <Filter>ascension\Header Files\viewer\detail</Filter>
     </ClInclude>
   </ItemGroup>
