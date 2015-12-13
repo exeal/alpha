@@ -263,11 +263,11 @@ namespace ascension {
 			 * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the viewport. If
 			 *                      this happened, the block-progression-dimension of the returned point is
 			 *                      @c std#numeric_limits&lt;Scalar&gt;::max() (for the before-edge) or
-			 *                      @c std#numeric_limits&lt;Scalar&gt;::min() (for the after-edge). If this is
+			 *                      @c std#numeric_limits&lt;Scalar&gt;::lowest() (for the after-edge). If this is
 			 *                      @c true, the calculation is performed completely and returns an exact location will
 			 *                      (may be very slow)
 			 * @return The point in viewport-coordinates in user units. The block-progression-dimension addresses the
-			 *         baseline of the line, or @c std#numeric_limits#min() or @c std#numeric_limits#max() if
+			 *         baseline of the line, or @c std#numeric_limits#lowest() or @c std#numeric_limits#max() if
 			 *         @a position is outside of @a viewport (in this case, inline-progression-dimension is zero. See
 			 *         the documentation of @c font#BaselineIterator class)
 			 * @throw BadPositionException @a position is outside of the document

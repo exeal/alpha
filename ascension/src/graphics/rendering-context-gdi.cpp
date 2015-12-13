@@ -227,8 +227,11 @@ namespace ascension {
 		inline bool RenderingContext2D::endPath() {
 			if(!hasCurrentSubpath_)
 				return false;
-			if(!win32::boole(::EndPath(nativeObject_.get())))
-				throw makePlatformError();
+			if(!win32::boole(::EndPath(nativeObject_.get()))) {
+				const auto e(makePlatformError());
+				assert(e.code().value() != ERROR_INVALID_PARAMETER);
+				throw e;
+			}
 			hasCurrentSubpath_ = false;
 			return true;
 		}
@@ -706,6 +709,19 @@ namespace ascension {
 
 		RenderingContext2D& RenderingContext2D::setGlobalAlpha(double) {
 			return *this;	// not supported in Win32 GDI...
+		}
+
+		RenderingContext2D& RenderingContext2D::setGlobalCompositeOperation(CompositeOperation compositeOperation) {
+			switch(compositeOperation) {
+				case COPY:
+					::SetROP2(nativeObject_.get(), R2_COPYPEN);
+					break;
+				case XOR:
+					::SetROP2(nativeObject_.get(), R2_XORPEN);
+				default:
+					ASCENSION_ASSERT_NOT_REACHED();
+			}
+			return *this;
 		}
 
 		RenderingContext2D& RenderingContext2D::setLineCap(LineCap lineCap) {

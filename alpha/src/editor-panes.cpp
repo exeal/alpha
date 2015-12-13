@@ -135,8 +135,8 @@ namespace alpha {
 
 #ifdef _DEBUG
 	bool EditorPanes::on_event(GdkEvent* event) {
-		ASCENSION_LOG_TRIVIAL(debug)
-			<< "allocation = " << get_allocated_width() << "x" << get_allocated_height() << std::endl;
+//		ASCENSION_LOG_TRIVIAL(debug)
+//			<< "allocation = " << get_allocated_width() << "x" << get_allocated_height() << std::endl;
 		if(event != nullptr)
 			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
 		return Gtk::Paned::on_event(event);
