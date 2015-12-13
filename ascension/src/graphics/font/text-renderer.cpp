@@ -29,6 +29,9 @@
 #include <boost/core/null_deleter.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
+#ifdef _DEBUG
+#	include <ascension/log.hpp>
+#endif
 
 namespace ascension {
 	namespace graphics {
@@ -466,6 +469,11 @@ namespace ascension {
 								presentation::_ipd = -inlineProgressionOffsetInViewerGeometry(*viewport())))));
 					layout.draw(context, graphics::geometry::make<graphics::Point>(p));
 				}
+#	ifdef _DEBUG
+				if(!boost::empty(linesToPaint))
+					ASCENSION_LOG_TRIVIAL(debug) << "TextRenderer.paint() with lines ["
+						<< linesToPaint.front().lineNumber << "," << linesToPaint.back().lineNumber << "]" << std::endl;
+#	endif
 #endif
 			}
 

@@ -170,8 +170,8 @@ namespace alpha {
 
 #ifdef _DEBUG
 	bool EditorView::on_event(GdkEvent* event) {
-		if(event != nullptr)
-			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
+//		if(event != nullptr)
+//			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
 		return ascension::viewer::TextViewer::on_event(event);
 	}
 #endif
