@@ -16,7 +16,7 @@
 #include <ascension/text-editor/input-sequence-checker.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/default-caret-shaper.hpp>
+#include <ascension/viewer/standard-caret-painter.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
@@ -723,18 +723,19 @@ namespace ascension {
 		}
 
 		/**
-		 * Sets the caret shaper.
-		 * @param shaper The new caret shaper to set. If this parameter is @c null, the @c TextArea instance uses
-		 *               @c DefaultCaretShaper object instead
+		 * Sets the caret painter.
+		 * @param newCaretPainter The new caret painter to set. If this parameter is @c null, the @c TextArea instance
+		 *                        uses @c StandardCaretPainter object instead
 		 */
-		void TextArea::setCaretShaper(std::shared_ptr<CaretShaper> shaper) {
-			if(shaper == caretShaper_ && shaper.get() != nullptr)
+		void TextArea::setCaretPainter(std::unique_ptr<CaretPainter> newCaretPainter) {
+			if(newCaretPainter == caretPainter_ && newCaretPainter.get() != nullptr)
 				return;
-			if(caretShaper_.get() != nullptr)
-				caretShaper_->uninstall(caret());	// TODO: Support multiple carets.
-			if(shaper.get() == nullptr)
-				shaper = std::make_shared<DefaultCaretShaper>();
-			(caretShaper_ = shaper)->install(caret());	// TODO: Support multiple carets.
+			if(caretPainter_.get() != nullptr)
+				static_cast<detail::CaretPainterBase&>(*caretPainter_).uninstall(caret());	// TODO: Support multiple carets.
+			if(newCaretPainter.get() == nullptr)
+				newCaretPainter.reset(new StandardCaretPainter());
+			caretPainter_ = std::move(newCaretPainter);
+			static_cast<detail::CaretPainterBase&>(*caretPainter_).install(caret());	// TODO: Support multiple carets.
 #ifdef ASCENSION_USE_SYSTEM_CARET
 			caretStaticShapeChanged(caret());	// update caret shapes immediately
 #endif

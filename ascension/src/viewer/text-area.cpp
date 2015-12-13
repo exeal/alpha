@@ -31,13 +31,18 @@
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/caret-shaper.hpp>
 #include <ascension/viewer/default-text-area-mouse-input-strategy.hpp>
+#include <ascension/viewer/standard-caret-painter.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
+#ifdef _DEBUG
+#	include <ascension/log.hpp>
+#	include <boost/geometry/io/dsv/write.hpp>
+#endif
 
 
 namespace ascension {
@@ -237,7 +242,7 @@ namespace ascension {
 		 */
 		void TextArea::hideCaret() BOOST_NOEXCEPT {
 			if(caretPainter_.get() != nullptr)
-				caretPainter_->hide();
+				static_cast<detail::CaretPainterBase&>(*caretPainter_).hide();
 		}
 
 		/// @see TextViewerComponent#install
@@ -245,7 +250,6 @@ namespace ascension {
 			viewer_ = &viewer;
 			locator_ = &locator;
 			caret_.reset(new Caret(viewer.document()));
-			caretPainter_.reset(new detail::CaretPainter(*caret_));
 			renderer_.reset(new Renderer(viewer));
 			caret().install(*this);
 			textViewer().document().addListener(*this);
@@ -271,6 +275,7 @@ namespace ascension {
 				mouseInputStrategy_->install(*this);
 			} else
 				setMouseInputStrategy(std::unique_ptr<TextAreaMouseInputStrategy>());
+			setCaretPainter(std::unique_ptr<CaretPainter>());
 			showCaret();
 			relocated();
 		}
@@ -328,7 +333,9 @@ namespace ascension {
 				context.restore();
 
 			// paint the caret(s)
-			paintCaret(context);
+			if(const graphics::font::TextLayout* const layout = textRenderer().layouts().at(kernel::line(caret())))
+				static_cast<detail::CaretPainterBase&>(*caretPainter_).paintIfShows(
+					context, *layout, modelToView(textViewer(), graphics::font::TextHit<kernel::Position>::leading(caret().position())));
 		}
 
 		/**
@@ -435,6 +442,9 @@ namespace ascension {
 			}
 
 			widgetapi::scheduleRedraw(textViewer(), boundsToRedraw, false);
+#ifdef _DEBUG
+			ASCENSION_LOG_TRIVIAL(debug) << "TextArea.redrawLines() scheduled redraw " << boost::geometry::dsv(boundsToRedraw) << std::endl;
+#endif
 		}
 
 		/// @see TextViewerComponent#relocated
@@ -479,7 +489,7 @@ namespace ascension {
 		 */
 		void TextArea::showCaret() BOOST_NOEXCEPT {
 			if(caretPainter_.get() != nullptr)
-				caretPainter_->show();
+				static_cast<detail::CaretPainterBase&>(*caretPainter_).show();
 		}
 
 		/// @see TextViewerComponent#uninstall

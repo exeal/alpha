@@ -49,7 +49,7 @@ namespace ascension {
 			BOOST_CONSTEXPR Caret& caret() BOOST_NOEXCEPT;
 			BOOST_CONSTEXPR const Caret& caret() const BOOST_NOEXCEPT;
 			void hideCaret() BOOST_NOEXCEPT;
-			void setCaretPainter(std::shared_ptr<CaretPainter> caretPainter) BOOST_NOEXCEPT;
+			void setCaretPainter(std::unique_ptr<CaretPainter> newCaretPainter) BOOST_NOEXCEPT;
 			void showCaret() BOOST_NOEXCEPT;
 			BOOST_CONSTEXPR bool showsCaret() const BOOST_NOEXCEPT;
 			/// @}

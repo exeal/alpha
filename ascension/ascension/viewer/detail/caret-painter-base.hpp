@@ -22,6 +22,7 @@ namespace ascension {
 	}
 
 	namespace viewer {
+		class Caret;
 		class TextArea;
 
 		namespace detail {
@@ -33,6 +34,11 @@ namespace ascension {
 			private:
 				/// Hides the cursor.
 				virtual void hide() = 0;
+				/**
+				 * Installs this @c CaretPainterBase instance to the @c TextArea object.
+				 * @param caret The caret
+				 */
+				virtual void install(Caret& caret) = 0;
 				/// Returns @c true if the caret is visible.
 				virtual bool isVisible() const BOOST_NOEXCEPT = 0;
 				/**
@@ -51,6 +57,11 @@ namespace ascension {
 				virtual void show() = 0;
 				/// Returns @c true if the caret is shown (may be blinking off).
 				virtual bool shows() const BOOST_NOEXCEPT = 0;
+				/**
+				 * Uninstalls this @c CaretPainterBase instance from the @c TextArea object.
+				 * @param caret The caret
+				 */
+				virtual void uninstall(Caret& caret) = 0;
 				/// Checks and updates state of blinking of the caret.
 				virtual void update() = 0;
 				friend class TextArea;

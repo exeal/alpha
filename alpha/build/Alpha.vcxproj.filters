@@ -563,6 +563,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\caret-painter.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\standard-caret-painter.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1290,6 +1293,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\detail\caret-painter-base.hpp">
       <Filter>ascension\Header Files\viewer\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\standard-caret-painter.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
