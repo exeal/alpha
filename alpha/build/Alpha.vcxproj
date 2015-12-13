@@ -267,6 +267,7 @@
     <ClCompile Include="..\..\ascension\src\viewer\source\line-number-ruler.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\ruler-border-decorator.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\source-viewer.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\standard-caret-painter.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-area.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-model-conversion.cpp" />
@@ -524,6 +525,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler-decorator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\source-viewer.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\standard-caret-painter.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area-mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-component.hpp" />

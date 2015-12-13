@@ -7,6 +7,8 @@
  * @date 2015-11-26 Reverted from ascension/src/viewer/detail/.
  */
 
+#include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/caret-painter.hpp>
 #include <ascension/viewer/text-area.hpp>
@@ -73,20 +75,57 @@ namespace ascension {
 			}
 		}
 
+		/// Default constructor.
+		CaretPainter::CaretPainter() : caret_(nullptr) {
+		}
+
+		/// Destructor.
+		CaretPainter::~CaretPainter() BOOST_NOEXCEPT {
+		}
+
 		/**
-		 * Constructor.
-		 * @param caret The caret this object is associated with
+		 * Computes and returns logical bounds of the character the given caret addresses.
+		 * @param caret The caret
+		 * @param layout The text layout on which @a caret is placed
+		 * @return The logical character bounds and the 'alignment-point' of the character in user units. (0, 0) is the
+		 *         'alignment-point' of @a layout. You can use @c presentation#mapFlowRelativeToPhysical function to
+		 *         map these values into physical coordinates
 		 */
-		CaretPainter::CaretPainter(Caret& caret) : caret_(caret) {
-			caretMotionConnection_ = caret_.motionSignal().connect([this](const Caret& caret, const kernel::Region&) {
-				if(&caret == &this->caret_ && this->shows() && widgetapi::isVisible(this->caret_.textArea().textViewer())) {
+		std::pair<presentation::FlowRelativeFourSides<graphics::Scalar>, presentation::FlowRelativeTwoAxes<graphics::Scalar>>
+				CaretPainter::computeCharacterLogicalBounds(const kernel::Point& caret, const graphics::font::TextLayout& layout) {
+			const Index subline = layout.lineAt(kernel::offsetInLine(caret));
+			const auto extent(layout.extent(boost::irange(subline, subline + 1)));
+			const auto leading(layout.hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret))));
+			const auto trailing(kernel::locations::isEndOfLine(caret) ? leading : layout.hitToPoint(graphics::font::TextHit<>::trailing(kernel::offsetInLine(caret))));
+
+			return std::make_pair(
+				presentation::FlowRelativeFourSides<graphics::Scalar>(
+					presentation::_blockStart = *boost::const_begin(extent), presentation::_blockEnd = *boost::const_end(extent),
+					presentation::_inlineStart = leading.ipd(), presentation::_inlineEnd = trailing.ipd()),
+				leading);
+		}
+
+		/// @see CaretPainterBase#hide
+		void CaretPainter::hide() {
+			if(shows()) {
+				timer_.stop();
+				setVisible(false);
+				visible_ = boost::none;
+			}
+		}
+
+		/// @see CaretPainterBase#install
+		void CaretPainter::install(Caret& caret) {
+			assert(caret_ == nullptr);
+			caret_ = &caret;
+			caretMotionConnection_ = caret_->motionSignal().connect([this](const Caret& caret, const kernel::Region&) {
+				if(&caret == this->caret_ && this->shows() && widgetapi::isVisible(this->caret_->textArea().textViewer())) {
 					this->resetTimer();
 					this->pend();
 				}
 			});
-
-			viewerFocusChangedConnection_ = caret_.textArea().textViewer().focusChangedSignal().connect([this](const TextViewer& viewer) {
-				if(&viewer == &this->caret_.textArea().textViewer()/* && !viewer.isFrozen()*/) {
+			viewerFocusChangedConnection_ = caret_->textArea().textViewer().focusChangedSignal().connect([this](const TextViewer& viewer) {
+				if(&viewer == &this->caret_->textArea().textViewer()/* && !viewer.isFrozen()*/) {
 					this->resetTimer();
 					if(widgetapi::hasFocus(viewer))
 						this->update();
@@ -94,15 +133,14 @@ namespace ascension {
 			});
 
 			update();
+			installed();
 		}
 
-		/// @see CaretPainterBase#hide
-		void CaretPainter::hide() {
-			if(visible_ != boost::none) {
-				timer_.stop();
-				setVisible(false);
-				visible_ = boost::none;
-			}
+		/**
+		 * This @c CaretPainter was installed into the @c TextArea.
+		 * @note The default implementation does nothing.
+		 */
+		void CaretPainter::installed() {
 		}
 
 		/// @see CaretPainterBase#paintIfShows
@@ -114,8 +152,9 @@ namespace ascension {
 
 		/// @see CaretPainterBase#pend
 		void CaretPainter::pend() {
-			if(isCaretBlinkable(caret_)) {
-				if(const boost::optional<boost::chrono::milliseconds> interval = systemBlinkTime(caret_)) {
+			assert(caret_ != nullptr);
+			if(isCaretBlinkable(*caret_)) {
+				if(const boost::optional<boost::chrono::milliseconds> interval = systemBlinkTime(*caret_)) {
 					timer_.stop();
 					timer_.start(boost::get(interval) * BLINK_RATE_PENDING_MULTIPLIER / BLINK_RATE_DIVIDER, *this);
 					setVisible(true);
@@ -128,29 +167,36 @@ namespace ascension {
 		}
 
 		inline void CaretPainter::setVisible(bool visible) {
+			assert(caret_ != nullptr);
+			assert(shows());
 			if(visible == visible_)
 				return;
 			visible_ = visible;
-			caret_.textArea().redrawLine(kernel::line(caret_));	// TODO: This code is not efficient.
+			caret_->textArea().redrawLine(kernel::line(*caret_));	// TODO: This code is not efficient.
 		}
 
 		/// @see CaretPainterBase#show
 		void CaretPainter::show() {
-			resetTimer();
-			if(widgetapi::hasFocus(caret_.textArea().textViewer()))
-				update();
+			assert(caret_ != nullptr);
+			if(!shows()) {
+				visible_ = false;
+				resetTimer();
+				if(widgetapi::hasFocus(caret_->textArea().textViewer()))
+					update();
+			}
 		}
 
 		/// @see HasTimer#timeElapsed
 		void CaretPainter::timeElapsed(Timer<>&) {
+			assert(caret_ != nullptr);
 			timer_.stop();
-			const auto interval(systemBlinkTime(caret_));
-			if(interval == boost::none || !widgetapi::hasFocus(caret_.textArea().textViewer())) {
+			const auto interval(systemBlinkTime(*caret_));
+			if(interval == boost::none || !widgetapi::hasFocus(caret_->textArea().textViewer())) {
 				update();
 				return;
 			}
 
-			const auto timeout(systemBlinkTimeout(caret_));
+			const auto timeout(systemBlinkTimeout(*caret_));
 			if(timeout != boost::none && elapsedTimeFromLastUserInput_ > boost::get(timeout)) {
 				// stop blinking
 				setVisible(true);
@@ -164,20 +210,38 @@ namespace ascension {
 			}
 		}
 
+		/// @see CaretPainterBase#uninstall
+		void CaretPainter::uninstall(Caret& caret) {
+			assert(caret_ != nullptr);
+			timer_.stop();
+			caret_ = nullptr;
+			uninstalled();
+		}
+
+		/**
+		 * This @c CaretPainter was uninstalled from the @c TextArea.
+		 * @note The default implementation does nothing.
+		 */
+		void CaretPainter::uninstalled() {
+		}
+
 		/// @see CaretPainterBase#update
 		void CaretPainter::update() {
-			if(isCaretBlinkable(caret_)) {
-				if(const boost::optional<boost::chrono::milliseconds> interval = systemBlinkTime(caret_)) {
-					if(!timer_.isActive()) {
-						setVisible(true);
-						timer_.start(boost::get(interval) * BLINK_RATE_SHOWING_MULTIPLIER / BLINK_RATE_DIVIDER, *this);
-						return;
+			assert(caret_ != nullptr);
+			if(shows()) {
+				if(isCaretBlinkable(*caret_)) {
+					if(const boost::optional<boost::chrono::milliseconds> interval = systemBlinkTime(*caret_)) {
+						if(!timer_.isActive()) {
+							setVisible(true);
+							timer_.start(boost::get(interval) * BLINK_RATE_SHOWING_MULTIPLIER / BLINK_RATE_DIVIDER, *this);
+							return;
+						}
 					}
 				}
-			}
 				
-			timer_.stop();
-			visible_ = true;
+				timer_.stop();
+				setVisible(false);
+			}
 		}
 	}
 }
