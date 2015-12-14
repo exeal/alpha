@@ -245,7 +245,7 @@ namespace ascension {
 					if(selectCompletionProposal(target(), procedure_, direction_, n))
 						return true;
 					caret.endRectangleSelection();
-					if(viewer::isSelectionEmpty(caret)) {	// just clear the selection
+					if(!viewer::isSelectionEmpty(caret)) {	// just clear the selection
 						if(moveToBoundOfSelection(caret, procedure_, direction_))
 							return true;
 					}
