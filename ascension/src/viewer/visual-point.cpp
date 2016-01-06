@@ -57,11 +57,13 @@ namespace ascension {
 				const graphics::font::TextLayout& layout = renderer.layouts().at(
 					np.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);	// this call may change the layouts
 				const float visibleLines = viewport->numberOfVisibleLines();
-				presentation::FlowRelativeTwoAxes<boost::optional<graphics::font::TextViewport::ScrollOffset>> to;	// scroll destination
+				presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset> to;	// scroll destination
 
-				// scroll if the point is outside of 'before-edge' or 'after-edge'
+				// scroll if the point is outside of 'before-edge'
 				to.bpd() = std::min(p.visualLine().line, viewport->scrollPositions().bpd());
-				to.bpd() = std::max(p.visualLine().line - static_cast<graphics::font::TextViewport::ScrollOffset>(visibleLines) + 1, *to.bpd());
+				// scroll if the point is outside of 'after-edge'
+				if(p.visualLine().line > static_cast<graphics::font::TextViewport::ScrollOffset>(visibleLines))
+					to.bpd() = std::max(p.visualLine().line - static_cast<graphics::font::TextViewport::ScrollOffset>(visibleLines) + 1, to.bpd());
 
 				// scroll if the point is outside of 'start-edge' or 'end-edge'
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -85,16 +87,17 @@ namespace ascension {
 				const Index pointIpd = static_cast<Index>(
 					(graphics::font::lineIndent(layout, viewport->contentMeasure()) + layout.hitToPoint(graphics::font::TextHit<>::leading(np.offsetInLine)).ipd()));
 				to.ipd() = std::min(pointIpd, viewport->scrollPositions().ipd());
-				to.ipd() = std::max(pointIpd - static_cast<Index>(graphics::font::pageSize<presentation::ReadingDirection>(*viewport)) + 1, *to.ipd());
+				to.ipd() = std::max(pointIpd - static_cast<Index>(graphics::font::pageSize<presentation::ReadingDirection>(*viewport)) + 1, to.ipd());
 #	else
 				const Index pointIpd = static_cast<Index>(
 					(graphics::font::lineIndent(layout, viewport->contentMeasure()) + layout.hitToPoint(graphics::font::TextHit<>::leading(np.offsetInLine)).ipd())
 					/ widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->averageCharacterWidth());
 				to.ipd() = std::min(pointIpd, viewport->scrollPositions().ipd());
-				to.ipd() = std::max(pointIpd - static_cast<Index>(viewport->numberOfVisibleCharactersInLine()) + 1, *to.ipd());
+				to.ipd() = std::max(pointIpd - static_cast<Index>(viewport->numberOfVisibleCharactersInLine()) + 1, to.ipd());
 #	endif
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-				viewport->scrollTo(to);
+				viewport->scrollTo(presentation::makeFlowRelativeTwoAxes((
+					presentation::_bpd = boost::make_optional(to.bpd()), presentation::_ipd = boost::make_optional(to.ipd()))));
 			}
 		}	// namespace utils
 
@@ -837,6 +840,7 @@ namespace ascension {
 					(direction == Direction::FORWARD) ? static_cast<SignedIndex>(lines) : -static_cast<SignedIndex>(lines));
 				if(!p.positionInVisualLine_)
 					const_cast<viewer::VisualPoint&>(p).rememberPositionInVisualLine();
+				np.line = visualLine.line;
 				if(nullptr != (layout = renderer.layouts().at(visualLine.line))) {
 					np.offsetInLine = layout->hitTestCharacter(
 						presentation::FlowRelativeTwoAxes<graphics::Scalar>(
