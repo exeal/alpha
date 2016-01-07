@@ -275,7 +275,7 @@ namespace ascension {
 		 */
 		const ComputedTextLineStyle& Presentation::computeTextLineStyle(Index line) const {
 			if(line >= document_.numberOfLines())
-				throw kernel::BadPositionException(kernel::Position(line, 0));
+				throw kernel::BadPositionException(kernel::Position::bol(line));
 
 			const std::shared_ptr<const DeclaredTextLineStyle> declared(declaredTextLineStyle(line));
 			const std::shared_ptr<const DeclaredTextLineStyle> cascaded(*styles::cascade(boost::make_iterator_range_n(&declared, 1)));
@@ -350,7 +350,7 @@ namespace ascension {
 		 */
 		const ComputedTextRunStyle& Presentation::computeTextRunStyleForLine(Index line) const {
 			if(line >= document_.numberOfLines())
-				throw kernel::BadPositionException(kernel::Position(line, 0));
+				throw kernel::BadPositionException(kernel::Position::bol(line));
 
 			const CachedComputedTextRunStyle computed(computeTextRunStyle(*declaredTextLineStyle(line)->runsStyle(), computedTextRunStyle()));
 			pushToCacheList(computedStyles_->cacheForRuns, computed, MAXIMUM_COMPUTED_TEXT_RUNS_CACHE_SIZE);
@@ -398,7 +398,7 @@ namespace ascension {
 		 */
 		std::unique_ptr<ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line) const {
 			if(line >= document_.numberOfLines())
-				throw kernel::BadPositionException(kernel::Position(line, 0));
+				throw kernel::BadPositionException(kernel::Position::bol(line));
 			if(textRunStyleDeclarator_.get() != nullptr) {
 				std::unique_ptr<DeclaredStyledTextRunIterator> declaredRunStyles(textRunStyleDeclarator_->declareTextRunStyle(line));
 				if(declaredRunStyles.get() != nullptr)
@@ -520,7 +520,7 @@ namespace ascension {
 		 */
 		const hyperlink::Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOfHyperlinks) const {
 			if(line >= document_.numberOfLines())
-				throw kernel::BadPositionException(kernel::Position(line, 0));
+				throw kernel::BadPositionException(kernel::Position::bol(line));
 			else if(hyperlinkDetector_.get() == nullptr) {
 				numberOfHyperlinks = 0;
 				return nullptr;
@@ -669,7 +669,7 @@ namespace ascension {
 		void Presentation::textLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const {
 			if(line >= document_.numberOfLines())
-				throw kernel::BadPositionException(kernel::Position(line, 0));
+				throw kernel::BadPositionException(kernel::Position::bol(line));
 			TextLineColorSpecifier::Priority highestPriority = 0, p;
 			boost::optional<graphics::Color> f, g;
 			BOOST_FOREACH(const std::shared_ptr<TextLineColorSpecifier>& s, textLineColorSpecifiers_) {

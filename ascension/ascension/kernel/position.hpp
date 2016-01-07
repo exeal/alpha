@@ -48,6 +48,14 @@ namespace ascension {
 			bool operator<(const Position& other) const BOOST_NOEXCEPT {
 				return line < other.line || (line == other.line && offsetInLine < other.offsetInLine);
 			}
+			/// Returns the result of @c Position(line, 0).
+			static BOOST_CONSTEXPR Position bol(Index line) BOOST_NOEXCEPT {
+				return Position(line, 0);
+			}
+			/// Returns the result of @c #bol(p.line).
+			static BOOST_CONSTEXPR Position bol(const Position& p) BOOST_NOEXCEPT {
+				return bol(p.line);
+			}
 			/// Returns the result of @c Position(0, 0).
 			static BOOST_CONSTEXPR Position zero() BOOST_NOEXCEPT {
 				return Position(0, 0);

@@ -226,7 +226,7 @@ namespace ascension {
 			 */
 			boost::optional<Position> backwardBookmark(const Point& p, Index marks /* = 1 */) {
 				const boost::optional<Index> line(p.document().bookmarker().next(p.normalized().line, Direction::BACKWARD, true, marks));
-				return (line != boost::none) ? boost::make_optional(Position(*line, 0)) : boost::none;
+				return (line != boost::none) ? boost::make_optional(Position::bol(boost::get(line))) : boost::none;
 			}
 
 			/**
@@ -299,7 +299,7 @@ namespace ascension {
 			 * @return The destination
 			 */
 			Position beginningOfLine(const Point& p) {
-				return std::max(Position(p.normalized().line, 0), p.document().accessibleRegion().first);
+				return std::max(Position::bol(p.normalized()), p.document().accessibleRegion().first);
 			}
 
 			/**
@@ -344,7 +344,7 @@ namespace ascension {
 			 */
 			boost::optional<Position> forwardBookmark(const Point& p, Index marks /* = 1 */) {
 				const boost::optional<Index> line(p.document().bookmarker().next(p.normalized().line, Direction::FORWARD, true, marks));
-				return (line != boost::none) ? boost::make_optional(Position(*line, 0)) : boost::none;
+				return (line != boost::none) ? boost::make_optional(Position::bol(boost::get(line))) : boost::none;
 			}
 
 			/**
@@ -433,7 +433,7 @@ namespace ascension {
 			 */
 			boost::optional<Position> nextBookmark(const Point& p, Direction direction, Index marks /* = 1 */) {
 				const boost::optional<Index> line(p.document().bookmarker().next(p.normalized().line, direction, true, marks));
-				return (line != boost::none) ? boost::make_optional(Position(*line, 0)) : boost::none;
+				return (line != boost::none) ? boost::make_optional(Position::bol(boost::get(line))) : boost::none;
 			}
 
 			/**

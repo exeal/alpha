@@ -112,7 +112,7 @@ namespace ascension {
 					}
 					if(indentLength > 0) {
 						const Index deleteLength = std::min<Index>(-level, indentLength);
-						erase(document, kernel::Position(line, 0), kernel::Position(line, deleteLength));
+						erase(document, kernel::Position::bol(line), kernel::Position(line, deleteLength));
 						if(line == otherResult.line && otherResult.offsetInLine != 0)
 							otherResult.offsetInLine -= deleteLength;
 						if(line == kernel::line(caret) && offsetInLine(caret) != 0)
@@ -152,7 +152,7 @@ namespace ascension {
 						}
 						if(indentLength > 0) {
 							const Index deleteLength = std::min<Index>(-level, indentLength);
-							erase(document, kernel::Position(line, 0), kernel::Position(line, deleteLength));
+							erase(document, kernel::Position::bol(line), kernel::Position(line, deleteLength));
 							if(line == otherResult.line && otherResult.offsetInLine != 0)
 								otherResult.offsetInLine -= deleteLength;
 							if(line == kernel::line(caret) && offsetInLine(caret) != 0)
@@ -437,7 +437,7 @@ namespace ascension {
 
 			try {
 				document.replace(kernel::Region(
-					kernel::Position(firstLine, 0), kernel::Position(firstLine + 1, document.lineLength(firstLine + 1))), s);
+					kernel::Position::bol(firstLine), kernel::Position(firstLine + 1, document.lineLength(firstLine + 1))), s);
 				caret.moveTo(kernel::Position((old.line != document.numberOfLines() - 1) ? firstLine + 1 : firstLine, old.offsetInLine));
 			} catch(const kernel::DocumentAccessViolationException&) {
 				return false;

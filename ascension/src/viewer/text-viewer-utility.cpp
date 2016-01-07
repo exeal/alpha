@@ -46,7 +46,7 @@ namespace ascension {
 				// find the start of the identifier
 				if(startOffsetInLine != nullptr) {
 					kernel::DocumentCharacterIterator i(document,
-						kernel::Region(std::max(partition.region.beginning(), kernel::Position(position.line, 0)), position), position);
+						kernel::Region(std::max(partition.region.beginning(), kernel::Position::bol(position)), position), position);
 					do {
 						--i;
 						if(!syntax.isIdentifierContinueCharacter(*i)) {

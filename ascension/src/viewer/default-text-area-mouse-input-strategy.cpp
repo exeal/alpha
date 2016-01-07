@@ -84,7 +84,7 @@ namespace ascension {
 							kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 						--i;
 						caret.select(kernel::Position(anchorLine_, *boost::const_end(anchorOffsetsInLine_)),
-							(i.base().tell().line == destination.line) ? i.base().tell() : kernel::Position(destination.line, 0));
+							(i.base().tell().line == destination.line) ? i.base().tell() : kernel::Position::bol(destination.line));
 					} else if(destination.line > anchorLine_
 							|| (destination.line == anchorLine_
 								&& destination.offsetInLine > *boost::const_end(anchorOffsetsInLine_))) {
@@ -276,7 +276,7 @@ namespace ascension {
 					graphics::geometry::_from = cursorPosition, graphics::geometry::_to = hotspot,
 					graphics::geometry::_dx = -(geometry::left(textArea.contentRectangle()) - viewport->scrollPositions().ipd() + geometry::left(selectionBounds)),
 					graphics::geometry::_dy = -geometry::y(modelToView(viewer,
-						graphics::font::TextHit<kernel::Position>::leading(kernel::Position(selectedRegion.beginning().line, 0))))));
+						graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(selectedRegion.beginning().line))))));
 
 				// calculate 'dimensions'
 				graphics::geometry::scale((

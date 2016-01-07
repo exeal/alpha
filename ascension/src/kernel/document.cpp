@@ -346,7 +346,7 @@ namespace ascension {
 		 */
 		bool Bookmarker::isMarked(Index line) const {
 			if(line >= document_.numberOfLines())
-				throw BadPositionException(Position(line, 0));
+				throw BadPositionException(Position::bol(line));
 			const auto i(find(line));
 			return i != std::end(markedLines_) && *i == line;
 		}
@@ -359,7 +359,7 @@ namespace ascension {
 		 */
 		void Bookmarker::mark(Index line, bool set) {
 			if(line >= document_.numberOfLines())
-				throw BadPositionException(Position(line, 0));
+				throw BadPositionException(Position::bol(line));
 			const auto i(find(line));
 			if(i != std::end(markedLines_) && *i == line) {
 				if(!set) {
@@ -389,7 +389,7 @@ namespace ascension {
 		boost::optional<Index> Bookmarker::next(Index from, Direction direction, bool wrapAround /* = true */, std::size_t marks /* = 1 */) const {
 			// this code is tested by 'test/document-test.cpp'
 			if(from >= document_.numberOfLines())
-				throw BadPositionException(Position(from, 0));
+				throw BadPositionException(Position::bol(from));
 			else if(marks == 0 || markedLines_.empty())
 				return boost::none;
 			else if(marks > markedLines_.size()) {
@@ -448,7 +448,7 @@ namespace ascension {
 		 */
 		void Bookmarker::toggle(Index line) {
 			if(line >= document_.numberOfLines())
-				throw BadPositionException(Position(line, 0));
+				throw BadPositionException(Position::bol(line));
 			const auto i(find(line));
 			if(i == std::end(markedLines_) || *i != line)
 				markedLines_.insert(i, line);
@@ -680,7 +680,7 @@ namespace ascension {
 		 */
 		Index Document::lineOffset(Index line, const text::Newline& newline) const {
 			if(line >= numberOfLines())
-				throw BadPositionException(Position(line, 0));
+				throw BadPositionException(Position::bol(line));
 		
 			const text::Newline resolvedNewline(text::resolveNewline(*this, newline));
 			Index offset = 0, eolLength = resolvedNewline.isLiteral() ? resolvedNewline.asString().length() : 0;

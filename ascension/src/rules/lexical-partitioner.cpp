@@ -92,7 +92,7 @@ namespace ascension {
 			// compute partitioning for the affected region using the registered rules
 			std::vector<Partition*> newPartitions;	// newly computed partitions for the affected region
 			kernel::DocumentCharacterIterator i(doc,	// the beginning of the region to parse ~ the end of the document
-				kernel::Region(kernel::Position(std::min(change.erasedRegion().beginning().line, change.insertedRegion().beginning().line), 0), doc.region().end()));
+				kernel::Region(kernel::Position::bol(std::min(change.erasedRegion().beginning().line, change.insertedRegion().beginning().line)), doc.region().end()));
 			kernel::ContentType contentType, destination;
 			contentType = (i.tell().line == 0) ? kernel::DEFAULT_CONTENT_TYPE
 				: (*partitionAt(kernel::Position(i.tell().line - 1, doc.lineLength(i.tell().line - 1))))->contentType;
