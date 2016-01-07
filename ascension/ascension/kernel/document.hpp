@@ -529,7 +529,7 @@ namespace ascension {
 		 */
 		inline const Document::Line& Document::getLineInformation(Index line) const {
 			if(line >= lines_.size())
-				throw BadPositionException(Position(line, 0));
+				throw BadPositionException(Position::bol(line));
 			return *lines_[line];
 		}
 #if 0
