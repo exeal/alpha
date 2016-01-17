@@ -28,6 +28,8 @@ namespace ascension {
 			 * @note The "Computed Value" of almost all style properties which have @c Length as "Specified Value" are
 			 *       also @c Length types, because a @c Presentation instance is shared by multiple @c TextViewer s.
 			 *       The computation into physical units is delayed until generation of concrete layouts.
+			 * @note Resolution of viewport-related units uses @c #Context#viewport data member which refers to the
+			 *       the size of @c TextViewport (equals to 'allocation-rectangle' of the @c TextArea).
 			 * @see CSS Values and Units Module Level 3, 5. Distance Units: the ‘<length>’ type
 			 *      (http://www.w3.org/TR/css3-values/#lengths)
 			 * @see 4.2 Basic data types - SVG (Second Edition)
