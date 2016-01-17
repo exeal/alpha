@@ -75,7 +75,7 @@ namespace ascension {
 
 		/**
 		 * Returns the 'allocation-rectangle' of the text area, in viewer-coordinates.
-		 * @see #textAreaContentRectangle
+		 * @see #contentRectangle, #allocationRectangleChangedSignal
 		 */
 		graphics::Rectangle TextArea::allocationRectangle() const BOOST_NOEXCEPT {
 			if(viewer_ == nullptr || locator_ == nullptr)
@@ -85,7 +85,10 @@ namespace ascension {
 			return temp;
 		}
 
-		/// Returns the @c GeometryChangedSignal signal connector for the 'allocation-rectangle'.
+		/**
+		 * Returns the @c GeometryChangedSignal signal connector for the 'allocation-rectangle'.
+		 * @see #allocationRectangle
+		 */
 		SignalConnector<TextArea::GeometryChangedSignal> TextArea::allocationRectangleChangedSignal() BOOST_NOEXCEPT {
 			return makeSignalConnector(allocationRectangleChangedSignal_);
 		}
@@ -140,14 +143,17 @@ namespace ascension {
 
 		/**
 		 * Returns the 'content-rectangle' of the text area, in viewer-coordinates.
-		 * @see #bounds, #textAreaAllocationRectangle
+		 * @see #allocationRectangle, #contentRectangleChangedSignal
 		 */
 		graphics::Rectangle TextArea::contentRectangle() const BOOST_NOEXCEPT {
 			// TODO: Consider 'padding-start' setting.
 			return allocationRectangle();
 		}
 
-		/// Returns the @c GeometryChangedSignal signal connector for the 'content-rectangle'.
+		/**
+		 * Returns the @c GeometryChangedSignal signal connector for the 'content-rectangle'.
+		 * @see #contentRectangle
+		 */
 		SignalConnector<TextArea::GeometryChangedSignal> TextArea::contentRectangleChangedSignal() BOOST_NOEXCEPT {
 			return makeSignalConnector(contentRectangleChangedSignal_);
 		}
@@ -335,7 +341,7 @@ namespace ascension {
 			// paint the caret(s)
 			if(const graphics::font::TextLayout* const layout = textRenderer().layouts().at(kernel::line(caret())))
 				static_cast<detail::CaretPainterBase&>(*caretPainter_).paintIfShows(
-					context, *layout, modelToView(textViewer(), graphics::font::TextHit<kernel::Position>::leading(caret().position())));
+					context, *layout, modelToView(textViewer(), graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(caret().position()))));
 		}
 
 		/**
@@ -452,7 +458,7 @@ namespace ascension {
 			allocationRectangleChangedSignal_(*this);
 			contentRectangleChangedSignal_(*this);
 			if(viewer_ != nullptr)
-				textRenderer().viewport()->resize(graphics::geometry::size(contentRectangle()));
+				textRenderer().viewport()->resize(graphics::geometry::size(allocationRectangle()));	// update the size of 'initial-containing-block'
 		}
 
 		/// @see Caret#SelectionShapeChangedSignal
