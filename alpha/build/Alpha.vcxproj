@@ -65,7 +65,7 @@
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\ascension;$(ProjectDir)..\..;$(ProjectDir)..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_RESULT_OF_USE_DECLTYPE;BOOST_PYTHON_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB;BOOST_RESULT_OF_USE_DECLTYPE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
@@ -93,7 +93,7 @@
       <Culture>0x0411</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;libboost_python3-vc90-mt-s-1_41.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;libboost_python3-vc100-mt-s-1_60.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)Alpha.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ManifestFile>$(IntDir)$(TargetFileName).intermediate.manifest</ManifestFile>
@@ -128,7 +128,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\ascension;$(ProjectDir)..\..;$(ProjectDir)..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_STATIC_LIB;BOOST_PYTHON_STATIC_LINK;BOOST_RESULT_OF_USE_DECLTYPE;ASCENSION_WINDOW_SYSTEM_GTK;ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI;ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS;ALPHA_NO_AMBIENT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB;BOOST_RESULT_OF_USE_DECLTYPE;ASCENSION_WINDOW_SYSTEM_GTK;ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI;ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS;ALPHA_NO_AMBIENT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <SmallerTypeCheck>true</SmallerTypeCheck>
@@ -157,7 +157,7 @@
       <Culture>0x0411</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;atkmm-vc100-d-1_6.lib;cairo.lib;cairomm-vc100-d-1_0.lib;gdk-3.0.lib;gdkmm-vc100-d-3_0.lib;giomm-vc100-d-2_4.lib;glib-2.0.lib;glibmm-vc100-d-2_4.lib;gobject-2.0.lib;gtk-3.0.lib;gtkmm-vc100-d-3_0.lib;intl.lib;pango-1.0.lib;pangomm-vc100-d-1_4.lib;sigc-vc100-d-2_0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;atkmm-vc100-d-1_6.lib;cairo.lib;cairomm-vc100-d-1_0.lib;gdk-3.0.lib;gdkmm-vc100-d-3_0.lib;giomm-vc100-d-2_4.lib;glib-2.0.lib;glibmm-vc100-d-2_4.lib;gobject-2.0.lib;gtk-3.0.lib;gtkmm-vc100-d-3_0.lib;intl.lib;boost_python3-vc100-mt-gd-1_60.lib;pango-1.0.lib;pangomm-vc100-d-1_4.lib;sigc-vc100-d-2_0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)Alpha.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ManifestFile>$(IntDir)$(TargetFileName).intermediate.manifest</ManifestFile>
