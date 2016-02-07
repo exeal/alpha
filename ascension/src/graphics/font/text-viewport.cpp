@@ -302,14 +302,14 @@ namespace ascension {
 			}
 
 			template<>
-			TextViewport::ScrollOffset pageSize<presentation::BlockFlowDirection>(const TextViewport& viewport) {
-				return static_cast<TextViewport::ScrollOffset>(viewport.numberOfVisibleLines());
+			float pageSize<presentation::BlockFlowDirection>(const TextViewport& viewport) {
+				return viewport.numberOfVisibleLines();
 			}
 
 			template<>
-			TextViewport::ScrollOffset pageSize<presentation::ReadingDirection>(const TextViewport& viewport) {
+			float pageSize<presentation::ReadingDirection>(const TextViewport& viewport) {
 				const Dimension bounds = viewport.size();
-				return static_cast<TextViewport::ScrollOffset>(isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ? geometry::dx(bounds) : geometry::dy(bounds));
+				return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ? geometry::dx(bounds) : geometry::dy(bounds);
 			}
 
 			/**
@@ -321,21 +321,21 @@ namespace ascension {
 			 */
 
 			template<>
-			TextViewport::SignedScrollOffset pageSize<0>(const TextViewport& viewport) {
+			float pageSize<0>(const TextViewport& viewport) {
 				switch(viewport.textRenderer().computedBlockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
 						return pageSize<presentation::ReadingDirection>(viewport);
 					case presentation::VERTICAL_RL:
-						return -static_cast<TextViewport::SignedScrollOffset>(pageSize<presentation::BlockFlowDirection>(viewport));
+						return -pageSize<presentation::BlockFlowDirection>(viewport);
 					case presentation::VERTICAL_LR:
-						return +static_cast<TextViewport::SignedScrollOffset>(pageSize<presentation::BlockFlowDirection>(viewport));
+						return +pageSize<presentation::BlockFlowDirection>(viewport);
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
 			}
 
 			template<>
-			TextViewport::SignedScrollOffset pageSize<1>(const TextViewport& viewport) {
+			float pageSize<1>(const TextViewport& viewport) {
 				return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ?
 					pageSize<presentation::BlockFlowDirection>(viewport) : pageSize<presentation::ReadingDirection>(viewport);
 			}
@@ -348,13 +348,13 @@ namespace ascension {
 			template<>
 			boost::integer_range<TextViewport::ScrollOffset> scrollableRange<presentation::BlockFlowDirection>(const TextViewport& viewport) {
 				return boost::irange(static_cast<TextViewport::ScrollOffset>(0),
-					viewport.textRenderer().layouts().numberOfVisualLines()/* - pageSize<presentation::BlockFlowDirection>(viewport) + 1*/);
+					static_cast<TextViewport::ScrollOffset>(viewport.textRenderer().layouts().numberOfVisualLines() - pageSize<presentation::BlockFlowDirection>(viewport)) + 1);
 			}
 
 			template<>
 			boost::integer_range<TextViewport::ScrollOffset> scrollableRange<presentation::ReadingDirection>(const TextViewport& viewport) {
 				return boost::irange(static_cast<TextViewport::ScrollOffset>(0),
-					static_cast<TextViewport::ScrollOffset>(viewport.contentMeasure()) - pageSize<presentation::ReadingDirection>(viewport) + 1);
+					static_cast<TextViewport::ScrollOffset>(viewport.contentMeasure() - pageSize<presentation::ReadingDirection>(viewport)) + 1);
 			}
 
 			template<>
@@ -384,7 +384,7 @@ namespace ascension {
 					mapPhysicalToFlowRelative(viewport.textRenderer().presentation().computeWritingMode(), pages));
 				viewport.scrollBlockFlowPage(delta.bpd());
 				delta.bpd() = 0;
-				delta.ipd() *= pageSize<presentation::ReadingDirection>(viewport);
+				delta.ipd() *= static_cast<TextViewport::ScrollOffset>(pageSize<presentation::ReadingDirection>(viewport));
 				viewport.scroll(delta);
 			}
 
@@ -1144,9 +1144,7 @@ namespace ascension {
 //					TextViewportNotificationLocker notificationLockGuard(this);	// this code can't change the layouts, unlike #scroll
 					auto range(scrollableRange<presentation::BlockFlowDirection>(*this));
 					assert(!boost::empty(range));
-					range.advance_end(-1);
 					newPositions.bpd() = clamp(newPositions.bpd(), range);
-					range.advance_end(+1);
 
 					// locate the nearest visual line
 					const Index numberOfLogicalLines = textRenderer().presentation().document().numberOfLines();

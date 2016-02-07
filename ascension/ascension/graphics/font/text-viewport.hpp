@@ -189,8 +189,9 @@ namespace ascension {
 
 			/// @defgroup scrollable_ranges_in_viewport Scrollable Ranges in Viewport
 			/// @{
-			template<typename AbstractCoordinate> TextViewport::ScrollOffset pageSize(const TextViewport& viewport);
-			template<std::size_t physicalCoordinate> TextViewport::SignedScrollOffset pageSize(const TextViewport& viewport);
+			template<typename AbstractCoordinate> float pageSize(const TextViewport& viewport);
+			template<std::size_t physicalCoordinate> float pageSize(const TextViewport& viewport);
+			static_assert(std::is_integral<TextViewport::ScrollOffset>::value, "");
 			template<typename AbstractCoordinate> boost::integer_range<TextViewport::ScrollOffset> scrollableRange(const TextViewport& viewport);
 			template<std::size_t physicalCoordinate> boost::integer_range<TextViewport::ScrollOffset> scrollableRange(const TextViewport& viewport);
 			/// @}
