@@ -19,7 +19,6 @@
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 
-#include <cairo/cairo-win32.h>
 
 namespace ascension {
 	namespace viewer {
@@ -31,39 +30,45 @@ namespace ascension {
 #endif
 		}
 
+		namespace {
+			// Helper for TextViewer.get_preferred_*_vfunc methods. Because these methods are called by
+			// GtkScrolledWindow to only adjust visibility of the scroll bars, this function returns the two values.
+			// See TextViewer.on_size_allocate method.
+			template<std::size_t dimension>
+			inline int preferredSize(const TextViewer& textViewer) {
+				if(textViewer.get_realized()) {
+					if(const auto viewport = textViewer.textArea().textRenderer().viewport()) {
+						if(boost::size(graphics::font::scrollableRange<dimension>(*viewport)) > 1)
+							return std::numeric_limits<int>::max();
+					}
+				}
+				return 0;
+			}
+		}
+
 		/// Implements @c Gtk#Widget#get_preferred_height_for_width_vfunc.
-		void TextViewer::get_preferred_height_for_width_vfunc(int width, int& minimumHeight, int& naturalHeight) const {
-#if 0
+		void TextViewer::get_preferred_height_for_width_vfunc(int, int& minimumHeight, int& naturalHeight) const {
 			return get_preferred_height_vfunc(minimumHeight, naturalHeight);
-#else
-			return Gtk::Widget::get_preferred_height_for_width_vfunc(width, minimumHeight, naturalHeight);
-#endif
 		}
 
 		/// Implements @c Gtk#Widget#get_preferred_height_vfunc.
 		void TextViewer::get_preferred_height_vfunc(int& minimumHeight, int& naturalHeight) const {
-			// TODO: Not implemented.
-			return Gtk::Widget::get_preferred_height_vfunc(minimumHeight, naturalHeight);
+			minimumHeight = naturalHeight = preferredSize<1>(*this);
 		}
 
 		/// Implements @c Gtk#Widget#get_preferred_width_for_height_vfunc.
-		void TextViewer::get_preferred_width_for_height_vfunc(int height, int& minimumWidth, int& naturalWidth) const {
-#if 0
+		void TextViewer::get_preferred_width_for_height_vfunc(int, int& minimumWidth, int& naturalWidth) const {
 			return get_preferred_width_vfunc(minimumWidth, naturalWidth);
-#else
-			return Gtk::Widget::get_preferred_width_for_height_vfunc(height, minimumWidth, naturalWidth);
-#endif
 		}
 
 		/// Implements @c Gtk#Widget#get_preferred_width_vfunc.
 		void TextViewer::get_preferred_width_vfunc(int& minimumWidth, int& naturalWidth) const {
-			// TODO: Not implemented.
-			return Gtk::Widget::get_preferred_width_vfunc(minimumWidth, naturalWidth);
+			minimumWidth = naturalWidth = preferredSize<0>(*this);
 		}
 
 		/// Implements @c Gtk#Widget#get_request_mode_vfunc.
 		Gtk::SizeRequestMode TextViewer::get_request_mode_vfunc() const {
-			return Gtk::Widget::get_request_mode_vfunc();
+			return Gtk::SIZE_REQUEST_CONSTANT_SIZE;
 		}
 
 		/// @internal Handles "commit" signal of @c GtkIMContext.
@@ -470,27 +475,9 @@ namespace ascension {
 		 */
 		void TextViewer::on_size_allocate(Gtk::Allocation& allocation) {
 			set_allocation(allocation);
-#if 0
-			if(textAreaWindow_ && get_realized()) {
-				graphics::Rectangle r(textAreaAllocationRectangle());
-				textAreaWindow_->move_resize(
-					static_cast<int>(graphics::geometry::left(r)), static_cast<int>(graphics::geometry::top(r)),
-					static_cast<int>(graphics::geometry::dx(r)), static_cast<int>(graphics::geometry::dy(r)));
-
-				const RulerStyles& rulerStyles = rulerPainter_->declaredStyles();
-				boost::geometry::assign_zero<graphics::Rectangle>(r);
-				if(indicatorMargin(rulerStyles)->visible)
-					r = graphics::geometry::joined(r, rulerPainter_->indicatorMarginAllocationRectangle());
-				if(lineNumbers(rulerStyles)->visible)
-					r = graphics::geometry::joined(r, rulerPainter_->lineNumbersAllocationRectangle());
-				textAreaWindow_->move_resize(
-					static_cast<int>(graphics::geometry::left(r)), static_cast<int>(graphics::geometry::top(r)),
-					static_cast<int>(graphics::geometry::dx(r)), static_cast<int>(graphics::geometry::dy(r)));
-			}
-#else
+			queue_resize_no_redraw();	// clear the size request caches
 			if(window_)
 				window_->move_resize(allocation.get_x(), allocation.get_y(), allocation.get_width(), allocation.get_height());
-#endif
 			resized(graphics::Dimension(
 				graphics::geometry::_dx = static_cast<graphics::Scalar>(allocation.get_width()),
 				graphics::geometry::_dy = static_cast<graphics::Scalar>(allocation.get_height())));

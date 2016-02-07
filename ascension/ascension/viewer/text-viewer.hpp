@@ -11,10 +11,6 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/corelib/signals.hpp>
 #include <ascension/graphics/color.hpp>
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
-#	include <ascension/graphics/physical-directions-dimensions.hpp>
-#endif
-#include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/flow-relative-directions-dimensions.hpp>
@@ -30,7 +26,11 @@
 #include <array>
 #include <set>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	if !defined(ASCENSION_PIXELFUL_SCROLL_IN_BPD)
+#		include <ascension/graphics/physical-directions-dimensions.hpp>
+#	endif
 #	include <glibmm/property.h>
+#	include <gtkmm/container.h>
 #	define ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/com/smart-pointer.hpp>
@@ -106,7 +106,7 @@ namespace ascension {
 				// QPlainTextEdit and QTextEdit inherit QAbstractScrollArea.
 				// NSTextView inherits NSText (which inherits NSView).
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				public Gtk::Widget,
+				public Gtk::Container,
 #	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 				public Gtk::Scrollable,
 #	endif

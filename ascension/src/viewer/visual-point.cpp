@@ -17,6 +17,9 @@
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/visual-point.hpp>
+#ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+#	include <boost/math/special_functions/trunc.hpp>
+#endif
 
 namespace ascension {
 	namespace viewer {
@@ -59,11 +62,17 @@ namespace ascension {
 				const float visibleLines = viewport->numberOfVisibleLines();
 				presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset> to;	// scroll destination
 
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+#	error Not implemented.
+#else
+				to.bpd() = viewport->scrollPositions().bpd();
 				// scroll if the point is outside of 'before-edge'
-				to.bpd() = std::min(p.visualLine().line, viewport->scrollPositions().bpd());
+				if(to.bpd() > p.visualLine().line)
+					to.bpd() = p.visualLine().line;
 				// scroll if the point is outside of 'after-edge'
-				if(p.visualLine().line > static_cast<graphics::font::TextViewport::ScrollOffset>(visibleLines))
-					to.bpd() = std::max(p.visualLine().line - static_cast<graphics::font::TextViewport::ScrollOffset>(visibleLines) + 1, to.bpd());
+				else if(to.bpd() + static_cast<graphics::font::TextViewport::ScrollOffset>(visibleLines) - 1 < p.visualLine().line)
+					to.bpd() = p.visualLine().line + 1 - static_cast<graphics::font::TextViewport::ScrollOffset>(boost::math::trunc(visibleLines));
+#endif
 
 				// scroll if the point is outside of 'start-edge' or 'end-edge'
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
