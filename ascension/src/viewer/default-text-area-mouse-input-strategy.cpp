@@ -711,13 +711,13 @@ namespace ascension {
 								if(shift)
 									selectionExtender_.reset(new WordSelectionExtender(caret, &caret.anchor().position()));
 								else
-									selectionExtender_.reset(new WordSelectionExtender(caret, &to->characterIndex()));
+									selectionExtender_.reset(new WordSelectionExtender(caret, &to->insertionIndex()));
 							}
 							if(shift)
-								selectionExtender_->continueSelection(caret, to->characterIndex());
+								selectionExtender_->continueSelection(caret, to->insertionIndex());
 						}
 						if(selectionExtender_.get() == nullptr)
-							selectionExtender_.reset(new CharacterSelectionExtender(caret, to->characterIndex()));
+							selectionExtender_.reset(new CharacterSelectionExtender(caret, to->insertionIndex()));
 						if(input.hasModifier(widgetapi::event::UserInput::ALT_DOWN))	// make the selection reactangle
 							caret.beginRectangleSelection();
 						else
