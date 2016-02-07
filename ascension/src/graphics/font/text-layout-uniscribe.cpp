@@ -3337,6 +3337,10 @@ namespace ascension {
 						run.justify(static_cast<int>(newRunMeasure));
 					}
 				}
+
+				// clear measures caches
+				maximumMeasure_ = boost::none;
+				lineMeasures_.reset();
 			}
 
 			/// Reorders the runs in visual order.
