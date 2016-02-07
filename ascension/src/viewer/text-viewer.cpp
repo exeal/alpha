@@ -36,8 +36,11 @@
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
+#ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+#	include <boost/math/special_functions/trunc.hpp>
+#endif
 #ifdef _DEBUG
-#	include <boost/log/trivial.hpp>
+#	include <ascension/log.hpp>
 //#	define ASCENSIOB_DIAGNOSE_INHERENT_DRAWING
 //#	define ASCENSION_TRACE_DRAWING_STRING
 #endif // _DEBUG
@@ -542,6 +545,19 @@ namespace ascension {
 			void configureScrollBar(TextViewer& viewer, std::size_t coordinate, const boost::optional<widgetapi::NativeScrollPosition>& position,
 					const boost::optional<NumericRange<widgetapi::NativeScrollPosition>>& range, const boost::optional<widgetapi::NativeScrollPosition>& pageSize) {
 				assert(coordinate <= 1);
+#ifdef _DEBUG
+				std::ostringstream parametersMessage;
+				if(position != boost::none)
+					parametersMessage << "position=" << boost::get(position) << ", ";
+				if(range != boost::none)
+					parametersMessage << "range=[" << *boost::const_begin(boost::get(range)) << "," << *boost::const_end(boost::get(range)) << "), ";
+				if(pageSize != boost::none)
+					parametersMessage << "pagesize=" << boost::get(pageSize) << ", ";
+				ASCENSION_LOG_TRIVIAL(debug)
+					<< "A TextViewer 0x" << std::hex << reinterpret_cast<std::uintptr_t>(&viewer)
+					<< " was configured the scroll bar (" << coordinate << ") with: \n\t" << parametersMessage.str() << std::endl;
+#endif
+
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 				Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
@@ -818,9 +834,9 @@ namespace ascension {
 			static_cast<TextViewerComponent*>(textArea_.get())->install(*this, *this);
 
 			auto viewport(textArea().textRenderer().viewport());
-			viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
-				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
-			});
+//			viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
+//				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
+//			});
 			viewportScrolledConnection_ = viewport->scrolledSignal().connect(
 				[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
 					assert(!this->isFrozen());
@@ -1659,8 +1675,13 @@ namespace ascension {
 					position = (writingMode.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
 						viewport->scrollPositions().ipd() : (*viewportRange.end() - viewport->scrollPositions().ipd() - 1);
 				if(properties.ipd()) {
-					size = graphics::font::pageSize<presentation::ReadingDirection>(*viewport);
-					range = nrange<widgetapi::NativeScrollPosition>(*boost::const_begin(viewportRange), *boost::const_end(viewportRange) + boost::get(size) - 1);
+					const float realSize = graphics::font::pageSize<presentation::ReadingDirection>(*viewport);
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+#	error Not implemented.
+#else
+					range = nrange<widgetapi::NativeScrollPosition>(*boost::const_begin(viewportRange), *boost::const_end(viewportRange) + std::ceil(realSize) - 1);
+					size = boost::math::trunc(realSize);
+#endif
 				}
 				configureScrollBar(*this, presentation::isHorizontal(writingMode.blockFlowDirection) ? 0 : 1, position, range, size);
 			}
@@ -1675,8 +1696,13 @@ namespace ascension {
 					position = (writingMode.blockFlowDirection != presentation::VERTICAL_RL) ?
 						viewport->scrollPositions().bpd() : (*viewportRange.end() - viewport->scrollPositions().bpd() - 1);
 				if(properties.bpd()) {
-					size = graphics::font::pageSize<presentation::BlockFlowDirection>(*viewport);
-					range = nrange<widgetapi::NativeScrollPosition>(*boost::const_begin(viewportRange), *boost::const_end(viewportRange) + boost::get(size) - 1);
+					const float realSize = graphics::font::pageSize<presentation::BlockFlowDirection>(*viewport);
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+#	error Not implemented.
+#else
+					range = nrange<widgetapi::NativeScrollPosition>(*boost::const_begin(viewportRange), *boost::const_end(viewportRange) + std::ceil(realSize) - 1);
+					size = boost::math::trunc(realSize);
+#endif
 				}
 				configureScrollBar(*this, presentation::isHorizontal(writingMode.blockFlowDirection) ? 1 : 0, position, range, size);
 			}

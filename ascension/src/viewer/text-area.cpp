@@ -523,6 +523,7 @@ namespace ascension {
 
 		/// @see TextViewport#ResizedSignal
 		void TextArea::viewportResized(const graphics::Dimension& oldSize) BOOST_NOEXCEPT {
+			textRenderer().layouts().invalidate();
 //			textRenderer().setTextWrapping(textRenderer().textWrapping(), widgetapi::createRenderingContext(*this).get());
 		}
 

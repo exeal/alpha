@@ -509,9 +509,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\source\source-viewer.cpp">
       <Filter>ascension\Source Files\viewer\source</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\text-viewer.cpp">
-      <Filter>ascension\Source Files\viewer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-gtk.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
@@ -564,6 +561,9 @@
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\standard-caret-painter.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
   </ItemGroup>
