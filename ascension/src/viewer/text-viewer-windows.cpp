@@ -10,7 +10,6 @@
 #include <ascension/viewer/text-viewer.hpp>
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#define ASCENSION_TEST_TEXT_STYLES
 
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
@@ -30,10 +29,6 @@
 #	include <Textstor.h>
 #endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 #pragma comment(lib, "version.lib")
-
-#ifdef ASCENSION_TEST_TEXT_STYLES
-#	include <ascension/presentation/presentation-reconstructor.hpp>
-#endif
 
 using namespace ascension;
 using namespace ascension::graphics;
