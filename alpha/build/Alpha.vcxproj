@@ -269,6 +269,7 @@
     <ClCompile Include="..\..\ascension\src\viewer\source\source-viewer.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\standard-caret-painter.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-area.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer-events.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-model-conversion.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-utility.cpp" />
