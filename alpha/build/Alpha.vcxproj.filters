@@ -566,6 +566,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\text-viewer-events.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">

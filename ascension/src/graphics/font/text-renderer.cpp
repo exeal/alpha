@@ -471,7 +471,7 @@ namespace ascension {
 				}
 #	ifdef _DEBUG
 				if(!boost::empty(linesToPaint))
-					ASCENSION_LOG_TRIVIAL(debug) << "TextRenderer.paint() with lines ["
+					ASCENSION_LOG_TRIVIAL(debug) << "Repainted lines ["
 						<< linesToPaint.front().lineNumber << "," << linesToPaint.back().lineNumber << "]" << std::endl;
 #	endif
 #endif

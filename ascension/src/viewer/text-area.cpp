@@ -449,7 +449,7 @@ namespace ascension {
 
 			widgetapi::scheduleRedraw(textViewer(), boundsToRedraw, false);
 #ifdef _DEBUG
-			ASCENSION_LOG_TRIVIAL(debug) << "TextArea.redrawLines() scheduled redraw " << boost::geometry::dsv(boundsToRedraw) << std::endl;
+			ASCENSION_LOG_TRIVIAL(debug) << "Scheduled redraw " << boost::geometry::dsv(boundsToRedraw) << std::endl;
 #endif
 		}
 

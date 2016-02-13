@@ -13,6 +13,9 @@
 #include <ascension/viewer/caret-painter.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#ifdef _DEBUG
+#	include <ascension/log.hpp>
+#endif
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && !defined(GTKMM_DISABLE_DEPRECATED)
 #	include <gtkmm/settings.h>
 #endif
@@ -172,6 +175,9 @@ namespace ascension {
 			if(visible == visible_)
 				return;
 			visible_ = visible;
+#ifdef _DEBUG
+			ASCENSION_LOG_TRIVIAL(debug) << "Requested redraw line:" << kernel::line(*caret_) << std::endl;
+#endif
 			caret_->textArea().redrawLine(kernel::line(*caret_));	// TODO: This code is not efficient.
 		}
 
