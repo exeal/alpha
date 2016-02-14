@@ -4,7 +4,7 @@
  * @date 2004-2010
  * @date 2010-10-21 separated from common.hpp
  * @date 2010-11-07 joined with common.hpp
- * @date 2011-2015
+ * @date 2011-2016
  */
 
 #ifndef ASCENSION_BASIC_TYPES_HPP
@@ -22,13 +22,6 @@
 
 /// Version of Unicode we're tracking
 #define ASCENSION_UNICODE_VERSION 0x0510	// 5.1.0
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-/// Makes the specified class unassignable. Used in class definition.
-#	define ASCENSION_UNASSIGNABLE_TAG(className) private: className& operator=(const className&)
-/// Makes the specified class uncopyable. Used in class definition
-#	define ASCENSION_NONCOPYABLE_TAG(className) ASCENSION_UNASSIGNABLE_TAG(className); className(const className&)
-#endif
 
 namespace ascension {
 	// shorten type names

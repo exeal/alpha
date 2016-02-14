@@ -7,42 +7,13 @@
 
 #ifndef ASCENSION_LISTENERS_HPP
 #define ASCENSION_LISTENERS_HPP
-#include <ascension/corelib/basic-types.hpp>	// ASCENSION_NONCOPYABLE_TAG
+#include <boost/core/noncopyable.hpp>
 #include <algorithm>	// std.find
 #include <list>
 #include <stdexcept>	// std.invalid_argument
 
 namespace ascension {
 	namespace detail {
-#if ASCENSION_ABANDONED_AT_VERSION_08
-		/**
-		 * @internal Manages a strategy object.
-		 * @tparam Strategy The type of strategy object
-		 * @deprecated 0.8 Use @c std#shared_ptr instead.
-		 */
-		template<typename Strategy>
-		class StrategyPointer {
-			ASCENSION_NONCOPYABLE_TAG(StrategyPointer);
-		public:
-			StrategyPointer() BOOST_NOEXCEPT : pointee_(nullptr), manages_(false) {}
-			StrategyPointer(Strategy* pointee, bool manage) BOOST_NOEXCEPT : pointee_(pointee), manages_(manage) {}
-			~StrategyPointer() BOOST_NOEXCEPT {if(manages_) delete pointee_;}
-			Strategy& operator*() const BOOST_NOEXCEPT {return *pointee_;}
-			Strategy* operator->() const BOOST_NOEXCEPT {return get();}
-			Strategy* get() const BOOST_NOEXCEPT {return pointee_;}
-			void reset(Strategy* newValue, bool manage) BOOST_NOEXCEPT {
-				if(manages_ && newValue != pointee_)
-					delete pointee_;
-				pointee_ = newValue;
-				manages_ = manage;
-			}
-			void reset() {reset(nullptr, false);}
-		private:
-			Strategy* pointee_;
-			bool manages_;
-		};
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
 		/**
 		 * @internal Manages the listeners (observers).
 		 * @tparam Listener The type of listener/observer object
