@@ -176,7 +176,10 @@ namespace ascension {
 				return;
 			visible_ = visible;
 #ifdef _DEBUG
-			ASCENSION_LOG_TRIVIAL(debug) << "Requested redraw line:" << kernel::line(*caret_) << std::endl;
+			ASCENSION_LOG_TRIVIAL(debug)
+				<< "Requested redraw line: " << kernel::line(*caret_)
+				<< (visible ? " (off => on)" : " (on => off)")
+				<< std::endl;
 #endif
 			caret_->textArea().redrawLine(kernel::line(*caret_));	// TODO: This code is not efficient.
 		}

@@ -31,6 +31,7 @@
 #include <boost/geometry/algorithms/intersection.hpp>
 #ifdef _DEBUG
 #	include <ascension/log.hpp>
+#	include <boost/geometry/io/dsv/write.hpp>
 #endif
 
 namespace ascension {
@@ -470,9 +471,13 @@ namespace ascension {
 					layout.draw(context, graphics::geometry::make<graphics::Point>(p));
 				}
 #	ifdef _DEBUG
-				if(!boost::empty(linesToPaint))
-					ASCENSION_LOG_TRIVIAL(debug) << "Repainted lines ["
-						<< linesToPaint.front().lineNumber << "," << linesToPaint.back().lineNumber << "]" << std::endl;
+				if(!boost::empty(linesToPaint)) {
+					static unsigned long n;
+					ASCENSION_LOG_TRIVIAL(debug)
+						<< "Repainted lines [" << linesToPaint.front().lineNumber << "," << linesToPaint.back().lineNumber << "]"
+						<< " for area " << boost::geometry::dsv(context.boundsToPaint())
+						<< " [#" << (n++) << "]" << std::endl;
+				}
 #	endif
 #endif
 			}

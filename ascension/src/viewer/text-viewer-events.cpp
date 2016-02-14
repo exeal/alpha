@@ -559,8 +559,10 @@ namespace ascension {
 						}
 					break;
 #endif
+				default:
+					return input.ignore();
 			}
-			return input.ignore();
+			return input.consume();
 		}
 
 		/// Invoked when a key has been released.
