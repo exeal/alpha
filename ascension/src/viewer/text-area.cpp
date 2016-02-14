@@ -17,11 +17,11 @@
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <ascension/graphics/geometry/rectangle-corners.hpp>
 #include <ascension/graphics/geometry/rectangle-odxdy.hpp>
+#include <ascension/graphics/geometry/rectangle-range.hpp>
 #include <ascension/graphics/geometry/rectangle-sides.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/geometry/algorithms/normalize.hpp>
 #include <ascension/graphics/geometry/algorithms/size.hpp>
-#include <ascension/graphics/geometry/algorithms/translate.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document.hpp>
@@ -44,6 +44,29 @@
 #	include <boost/geometry/io/dsv/write.hpp>
 #endif
 
+#ifdef _DEBUG
+#	define ASCENSION_REDRAW_TEXT_AREA_LINE(lineNumber)											\
+		ASCENSION_LOG_TRIVIAL(debug) << "Requested redraw line: " << lineNumber << std::endl;	\
+		redrawLine(lineNumber, false)
+#	define ASCENSION_REDRAW_TEXT_AREA_LINES(lineNumbersRange)												\
+		ASCENSION_LOG_TRIVIAL(debug)																		\
+			<< "Requested redraw lines: ["																	\
+			<< *boost::const_begin(lineNumbersRange) << "," << *boost::const_end(lineNumbersRange) << ")"	\
+			<< std::endl;																					\
+		redrawLines(lineNumbersRange)
+#	define ASCENSION_REDRAW_TEXT_AREA_LINE_AND_FOLLOWINGS(firstLineNumber)	\
+		ASCENSION_LOG_TRIVIAL(debug)										\
+			<< "Requested redraw line: [" << firstLineNumber << ",..)"		\
+			<< std::endl;													\
+		redrawLine(firstLineNumber, true)
+#else
+#	define ASCENSION_REDRAW_TEXT_AREA_LINE(lineNumber)	\
+		redrawLine(lineNumber, false)
+#	define ASCENSION_REDRAW_TEXT_AREA_LINES(lineNumbersRange)	\
+		redrawLines(lineNumbersRange)
+#	define ASCENSION_REDRAW_TEXT_AREA_LINE_AND_FOLLOWINGS(firstLineNumber)	\
+		redrawLine(firstLineNumber, true)
+#endif
 
 namespace ascension {
 	namespace viewer {
@@ -127,7 +150,7 @@ namespace ascension {
 							};
 							linesToRedraw = boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1);
 						} else {
-							redrawLines(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
+							ASCENSION_REDRAW_TEXT_AREA_LINES(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
 							redrawIfNotFrozen(*this);
 							linesToRedraw = boost::irange(newRegion.beginning().line, newRegion.end().line + 1);
 						}
@@ -136,7 +159,7 @@ namespace ascension {
 			}
 
 			if(linesToRedraw != boost::none) {
-				redrawLines(boost::get(linesToRedraw));
+				ASCENSION_REDRAW_TEXT_AREA_LINES(boost::get(linesToRedraw));
 				redrawIfNotFrozen(*this);
 			}
 		}
@@ -164,7 +187,7 @@ namespace ascension {
 #ifdef ASCENSION_USE_SYSTEM_CARET
 				caret().resetVisualization();
 #endif
-				redrawLine(0, true);
+				ASCENSION_REDRAW_TEXT_AREA_LINE_AND_FOLLOWINGS(0);
 			}
 		}
 
@@ -202,7 +225,7 @@ namespace ascension {
 					}
 					linesToRedraw_ = boost::irange(b, e);
 				}
-//				redrawLines(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
+//				ASCENSION_REDRAW_TEXT_AREA_LINES(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
 			}
 		}
 
@@ -210,8 +233,8 @@ namespace ascension {
 		void TextArea::focusChanged(const TextViewer& viewer) {
 			if(&viewer == &textViewer()) {
 				// repaint the lines where the caret places
-				redrawLines(boost::irange(kernel::line(caret().beginning()), kernel::line(caret().end()) + 1));
-				redrawIfNotFrozen(*this);
+//				ASCENSION_REDRAW_TEXT_AREA_LINES(boost::irange(kernel::line(caret().beginning()), kernel::line(caret().end()) + 1));
+//				redrawIfNotFrozen(*this);
 			}
 		}
 
@@ -232,7 +255,7 @@ namespace ascension {
 							// ignore
 						}
 						if(!linesToRedraw_.empty()) {
-							redrawLines(linesToRedraw_);
+							ASCENSION_REDRAW_TEXT_AREA_LINES(linesToRedraw_);
 							linesToRedraw_ = boost::irange<Index>(0, 0);
 						}
 						caretMoved(caret(), caret().selectedRegion());
@@ -293,26 +316,26 @@ namespace ascension {
 				return;
 			const boost::optional<std::pair<kernel::Position, kernel::Position>>& newPair = caret.matchBrackets();
 			if(newPair) {
-				redrawLine(newPair->first.line);
+				ASCENSION_REDRAW_TEXT_AREA_LINE(newPair->first.line);
 				redrawIfNotFrozen(*this);
 				if(newPair->second.line != newPair->first.line) {
-					redrawLine(newPair->second.line);
+					ASCENSION_REDRAW_TEXT_AREA_LINE(newPair->second.line);
 					redrawIfNotFrozen(*this);
 				}
 				if(previouslyMatchedBrackets	// clear the previous highlight
 						&& previouslyMatchedBrackets->first.line != newPair->first.line && previouslyMatchedBrackets->first.line != newPair->second.line) {
-					redrawLine(previouslyMatchedBrackets->first.line);
+					ASCENSION_REDRAW_TEXT_AREA_LINE(previouslyMatchedBrackets->first.line);
 					redrawIfNotFrozen(*this);
 				}
 				if(previouslyMatchedBrackets && previouslyMatchedBrackets->second.line != newPair->first.line
 						&& previouslyMatchedBrackets->second.line != newPair->second.line && previouslyMatchedBrackets->second.line != previouslyMatchedBrackets->first.line)
-					redrawLine(previouslyMatchedBrackets->second.line);
+					ASCENSION_REDRAW_TEXT_AREA_LINE(previouslyMatchedBrackets->second.line);
 			} else {
 				if(previouslyMatchedBrackets) {	// clear the previous highlight
-					redrawLine(previouslyMatchedBrackets->first.line);
+					ASCENSION_REDRAW_TEXT_AREA_LINE(previouslyMatchedBrackets->first.line);
 					redrawIfNotFrozen(*this);
 					if(previouslyMatchedBrackets->second.line != previouslyMatchedBrackets->first.line)
-						redrawLine(previouslyMatchedBrackets->second.line);
+						ASCENSION_REDRAW_TEXT_AREA_LINE(previouslyMatchedBrackets->second.line);
 				}
 			}
 		}
@@ -378,13 +401,6 @@ namespace ascension {
 			if(orderedLines.back() < textRenderer().viewport()->firstVisibleLine().line)
 				return;
 
-#if defined(_DEBUG) && defined(ASCENSION_DIAGNOSE_INHERENT_DRAWING)
-			ASCENSION_LOG_TRIVIAL(debug)
-				<< L"@TextViewer.redrawLines invalidates lines ["
-				<< static_cast<unsigned long>(*lines.begin())
-				<< L".." << static_cast<unsigned long>(*lines.end()) << L"]\n";
-#endif
-
 			using graphics::Scalar;
 			const presentation::WritingMode writingMode(textViewer().presentation().computeWritingMode());
 			std::array<Scalar, 2> beforeAndAfter;	// in viewport (distances from before-edge of the viewport)
@@ -405,51 +421,52 @@ namespace ascension {
 					assert(layout != nullptr);
 					std::get<1>(beforeAndAfter) += *boost::const_end(layout->lineMetrics(layout->numberOfLines() - 1).extent());
 				}
+
 				assert(std::get<0>(beforeAndAfter) <= std::get<1>(beforeAndAfter));
+				if(std::get<0>(beforeAndAfter) == std::numeric_limits<Scalar>::max() || std::get<1>(beforeAndAfter) == std::numeric_limits<Scalar>::min())
+					return;
 			}
 
-			namespace geometry = graphics::geometry;
-			const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer(), false));
-			graphics::Rectangle boundsToRedraw;
-			geometry::translate((
-				geometry::_from = allocationRectangle(), geometry::_to = boundsToRedraw,
-				geometry::_dx = geometry::left(viewerBounds), geometry::_dy = geometry::top(viewerBounds)));
-			assert(boost::geometry::equals(boundsToRedraw, allocationRectangle()));
-
-			BOOST_FOREACH(graphics::Scalar& edge, beforeAndAfter) {
-				switch(textRenderer().computedBlockFlowDirection()) {
-					case presentation::HORIZONTAL_TB:
-						if(edge == std::numeric_limits<Scalar>::min())
-							edge = geometry::top(boundsToRedraw);
-						else if(edge == std::numeric_limits<Scalar>::max())
-							edge = geometry::bottom(boundsToRedraw);
-						else
-							edge = geometry::top(boundsToRedraw) + edge;
-						break;
-					case presentation::VERTICAL_RL:
-						if(edge == std::numeric_limits<Scalar>::min())
-							edge = geometry::right(boundsToRedraw);
-						else if(edge == std::numeric_limits<Scalar>::max())
-							edge = geometry::left(boundsToRedraw);
-						else
-							edge = geometry::right(boundsToRedraw) - edge;
-						break;
-					case presentation::VERTICAL_LR:
-						if(edge == std::numeric_limits<Scalar>::min())
-							edge = geometry::left(boundsToRedraw);
-						else if(edge == std::numeric_limits<Scalar>::max())
-							edge = geometry::right(boundsToRedraw);
-						else
-							edge = geometry::left(boundsToRedraw) + edge;
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
+			graphics::Rectangle boundsToRedraw(allocationRectangle());
+			graphics::Scalar topLeft, bottomRight;
+			switch(textRenderer().computedBlockFlowDirection()) {
+				case presentation::HORIZONTAL_TB:
+					topLeft = graphics::geometry::top(boundsToRedraw);
+					if(std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::min())
+						topLeft += std::get<0>(beforeAndAfter);
+					bottomRight = (std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::max()) ?
+						graphics::geometry::top(boundsToRedraw) + std::get<1>(beforeAndAfter) : graphics::geometry::bottom(boundsToRedraw);
+					graphics::geometry::range<1>(boundsToRedraw) = nrange(topLeft, bottomRight);
+					break;
+				case presentation::VERTICAL_RL:
+					bottomRight = graphics::geometry::right(boundsToRedraw);
+					if(std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::min())
+						bottomRight -= std::get<0>(beforeAndAfter);
+					topLeft = (std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::max()) ?
+						graphics::geometry::right(boundsToRedraw) - std::get<1>(beforeAndAfter) : graphics::geometry::left(boundsToRedraw);
+					graphics::geometry::range<1>(boundsToRedraw) = nrange(topLeft, bottomRight);
+					break;
+				case presentation::VERTICAL_LR:
+					topLeft = graphics::geometry::left(boundsToRedraw);
+					if(std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::min())
+						topLeft += std::get<0>(beforeAndAfter);
+					bottomRight = (std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::max()) ?
+						graphics::geometry::left(boundsToRedraw) + std::get<1>(beforeAndAfter) : graphics::geometry::right(boundsToRedraw);
+					graphics::geometry::range<1>(boundsToRedraw) = nrange(topLeft, bottomRight);
+					break;
+				default:
+					ASCENSION_ASSERT_NOT_REACHED();
 			}
 
 			widgetapi::scheduleRedraw(textViewer(), boundsToRedraw, false);
 #ifdef _DEBUG
-			ASCENSION_LOG_TRIVIAL(debug) << "Scheduled redraw " << boost::geometry::dsv(boundsToRedraw) << std::endl;
+			{
+				static unsigned long n;
+				ASCENSION_LOG_TRIVIAL(debug)
+					<< "[#" << std::dec << (n++) << "]" << std::endl
+					<< "Invalidated lines: [" << std::dec << *boost::const_begin(lines) << "," << std::dec << *boost::const_end(lines) << ")" << std::endl
+					<< "Sheduled redraw: " << boost::geometry::dsv(boundsToRedraw) << std::endl;
+			}
 #endif
 		}
 
@@ -465,7 +482,7 @@ namespace ascension {
 		void TextArea::selectionShapeChanged(const Caret& caret) {
 			if(viewer_ != nullptr) {
 				if(!textViewer().isFrozen() && !isSelectionEmpty(caret))
-					redrawLines(boost::irange(kernel::line(caret.beginning()), kernel::line(caret.end()) + 1));
+					ASCENSION_REDRAW_TEXT_AREA_LINES(boost::irange(kernel::line(caret.beginning()), kernel::line(caret.end()) + 1));
 			}
 		}
 
@@ -661,7 +678,7 @@ namespace ascension {
 				firstLineToDraw = *boost::const_begin(lines);
 			}
 			if(firstLineToDraw != boost::none) {
-				redrawLine(boost::get(firstLineToDraw), true);
+				ASCENSION_REDRAW_TEXT_AREA_LINE_AND_FOLLOWINGS(boost::get(firstLineToDraw));
 				redrawIfNotFrozen(*this);
 			}
 		}
@@ -684,7 +701,7 @@ namespace ascension {
 				firstLineToDraw = *boost::const_begin(lines);
 			}
 			if(firstLineToDraw != boost::none) {
-				redrawLine(boost::get(firstLineToDraw), true);
+				ASCENSION_REDRAW_TEXT_AREA_LINE_AND_FOLLOWINGS(boost::get(firstLineToDraw));
 				redrawIfNotFrozen(*this);
 			}
 		}
@@ -694,7 +711,7 @@ namespace ascension {
 				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT {
 			boost::optional<Index> firstLineToDraw;
 			if(sublinesDifference == 0) {	// number of visual lines was not changed
-				redrawLines(lines);
+				ASCENSION_REDRAW_TEXT_AREA_LINES(lines);
 				redrawIfNotFrozen(*this);
 			} else {
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer().viewport());
@@ -711,7 +728,7 @@ namespace ascension {
 					firstLineToDraw = *boost::const_begin(lines);
 				}
 				if(firstLineToDraw != boost::none) {
-					redrawLine(boost::get(firstLineToDraw), true);
+					ASCENSION_REDRAW_TEXT_AREA_LINE_AND_FOLLOWINGS(boost::get(firstLineToDraw));
 					redrawIfNotFrozen(*this);
 				}
 			}
