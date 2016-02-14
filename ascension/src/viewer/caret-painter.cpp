@@ -121,10 +121,17 @@ namespace ascension {
 		void CaretPainter::install(Caret& caret) {
 			assert(caret_ == nullptr);
 			caret_ = &caret;
-			caretMotionConnection_ = caret_->motionSignal().connect([this](const Caret& caret, const kernel::Region&) {
-				if(&caret == this->caret_ && this->shows() && widgetapi::isVisible(this->caret_->textArea().textViewer())) {
+			caretMotionConnection_ = caret_->motionSignal().connect([this](const Caret& caret, const kernel::Region& regionBeforeMotion) {
+				TextArea& textArea = this->caret_->textArea();
+				if(&caret == this->caret_ && this->shows() && widgetapi::isVisible(textArea.textViewer())) {
 					this->resetTimer();
 					this->pend();
+
+					if(regionBeforeMotion.second.line != kernel::line(caret)) {
+						textArea.redrawLine(regionBeforeMotion.second.line);
+						widgetapi::redrawScheduledRegion(textArea.textViewer());
+					}
+					textArea.redrawLine(kernel::line(caret));
 				}
 			});
 			viewerFocusChangedConnection_ = caret_->textArea().textViewer().focusChangedSignal().connect([this](const TextViewer& viewer) {
