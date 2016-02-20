@@ -310,7 +310,7 @@ namespace ascension {
 			 * @return The code point of the character, or @c INVALID_CODE_POINT if @a p is the end of the document
 			 */
 			CodePoint characterAt(const Point& p, bool useLineFeed /* = false */) {
-				const String& lineString = p.document().line(line(p));
+				const String& lineString = p.document().lineString(line(p));
 				if(offsetInLine(p) == lineString.length())
 					return (line(p) == p.document().numberOfLines() - 1) ? text::INVALID_CODE_POINT : (useLineFeed ? text::LINE_FEED : text::LINE_SEPARATOR);
 				return text::utf::decodeFirst(std::begin(lineString) + offsetInLine(p), std::end(lineString));

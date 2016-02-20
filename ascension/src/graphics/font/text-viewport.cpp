@@ -450,7 +450,7 @@ namespace ascension {
 					if(hitInLine.characterIndex() != 0 && snapPolicy != kernel::locations::UTF16_CODE_UNIT) {
 						using namespace text;
 						const kernel::Document& document = viewport.textRenderer().presentation().document();
-						const String& s = document.line(line.line);
+						const String& s = document.lineString(line.line);
 						const bool interveningSurrogates =
 							surrogates::isLowSurrogate(s[hitInLine.characterIndex()]) && surrogates::isHighSurrogate(s[hitInLine.characterIndex() - 1]);
 						const Scalar ipd = horizontal ? lineLocalPoint.x() : lineLocalPoint.y();

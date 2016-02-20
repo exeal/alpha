@@ -59,7 +59,7 @@ namespace ascension {
 			/// @see HyperlinkDetector#nextHyperlink
 			std::unique_ptr<Hyperlink> URIHyperlinkDetector::nextHyperlink(
 					const kernel::Document& document, Index line, const boost::integer_range<Index>& range) const {
-				const String& s = document.line(line);
+				const String& s = document.lineString(line);
 				if(*range.end() > s.length())
 					throw std::out_of_range("range");
 				const Char* bol = s.data();

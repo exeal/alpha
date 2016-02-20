@@ -98,7 +98,7 @@ namespace ascension {
 			kernel::ContentType contentType, destination;
 			contentType = (kernel::line(i.tell()) == 0) ? kernel::DEFAULT_CONTENT_TYPE
 				: (*partitionAt(kernel::Position(kernel::line(i.tell()), doc.lineLength(kernel::line(i.tell()) - 1))))->contentType;
-			for(const String* line = &doc.line(kernel::line(i.tell())); ; ) {	// scan and tokenize into partitions...
+			for(const String* line = &doc.lineString(kernel::line(i.tell())); ; ) {	// scan and tokenize into partitions...
 				const bool atEOL = kernel::offsetInLine(i.tell()) == line->length();
 				Index tokenLength = tryTransition(*line, kernel::offsetInLine(i.tell()), contentType, destination);
 				if(tokenLength != 0) {	// a token was found
@@ -127,7 +127,7 @@ namespace ascension {
 				if(tokenLength == 0) {
 					++i;
 					if(kernel::offsetInLine(i.tell()) == 0)	// entered the next line
-						line = &doc.line(kernel::line(i.tell()));
+						line = &doc.lineString(kernel::line(i.tell()));
 				}
 			}
 		

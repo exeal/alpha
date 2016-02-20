@@ -43,7 +43,7 @@ namespace ascension {
 			String s(newline.asString());
 
 			if(inheritIndent) {	// simple auto-indent
-				const String& currentLine = caret.document().line(kernel::line(caret));
+				const String& currentLine = caret.document().lineString(kernel::line(caret));
 				const Index len = detail::identifierSyntax(caret).eatWhiteSpaces(
 					currentLine.data(), currentLine.data() + offsetInLine(caret), true) - currentLine.data();
 				s += currentLine.substr(0, len);
@@ -103,7 +103,7 @@ namespace ascension {
 					if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
 						caret.moveTo(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) + level));
 				} else {
-					const String& s = document.line(line);
+					const String& s = document.lineString(line);
 					Index indentLength;
 					for(indentLength = 0; indentLength < s.length(); ++indentLength) {
 						// this assumes that all white space characters belong to BMP
@@ -143,7 +143,7 @@ namespace ascension {
 					}
 				} else {
 					for(++line; line <= kernel::line(region.end()); ++line) {
-						const String& s = document.line(line);
+						const String& s = document.lineString(line);
 						Index indentLength;
 						for(indentLength = 0; indentLength < s.length(); ++indentLength) {
 						// this assumes that all white space characters belong to BMP
@@ -307,7 +307,7 @@ namespace ascension {
 					const kernel::Document& document = caret.document();
 					const Index lastLine = line(caret.end());
 					for(Index line = kernel::line(caret.beginning()); line <= lastLine; ++line) {
-						const kernel::Document::Line& ln = document.getLineInformation(line);
+						const kernel::Document::Line& ln = document.lineContent(line);
 						// TODO: Recognize wrap (second parameter).
 						const boost::optional<boost::integer_range<Index>> selection(caret.boxForRectangleSelection().characterRangeInVisualLine(graphics::font::VisualLine(line, 0)));
 						if(selection)
@@ -431,9 +431,9 @@ namespace ascension {
 			kernel::Document& document = caret.document();
 			const kernel::Position old(caret.position());
 			const Index firstLine = (old.line != document.numberOfLines() - 1) ? kernel::line(old) : kernel::line(old) - 1;
-			String s(document.line(firstLine + 1));
-			s += document.getLineInformation(firstLine).newline().asString();
-			s += document.line(firstLine);
+			String s(document.lineString(firstLine + 1));
+			s += document.lineContent(firstLine).newline().asString();
+			s += document.lineString(firstLine);
 
 			try {
 				document.replace(kernel::Region(

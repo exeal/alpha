@@ -765,7 +765,7 @@ namespace ascension {
 			auto styles(buildLineLayoutConstructionParameters(line, *renderingContext));
 			return std::unique_ptr<const graphics::font::TextLayout>(
 				new graphics::font::TextLayout(
-					viewer_.document().line(line),
+					viewer_.document().lineString(line),
 					presentation().computedTextToplevelStyle(), styles.first, std::move(styles.second),
 					presentation().computeTextRunStyleForLine(line),
 					presentation::styles::Length::Context(*renderingContext, graphics::geometry::size(viewer_.textArea().allocationRectangle())),
