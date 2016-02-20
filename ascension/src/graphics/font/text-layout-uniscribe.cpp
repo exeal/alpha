@@ -2325,11 +2325,11 @@ namespace ascension {
 						// style cursors
 						AttributedCharacterRange<presentation::ComputedTextRunStyle> styleRun, nextStyleRun;
 						styleRun.attribute = textRunStyles->style();
-						styleRun.position = boost::const_begin(textString) + textRunStyles->position().offsetInLine;
+						styleRun.position = boost::const_begin(textString) + kernel::offsetInLine(textRunStyles->position());
 						textRunStyles->next();
 						if(!textRunStyles->isDone()) {
 							nextStyleRun.attribute = textRunStyles->style();
-							nextStyleRun.position = boost::const_begin(textString) + textRunStyles->position().offsetInLine;
+							nextStyleRun.position = boost::const_begin(textString) + kernel::offsetInLine(textRunStyles->position());
 						} else
 							nextStyleRun.position = boost::const_end(textString);
 						styleRuns.push_back(AttributedCharacterRange<presentation::ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
@@ -2376,7 +2376,7 @@ namespace ascension {
 									textRunStyles->next();
 									if(!textRunStyles->isDone()) {
 										nextStyleRun.attribute = textRunStyles->style();
-										nextStyleRun.position = boost::const_begin(textString) + textRunStyles->position().offsetInLine;
+										nextStyleRun.position = boost::const_begin(textString) + kernel::offsetInLine(textRunStyles->position());
 									} else
 										nextStyleRun.position = boost::const_end(textString);
 								}

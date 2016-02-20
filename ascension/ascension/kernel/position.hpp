@@ -112,6 +112,27 @@ namespace ascension {
 		private:
 			const boost::optional<Position> requestedPosition_;
 		};
+
+		/// @defgroup position_accessors Position Accessors
+		/// @{
+		/**
+		 * Returns the line number of the given position.
+		 * @param p The position
+		 * @return The line number
+		 */
+		BOOST_CONSTEXPR inline Index line(const Position& p) BOOST_NOEXCEPT {
+			return p.line;
+		}
+
+		/**
+		 * Returns the offset in the line of the given position.
+		 * @param p The position
+		 * @return The offset in the line
+		 */
+		BOOST_CONSTEXPR inline Index offsetInLine(const Position& p) BOOST_NOEXCEPT {
+			return p.offsetInLine;
+		}
+		/// @}
 	}
 } // namespace ascension.kernel
 

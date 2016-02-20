@@ -225,8 +225,8 @@ namespace ascension {
 			 *         document
 			 */
 			boost::optional<Position> backwardBookmark(const Point& p, Index marks /* = 1 */) {
-				const boost::optional<Index> line(p.document().bookmarker().next(p.normalized().line, Direction::BACKWARD, true, marks));
-				return (line != boost::none) ? boost::make_optional(Position::bol(boost::get(line))) : boost::none;
+				const boost::optional<Index> temp(p.document().bookmarker().next(line(p.normalized()), Direction::BACKWARD, true, marks));
+				return (temp != boost::none) ? boost::make_optional(Position::bol(boost::get(temp))) : boost::none;
 			}
 
 			/**
@@ -251,10 +251,10 @@ namespace ascension {
 			Position backwardLine(const Point& p, Index lines /* = 1 */) {
 				Position temp(p.normalized());
 				const Position bob(p.document().accessibleRegion().first);
-				Index line = (temp.line > bob.line + lines) ? temp.line - lines : bob.line;
-				if(line == bob.line && temp.offsetInLine < bob.offsetInLine)
-					++line;
-				return temp.line = line, temp;
+				Index destination = (line(temp) > line(bob) + lines) ? temp.line - lines : line(bob);
+				if(destination == line(bob) && offsetInLine(temp) < offsetInLine(bob))
+					++destination;
+				return temp.line = destination, temp;
 			}
 
 			/**
@@ -332,7 +332,7 @@ namespace ascension {
 			 */
 			Position endOfLine(const Point& p) {
 				const Position temp(p.normalized());
-				return std::min(Position(temp.line, p.document().lineLength(temp.line)), p.document().accessibleRegion().second);
+				return std::min(Position(line(temp), p.document().lineLength(line(temp))), p.document().accessibleRegion().second);
 			}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -343,8 +343,8 @@ namespace ascension {
 			 *         document
 			 */
 			boost::optional<Position> forwardBookmark(const Point& p, Index marks /* = 1 */) {
-				const boost::optional<Index> line(p.document().bookmarker().next(p.normalized().line, Direction::FORWARD, true, marks));
-				return (line != boost::none) ? boost::make_optional(Position::bol(boost::get(line))) : boost::none;
+				const boost::optional<Index> temp(p.document().bookmarker().next(line(p.normalized()), Direction::FORWARD, true, marks));
+				return (temp != boost::none) ? boost::make_optional(Position::bol(boost::get(temp))) : boost::none;
 			}
 
 			/**
@@ -368,10 +368,10 @@ namespace ascension {
 			Position forwardLine(const Point& p, Index lines /* = 1 */) {
 				Position temp(p.normalized());
 				const Position eob(p.document().accessibleRegion().second);
-				Index line = (temp.line + lines < eob.line) ? temp.line + lines : eob.line;
-				if(line == eob.line && temp.offsetInLine > eob.offsetInLine)
-					--line;
-				return temp.line = line, temp;
+				Index destination = (line(temp) + lines < line(eob)) ? line(temp) + lines : line(eob);
+				if(destination == line(eob) && offsetInLine(temp) > offsetInLine(eob))
+					--destination;
+				return temp.line = destination, temp;
 			}
 
 			/**
@@ -432,8 +432,8 @@ namespace ascension {
 			 * @see #nextBookmarkInPhysicalDirection
 			 */
 			boost::optional<Position> nextBookmark(const Point& p, Direction direction, Index marks /* = 1 */) {
-				const boost::optional<Index> line(p.document().bookmarker().next(p.normalized().line, direction, true, marks));
-				return (line != boost::none) ? boost::make_optional(Position::bol(boost::get(line))) : boost::none;
+				const boost::optional<Index> temp(p.document().bookmarker().next(line(p.normalized()), direction, true, marks));
+				return (temp != boost::none) ? boost::make_optional(Position::bol(boost::get(temp))) : boost::none;
 			}
 
 			/**
@@ -459,19 +459,19 @@ namespace ascension {
 						if(position >= e)
 							return e;
 						for(Position p(position); ; offset -= document.lineLength(p.line++) + 1, p.offsetInLine = 0) {
-							if(p.line == e.line)
-								return std::min(Position(p.line, p.offsetInLine + offset), e);
-							else if(p.offsetInLine + offset <= document.lineLength(p.line))
+							if(line(p) == line(e))
+								return std::min(Position(line(p), offsetInLine(p) + offset), e);
+							else if(offsetInLine(p) + offset <= document.lineLength(line(p)))
 								return p.offsetInLine += offset, p;
 						}
 					} else {
 						const Position e(document.accessibleRegion().first);
 						if(position <= e)
 							return e;
-						for(Position p(position); ; offset -= document.lineLength(p.line) + 1, p.offsetInLine = document.lineLength(--p.line)) {
-							if(p.line == e.line)
-								return (p.offsetInLine <= e.offsetInLine + offset) ? e : (p.offsetInLine -= offset, p);
-							else if(p.offsetInLine >= offset)
+						for(Position p(position); ; offset -= document.lineLength(line(p)) + 1, p.offsetInLine = document.lineLength(--p.line)) {
+							if(line(p) == line(e))
+								return (offsetInLine(p) <= offsetInLine(e) + offset) ? e : (p.offsetInLine -= offset, p);
+							else if(offsetInLine(p) >= offset)
 								return p.offsetInLine -= offset, p;
 						}
 					}
@@ -508,13 +508,13 @@ namespace ascension {
 				Position result(p.normalized());
 				if(direction == Direction::FORWARD) {
 					const Position eob(p.document().accessibleRegion().end());
-					result.line = (result.line + lines < eob.line) ? result.line + lines : eob.line;
-					if(result.line == eob.line && result.offsetInLine > eob.offsetInLine)
+					result.line = (line(result) + lines < line(eob)) ? line(result) + lines : line(eob);
+					if(line(result) == line(eob) && offsetInLine(result) > offsetInLine(eob))
 						--result.line;
 				} else {
 					const Position bob(p.document().accessibleRegion().beginning());
-					result.line = (result.line > bob.line + lines) ? result.line - lines : bob.line;
-					if(result.line == bob.line && result.offsetInLine < bob.offsetInLine)
+					result.line = (line(result) > line(bob) + lines) ? line(result) - lines : line(bob);
+					if(line(result) == line(bob) && offsetInLine(result) < offsetInLine(bob))
 						++result.line;
 				}
 				return result;
@@ -569,20 +569,20 @@ namespace ascension {
 			Index readCount = 0;
 			const Region region(document()->region());
 		
-			if(document()->lineLength(region.first.line) + 1 - region.first.offsetInLine >= offset) {
-				moveTo(Position(region.first.line, region.first.offsetInLine + offset));
+			if(document()->lineLength(line(region.first)) + 1 - offsetInLine(region.first) >= offset) {
+				moveTo(Position(line(region.first), offsetInLine(region.first) + offset));
 				return;
 			}
-			readCount += document()->lineLength(region.first.line) + 1 - region.first.offsetInLine;
-			for(Index line = region.first.line + 1; line <= region.second.line; ++line) {
-				const Index lineLength = document()->lineLength(line) + 1;	// +1 is for a newline
+			readCount += document()->lineLength(line(region.first)) + 1 - offsetInLine(region.first);
+			for(Index i = line(region.first) + 1; i <= line(region.second); ++i) {
+				const Index lineLength = document()->lineLength(i) + 1;	// +1 is for a newline
 				if(readCount + lineLength >= offset) {
-					moveTo(Position(line, readCount + lineLength - offset));
+					moveTo(Position(i, readCount + lineLength - offset));
 					return;
 				}
 				readCount += lineLength;
 			}
-			moveTo(Position(region.second.line, document()->lineLength(region.second.line)));
+			moveTo(Position(line(region.second), document()->lineLength(line(region.second))));
 		}
 #endif
 	}

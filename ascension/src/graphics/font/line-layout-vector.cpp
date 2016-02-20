@@ -183,23 +183,23 @@ namespace ascension {
 			void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
 				documentChangePhase_ = CHANGING;
 				assert(change.erasedRegion().isNormalized() && change.insertedRegion().isNormalized());
-				if(change.erasedRegion().first.line != change.erasedRegion().second.line) {	// erased region includes newline(s)
+				if(kernel::line(change.erasedRegion().first) != kernel::line(change.erasedRegion().second)) {	// erased region includes newline(s)
 					const kernel::Region& region = change.erasedRegion();
-					clearCaches(boost::irange(region.first.line + 1, region.second.line + 1), false);
+					clearCaches(boost::irange(kernel::line(region.first) + 1, kernel::line(region.second) + 1), false);
 					BOOST_FOREACH(NumberedLayout& layout, layouts_) {
-						if(layout.lineNumber > region.first.line)
-							layout.lineNumber -= region.second.line - region.first.line;	// $friendly-access
+						if(layout.lineNumber > kernel::line(region.first))
+							layout.lineNumber -= kernel::line(region.second) - kernel::line(region.first);	// $friendly-access
 					}
 				}
-				if(change.insertedRegion().first.line != change.insertedRegion().second.line) {	// inserted text is multiline
+				if(kernel::line(change.insertedRegion().first) != kernel::line(change.insertedRegion().second)) {	// inserted text is multiline
 					const kernel::Region& region = change.insertedRegion();
 					BOOST_FOREACH(NumberedLayout& layout, layouts_) {
-						if(layout.lineNumber > region.first.line)
-							layout.lineNumber += region.second.line - region.first.line;	// $friendly-access
+						if(layout.lineNumber > kernel::line(region.first))
+							layout.lineNumber += kernel::line(region.second) - kernel::line(region.first);	// $friendly-access
 					}
-					fireVisualLinesInserted(boost::irange(region.first.line + 1, region.second.line + 1));
+					fireVisualLinesInserted(boost::irange(kernel::line(region.first) + 1, kernel::line(region.second) + 1));
 				}
-				const Index firstLine = std::min(change.erasedRegion().first.line, change.insertedRegion().first.line);
+				const Index firstLine = std::min(kernel::line(change.erasedRegion().first), kernel::line(change.insertedRegion().first));
 				if(!pendingCacheClearance_ || !includes(*pendingCacheClearance_, firstLine))
 					invalidate(firstLine);
 				documentChangePhase_ = NONE;
@@ -211,7 +211,7 @@ namespace ascension {
 
 			/// @see kernel#DocumentPartitioningListener#documentPartitioningChanged
 			void LineLayoutVector::documentPartitioningChanged(const kernel::Region& changedRegion) {
-				invalidate(boost::irange(changedRegion.beginning().line, changedRegion.end().line + 1));
+				invalidate(boost::irange(kernel::line(changedRegion.beginning()), kernel::line(changedRegion.end()) + 1));
 			}
 
 			void LineLayoutVector::fireVisualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines) {
@@ -361,15 +361,15 @@ namespace ascension {
 			Index LineLayoutVector::mapLogicalPositionToVisualPosition(const kernel::Position& position, Index* offsetInVisualLine) const {
 //				if(!wrapsLongLines()) {
 //					if(offsetInVisualLine != 0)
-//						*offsetInVisualLine = position.offsetInLine;
-//					return position.line;
+//						*offsetInVisualLine = kernel::offsetInLine(position);
+//					return kernel::line(position);
 //				}
 				try {
-					const TextLayout* const layout = at(position.line);
-					const Index line = (layout != nullptr) ? layout->lineAt(position.offsetInLine) : 0;
+					const TextLayout* const layout = at(kernel::line(position));
+					const Index line = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(position)) : 0;
 					if(offsetInVisualLine != nullptr)
-						*offsetInVisualLine = position.offsetInLine - ((layout != nullptr) ? layout->lineOffset(line) : 0);
-					return mapLogicalLineToVisualLine(position.line) + line;
+						*offsetInVisualLine = kernel::offsetInLine(position) - ((layout != nullptr) ? layout->lineOffset(line) : 0);
+					return mapLogicalLineToVisualLine(kernel::line(position)) + line;
 				} catch(const IndexOutOfBoundsException&) {
 					throw kernel::BadPositionException(position);
 				}

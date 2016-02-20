@@ -81,10 +81,10 @@ namespace ascension {
 				const Document& document, const Region& region, const text::Newline& newline /* = text::Newline::USE_INTRINSIC_VALUE */) {
 			const Position& beginning = region.beginning();
 			const Position end(std::min(region.end(), document.region().second));
-			if(beginning.line == end.line) {	// shortcut for single-line
+			if(line(beginning) == line(end)) {	// shortcut for single-line
 				if(out) {
 					// TODO: this cast may be danger.
-					out.write(document.line(end.line).data() + beginning.offsetInLine, static_cast<std::streamsize>(end.offsetInLine - beginning.offsetInLine));
+					out.write(document.line(line(end)).data() + offsetInLine(beginning), static_cast<std::streamsize>(offsetInLine(end) - offsetInLine(beginning)));
 				}
 			} else {
 				const text::Newline resolvedNewline(text::resolveNewline(document, newline));
@@ -92,10 +92,10 @@ namespace ascension {
 				assert(!eol.empty() || resolvedNewline == text::Newline::USE_INTRINSIC_VALUE);
 				for(Index i = beginning.line; out; ++i) {
 					const Document::Line& line = document.getLineInformation(i);
-					const Index first = (i == beginning.line) ? beginning.offsetInLine : 0;
-					const Index last = (i == end.line) ? end.offsetInLine : line.text().length();
+					const Index first = (i == kernel::line(beginning)) ? offsetInLine(beginning) : 0;
+					const Index last = (i == kernel::line(end)) ? offsetInLine(end) : line.text().length();
 					out.write(line.text().data() + first, static_cast<std::streamsize>(last - first));
-					if(i == end.line)
+					if(i == kernel::line(end))
 						break;
 					if(resolvedNewline == text::Newline::USE_INTRINSIC_VALUE) {
 						const String intrinsicEol(line.newline().asString());
@@ -122,14 +122,14 @@ namespace ascension {
 				throw BadPositionException(at);
 			Index offset = 0;
 			const Position start((fromAccessibleStart ? document.accessibleRegion() : document.region()).first);
-			for(Index line = start.line; ; ++line) {
-				if(line == at.line) {
-					offset += at.offsetInLine;
+			for(Index i = line(start); ; ++i) {
+				if(i == line(at)) {
+					offset += offsetInLine(at);
 					break;
 				} else {
-					offset += document.lineLength(line) + 1;	// +1 is for a newline character
-					if(line == start.line)
-						offset -= start.offsetInLine;
+					offset += document.lineLength(i) + 1;	// +1 is for a newline character
+					if(i == line(start))
+						offset -= offsetInLine(start);
 				}
 			}
 			return offset;
@@ -152,14 +152,14 @@ namespace ascension {
 						return newPosition;
 					else	// in the region
 						newPosition = change.erasedRegion().first;
-				} else if(position.line > change.erasedRegion().second.line)	// in front of the current line
-					newPosition.line -= change.erasedRegion().second.line - change.erasedRegion().first.line;
+				} else if(line(position) > line(change.erasedRegion().second))	// in front of the current line
+					newPosition.line -= line(change.erasedRegion().second) - line(change.erasedRegion().first);
 				else {	// the end is the current line
 					if(position.line == change.erasedRegion().first.line)	// the region is single-line
-						newPosition.offsetInLine -= change.erasedRegion().second.offsetInLine - change.erasedRegion().first.offsetInLine;
+						newPosition.offsetInLine -= offsetInLine(change.erasedRegion().second) - offsetInLine(change.erasedRegion().first);
 					else {	// the region is multiline
-						newPosition.line -= change.erasedRegion().second.line - change.erasedRegion().first.line;
-						newPosition.offsetInLine -= change.erasedRegion().second.offsetInLine - change.erasedRegion().first.offsetInLine;
+						newPosition.line -= line(change.erasedRegion().second) - line(change.erasedRegion().first);
+						newPosition.offsetInLine -= offsetInLine(change.erasedRegion().second) - offsetInLine(change.erasedRegion().first);
 					}
 				}
 			}
@@ -168,11 +168,11 @@ namespace ascension {
 					return newPosition;
 				else if(position == change.insertedRegion().first && gravity == Direction::BACKWARD) // the current position + backward gravity
 					return newPosition;
-				else if(position.line > change.insertedRegion().first.line)	// in front of the current line
-					newPosition.line += change.insertedRegion().second.line - change.insertedRegion().first.line;
+				else if(line(position) > line(change.insertedRegion().first))	// in front of the current line
+					newPosition.line += line(change.insertedRegion().second) - line(change.insertedRegion().first);
 				else {	// in the current line
-					newPosition.line += change.insertedRegion().second.line - change.insertedRegion().first.line;
-					newPosition.offsetInLine += change.insertedRegion().second.offsetInLine - change.insertedRegion().first.offsetInLine;
+					newPosition.line += line(change.insertedRegion().second) - line(change.insertedRegion().first);
+					newPosition.offsetInLine += offsetInLine(change.insertedRegion().second) - offsetInLine(change.insertedRegion().first);
 				}
 			}
 			return newPosition;
@@ -294,16 +294,16 @@ namespace ascension {
 			// update markedLines_ based on the change
 			if(&document_ != &document || markedLines_.empty())
 				return;
-			if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
+			if(line(change.erasedRegion().first) != line(change.erasedRegion().second)) {
 				// remove the marks on the deleted lines
-				const Index lines = change.erasedRegion().second.line - change.erasedRegion().first.line;
+				const Index lines = line(change.erasedRegion().second) - line(change.erasedRegion().first);
 				const auto e(std::end(markedLines_));
-				auto top(find(change.erasedRegion().first.line));
+				auto top(find(line(change.erasedRegion().first)));
 				if(top != e) {
-					if(*top == change.erasedRegion().first.line)
+					if(*top == line(change.erasedRegion().first))
 						++top;
-					auto bottom(find(change.erasedRegion().second.line));
-					if(bottom != e && *bottom == change.erasedRegion().second.line)
+					auto bottom(find(line(change.erasedRegion().second)));
+					if(bottom != e && *bottom == line(change.erasedRegion().second))
 						++bottom;
 					// slide the following lines before removing
 					if(bottom != e) {
@@ -313,11 +313,11 @@ namespace ascension {
 					markedLines_.erase(top, bottom);	// GapVector<>.erase does not return an iterator
 				}
 			}
-			if(change.insertedRegion().first.line != change.insertedRegion().second.line) {
-				const Index lines = change.insertedRegion().second.line - change.insertedRegion().first.line;
-				auto i(find(change.insertedRegion().first.line));
+			if(line(change.insertedRegion().first) != line(change.insertedRegion().second)) {
+				const Index lines = line(change.insertedRegion().second) - line(change.insertedRegion().first);
+				auto i(find(line(change.insertedRegion().first)));
 				if(i != std::end(markedLines_)) {
-					if(*i == change.insertedRegion().first.line && change.insertedRegion().first.offsetInLine != 0)
+					if(*i == line(change.insertedRegion().first) && offsetInLine(change.insertedRegion().first) != 0)
 						++i;
 					for(const auto e(std::end(markedLines_)); i != e; ++i)
 						*i += lines;	// ??? - C4267@MSVC9

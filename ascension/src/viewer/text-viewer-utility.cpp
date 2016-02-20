@@ -41,7 +41,7 @@ namespace ascension {
 				kernel::DocumentPartition partition;
 				document.partitioner().partition(position, partition);
 				const text::IdentifierSyntax& syntax = document.contentTypeInformation().getIdentifierSyntax(partition.contentType);
-				Index start = position.offsetInLine, end = position.offsetInLine;
+				Index start = kernel::offsetInLine(position), end = kernel::offsetInLine(position);
 
 				// find the start of the identifier
 				if(startOffsetInLine != nullptr) {
@@ -51,31 +51,31 @@ namespace ascension {
 						--i;
 						if(!syntax.isIdentifierContinueCharacter(*i)) {
 							++i;
-							start = i.tell().offsetInLine;
+							start = kernel::offsetInLine(i.tell());
 							break;
-						} else if(position.offsetInLine - i.tell().offsetInLine > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
+						} else if(kernel::offsetInLine(position) - kernel::offsetInLine(i.tell()) > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
 							return false;
 					} while(i.hasPrevious());
 					if(!i.hasPrevious())
-						start = i.tell().offsetInLine;
+						start = kernel::offsetInLine(i.tell());
 					*startOffsetInLine = start;
 				}
 
 				// find the end of the identifier
 				if(endOffsetInLine != nullptr) {
 					kernel::DocumentCharacterIterator i(document, kernel::Region(position,
-						std::min(partition.region.end(), kernel::Position(position.line, document.lineLength(position.line)))), position);
+						std::min(partition.region.end(), kernel::Position(kernel::line(position), document.lineLength(kernel::line(position))))), position);
 					while(i.hasNext()) {
 						if(!syntax.isIdentifierContinueCharacter(*i)) {
-							end = i.tell().offsetInLine;
+							end = kernel::offsetInLine(i.tell());
 							break;
 						}
 						++i;
-						if(i.tell().offsetInLine - position.offsetInLine > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
+						if(kernel::offsetInLine(i.tell()) - kernel::offsetInLine(position) > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
 							return false;
 					}
 					if(!i.hasNext())
-						end = i.tell().offsetInLine;
+						end = kernel::offsetInLine(i.tell());
 					*endOffsetInLine = end;
 				}
 
@@ -91,17 +91,17 @@ namespace ascension {
 			 */
 			boost::optional<kernel::Region> getNearestIdentifier(const kernel::Document& document, const kernel::Position& position) {
 				std::pair<Index, Index> offsetsInLine;
-				if(getNearestIdentifier(document, position, &offsetsInLine.first, &offsetsInLine.second))
-					return boost::make_optional(kernel::Region(position.line, boost::irange(offsetsInLine.first, offsetsInLine.second)));
+				if(getNearestIdentifier(document, position, &std::get<0>(offsetsInLine), &std::get<1>(offsetsInLine)))
+					return boost::make_optional(kernel::Region(kernel::line(position), boost::irange(std::get<0>(offsetsInLine), std::get<1>(offsetsInLine))));
 				else
 					return boost::none;
 			}
 
 			const presentation::hyperlink::Hyperlink* getPointedHyperlink(const TextViewer& viewer, const kernel::Position& at) {
 				std::size_t numberOfHyperlinks;
-				if(const presentation::hyperlink::Hyperlink* const* hyperlinks = viewer.presentation().getHyperlinks(at.line, numberOfHyperlinks)) {
+				if(const presentation::hyperlink::Hyperlink* const* hyperlinks = viewer.presentation().getHyperlinks(kernel::line(at), numberOfHyperlinks)) {
 					for(std::size_t i = 0; i < numberOfHyperlinks; ++i) {
-						if(at.offsetInLine >= *hyperlinks[i]->region().begin() && at.offsetInLine <= *hyperlinks[i]->region().end())
+						if(kernel::offsetInLine(at) >= *hyperlinks[i]->region().begin() && kernel::offsetInLine(at) <= *hyperlinks[i]->region().end())
 							return hyperlinks[i];
 					}
 				}

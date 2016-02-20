@@ -129,7 +129,7 @@ namespace ascension {
 				if(&postChange.type() != &type_)
 					return false;
 				const Position& bottom = region_.end();
-				if(bottom.offsetInLine == 0 || bottom != static_cast<DeletionChange&>(postChange).region_.beginning())
+				if(offsetInLine(bottom) == 0 || bottom != static_cast<DeletionChange&>(postChange).region_.beginning())
 					return false;
 				else {
 					region_.end() = static_cast<DeletionChange&>(postChange).region_.end();
@@ -544,9 +544,9 @@ namespace ascension {
 				throw IllegalStateException("called in IDocumentListeners' notification.");
 			else if(isReadOnly())
 				throw ReadOnlyDocumentException();
-			else if(region.end().line >= numberOfLines()
-					|| region.first.offsetInLine > lineLength(region.first.line)
-					|| region.second.offsetInLine > lineLength(region.second.line))
+			else if(kernel::line(region.end()) >= numberOfLines()
+					|| kernel::offsetInLine(region.first) > lineLength(kernel::line(region.first))
+					|| kernel::offsetInLine(region.second) > lineLength(kernel::line(region.second)))
 				throw BadRegionException(region);
 			else if(isNarrowed() && !accessibleRegion().encompasses(region))
 				throw DocumentAccessViolationException();
@@ -568,25 +568,25 @@ namespace ascension {
 			Position endOfInsertedString;
 			try {
 				// simple cases: both erased region and inserted string are single line
-				if(beginning.line == end.line && (text.cbegin() == nullptr || text.empty())) {	// erase in single line
+				if(kernel::line(beginning) == kernel::line(end) && (text.cbegin() == nullptr || text.empty())) {	// erase in single line
 					Line& line = *lines_[beginning.line];
-					erasedString.sputn(line.text().data() + beginning.offsetInLine, static_cast<std::streamsize>(end.offsetInLine - beginning.offsetInLine));
-					line.text_.erase(beginning.offsetInLine, end.offsetInLine - beginning.offsetInLine);
-					erasedStringLength += end.offsetInLine - beginning.offsetInLine;
+					erasedString.sputn(line.text().data() + offsetInLine(beginning), static_cast<std::streamsize>(offsetInLine(end) - offsetInLine(beginning)));
+					line.text_.erase(offsetInLine(beginning), offsetInLine(end) - offsetInLine(beginning));
+					erasedStringLength += offsetInLine(end) - offsetInLine(beginning);
 					endOfInsertedString = beginning;
 				} else if(region.isEmpty() && nextNewline == text.cend()) {	// insert single line
-					lines_[beginning.line]->text_.insert(beginning.offsetInLine, text.cbegin(), text.length());
+					lines_[kernel::line(beginning)]->text_.insert(offsetInLine(beginning), text.cbegin(), text.length());
 					insertedStringLength += text.length();
-					endOfInsertedString.line = beginning.line;
-					endOfInsertedString.offsetInLine = beginning.offsetInLine + text.length();
-				} else if(beginning.line == end.line && nextNewline == text.cend()) {	// replace in single line
+					endOfInsertedString.line = kernel::line(beginning);
+					endOfInsertedString.offsetInLine = offsetInLine(beginning) + text.length();
+				} else if(kernel::line(beginning) == kernel::line(end) && nextNewline == text.cend()) {	// replace in single line
 					Line& line = *lines_[beginning.line];
-					erasedString.sputn(line.text().data() + beginning.offsetInLine, static_cast<std::streamsize>(end.offsetInLine - beginning.offsetInLine));
-					line.text_.replace(beginning.offsetInLine, end.offsetInLine - beginning.offsetInLine, text.cbegin(), text.length());
-					erasedStringLength += end.offsetInLine - beginning.offsetInLine;
+					erasedString.sputn(line.text().data() + offsetInLine(beginning), static_cast<std::streamsize>(offsetInLine(end) - offsetInLine(beginning)));
+					line.text_.replace(offsetInLine(beginning), offsetInLine(end) - offsetInLine(beginning), text.cbegin(), text.length());
+					erasedStringLength += offsetInLine(end) - offsetInLine(beginning);
 					insertedStringLength += text.length();
-					endOfInsertedString.line = beginning.line;
-					endOfInsertedString.offsetInLine = beginning.offsetInLine + text.length();
+					endOfInsertedString.line = kernel::line(beginning);
+					endOfInsertedString.offsetInLine = offsetInLine(beginning) + text.length();
 				}
 				// complex case: erased region and/or inserted string are/is multi-line
 				else {
@@ -595,15 +595,15 @@ namespace ascension {
 						for(Position p(beginning); ; ++p.line, p.offsetInLine = 0) {
 							const Line& line = *lines_[p.line];
 							const bool last = p.line == end.line;
-							const Index e = !last ? line.text().length() : end.offsetInLine;
+							const Index e = !last ? line.text().length() : offsetInLine(end);
 							if(recordingChanges_) {
-								erasedString.sputn(line.text().data() + p.offsetInLine, static_cast<std::streamsize>(e - p.offsetInLine));
+								erasedString.sputn(line.text().data() + offsetInLine(p), static_cast<std::streamsize>(e - offsetInLine(p)));
 								if(!last) {
 									const String eol(line.newline().asString());
 									erasedString.sputn(eol.data(), static_cast<std::streamsize>(eol.length()));
 								}
 							}
-//							erasedStringLength += e - p.offsetInLine;
+//							erasedStringLength += e - offsetInLine(p);
 							if(last)
 								break;
 						}
@@ -629,10 +629,10 @@ namespace ascension {
 							}
 							// merge last line
 							Line& lastAllocatedLine = *allocatedLines.back();
-							endOfInsertedString.line = beginning.line + allocatedLines.size();
+							endOfInsertedString.line = kernel::line(beginning) + allocatedLines.size();
 							endOfInsertedString.offsetInLine = lastAllocatedLine.text().length();
-							const Line& lastLine = *lines_[end.line];
-							lastAllocatedLine.text_.append(lastLine.text(), end.offsetInLine, lastLine.text().length() - end.offsetInLine);
+							const Line& lastLine = *lines_[kernel::line(end)];
+							lastAllocatedLine.text_.append(lastLine.text(), offsetInLine(end), lastLine.text().length() - offsetInLine(end));
 							lastAllocatedLine.newline_ = lastLine.newline();
 						} catch(...) {
 							BOOST_FOREACH(Line* line, allocatedLines)
@@ -644,31 +644,31 @@ namespace ascension {
 					try {
 						// 3. insert allocated strings
 						if(!allocatedLines.empty())
-							lines_.insert(std::begin(lines_) + end.line + 1, std::begin(allocatedLines), std::end(allocatedLines));
+							lines_.insert(std::begin(lines_) + kernel::line(end) + 1, std::begin(allocatedLines), std::end(allocatedLines));
 						// 4. replace first line
-						Line& firstLine = *lines_[beginning.line];
-						const Index erasedLength = firstLine.text().length() - beginning.offsetInLine;
+						Line& firstLine = *lines_[kernel::line(beginning)];
+						const Index erasedLength = firstLine.text().length() - offsetInLine(beginning);
 						const Index insertedLength = firstNewline - text.cbegin();
 						try {
 							if(!allocatedLines.empty())
-								firstLine.text_.replace(beginning.offsetInLine, erasedLength, text.cbegin(), insertedLength);
+								firstLine.text_.replace(offsetInLine(beginning), erasedLength, text.cbegin(), insertedLength);
 							else {
 								// join the first line, inserted string and the last line
 								String temp(text.cbegin(), insertedLength);
-								const Line& lastLine = *lines_[end.line];
-								temp.append(lastLine.text(), end.offsetInLine, lastLine.text().length() - end.offsetInLine);
-								firstLine.text_.replace(beginning.offsetInLine, erasedLength, temp);
+								const Line& lastLine = *lines_[kernel::line(end)];
+								temp.append(lastLine.text(), offsetInLine(end), lastLine.text().length() - offsetInLine(end));
+								firstLine.text_.replace(offsetInLine(beginning), erasedLength, temp);
 								endOfInsertedString.offsetInLine += insertedLength;
 							}
 						} catch(...) {
-							const ascension::detail::GapVector<Line*>::const_iterator b(std::begin(lines_) + end.line + 1);
+							const ascension::detail::GapVector<Line*>::const_iterator b(std::begin(lines_) + kernel::line(end) + 1);
 							const ascension::detail::GapVector<Line*>::const_iterator e(b + allocatedLines.size());
 							std::for_each(b, e, std::default_delete<Line>());
 							lines_.erase(b, e);
 							throw;
 						}
 						firstLine.newline_ = (firstNewline != text.cend()) ?
-							*text::eatNewline(firstNewline, text.cend()) : lines_[end.line]->newline();
+							*text::eatNewline(firstNewline, text.cend()) : lines_[kernel::line(end)]->newline();
 						erasedStringLength += erasedLength;
 						insertedStringLength += insertedLength;
 					} catch(...) {
@@ -678,7 +678,7 @@ namespace ascension {
 					}
 					// 5. remove lines to erase
 					if(!region.isEmpty()) {
-						const auto b(std::begin(lines_) + beginning.line + 1), e(std::begin(lines_) + end.line + 1);
+						const auto b(std::begin(lines_) + kernel::line(beginning) + 1), e(std::begin(lines_) + kernel::line(end) + 1);
 						std::for_each(b, e, std::default_delete<Line>());
 						lines_.erase(b, e);
 					}

@@ -32,7 +32,7 @@ namespace ascension {
 					std::map<kernel::ContentType, HyperlinkDetector*>::const_iterator detector(composites_.find(partition.contentType));
 					if(detector != composites_.end()) {
 						std::unique_ptr<Hyperlink> found = detector->second->nextHyperlink(
-							document, line, boost::irange(p.offsetInLine, std::min(partition.region.end(), e).offsetInLine));
+							document, line, boost::irange(kernel::offsetInLine(p), kernel::offsetInLine(std::min(partition.region.end(), e))));
 						if(found.get() != nullptr)
 							return found;
 					}

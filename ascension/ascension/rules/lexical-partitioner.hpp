@@ -45,7 +45,7 @@ namespace ascension {
 					const kernel::Position& startOfToken, Index lengthOfToken) BOOST_NOEXCEPT
 					: contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
 				kernel::Position getTokenEnd() const BOOST_NOEXCEPT {
-					return kernel::Position(tokenStart.line, tokenStart.offsetInLine + tokenLength);
+					return kernel::Position(kernel::line(tokenStart), kernel::offsetInLine(tokenStart) + tokenLength);
 				}
 			};
 		private:

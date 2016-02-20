@@ -77,23 +77,23 @@ namespace ascension {
 				void continueSelection(Caret& caret, const kernel::Position& destination) override {
 					const kernel::Document& document = caret.document();
 					const text::IdentifierSyntax& id = document.contentTypeInformation().getIdentifierSyntax(kernel::contentType(caret));
-					if(destination.line < anchorLine_
-							|| (destination.line == anchorLine_
-								&& destination.offsetInLine < *boost::const_begin(anchorOffsetsInLine_))) {
+					if(kernel::line(destination) < anchorLine_
+							|| (kernel::line(destination) == anchorLine_
+								&& kernel::offsetInLine(destination) < *boost::const_begin(anchorOffsetsInLine_))) {
 						text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
 							kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 						--i;
 						caret.select(kernel::Position(anchorLine_, *boost::const_end(anchorOffsetsInLine_)),
-							(i.base().tell().line == destination.line) ? i.base().tell() : kernel::Position::bol(destination.line));
-					} else if(destination.line > anchorLine_
-							|| (destination.line == anchorLine_
-								&& destination.offsetInLine > *boost::const_end(anchorOffsetsInLine_))) {
+							(kernel::line(i.base().tell()) == kernel::line(destination)) ? i.base().tell() : kernel::Position::bol(kernel::line(destination)));
+					} else if(kernel::line(destination) > anchorLine_
+							|| (kernel::line(destination) == anchorLine_
+								&& kernel::offsetInLine(destination) > *boost::const_end(anchorOffsetsInLine_))) {
 						text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
 							kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 						++i;
 						caret.select(kernel::Position(anchorLine_, *boost::const_begin(anchorOffsetsInLine_)),
-							(i.base().tell().line == destination.line) ?
-								i.base().tell() : kernel::Position(destination.line, document.lineLength(destination.line)));
+							(kernel::line(i.base().tell()) == kernel::line(destination)) ?
+								i.base().tell() : kernel::Position(destination.line, document.lineLength(kernel::line(destination))));
 					} else
 						caret.select(kernel::Region(anchorLine_, anchorOffsetsInLine_));
 				}
@@ -150,7 +150,7 @@ namespace ascension {
 						graphics::geometry::make<graphics::Point>((
 							geometry::_x = std::numeric_limits<Scalar>::max(), geometry::_y = 0.0f)),
 						graphics::Dimension(geometry::_dx = std::numeric_limits<Scalar>::min(), geometry::_dy = 0.0f)));
-				for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+				for(Index line = kernel::line(selectedRegion.beginning()), e = kernel::line(selectedRegion.end()); line <= e; ++line) {
 					NumericRange<Scalar> yrange(geometry::crange<1>(selectionBounds) | adaptors::ordered());
 //					yrange.advance_end(widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
 					yrange = boost::irange(*yrange.begin(), *yrange.end() + widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
@@ -190,7 +190,7 @@ namespace ascension {
 
 					// render mask pattern
 					Scalar y = 0;
-					for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+					for(Index line = kernel::line(selectedRegion.beginning()), e = kernel::line(selectedRegion.end()); line <= e; ++line) {
 						// render each lines
 						const graphics::font::TextLayout& layout = renderer.layouts()[line];
 						const Scalar indent = graphics::font::lineIndent(layout, viewport->contentMeasure());
@@ -233,7 +233,7 @@ namespace ascension {
 						graphics::geometry::_dx = -geometry::left(selectionExtent), graphics::geometry::_dy = -geometry::top(selectionExtent)));
 					graphics::PaintContext context(move(image->createRenderingContext()), selectionExtent);
 					Scalar y = geometry::top(selectionBounds);
-					for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+					for(Index line = kernel::line(selectedRegion.beginning()), e = kernel::line(selectedRegion.end()); line <= e; ++line) {
 						renderer.paint(line, context,
 							graphics::geometry::make<graphics::Point>((
 								geometry::_x = graphics::font::lineIndent(renderer.layouts()[line], viewport->contentMeasure()) - geometry::left(selectionBounds),
@@ -276,7 +276,7 @@ namespace ascension {
 					graphics::geometry::_from = cursorPosition, graphics::geometry::_to = hotspot,
 					graphics::geometry::_dx = -(geometry::left(textArea.contentRectangle()) - viewport->scrollPositions().ipd() + geometry::left(selectionBounds)),
 					graphics::geometry::_dy = -geometry::y(modelToView(viewer,
-						graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(selectedRegion.beginning().line))))));
+						graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(kernel::line(selectedRegion.beginning())))))));
 
 				// calculate 'dimensions'
 				graphics::geometry::scale((
@@ -298,7 +298,7 @@ namespace ascension {
 				dragAndDrop_->numberOfRectangleLines = 0;
 			else {
 				const kernel::Region selection(caret.selectedRegion());
-				dragAndDrop_->numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
+				dragAndDrop_->numberOfRectangleLines = kernel::line(selection.end()) - kernel::line(selection.beginning()) + 1;
 			}
 
 			// setup drag-image and begin operation
@@ -476,9 +476,9 @@ namespace ascension {
 				if(dragAndDrop_->numberOfRectangleLines == 0)
 					acceptable = true;
 				else {
-					const Index lines = std::min(viewer.document().numberOfLines(), p.line + dragAndDrop_->numberOfRectangleLines);
+					const Index lines = std::min(viewer.document().numberOfLines(), kernel::line(p) + dragAndDrop_->numberOfRectangleLines);
 					bool bidirectional = false;
-					for(Index line = p.line; line < lines; ++line) {
+					for(Index line = kernel::line(p); line < lines; ++line) {
 						if(textArea_->textRenderer().layouts()[line].isBidirectional()) {
 							bidirectional = true;
 							break;

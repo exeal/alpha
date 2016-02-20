@@ -291,18 +291,18 @@ namespace ascension {
 			const Document& document = document();
 			const Position pos = getCharacterForClientXY(getCursorPosition(), false);	// カーソル位置に最も近い文字位置
 
-			if(pos.offsetInLine == document.getLineLength(pos.line))	// 指定位置に文字が無い
+			if(kernel::offsetInLine(pos) == document.getLineLength(pos.line))	// 指定位置に文字が無い
 				return false;
 
 			const LineLayout& layout = renderer_->getLineLayout(pos.line);
-			const Index subline = layout.getSubline(pos.offsetInLine);
+			const Index subline = layout.getSubline(kernel::offsetInLine(pos));
 			const Char* const line = document.getLine(pos.line).data();
 			const Char* const first = line + layout.getSublineOffset(subline);
 			const Char* const last =
 				line + ((subline < layout.getNumberOfSublines() - 1) ? layout.getSublineOffset(subline + 1) : document.getLineLength(pos.line));
 			Index linkLength;	// URIDetector の eatMailAddress 、eatUrlString で見つけたリンクテキストの長さ
 
-			for(const Char* p = (pos.offsetInLine > 200) ? first + pos.offsetInLine - 200 : first; p <= first + pos.offsetInLine; ) {
+			for(const Char* p = (pos.offsetInLine > 200) ? first + kernel::offsetInLine(pos) - 200 : first; p <= first + kernel::offsetInLine(pos); ) {
 				if(p != first) {
 					if((p[-1] >= L'A' && p[-1] <= L'Z')
 							|| (p[-1] >= L'a' && p[-1] <= L'z')
@@ -312,10 +312,10 @@ namespace ascension {
 					}
 				}
 				if(0 != (linkLength = rules::URIDetector::eatURL(p, last, true) - p)) {
-					if(p - first + linkLength > pos.offsetInLine) {	// カーソル位置を越えた
+					if(p - first + linkLength > kernel::offsetInLine(pos)) {	// カーソル位置を越えた
 						region.first.line = region.second.line = pos.line;
 						region.first.offsetInLine = p - line;
-						region.second.offsetInLine = region.first.offsetInLine + linkLength;
+						region.second.offsetInLine = kernel::offsetInLine(region.first) + linkLength;
 						text.reset(new Char[linkLength + 1]);
 						wmemcpy(text.get(), p, linkLength);
 						text[linkLength] = 0;
@@ -323,11 +323,11 @@ namespace ascension {
 					}
 					p += linkLength;	// 届かない場合は続行
 				} else if(0 != (linkLength = rules::URIDetector::eatMailAddress(p, last, true) - p)) {
-					if(p - first + linkLength > pos.offsetInLine) {	// カーソル位置を越えた
+					if(p - first + linkLength > kernel::offsetInLine(pos)) {	// カーソル位置を越えた
 						static const wchar_t MAILTO_PREFIX[] = L"mailto:";
 						region.first.line = region.second.line = pos.line;
 						region.first.offsetInLine = p - line;
-						region.second.offsetInLine = region.first.offsetInLine + linkLength;
+						region.second.offsetInLine = kernel::offsetInLine(region.first) + linkLength;
 						text.reset(new Char[linkLength + 7 + 1]);
 						wmemcpy(text.get(), MAILTO_PREFIX, countof(MAILTO_PREFIX) - 1);
 						wmemcpy(text.get() + countof(MAILTO_PREFIX) - 1, p, linkLength);

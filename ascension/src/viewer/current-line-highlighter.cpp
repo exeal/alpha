@@ -73,11 +73,11 @@ namespace ascension {
 		/// @see CaretListener#caretMoved
 		void CurrentLineHighlighter::caretMoved(const Caret&, const kernel::Region& oldRegion) {
 			if(oldRegion.isEmpty()) {
-				if(!isSelectionEmpty(*caret_) || kernel::line(*caret_) != oldRegion.first.line)
-					caret_->textArea().redrawLine(oldRegion.first.line, false);
+				if(!isSelectionEmpty(*caret_) || kernel::line(*caret_) != kernel::line(oldRegion.first))
+					caret_->textArea().redrawLine(kernel::line(oldRegion.first), false);
 			}
 			if(isSelectionEmpty(*caret_)) {
-				if(!oldRegion.isEmpty() || kernel::line(*caret_) != oldRegion.first.line)
+				if(!oldRegion.isEmpty() || kernel::line(*caret_) != kernel::line(oldRegion.first))
 					caret_->textArea().redrawLine(kernel::line(*caret_), false);
 			}
 		}
