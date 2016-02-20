@@ -88,11 +88,11 @@ namespace ascension {
 
 			if(kernel::offsetInLine(tell()) == 0) {
 				--position_.line;
-				position_.offsetInLine = line().length();
+				position_.offsetInLine = lineString().length();
 			} else if(--position_.offsetInLine > 0) {
-				const String& lineString = line();
-				if(text::surrogates::isLowSurrogate(lineString[kernel::offsetInLine(tell())])
-						&& text::surrogates::isHighSurrogate(lineString[kernel::offsetInLine(tell()) - 1]))
+				const String& s = lineString();
+				if(text::surrogates::isLowSurrogate(s[kernel::offsetInLine(tell())])
+						&& text::surrogates::isHighSurrogate(s[kernel::offsetInLine(tell()) - 1]))
 					--position_.offsetInLine;
 			}
 			--offset_;
@@ -100,11 +100,11 @@ namespace ascension {
 
 		CodePoint DocumentCharacterIterator::dereference() const BOOST_NOEXCEPT {
 			assert(document_ != nullptr && tell() != region().second);
-			const String& lineString = line();
-			if(kernel::offsetInLine(tell()) == lineString.length())
+			const String& s = lineString();
+			if(kernel::offsetInLine(tell()) == s.length())
 				return text::LINE_SEPARATOR;
 			else
-				return text::utf::decodeFirst(std::begin(lineString) + kernel::offsetInLine(tell()), std::end(lineString));
+				return text::utf::decodeFirst(std::begin(s) + kernel::offsetInLine(tell()), std::end(s));
 		}
 #if 0
 		/// @see text#CharacterIterator#doLess
@@ -123,19 +123,19 @@ namespace ascension {
 //				throw NoSuchElementException("the iterator is at the last.");
 				return;
 
-			const String& lineString = line();
-			if(kernel::offsetInLine(tell()) == lineString.length()) {
+			const String& s = lineString();
+			if(kernel::offsetInLine(tell()) == s.length()) {
 				++position_.line;
 				position_.offsetInLine = 0;
-			} else if(++position_.offsetInLine < lineString.length()
-					&& text::surrogates::isLowSurrogate(lineString[kernel::offsetInLine(tell())])
-					&& text::surrogates::isHighSurrogate(lineString[kernel::offsetInLine(tell()) - 1]))
+			} else if(++position_.offsetInLine < s.length()
+					&& text::surrogates::isLowSurrogate(s[kernel::offsetInLine(tell())])
+					&& text::surrogates::isHighSurrogate(s[kernel::offsetInLine(tell()) - 1]))
 				++position_.offsetInLine;
 			++offset_;
 		}
 		
 		/// Returns the line text string.
-		const String& DocumentCharacterIterator::line() const BOOST_NOEXCEPT {
+		const String& DocumentCharacterIterator::lineString() const BOOST_NOEXCEPT {
 			return document().lineString(kernel::line(tell()));
 		}
 
