@@ -572,7 +572,7 @@ namespace ascension {
 			 */
 			Position locations::firstPrintableCharacterOfLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
-				const Char* const s = p.document().line(kernel::line(np)).data();
+				const Char* const s = p.document().lineString(kernel::line(np)).data();
 				np.offsetInLine = detail::identifierSyntax(p).eatWhiteSpaces(s, s + p.document().lineLength(kernel::line(np)), true) - s;
 				return np;
 			}
@@ -586,7 +586,7 @@ namespace ascension {
 			 */
 			Position firstPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
-				const String& s = p.document().line(kernel::line(np));
+				const String& s = p.document().lineString(kernel::line(np));
 				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np))) {
 					const Index subline = layout->lineAt(kernel::offsetInLine(np));
 					np.offsetInLine = detail::identifierSyntax(p).eatWhiteSpaces(
@@ -680,7 +680,7 @@ namespace ascension {
 			bool isFirstPrintableCharacterOfLine(const viewer::VisualPoint& p) {
 				const Position np(p.normalized()), bob(p.document().accessibleRegion().first);
 				const Index offset = (kernel::line(bob) == kernel::line(np)) ? kernel::offsetInLine(bob) : 0;
-				const String& line = p.document().line(kernel::line(np));
+				const String& line = p.document().lineString(kernel::line(np));
 				return line.data() + kernel::offsetInLine(np) - offset
 					== detail::identifierSyntax(p).eatWhiteSpaces(line.data() + offset, line.data() + line.length(), true);
 			}
@@ -694,7 +694,7 @@ namespace ascension {
 			/// Returns @c true if the given position is the last printable character in the line.
 			bool isLastPrintableCharacterOfLine(const viewer::VisualPoint& p) {
 				const Position np(p.normalized()), eob(p.document().accessibleRegion().second);
-				const String& line = p.document().line(kernel::line(np));
+				const String& line = p.document().lineString(kernel::line(np));
 				const Index lineLength = (kernel::line(eob) == kernel::line(np)) ? kernel::offsetInLine(eob) : line.length();
 				return line.data() + lineLength - kernel::offsetInLine(np)
 					== detail::identifierSyntax(p).eatWhiteSpaces(line.data() + kernel::offsetInLine(np), line.data() + lineLength, true);
@@ -713,7 +713,7 @@ namespace ascension {
 			 */
 			Position lastPrintableCharacterOfLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
-				const String& s(p.document().line(kernel::line(np)));
+				const String& s(p.document().lineString(kernel::line(np)));
 				const text::IdentifierSyntax& syntax = detail::identifierSyntax(p);
 				for(Index spaceLength = 0; spaceLength < s.length(); ++spaceLength) {
 					if(syntax.isWhiteSpace(s[s.length() - spaceLength - 1], true))

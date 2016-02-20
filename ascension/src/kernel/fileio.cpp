@@ -1316,7 +1316,7 @@ private:
 #	endif
 #endif
 				encoding_ = resultEncoding.first;
-				newline_ = document().getLineInformation(0).newline();	// use the newline of the first line
+				newline_ = document().lineContent(0).newline();	// use the newline of the first line
 				listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileEncodingChanged, *this);
 				listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);
 

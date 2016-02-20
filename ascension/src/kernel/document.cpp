@@ -2,7 +2,7 @@
  * @file document.cpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2014
+ * @date 2006-2016
  */
 
 #include <ascension/kernel/document.hpp>
@@ -84,21 +84,21 @@ namespace ascension {
 			if(line(beginning) == line(end)) {	// shortcut for single-line
 				if(out) {
 					// TODO: this cast may be danger.
-					out.write(document.line(line(end)).data() + offsetInLine(beginning), static_cast<std::streamsize>(offsetInLine(end) - offsetInLine(beginning)));
+					out.write(document.lineString(line(end)).data() + offsetInLine(beginning), static_cast<std::streamsize>(offsetInLine(end) - offsetInLine(beginning)));
 				}
 			} else {
 				const text::Newline resolvedNewline(text::resolveNewline(document, newline));
 				const String eol(resolvedNewline.isLiteral() ? resolvedNewline.asString() : String());
 				assert(!eol.empty() || resolvedNewline == text::Newline::USE_INTRINSIC_VALUE);
 				for(Index i = beginning.line; out; ++i) {
-					const Document::Line& line = document.getLineInformation(i);
-					const Index first = (i == kernel::line(beginning)) ? offsetInLine(beginning) : 0;
-					const Index last = (i == kernel::line(end)) ? offsetInLine(end) : line.text().length();
-					out.write(line.text().data() + first, static_cast<std::streamsize>(last - first));
-					if(i == kernel::line(end))
+					const Document::Line& lineContent = document.lineContent(i);
+					const Index first = (i == line(beginning)) ? offsetInLine(beginning) : 0;
+					const Index last = (i == line(end)) ? offsetInLine(end) : lineContent.text().length();
+					out.write(lineContent.text().data() + first, static_cast<std::streamsize>(last - first));
+					if(i == line(end))
 						break;
 					if(resolvedNewline == text::Newline::USE_INTRINSIC_VALUE) {
-						const String intrinsicEol(line.newline().asString());
+						const String intrinsicEol(lineContent.newline().asString());
 						out.write(intrinsicEol.data(), static_cast<std::streamsize>(intrinsicEol.length()));
 					} else
 						out.write(eol.data(), static_cast<std::streamsize>(eol.length()));

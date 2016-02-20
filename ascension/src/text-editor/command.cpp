@@ -432,7 +432,7 @@ namespace ascension {
 					return false;
 	
 				const kernel::Position p(kernel::locations::nextVisualLine(caret, fromPreviousLine_ ? Direction::BACKWARD : Direction::FORWARD).position());
-				const String& lineString = document.line(kernel::line(caret) + (fromPreviousLine_ ? -1 : 1));
+				const String& lineString = document.lineString(kernel::line(caret) + (fromPreviousLine_ ? -1 : 1));
 				if(kernel::offsetInLine(p) >= lineString.length())
 					return false;
 				setNumericPrefix(1);
@@ -462,7 +462,7 @@ namespace ascension {
 					return false;
 
 				viewer::Caret& caret = viewer.textArea().caret();
-				const String& lineString = document.line(kernel::line(eos));
+				const String& lineString = document.lineString(kernel::line(eos));
 				const CodePoint c = text::utf::decodeLast(std::begin(lineString), std::begin(lineString) + offsetInLine(eos));
 				std::array<Char, 7> buffer;
 #if(_MSC_VER < 1400)
@@ -503,7 +503,7 @@ namespace ascension {
 					return false;
 
 				viewer::Caret& caret = viewer.textArea().caret();
-				const String& lineString = document.line(kernel::line(eos));
+				const String& lineString = document.lineString(kernel::line(eos));
 				const Index offsetInLine = kernel::offsetInLine(eos);
 
 				// accept /(?:[Uu]\+)?[0-9A-Fa-f]{1,6}/

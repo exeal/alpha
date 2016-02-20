@@ -136,7 +136,7 @@ namespace ascension {
 		
 		/// Returns the line text string.
 		const String& DocumentCharacterIterator::line() const BOOST_NOEXCEPT {
-			return document().line(kernel::line(tell()));
+			return document().lineString(kernel::line(tell()));
 		}
 
 		/**

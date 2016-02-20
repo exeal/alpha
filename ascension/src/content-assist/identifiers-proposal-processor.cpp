@@ -58,7 +58,7 @@ namespace ascension {
 				const viewer::TextViewer& textViewer, const kernel::Region& replacementRegion,
 				std::shared_ptr<const CompletionProposal> currentProposals[], std::size_t numberOfCurrentProposals) const BOOST_NOEXCEPT {
 			// select the partially matched proposal
-			String precedingIdentifier(textViewer.document().line(kernel::line(replacementRegion.first)).substr(
+			String precedingIdentifier(textViewer.document().lineString(kernel::line(replacementRegion.first)).substr(
 				kernel::offsetInLine(replacementRegion.beginning()), kernel::offsetInLine(replacementRegion.end()) - kernel::offsetInLine(replacementRegion.beginning())));
 			if(precedingIdentifier.empty())
 				return std::shared_ptr<CompletionProposal>();

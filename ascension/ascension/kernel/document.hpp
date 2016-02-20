@@ -2,7 +2,7 @@
  * @file document.hpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2012, 2014-2015
+ * @date 2006-2012, 2014-2016
  */
 
 #ifndef ASCENSION_DOCUMENT_HPP
@@ -275,11 +275,11 @@ namespace ascension {
 			/// @name Contents
 			/// @{
 			Region accessibleRegion() const BOOST_NOEXCEPT;
-			const Line& getLineInformation(Index line) const;
 			Index length(const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE) const BOOST_NOEXCEPT;
-			const String& line(Index line) const;
+			const Line& lineContent(Index line) const;
 			Index lineLength(Index line) const;
 			Index lineOffset(Index line, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE) const;
+			const String& lineString(Index line) const;
 			Index numberOfLines() const BOOST_NOEXCEPT;
 			Region region() const BOOST_NOEXCEPT;
 			std::size_t revisionNumber() const BOOST_NOEXCEPT;
@@ -520,18 +520,6 @@ namespace ascension {
 		inline ContentTypeInformationProvider& Document::contentTypeInformation() const BOOST_NOEXCEPT {
 			return *contentTypeInformationProvider_;
 		}
-
-		/**
-		 * Returns the information of the specified line.
-		 * @param line The line
-		 * @return The information about @a line
-		 * @throw BadPostionException @a line is outside of the document
-		 */
-		inline const Document::Line& Document::getLineInformation(Index line) const {
-			if(line >= lines_.size())
-				throw BadPositionException(Position::bol(line));
-			return *lines_[line];
-		}
 #if 0
 		inline Document::LineIterator Document::getLineIterator(Index line) const {
 			assertValid();
@@ -576,14 +564,18 @@ namespace ascension {
 		 * @see #recordChanges, #numberOfUndoableChanges, #numberOfRedoableChanges
 		 */
 		inline bool Document::isRecordingChanges() const BOOST_NOEXCEPT {return recordingChanges_;}
-		
+
 		/**
-		 * Returns the text of the specified line.
-		 * @param line the line
-		 * @return the text
+		 * Returns the @c #Line value of the specified line.
+		 * @param line The line
+		 * @return The content of @a line
 		 * @throw BadPostionException @a line is outside of the document
 		 */
-		inline const String& Document::line(Index line) const {return getLineInformation(line).text_;}
+		inline const Document::Line& Document::lineContent(Index line) const {
+			if(line >= lines_.size())
+				throw BadPositionException(Position::bol(line));
+			return *lines_[line];
+		}
 
 		/**
 		 * Returns the length of the specified line. The line break is not included.
@@ -591,7 +583,15 @@ namespace ascension {
 		 * @return the length of @a line
 		 * @throw BadLocationException @a line is outside of the document
 		 */
-		inline Index Document::lineLength(Index line) const {return this->line(line).length();}
+		inline Index Document::lineLength(Index line) const {return lineString(line).length();}
+		
+		/**
+		 * Returns the text string of the specified line.
+		 * @param line the line
+		 * @return the text
+		 * @throw BadPostionException @a line is outside of the document
+		 */
+		inline const String& Document::lineString(Index line) const {return lineContent(line).text_;}
 #if 0
 		/// Returns the object locks the document or @c null if the document is not locked.
 		inline const void* Document::locker() const BOOST_NOEXCEPT {return locker_;}

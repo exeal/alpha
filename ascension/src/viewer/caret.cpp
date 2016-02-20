@@ -464,7 +464,7 @@ namespace ascension {
 			if(validateSequence) {
 				if(const texteditor::Session* const session = doc.session()) {
 					if(const std::shared_ptr<const texteditor::InputSequenceCheckers> checker = session->inputSequenceCheckers()) {
-						const Char* const lineString = doc.line(kernel::line(beginning())).data();
+						const Char* const lineString = doc.lineString(kernel::line(beginning())).data();
 						if(!checker->check(StringPiece(lineString, offsetInLine(beginning())), character)) {
 							eraseSelection(*this);
 							return false;	// invalid sequence
@@ -601,7 +601,7 @@ namespace ascension {
 
 		// @see detail#InputMethodQueryEvent#querySurroundingText
 		std::pair<const StringPiece, StringPiece::const_iterator> Caret::querySurroundingText() const {
-			const StringPiece lineString(document().line(kernel::line(*this)));
+			const StringPiece lineString(document().lineString(kernel::line(*this)));
 			StringPiece::const_iterator position(lineString.cbegin());
 			if(kernel::line(*this) == kernel::line(anchor()))
 				position += kernel::offsetInLine(beginning());
