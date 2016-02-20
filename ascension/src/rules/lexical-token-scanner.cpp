@@ -72,11 +72,11 @@ namespace ascension {
 		std::unique_ptr<Token> LexicalTokenScanner::nextToken() {
 			// TODO: This code is not exception-safe.
 			const text::IdentifierSyntax& ids = identifierSyntax();
-			StringPiece line(current_.line());
+			StringPiece line(current_.lineString());
 			while(current_.hasNext()) {
 				if(*current_ == text::LINE_SEPARATOR) {
 					++current_;
-					line = current_.line();
+					line = current_.lineString();
 					if(!current_.hasNext())
 						break;
 				}

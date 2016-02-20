@@ -4,12 +4,11 @@
  * @date 2003-2006 (was EditDoc.h)
  * @date 2006-2010 (was document.hpp)
  * @date 2010-11-06 separated from document.hpp
- * @date 2012-2014
+ * @date 2012-2014, 2016
  */
 
 #ifndef ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
 #define ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
-
 #include <ascension/corelib/text/character-iterator.hpp>	// text.CharacterIterator
 #include <ascension/kernel/region.hpp>
 #include <boost/iterator/iterator_facade.hpp>
@@ -39,7 +38,7 @@ namespace ascension {
 			/// @name Other Document-Related Attributes
 			/// @{
 			const Document& document() const BOOST_NOEXCEPT;
-			const String& line() const BOOST_NOEXCEPT;
+			const String& lineString() const BOOST_NOEXCEPT;
 			const Region& region() const BOOST_NOEXCEPT;
 			void setRegion(const Region& newRegion);
 			/// @}

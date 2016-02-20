@@ -103,15 +103,15 @@ namespace ascension {
 				if(currentPartition.contentType != contentType_)
 					i.seek(currentPartition.region.end());
 				if(i.tell() >= currentPartition.region.end()) {
-					if(kernel::offsetInLine(i.tell()) == i.line().length())
+					if(kernel::offsetInLine(i.tell()) == i.lineString().length())
 						++i;
 					document.partitioner().partition(i.tell(), currentPartition);
 					continue;
 				}
 				if(!followingNIDs) {
-					const Char* const bol = i.line().data();
+					const Char* const bol = i.lineString().data();
 					const Char* const s = bol + kernel::offsetInLine(i.tell());
-					const Char* e = syntax_.eatIdentifier(s, bol + i.line().length());
+					const Char* e = syntax_.eatIdentifier(s, bol + i.lineString().length());
 					if(e > s) {
 						identifiers.insert(String(s, e));	// automatically merged
 						i.seek(kernel::Position(kernel::line(i.tell()), e - bol));
