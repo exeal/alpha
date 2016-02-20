@@ -43,7 +43,7 @@ namespace ascension {
 			String s(newline.asString());
 
 			if(inheritIndent) {	// simple auto-indent
-				const String& currentLine = caret.document().line(line(caret));
+				const String& currentLine = caret.document().line(kernel::line(caret));
 				const Index len = detail::identifierSyntax(caret).eatWhiteSpaces(
 					currentLine.data(), currentLine.data() + offsetInLine(caret), true) - currentLine.data();
 				s += currentLine.substr(0, len);
@@ -84,7 +84,7 @@ namespace ascension {
 				const String indent(abs(level), character);
 				const kernel::Region region(caret.selectedRegion());
 
-				if(region.beginning().line == region.end().line) {
+				if(kernel::line(region.beginning()) == kernel::line(region.end())) {
 					// number of selected lines is one -> just insert tab character(s)
 					caret.replaceSelection(indent);
 					return;
@@ -92,16 +92,16 @@ namespace ascension {
 
 				const kernel::Position oldPosition(caret.position());
 				kernel::Position otherResult(caret.anchor());
-				Index line = region.beginning().line;
+				Index line = kernel::line(region.beginning());
 
 				// indent/unindent the first line
 				kernel::Document& document = caret.document();
 				if(level > 0) {
-					insert(document, kernel::Position(line, rectangle ? region.beginning().offsetInLine : 0), indent);
-					if(line == otherResult.line && otherResult.offsetInLine != 0)
+					insert(document, kernel::Position(line, rectangle ? kernel::offsetInLine(region.beginning()) : 0), indent);
+					if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 						otherResult.offsetInLine += level;
-					if(line == kernel::line(caret) && offsetInLine(caret) != 0)
-						caret.moveTo(kernel::Position(kernel::line(caret), offsetInLine(caret) + level));
+					if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
+						caret.moveTo(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) + level));
 				} else {
 					const String& s = document.line(line);
 					Index indentLength;
@@ -113,17 +113,17 @@ namespace ascension {
 					if(indentLength > 0) {
 						const Index deleteLength = std::min<Index>(-level, indentLength);
 						erase(document, kernel::Position::bol(line), kernel::Position(line, deleteLength));
-						if(line == otherResult.line && otherResult.offsetInLine != 0)
+						if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 							otherResult.offsetInLine -= deleteLength;
-						if(line == kernel::line(caret) && offsetInLine(caret) != 0)
-							caret.moveTo(kernel::Position(kernel::line(caret), offsetInLine(caret) - deleteLength));
+						if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
+							caret.moveTo(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) - deleteLength));
 					}
 				}
 
 				// indent/unindent the following selected lines
 				if(level > 0) {
-					for(++line; line <= region.end().line; ++line) {
-						if(document.lineLength(line) != 0 && (line != region.end().line || region.end().offsetInLine > 0)) {
+					for(++line; line <= kernel::line(region.end()); ++line) {
+						if(document.lineLength(line) != 0 && (line != kernel::line(region.end()) || kernel::offsetInLine(region.end()) > 0)) {
 							boost::optional<Index> insertPosition(0);	// zero is suitable for linear selection
 							if(rectangle) {
 								// TODO: recognize wrap (second parameter).
@@ -135,14 +135,14 @@ namespace ascension {
 							}
 							if(insertPosition)
 								insert(document, kernel::Position(line, *insertPosition), indent);
-							if(line == otherResult.line && otherResult.offsetInLine != 0)
+							if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 								otherResult.offsetInLine += level;
-							if(line == kernel::line(caret) && offsetInLine(caret) != 0)
-								caret.moveTo(kernel::Position(kernel::line(caret), offsetInLine(caret) + level));
+							if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
+								caret.moveTo(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) + level));
 						}
 					}
 				} else {
-					for(++line; line <= region.end().line; ++line) {
+					for(++line; line <= kernel::line(region.end()); ++line) {
 						const String& s = document.line(line);
 						Index indentLength;
 						for(indentLength = 0; indentLength < s.length(); ++indentLength) {
@@ -153,10 +153,10 @@ namespace ascension {
 						if(indentLength > 0) {
 							const Index deleteLength = std::min<Index>(-level, indentLength);
 							erase(document, kernel::Position::bol(line), kernel::Position(line, deleteLength));
-							if(line == otherResult.line && otherResult.offsetInLine != 0)
+							if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 								otherResult.offsetInLine -= deleteLength;
-							if(line == kernel::line(caret) && offsetInLine(caret) != 0)
-								caret.moveTo(kernel::Position(kernel::line(caret), offsetInLine(caret) - deleteLength));
+							if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
+								caret.moveTo(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) - deleteLength));
 						}
 					}
 				}
@@ -225,14 +225,14 @@ namespace ascension {
 		 */
 		boost::optional<boost::integer_range<Index>> viewer::selectedRangeOnLine(const Caret& caret, Index line) {
 			const kernel::Position bos(caret.beginning());
-			if(bos.line > line)
+			if(kernel::line(bos) > line)
 				return boost::none;
 			const kernel::Position eos(caret.end());
-			if(eos.line < line)
+			if(kernel::line(eos) < line)
 				return boost::none;
 			return boost::irange(
-				(line == bos.line) ? bos.offsetInLine : 0,
-				(line == eos.line) ? eos.offsetInLine : caret.document().lineLength(line) + 1);
+				(line == kernel::line(bos)) ? kernel::offsetInLine(bos) : 0,
+				(line == kernel::line(eos)) ? kernel::offsetInLine(eos) : caret.document().lineLength(line) + 1);
 		}
 
 		namespace {
@@ -376,29 +376,29 @@ namespace ascension {
 				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
 					kernel::DocumentCharacterIterator(caret.document(), pos[0] = caret.position()));
 				pos[1] = (++i).base().tell();
-				if(pos[1].line != pos[0].line || pos[1] == pos[0] || !region.includes(pos[1]))
+				if(kernel::line(pos[1]) != kernel::line(pos[0]) || pos[1] == pos[0] || !region.includes(pos[1]))
 					return false;
 				pos[2] = (++i).base().tell();
-				if(pos[2].line != pos[1].line || pos[2] == pos[1] || !region.includes(pos[2]))
+				if(kernel::line(pos[2]) != kernel::line(pos[1]) || pos[2] == pos[1] || !region.includes(pos[2]))
 					return false;
-			} else if(offsetInLine(caret) == caret.document().lineLength(line(caret)) || caret.position() == region.second) {
+			} else if(kernel::offsetInLine(caret) == caret.document().lineLength(kernel::line(caret)) || caret.position() == region.second) {
 				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
 					kernel::DocumentCharacterIterator(caret.document(), pos[2] = caret.position()));
 				pos[1] = (--i).base().tell();
-				if(pos[1].line != pos[2].line || pos[1] == pos[2] || !region.includes(pos[1]))
+				if(kernel::line(pos[1]) != kernel::line(pos[2]) || pos[1] == pos[2] || !region.includes(pos[1]))
 					return false;
 				pos[0] = (--i).base().tell();
-				if(pos[0].line != pos[1].line || pos[0] == pos[1] || !region.includes(pos[0]))
+				if(kernel::line(pos[0]) != kernel::line(pos[1]) || pos[0] == pos[1] || !region.includes(pos[0]))
 					return false;
 			} else {
 				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
 					kernel::DocumentCharacterIterator(caret.document(), pos[1] = caret.position()));
 				pos[2] = (++i).base().tell();
-				if(pos[2].line != pos[1].line || pos[2] == pos[1] || !region.includes(pos[2]))
+				if(kernel::line(pos[2]) != kernel::line(pos[1]) || pos[2] == pos[1] || !region.includes(pos[2]))
 					return false;
 				i.base().seek(pos[1]);
 				pos[0] = (--i).base().tell();
-				if(pos[0].line != pos[1].line || pos[0] == pos[1] || !region.includes(pos[0]))
+				if(kernel::line(pos[0]) != kernel::line(pos[1]) || pos[0] == pos[1] || !region.includes(pos[0]))
 					return false;
 			}
 
@@ -430,7 +430,7 @@ namespace ascension {
 
 			kernel::Document& document = caret.document();
 			const kernel::Position old(caret.position());
-			const Index firstLine = (old.line != document.numberOfLines() - 1) ? old.line : old.line - 1;
+			const Index firstLine = (old.line != document.numberOfLines() - 1) ? kernel::line(old) : kernel::line(old) - 1;
 			String s(document.line(firstLine + 1));
 			s += document.getLineInformation(firstLine).newline().asString();
 			s += document.line(firstLine);
@@ -438,7 +438,7 @@ namespace ascension {
 			try {
 				document.replace(kernel::Region(
 					kernel::Position::bol(firstLine), kernel::Position(firstLine + 1, document.lineLength(firstLine + 1))), s);
-				caret.moveTo(kernel::Position((old.line != document.numberOfLines() - 1) ? firstLine + 1 : firstLine, old.offsetInLine));
+				caret.moveTo(kernel::Position((old.line != document.numberOfLines() - 1) ? firstLine + 1 : firstLine, kernel::offsetInLine(old)));
 			} catch(const kernel::DocumentAccessViolationException&) {
 				return false;
 			}

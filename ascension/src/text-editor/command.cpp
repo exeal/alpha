@@ -89,8 +89,8 @@ namespace ascension {
 				while(s->search(document,
 						std::max<kernel::Position>(viewer.textArea().caret().beginning(), document.accessibleRegion().first),
 						scope, Direction::FORWARD, matchedRegion)) {
-					bookmarker.mark(matchedRegion.first.line);
-					scope.first.line = matchedRegion.first.line + 1;
+					bookmarker.mark(kernel::line(matchedRegion.first));
+					scope.first.line = kernel::line(matchedRegion.first) + 1;
 					scope.first.offsetInLine = 0;
 					++numberOfMarkedLines_;
 				}
@@ -433,10 +433,10 @@ namespace ascension {
 	
 				const kernel::Position p(kernel::locations::nextVisualLine(caret, fromPreviousLine_ ? Direction::BACKWARD : Direction::FORWARD).position());
 				const String& lineString = document.line(kernel::line(caret) + (fromPreviousLine_ ? -1 : 1));
-				if(p.offsetInLine >= lineString.length())
+				if(kernel::offsetInLine(p) >= lineString.length())
 					return false;
 				setNumericPrefix(1);
-				return CharacterInputCommand(target(), text::utf::decodeFirst(std::begin(lineString) + p.offsetInLine, std::end(lineString)))();
+				return CharacterInputCommand(target(), text::utf::decodeFirst(std::begin(lineString) + kernel::offsetInLine(p), std::end(lineString)))();
 			}
 
 			/**
@@ -462,7 +462,7 @@ namespace ascension {
 					return false;
 
 				viewer::Caret& caret = viewer.textArea().caret();
-				const String& lineString = document.line(line(eos));
+				const String& lineString = document.line(kernel::line(eos));
 				const CodePoint c = text::utf::decodeLast(std::begin(lineString), std::begin(lineString) + offsetInLine(eos));
 				std::array<Char, 7> buffer;
 #if(_MSC_VER < 1400)
@@ -763,7 +763,7 @@ namespace ascension {
 					if(!extends_)
 						caret.moveTo(matchBrackets->first);
 					else if(matchBrackets->first > caret)
-						caret.select(caret, kernel::Position(matchBrackets->first.line, matchBrackets->first.offsetInLine + 1));
+						caret.select(caret, kernel::Position(kernel::line(matchBrackets->first), kernel::offsetInLine(matchBrackets->first) + 1));
 					else
 						caret.select(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) + 1), matchBrackets->first);
 					return true;
@@ -813,8 +813,8 @@ namespace ascension {
 					kernel::Position p;
 					if(*direction_ == Direction::FORWARD)
 						p = kernel::locations::endOfVisualLine(caret);
-					else if(line(caret) != document.region().beginning().line)
-						p.offsetInLine = document.lineLength(p.line = line(caret) - 1);
+					else if(kernel::line(caret) != kernel::line(document.region().beginning()))
+						p.offsetInLine = document.lineLength(p.line = kernel::line(caret) - 1);
 					else
 						p = document.region().beginning();
 					if(p < document.accessibleRegion().beginning() || p > document.accessibleRegion().end())
@@ -908,7 +908,7 @@ namespace ascension {
 
 						// from NotePadView.pas of TNotePad (http://wantech.ikuto.com/)
 						const bool multilineSelection = line(caret) != line(caret.anchor());
-						const String s(multilineSelection ? selectedString(caret) : viewer.document().line(line(caret)));
+						const String s(multilineSelection ? selectedString(caret) : viewer.document().line(kernel::line(caret)));
 						const DWORD bytes = static_cast<DWORD>(sizeof(RECONVERTSTRING) + sizeof(Char) * s.length());
 						RECONVERTSTRING* const rcs = static_cast<RECONVERTSTRING*>(::operator new(bytes));
 						rcs->dwSize = bytes;

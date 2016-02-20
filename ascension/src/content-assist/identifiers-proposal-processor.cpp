@@ -58,8 +58,8 @@ namespace ascension {
 				const viewer::TextViewer& textViewer, const kernel::Region& replacementRegion,
 				std::shared_ptr<const CompletionProposal> currentProposals[], std::size_t numberOfCurrentProposals) const BOOST_NOEXCEPT {
 			// select the partially matched proposal
-			String precedingIdentifier(textViewer.document().line(replacementRegion.first.line).substr(
-				replacementRegion.beginning().offsetInLine, replacementRegion.end().offsetInLine - replacementRegion.beginning().offsetInLine));
+			String precedingIdentifier(textViewer.document().line(kernel::line(replacementRegion.first)).substr(
+				kernel::offsetInLine(replacementRegion.beginning()), kernel::offsetInLine(replacementRegion.end()) - kernel::offsetInLine(replacementRegion.beginning())));
 			if(precedingIdentifier.empty())
 				return std::shared_ptr<CompletionProposal>();
 			std::shared_ptr<const CompletionProposal> activeProposal(*std::lower_bound(currentProposals,
@@ -103,18 +103,18 @@ namespace ascension {
 				if(currentPartition.contentType != contentType_)
 					i.seek(currentPartition.region.end());
 				if(i.tell() >= currentPartition.region.end()) {
-					if(i.tell().offsetInLine == i.line().length())
+					if(kernel::offsetInLine(i.tell()) == i.line().length())
 						++i;
 					document.partitioner().partition(i.tell(), currentPartition);
 					continue;
 				}
 				if(!followingNIDs) {
 					const Char* const bol = i.line().data();
-					const Char* const s = bol + i.tell().offsetInLine;
+					const Char* const s = bol + kernel::offsetInLine(i.tell());
 					const Char* e = syntax_.eatIdentifier(s, bol + i.line().length());
 					if(e > s) {
 						identifiers.insert(String(s, e));	// automatically merged
-						i.seek(kernel::Position(i.tell().line, e - bol));
+						i.seek(kernel::Position(kernel::line(i.tell()), e - bol));
 					} else {
 						if(syntax_.isIdentifierContinueCharacter(*i))
 							followingNIDs = true;

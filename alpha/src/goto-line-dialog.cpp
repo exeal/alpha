@@ -38,13 +38,13 @@ void GotoLineDialog::onInitDialog(HWND, bool&) {
 	const EditorView& viewer = EditorWindows::instance().activePane().visibleView();
 	const length_t lineOffset = viewer.verticalRulerConfiguration().lineNumbers.startValue;
 	const wstring s = app.loadMessage(MSG_DIALOG__LINE_NUMBER_RANGE, MARGS
-						% static_cast<ulong>(buffer.accessibleRegion().first.line + lineOffset)
-						% static_cast<ulong>(buffer.accessibleRegion().second.line + lineOffset));
+						% static_cast<ulong>(kernel::line(buffer.accessibleRegion().first) + lineOffset)
+						% static_cast<ulong>(kernel::line(buffer.accessibleRegion().second) + lineOffset));
 
 	setItemText(IDC_STATIC_1, s.c_str());
 	lineNumberSpin_.setRange(
-		static_cast<int>(buffer.accessibleRegion().first.line + lineOffset),
-		static_cast<int>(buffer.accessibleRegion().second.line + lineOffset));
+		static_cast<int>(kernel::line(buffer.accessibleRegion().first) + lineOffset),
+		static_cast<int>(kernel::line(buffer.accessibleRegion().second) + lineOffset));
 	lineNumberSpin_.setPosition(static_cast<int>(viewer.caret().line() + lineOffset));
 	lineNumberSpin_.invalidateRect(0);
 

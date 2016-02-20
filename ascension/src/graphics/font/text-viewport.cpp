@@ -287,10 +287,10 @@ namespace ascension {
 				const bool horizontal = isHorizontal(viewport.textRenderer().computedBlockFlowDirection());
 
 				// compute offset in the line layout
-				const TextLayout* const layout = viewport.textRenderer().layouts().at(position.characterIndex().line);
+				const TextLayout* const layout = viewport.textRenderer().layouts().at(kernel::line(position.characterIndex()));
 				assert(layout != nullptr);
 				const TextHit<> hitInLine(position.isLeadingEdge() ?
-					TextHit<>::leading(position.characterIndex().offsetInLine) : TextHit<>::trailing(position.characterIndex().offsetInLine));
+					TextHit<>::leading(kernel::offsetInLine(position.characterIndex())) : TextHit<>::trailing(kernel::offsetInLine(position.characterIndex())));
 				presentation::FlowRelativeTwoAxes<Scalar> abstractOffset(layout->hitToPoint(hitInLine));
 				abstractOffset.bpd() = 0;	// because subline is already known
 				const PhysicalTwoAxes<Scalar> physicalOffset(presentation::mapFlowRelativeToPhysical(writingMode(*layout), abstractOffset));
@@ -467,8 +467,8 @@ namespace ascension {
 								kernel::DocumentCharacterIterator(document, kernel::Region(line.line, boost::irange<Index>(0, s.length())), kernel::Position(line.line, hitInLine.characterIndex())));
 							if(interveningSurrogates || !i.isBoundary(i.base())) {
 								--i;
-								const TextHit<> leading(TextHit<>::leading(i.base().tell().offsetInLine));
-								const TextHit<> trailing(TextHit<>::trailing((++i).base().tell().offsetInLine));
+								const TextHit<> leading(TextHit<>::leading(kernel::offsetInLine(i.base().tell())));
+								const TextHit<> trailing(TextHit<>::trailing(kernel::offsetInLine((++i).base().tell())));
 								const Scalar leadingIpd = layout->hitToPoint(leading).ipd();
 								const Scalar trailingIpd = layout->hitToPoint(trailing).ipd();
 								hitInLine = (abs(ipd - leadingIpd) <= abs(ipd - trailingIpd)) ? leading : trailing;

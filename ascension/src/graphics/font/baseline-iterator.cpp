@@ -58,16 +58,16 @@ namespace ascension {
 			BaselineIterator::BaselineIterator(const TextViewport& viewport, const TextHit<kernel::Position>& position, bool trackOutOfViewport)
 					: viewport_(&viewport), tracksOutOfViewport_(trackOutOfViewport) {
 				initializeWithFirstVisibleLine();
-				VisualLine line(position.characterIndex().line, 0);
+				VisualLine line(kernel::line(position.characterIndex()), 0);
 				if(line.line < this->viewport().firstVisibleLine().line)
 					internalAdvance(&line, boost::none);	// should go beyond before-edge
 				else if(line.line == this->viewport().firstVisibleLine().line) {
-					line.subline = this->viewport().textRenderer().layouts().at(line.line)->lineAt(position.insertionIndex().offsetInLine);
+					line.subline = this->viewport().textRenderer().layouts().at(line.line)->lineAt(kernel::offsetInLine(position.insertionIndex()));
 					internalAdvance(&line, boost::none);
 				} else {
 					internalAdvance(&line, boost::none);
 					if(this->line() != boost::none)
-						std::advance(*this, this->viewport().textRenderer().layouts().at(line.line)->lineAt(position.insertionIndex().offsetInLine));
+						std::advance(*this, this->viewport().textRenderer().layouts().at(line.line)->lineAt(kernel::offsetInLine(position.insertionIndex())));
 				}
 			}
 

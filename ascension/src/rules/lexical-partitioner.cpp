@@ -92,17 +92,19 @@ namespace ascension {
 			// compute partitioning for the affected region using the registered rules
 			std::vector<Partition*> newPartitions;	// newly computed partitions for the affected region
 			kernel::DocumentCharacterIterator i(doc,	// the beginning of the region to parse ~ the end of the document
-				kernel::Region(kernel::Position::bol(std::min(change.erasedRegion().beginning().line, change.insertedRegion().beginning().line)), doc.region().end()));
+				kernel::Region(
+					kernel::Position::bol(std::min(kernel::line(change.erasedRegion().beginning()), kernel::line(change.insertedRegion().beginning()))),
+					doc.region().end()));
 			kernel::ContentType contentType, destination;
-			contentType = (i.tell().line == 0) ? kernel::DEFAULT_CONTENT_TYPE
-				: (*partitionAt(kernel::Position(i.tell().line - 1, doc.lineLength(i.tell().line - 1))))->contentType;
-			for(const String* line = &doc.line(i.tell().line); ; ) {	// scan and tokenize into partitions...
-				const bool atEOL = i.tell().offsetInLine == line->length();
-				Index tokenLength = tryTransition(*line, i.tell().offsetInLine, contentType, destination);
+			contentType = (kernel::line(i.tell()) == 0) ? kernel::DEFAULT_CONTENT_TYPE
+				: (*partitionAt(kernel::Position(kernel::line(i.tell()), doc.lineLength(kernel::line(i.tell()) - 1))))->contentType;
+			for(const String* line = &doc.line(kernel::line(i.tell())); ; ) {	// scan and tokenize into partitions...
+				const bool atEOL = kernel::offsetInLine(i.tell()) == line->length();
+				Index tokenLength = tryTransition(*line, kernel::offsetInLine(i.tell()), contentType, destination);
 				if(tokenLength != 0) {	// a token was found
 					if(atEOL)
 						tokenLength = 0;	// a line terminator is zero-length...
-					const kernel::Position tokenEnd(i.tell().line, i.tell().offsetInLine + tokenLength);
+					const kernel::Position tokenEnd(kernel::line(i.tell()), kernel::offsetInLine(i.tell()) + tokenLength);
 					// insert the new partition behind the current
 					assert(destination != contentType);
 					newPartitions.push_back(new Partition(
@@ -124,8 +126,8 @@ namespace ascension {
 				// go to the next character if no transition occurred
 				if(tokenLength == 0) {
 					++i;
-					if(i.tell().offsetInLine == 0)	// entered the next line
-						line = &doc.line(i.tell().line);
+					if(kernel::offsetInLine(i.tell()) == 0)	// entered the next line
+						line = &doc.line(kernel::line(i.tell()));
 				}
 			}
 		
@@ -140,7 +142,7 @@ namespace ascension {
 #endif
 			verify();
 			notifyDocument(kernel::Region(kernel::Position(std::min(
-				change.erasedRegion().beginning().line, change.insertedRegion().beginning().line), 0), i.tell()));
+				kernel::line(change.erasedRegion().beginning()), kernel::line(change.insertedRegion().beginning())), 0), i.tell()));
 		}
 
 		/// @see kernel#DocumentPartitioner#doGetPartition
@@ -170,8 +172,8 @@ namespace ascension {
 			BOOST_FOREACH(auto i, partitions_)
 				ASCENSION_LOG_TRIVIAL(debug)
 					<< "\t" << i->contentType << " = ("
-					<< static_cast<std::uint32_t>(i->start.line) << ", "
-					<< static_cast<std::uint32_t>(i->start.offsetInLine) << ")\n";
+					<< static_cast<std::uint32_t>(kernel::line(i->start)) << ", "
+					<< static_cast<std::uint32_t>(kernel::offsetInLine(i->start)) << ")\n";
 #endif
 		}
 
@@ -233,8 +235,8 @@ namespace ascension {
 				assert(partitions_.front()->start != document()->region().first);	// twilight context
 				return std::begin(partitions_);
 			}
-			if(at.line < document()->numberOfLines()
-					&& (*p)->tokenStart == at && p != std::begin(partitions_) && at.offsetInLine == document()->lineLength(at.line))
+			if(kernel::line(at) < document()->numberOfLines()
+					&& (*p)->tokenStart == at && p != std::begin(partitions_) && kernel::offsetInLine(at) == document()->lineLength(kernel::line(at)))
 				--p;
 //			if(result > 0 && partitions_[result]->start == partitions_[result - 1]->start)
 //				--p;
@@ -255,7 +257,7 @@ namespace ascension {
 		
 		// returns the transition state (corresponding content type) at the given position.
 		inline kernel::ContentType LexicalPartitioner::transitionStateAt(const kernel::Position& at) const BOOST_NOEXCEPT {
-			if(at.line == 0 && at.offsetInLine == 0)
+			if(at == kernel::Position::zero())
 				return kernel::DEFAULT_CONTENT_TYPE;
 			auto i(partitionAt(at));
 			if((*i)->start == at)

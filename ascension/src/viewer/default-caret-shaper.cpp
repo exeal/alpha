@@ -30,7 +30,7 @@ namespace ascension {
 
 		/// @see Caret#MotionSignal
 		void DefaultCaretShaper::caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion) {
-			if(kernel::line(caret) != regionBeforeMotion.second.line)
+			if(kernel::line(caret) != kernel::line(regionBeforeMotion.second))
 				signalStaticShapeChanged(caret);
 		}
 

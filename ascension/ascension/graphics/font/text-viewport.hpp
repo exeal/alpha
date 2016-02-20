@@ -303,7 +303,7 @@ namespace ascension {
 			// TextHit specializations for kernel.Position ////////////////////////////////////////
 
 			template<> inline TextHit<kernel::Position> TextHit<kernel::Position>::beforeOffset(const kernel::Position& offset) BOOST_NOEXCEPT {
-				return TextHit<kernel::Position>(kernel::Position(offset.line, offset.offsetInLine - 1), false);
+				return TextHit<kernel::Position>(kernel::Position(kernel::line(offset), kernel::offsetInLine(offset) - 1), false);
 			}
 
 			template<> inline kernel::Position TextHit<kernel::Position>::insertionIndex() const BOOST_NOEXCEPT {
@@ -314,11 +314,11 @@ namespace ascension {
 			}
 
 			template<> inline TextHit<kernel::Position> TextHit<kernel::Position>::offsetHit(SignedIndex delta) const {
-				if(delta > 0 && static_cast<Index>(delta) > std::numeric_limits<Index>::max() - characterIndex().offsetInLine)
+				if(delta > 0 && static_cast<Index>(delta) > std::numeric_limits<Index>::max() - kernel::offsetInLine(characterIndex()))
 					throw std::overflow_error("delta");
-				else if(delta < 0 && static_cast<Index>(-delta) > characterIndex().offsetInLine)
+				else if(delta < 0 && static_cast<Index>(-delta) > kernel::offsetInLine(characterIndex()))
 					throw std::underflow_error("delta");
-				return TextHit(kernel::Position(characterIndex().line, characterIndex().offsetInLine + delta), isLeadingEdge());
+				return TextHit(kernel::Position(kernel::line(characterIndex()), kernel::offsetInLine(characterIndex()) + delta), isLeadingEdge());
 			}
 
 			template<> inline TextHit<kernel::Position> TextHit<kernel::Position>::otherHit() const BOOST_NOEXCEPT {

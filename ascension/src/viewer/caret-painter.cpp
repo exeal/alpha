@@ -127,8 +127,8 @@ namespace ascension {
 					this->resetTimer();
 					this->pend();
 
-					if(regionBeforeMotion.second.line != kernel::line(caret)) {
-						textArea.redrawLine(regionBeforeMotion.second.line);
+					if(kernel::line(regionBeforeMotion.second) != kernel::line(caret)) {
+						textArea.redrawLine(kernel::line(regionBeforeMotion.second));
 						widgetapi::redrawScheduledRegion(textArea.textViewer());
 					}
 					textArea.redrawLine(kernel::line(caret));

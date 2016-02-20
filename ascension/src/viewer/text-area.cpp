@@ -126,33 +126,33 @@ namespace ascension {
 			boost::optional<boost::integer_range<Index>> linesToRedraw;
 			if(self.isSelectionRectangle()) {	// rectangle
 				if(!oldRegion.isEmpty())
-					linesToRedraw = boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1);
+					linesToRedraw = oldRegion.lines();
 				if(!newRegion.isEmpty())
-					linesToRedraw = boost::irange(newRegion.beginning().line, newRegion.end().line + 1);
+					linesToRedraw = newRegion.lines();
 			} else if(newRegion != oldRegion) {	// the selection actually changed
 				if(oldRegion.isEmpty()) {	// the selection was empty...
 					if(!newRegion.isEmpty())	// the selection is not empty now
-						linesToRedraw = boost::irange(newRegion.beginning().line, newRegion.end().line + 1);
+						linesToRedraw = newRegion.lines();
 				} else {	// ...if the there is selection
 					if(newRegion.isEmpty())	// the selection became empty
-						linesToRedraw = boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1);
+						linesToRedraw = oldRegion.lines();
 					else if(oldRegion.beginning() == newRegion.beginning()) {	// the beginning point didn't change
-						const Index i[2] = {oldRegion.end().line, newRegion.end().line};
+						const Index i[2] = {kernel::line(oldRegion.end()), kernel::line(newRegion.end())};
 						linesToRedraw = boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1);
 					} else if(oldRegion.end() == newRegion.end()) {	// the end point didn't change
-						const Index i[2] = {oldRegion.beginning().line, newRegion.beginning().line};
+						const Index i[2] = {kernel::line(oldRegion.beginning()), kernel::line(newRegion.beginning())};
 						linesToRedraw = boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1);
 					} else {	// the both points changed
-						if((oldRegion.beginning().line >= newRegion.beginning().line && oldRegion.beginning().line <= newRegion.end().line)
-								|| (oldRegion.end().line >= newRegion.beginning().line && oldRegion.end().line <= newRegion.end().line)) {
+						if((kernel::line(oldRegion.beginning()) >= kernel::line(newRegion.beginning()) && kernel::line(oldRegion.beginning()) <= kernel::line(newRegion.end()))
+								|| (kernel::line(oldRegion.end()) >= kernel::line(newRegion.beginning()) && kernel::line(oldRegion.end()) <= kernel::line(newRegion.end()))) {
 							const Index i[2] = {
-								std::min(oldRegion.beginning().line, newRegion.beginning().line), std::max(oldRegion.end().line, newRegion.end().line)
+								std::min(kernel::line(oldRegion.beginning()), kernel::line(newRegion.beginning())), std::max(kernel::line(oldRegion.end()), kernel::line(newRegion.end()))
 							};
 							linesToRedraw = boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1);
 						} else {
-							ASCENSION_REDRAW_TEXT_AREA_LINES(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
+							ASCENSION_REDRAW_TEXT_AREA_LINES(oldRegion.lines());
 							redrawIfNotFrozen(*this);
-							linesToRedraw = boost::irange(newRegion.beginning().line, newRegion.end().line + 1);
+							linesToRedraw = newRegion.lines();
 						}
 					}
 				}
@@ -203,8 +203,8 @@ namespace ascension {
 				if(textViewer().isFrozen() && !boost::empty(linesToRedraw_)) {
 					Index b = *boost::const_begin(linesToRedraw_);
 					Index e = *boost::const_end(linesToRedraw_);
-					if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
-						const Index first = change.erasedRegion().first.line + 1, last = change.erasedRegion().second.line;
+					if(kernel::line(change.erasedRegion().first) != kernel::line(change.erasedRegion().second)) {
+						const Index first = kernel::line(change.erasedRegion().first) + 1, last = kernel::line(change.erasedRegion().second);
 						if(b > last)
 							b -= last - first + 1;
 						else if(b > first)
@@ -216,8 +216,8 @@ namespace ascension {
 								e = first;
 						}
 					}
-					if(change.insertedRegion().first.line != change.insertedRegion().second.line) {
-						const Index first = change.insertedRegion().first.line + 1, last = change.insertedRegion().second.line;
+					if(kernel::line(change.insertedRegion().first) != kernel::line(change.insertedRegion().second)) {
+						const Index first = kernel::line(change.insertedRegion().first) + 1, last = kernel::line(change.insertedRegion().second);
 						if(b >= first)
 							b += last - first + 1;
 						if(e >= first && e != std::numeric_limits<Index>::max())
@@ -225,7 +225,7 @@ namespace ascension {
 					}
 					linesToRedraw_ = boost::irange(b, e);
 				}
-//				ASCENSION_REDRAW_TEXT_AREA_LINES(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
+//				ASCENSION_REDRAW_TEXT_AREA_LINES(kernel::line(region.beginning()), !multiLine ? kernel::line(region.end()) : INVALID_INDEX);
 			}
 		}
 
@@ -315,27 +315,27 @@ namespace ascension {
 			if(viewer_ == nullptr)
 				return;
 			const boost::optional<std::pair<kernel::Position, kernel::Position>>& newPair = caret.matchBrackets();
-			if(newPair) {
-				ASCENSION_REDRAW_TEXT_AREA_LINE(newPair->first.line);
+			if(newPair != boost::none) {
+				ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(newPair->first));
 				redrawIfNotFrozen(*this);
-				if(newPair->second.line != newPair->first.line) {
-					ASCENSION_REDRAW_TEXT_AREA_LINE(newPair->second.line);
+				if(kernel::line(newPair->second) != kernel::line(newPair->first)) {
+					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(newPair->second));
 					redrawIfNotFrozen(*this);
 				}
 				if(previouslyMatchedBrackets	// clear the previous highlight
-						&& previouslyMatchedBrackets->first.line != newPair->first.line && previouslyMatchedBrackets->first.line != newPair->second.line) {
-					ASCENSION_REDRAW_TEXT_AREA_LINE(previouslyMatchedBrackets->first.line);
+						&& kernel::line(previouslyMatchedBrackets->first) != kernel::line(newPair->first) && kernel::line(previouslyMatchedBrackets->first) != kernel::line(newPair->second)) {
+					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(previouslyMatchedBrackets->first));
 					redrawIfNotFrozen(*this);
 				}
-				if(previouslyMatchedBrackets && previouslyMatchedBrackets->second.line != newPair->first.line
-						&& previouslyMatchedBrackets->second.line != newPair->second.line && previouslyMatchedBrackets->second.line != previouslyMatchedBrackets->first.line)
-					ASCENSION_REDRAW_TEXT_AREA_LINE(previouslyMatchedBrackets->second.line);
+				if(previouslyMatchedBrackets && kernel::line(previouslyMatchedBrackets->second) != kernel::line(newPair->first)
+						&& kernel::line(previouslyMatchedBrackets->second) != kernel::line(newPair->second) && kernel::line(previouslyMatchedBrackets->second) != kernel::line(previouslyMatchedBrackets->first))
+					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(previouslyMatchedBrackets->second));
 			} else {
 				if(previouslyMatchedBrackets) {	// clear the previous highlight
-					ASCENSION_REDRAW_TEXT_AREA_LINE(previouslyMatchedBrackets->first.line);
+					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(previouslyMatchedBrackets->first));
 					redrawIfNotFrozen(*this);
-					if(previouslyMatchedBrackets->second.line != previouslyMatchedBrackets->first.line)
-						ASCENSION_REDRAW_TEXT_AREA_LINE(previouslyMatchedBrackets->second.line);
+					if(kernel::line(previouslyMatchedBrackets->second) != kernel::line(previouslyMatchedBrackets->first))
+						ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(previouslyMatchedBrackets->second));
 				}
 			}
 		}

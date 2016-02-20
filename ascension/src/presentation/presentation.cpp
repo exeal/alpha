@@ -491,8 +491,8 @@ namespace ascension {
 		/// @see kernel#DocumentListener#documentChanged
 		void Presentation::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
 			const boost::integer_range<Index>
-				erasedLines(change.erasedRegion().first.line, change.erasedRegion().second.line),
-				insertedLines(change.insertedRegion().first.line, change.insertedRegion().second.line);
+				erasedLines(kernel::line(change.erasedRegion().first), kernel::line(change.erasedRegion().second)),
+				insertedLines(kernel::line(change.insertedRegion().first), kernel::line(change.insertedRegion().second));
 			for(std::list<Hyperlinks*>::iterator i(std::begin(hyperlinks_)), e(std::end(hyperlinks_)); i != e; ) {
 				const Index line = (*i)->lineNumber;
 				if(line == insertedLines.front() || includes(erasedLines, line)) {

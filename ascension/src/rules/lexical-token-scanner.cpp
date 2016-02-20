@@ -80,12 +80,12 @@ namespace ascension {
 					if(!current_.hasNext())
 						break;
 				}
-				const StringPiece::const_iterator p(line.cbegin() + current_.tell().offsetInLine);
+				const StringPiece::const_iterator p(line.cbegin() + kernel::offsetInLine(current_.tell()));
 				BOOST_FOREACH(const std::unique_ptr<const Rule>& rule, rules_) {
 					const boost::optional<StringPiece::const_iterator> endOfToken(rule->parse(line, p, ids));
 					if(endOfToken != boost::none) {
 						const kernel::Position beginningOfToken(current_.tell());
-						current_.seek(kernel::Position(beginningOfToken.line, boost::get(endOfToken) - line.cbegin()));
+						current_.seek(kernel::Position(kernel::line(beginningOfToken), boost::get(endOfToken) - line.cbegin()));
 						return std::unique_ptr<Token>(new Token(rule->tokenID(), beginningOfToken));
 					}
 				}
@@ -95,12 +95,12 @@ namespace ascension {
 						BOOST_FOREACH(const std::unique_ptr<const WordRule>& wordRule, wordRules_) {
 							if(wordRule->parse(line, makeStringPiece(p, endOfWord), ids)) {
 								const kernel::Position beginningOfToken(current_.tell());
-								current_.seek(kernel::Position(beginningOfToken.line, endOfWord - line.cbegin()));
+								current_.seek(kernel::Position(kernel::line(beginningOfToken), endOfWord - line.cbegin()));
 								return std::unique_ptr<Token>(new Token(wordRule->tokenID(), beginningOfToken));
 							}
 						}
 					}
-					current_.seek(kernel::Position(current_.tell().line, endOfWord - line.cbegin()));
+					current_.seek(kernel::Position(kernel::line(current_.tell()), endOfWord - line.cbegin()));
 				} else
 					++current_;
 			}

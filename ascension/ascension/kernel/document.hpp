@@ -467,8 +467,8 @@ namespace ascension {
 		/// Returns @c true if the given position is outside of the document.
 		inline bool positions::isOutsideOfDocumentRegion(
 				const Document& document, const Position& position) BOOST_NOEXCEPT {
-			return position.line >= document.numberOfLines()
-				|| position.offsetInLine > document.lineLength(position.line);
+			return line(position) >= document.numberOfLines()
+				|| offsetInLine(position) > document.lineLength(line(position));
 		}
 
 		/** 
@@ -485,7 +485,7 @@ namespace ascension {
 				return accessibleRegion.first;
 			else if(position > accessibleRegion.second)
 				return accessibleRegion.second;
-			return Position(position.line, std::min(position.offsetInLine, document.lineLength(position.line)));
+			return Position(line(position), std::min(offsetInLine(position), document.lineLength(line(position))));
 		}
 		
 		/** 
@@ -500,8 +500,8 @@ namespace ascension {
 		
 		/// Shrinks the given position into the document region.
 		inline Position positions::shrinkToDocumentRegion(const Document& document, const Position& position) BOOST_NOEXCEPT {
-			Position p(std::min(position.line, document.numberOfLines() - 1), 0);
-			p.offsetInLine = std::min(position.offsetInLine, document.lineLength(p.line));
+			Position p(std::min(line(position), document.numberOfLines() - 1), 0);
+			p.offsetInLine = std::min(offsetInLine(position), document.lineLength(line(p)));
 			return p;
 		}
 		

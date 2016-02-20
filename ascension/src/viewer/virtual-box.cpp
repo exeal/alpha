@@ -144,23 +144,23 @@ namespace ascension {
 			const graphics::font::TextRenderer& renderer = textArea_.textRenderer();
 
 			// first
-			const graphics::font::TextLayout* layout = renderer.layouts().at(lines.first.line = region.first.line);
+			const graphics::font::TextLayout* layout = renderer.layouts().at(std::get<0>(lines).line = kernel::line(region.first));
 			const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
-			ipds.first = layout->hitToPoint(graphics::font::TextHit<>::leading(region.first.offsetInLine)).ipd();
-			ipds.first = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, ipds.first);
-			ipds.first += renderer.lineStartEdge(graphics::font::VisualLine(lines.first.line, 0));
-			lines.first.subline = layout->lineAt(region.first.offsetInLine);
+			std::get<0>(ipds) = layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(region.first))).ipd();
+			std::get<0>(ipds) = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, std::get<0>(ipds));
+			std::get<0>(ipds) += renderer.lineStartEdge(graphics::font::VisualLine(std::get<0>(lines).line, 0));
+			std::get<0>(lines).subline = layout->lineAt(kernel::offsetInLine(region.first));
 
 			// second
-			layout = renderer.layouts().at(lines.second.line = region.second.line);
-			ipds.second = layout->hitToPoint(graphics::font::TextHit<>::leading(region.second.offsetInLine)).ipd();
-			ipds.second = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, ipds.second);
-			ipds.second += renderer.lineStartEdge(graphics::font::VisualLine(lines.second.line, 0));
-			lines.second.subline = layout->lineAt(region.second.offsetInLine);
+			layout = renderer.layouts().at(std::get<1>(lines).line = kernel::line(region.second));
+			std::get<1>(ipds) = layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(region.second))).ipd();
+			std::get<1>(ipds) = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, std::get<1>(ipds));
+			std::get<1>(ipds) += renderer.lineStartEdge(graphics::font::VisualLine(std::get<1>(lines).line, 0));
+			std::get<1>(lines).subline = layout->lineAt(kernel::offsetInLine(region.second));
 
 			// commit
-			lines_ = boost::irange(lines.first, lines.second) | adaptors::ordered();
-			ipds_ = nrange(ipds.first, ipds.second) | adaptors::ordered();
+			lines_ = boost::irange(std::get<0>(lines), std::get<1>(lines)) | adaptors::ordered();
+			ipds_ = nrange(std::get<0>(ipds), std::get<1>(ipds)) | adaptors::ordered();
 		}
 	}
 }

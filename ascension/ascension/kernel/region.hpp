@@ -79,7 +79,9 @@ namespace ascension {
 			/// Returns @c true if the region is normalized.
 			bool isNormalized() const BOOST_NOEXCEPT {return first <= second;}
 			/// Returns a range of lines.
-			boost::integer_range<Index> lines() const BOOST_NOEXCEPT {return boost::irange(beginning().line, end().line + 1);}
+			boost::integer_range<Index> lines() const BOOST_NOEXCEPT {
+				return boost::irange(line(beginning()), line(end()) + 1);
+			}
 			/// Normalizes the region.
 			Region& normalize() BOOST_NOEXCEPT {
 				if(!isNormalized())

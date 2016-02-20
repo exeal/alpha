@@ -51,9 +51,9 @@ namespace ascension {
 					const Index nlines = document.numberOfLines();
 					kernel::Region newSelection;
 					newSelection.first.line = (to.line >= boost::get(lineSelectionAnchorLine_)) ? boost::get(lineSelectionAnchorLine_) : boost::get(lineSelectionAnchorLine_) + 1;
-					newSelection.first.offsetInLine = (newSelection.first.line > nlines - 1) ? document.lineLength(--newSelection.first.line) : 0;
-					newSelection.second.line = (to.line >= boost::get(lineSelectionAnchorLine_)) ? to.line + 1 : to.line;
-					newSelection.second.offsetInLine = (newSelection.second.line > nlines - 1) ? document.lineLength(--newSelection.second.line) : 0;
+					newSelection.first.offsetInLine = (kernel::line(newSelection.first) > nlines - 1) ? document.lineLength(--newSelection.first.line) : 0;
+					newSelection.second.line = (to.line >= boost::get(lineSelectionAnchorLine_)) ? kernel::line(to) + 1 : kernel::line(to);
+					newSelection.second.offsetInLine = (kernel::line(newSelection.second) > nlines - 1) ? document.lineLength(--newSelection.second.line) : 0;
 					viewer()->textArea().caret().select(newSelection);
 				}
 			}
@@ -108,8 +108,8 @@ namespace ascension {
 							// select line(s)
 							Caret& caret = viewer()->textArea().caret();
 							const kernel::Position to(viewToModel(*viewer(), input.location()).insertionIndex());
-							const bool extend = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN) && to.line != kernel::line(caret.anchor());
-							lineSelectionAnchorLine_ = extend ? kernel::line(caret.anchor()) : to.line;
+							const bool extend = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN) && kernel::line(to) != kernel::line(caret.anchor());
+							lineSelectionAnchorLine_ = extend ? kernel::line(caret.anchor()) : kernel::line(to);
 							caret.endRectangleSelection();
 							continueLineSelection(to);
 							beginLocationTracking(*viewer(), &targetLocker, true, true);

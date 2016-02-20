@@ -536,7 +536,7 @@ LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 		consumed = true;
 		if(isSelectionEmpty(*this)) {	// IME selects the composition target automatically if no selection
 			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lp)) {
-				const String& lineString = doc.line(line(*this));
+				const String& lineString = doc.line(kernel::line(*this));
 				rcs->dwStrLen = static_cast<DWORD>(lineString.length());
 				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
 				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * offsetInLine(*this));
@@ -568,16 +568,16 @@ LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 			} else {
 				// reconvert the region IME passed if no selection (and create the new selection).
 				// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
-				if(doc.isNarrowed() && line(*this) == region.first.line) {	// the document is narrowed
-					if(rcs->dwCompStrOffset / sizeof(Char) < region.first.offsetInLine) {
-						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * region.first.offsetInLine - rcs->dwCompStrOffset);
+				if(doc.isNarrowed() && kernel::line(*this) == region.first.line) {	// the document is narrowed
+					if(rcs->dwCompStrOffset / sizeof(Char) < kernel::offsetInLine(region.first)) {
+						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * kernel::offsetInLine(region.first) - rcs->dwCompStrOffset);
 						rcs->dwTargetStrLen = rcs->dwCompStrOffset;
-						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * region.first.offsetInLine);
-					} else if(rcs->dwCompStrOffset / sizeof(Char) > region.second.offsetInLine) {
-						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * region.second.offsetInLine;
+						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * kernel::offsetInLine(region.first));
+					} else if(rcs->dwCompStrOffset / sizeof(Char) > kernel::offsetInLine(region.second)) {
+						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * kernel::offsetInLine(region.second);
 						rcs->dwTargetStrOffset = rcs->dwCompStrOffset;
 						rcs->dwCompStrLen = rcs->dwTargetStrLen
-							= static_cast<DWORD>(sizeof(Char) * region.second.offsetInLine - rcs->dwCompStrOffset);
+							= static_cast<DWORD>(sizeof(Char) * kernel::offsetInLine(region.second) - rcs->dwCompStrOffset);
 					}
 				}
 				select(
@@ -602,9 +602,9 @@ LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
 				rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
 				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(offsetInLine(beginning()));
-				doc.line(line(*this)).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+				doc.line(kernel::line(*this)).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 			}
-			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(line(*this));
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(kernel::line(*this));
 		}
 	}
 

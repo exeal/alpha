@@ -86,13 +86,13 @@ namespace ascension {
 //				throw NoSuchElementException("the iterator is at the first.");
 				return;
 
-			if(tell().offsetInLine == 0) {
+			if(kernel::offsetInLine(tell()) == 0) {
 				--position_.line;
 				position_.offsetInLine = line().length();
 			} else if(--position_.offsetInLine > 0) {
 				const String& lineString = line();
-				if(text::surrogates::isLowSurrogate(lineString[tell().offsetInLine])
-						&& text::surrogates::isHighSurrogate(lineString[tell().offsetInLine - 1]))
+				if(text::surrogates::isLowSurrogate(lineString[kernel::offsetInLine(tell())])
+						&& text::surrogates::isHighSurrogate(lineString[kernel::offsetInLine(tell()) - 1]))
 					--position_.offsetInLine;
 			}
 			--offset_;
@@ -101,10 +101,10 @@ namespace ascension {
 		CodePoint DocumentCharacterIterator::dereference() const BOOST_NOEXCEPT {
 			assert(document_ != nullptr && tell() != region().second);
 			const String& lineString = line();
-			if(tell().offsetInLine == lineString.length())
+			if(kernel::offsetInLine(tell()) == lineString.length())
 				return text::LINE_SEPARATOR;
 			else
-				return text::utf::decodeFirst(std::begin(lineString) + tell().offsetInLine, std::end(lineString));
+				return text::utf::decodeFirst(std::begin(lineString) + kernel::offsetInLine(tell()), std::end(lineString));
 		}
 #if 0
 		/// @see text#CharacterIterator#doLess
@@ -124,19 +124,19 @@ namespace ascension {
 				return;
 
 			const String& lineString = line();
-			if(tell().offsetInLine == lineString.length()) {
+			if(kernel::offsetInLine(tell()) == lineString.length()) {
 				++position_.line;
 				position_.offsetInLine = 0;
 			} else if(++position_.offsetInLine < lineString.length()
-					&& text::surrogates::isLowSurrogate(lineString[tell().offsetInLine])
-					&& text::surrogates::isHighSurrogate(lineString[tell().offsetInLine - 1]))
+					&& text::surrogates::isLowSurrogate(lineString[kernel::offsetInLine(tell())])
+					&& text::surrogates::isHighSurrogate(lineString[kernel::offsetInLine(tell()) - 1]))
 				++position_.offsetInLine;
 			++offset_;
 		}
 		
 		/// Returns the line text string.
 		const String& DocumentCharacterIterator::line() const BOOST_NOEXCEPT {
-			return document().line(tell().line);
+			return document().line(kernel::line(tell()));
 		}
 
 		/**

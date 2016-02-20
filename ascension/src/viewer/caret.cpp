@@ -319,7 +319,7 @@ namespace ascension {
 						points.reserve((lastLine - firstLine) * 2);
 						sizes.reserve((lastLine - firstLine) * 2);
 						const TextRenderer& renderer = textViewer().textRenderer();
-						for(Index line = resultPosition.line; line <= lastLine; ++line) {
+						for(Index line = kernel::line(resultPosition); line <= lastLine; ++line) {
 							const LineLayout& layout = renderer.lineLayout(line);
 							for(Index subline = 0; subline < layout.numberOfSublines(); ++subline) {
 								box_->overlappedSubline(line, subline, rangeInLine.first, rangeInLine.second);
@@ -345,12 +345,12 @@ namespace ascension {
 							delete points[i];
 						}
 					} else {
-						for(Index line = resultPosition.line; line <= lastLine; ++line) {
+						for(Index line = kernel::line(resultPosition); line <= lastLine; ++line) {
 							box_->overlappedSubline(line, 0, rangeInLine.first, rangeInLine.second);
 							try {
 								doc.erase(Position(line, rangeInLine.first), Position(line, rangeInLine.second));
 							} catch(...) {
-								if(line == resultPosition.line) {
+								if(line == kernel::line(resultPosition)) {
 									adaptToDocument(adapts);
 									throw;
 								}
@@ -464,7 +464,7 @@ namespace ascension {
 			if(validateSequence) {
 				if(const texteditor::Session* const session = doc.session()) {
 					if(const std::shared_ptr<const texteditor::InputSequenceCheckers> checker = session->inputSequenceCheckers()) {
-						const Char* const lineString = doc.line(line(beginning())).data();
+						const Char* const lineString = doc.line(kernel::line(beginning())).data();
 						if(!checker->check(StringPiece(lineString, offsetInLine(beginning())), character)) {
 							eraseSelection(*this);
 							return false;	// invalid sequence
