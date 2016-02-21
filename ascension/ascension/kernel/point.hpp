@@ -142,24 +142,9 @@ namespace ascension {
 
 		ContentType contentType(const Point& p);
 
-		/**
-		 * Returns the line number of the given point.
-		 * @param p The point
-		 * @return The line number
-		 * @ingroup position_accessors
-		 */
-		inline Index line(const Point& p) BOOST_NOEXCEPT {
-			return line(p.position());
-		}
-
-		/**
-		 * Returns the offset in the line of the given point.
-		 * @param p The point
-		 * @return The offset in the line
-		 * @ingroup position_accessors
-		 */
-		inline Index offsetInLine(const Point& p) BOOST_NOEXCEPT {
-			return offsetInLine(p.position());
+		/// @overload
+		inline const Position& position(const Point& p) BOOST_NOEXCEPT {
+			return p.position();
 		}
 
 
