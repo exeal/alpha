@@ -86,7 +86,7 @@ namespace ascension {
 //				throw NoSuchElementException("the iterator is at the first.");
 				return;
 
-			if(kernel::offsetInLine(tell()) == 0) {
+			if(offsetInLine(*this) == 0) {
 				--position_.line;
 				position_.offsetInLine = lineString().length();
 			} else if(--position_.offsetInLine > 0) {
@@ -136,7 +136,7 @@ namespace ascension {
 		
 		/// Returns the line text string.
 		const String& DocumentCharacterIterator::lineString() const BOOST_NOEXCEPT {
-			return document().lineString(kernel::line(tell()));
+			return document().lineString(line(*this));
 		}
 
 		/**

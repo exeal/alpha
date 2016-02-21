@@ -104,6 +104,11 @@ namespace ascension {
 		inline const Position& DocumentCharacterIterator::tell() const BOOST_NOEXCEPT {
 			return position_;
 		}
+
+		/// @overload
+		inline const Position& position(const DocumentCharacterIterator& i) BOOST_NOEXCEPT {
+			return i.tell();
+		}
 	}
 } // namespace ascension.kernel
 
