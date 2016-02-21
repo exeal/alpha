@@ -298,7 +298,7 @@ namespace ascension {
 				dragAndDrop_->numberOfRectangleLines = 0;
 			else {
 				const kernel::Region selection(caret.selectedRegion());
-				dragAndDrop_->numberOfRectangleLines = kernel::line(selection.end()) - kernel::line(selection.beginning()) + 1;
+				dragAndDrop_->numberOfRectangleLines = boost::size(selection.lines());
 			}
 
 			// setup drag-image and begin operation
