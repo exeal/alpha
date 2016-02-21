@@ -84,7 +84,7 @@ namespace ascension {
 				const String indent(abs(level), character);
 				const kernel::Region region(caret.selectedRegion());
 
-				if(kernel::line(region.beginning()) == kernel::line(region.end())) {
+				if(boost::size(region.lines()) == 1) {
 					// number of selected lines is one -> just insert tab character(s)
 					caret.replaceSelection(indent);
 					return;

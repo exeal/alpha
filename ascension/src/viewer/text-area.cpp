@@ -203,7 +203,7 @@ namespace ascension {
 				if(textViewer().isFrozen() && !boost::empty(linesToRedraw_)) {
 					Index b = *boost::const_begin(linesToRedraw_);
 					Index e = *boost::const_end(linesToRedraw_);
-					if(kernel::line(change.erasedRegion().first) != kernel::line(change.erasedRegion().second)) {
+					if(boost::size(change.erasedRegion().lines()) > 1) {
 						const Index first = kernel::line(change.erasedRegion().first) + 1, last = kernel::line(change.erasedRegion().second);
 						if(b > last)
 							b -= last - first + 1;
@@ -216,7 +216,7 @@ namespace ascension {
 								e = first;
 						}
 					}
-					if(kernel::line(change.insertedRegion().first) != kernel::line(change.insertedRegion().second)) {
+					if(boost::size(change.insertedRegion().lines()) > 1) {
 						const Index first = kernel::line(change.insertedRegion().first) + 1, last = kernel::line(change.insertedRegion().second);
 						if(b >= first)
 							b += last - first + 1;
@@ -316,26 +316,29 @@ namespace ascension {
 				return;
 			const boost::optional<std::pair<kernel::Position, kernel::Position>>& newPair = caret.matchBrackets();
 			if(newPair != boost::none) {
-				ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(newPair->first));
+				ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(std::get<0>(boost::get(newPair))));
 				redrawIfNotFrozen(*this);
-				if(kernel::line(newPair->second) != kernel::line(newPair->first)) {
-					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(newPair->second));
+				if(kernel::line(std::get<1>(boost::get(newPair))) != kernel::line(std::get<0>(boost::get(newPair)))) {
+					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(std::get<1>(boost::get(newPair))));
 					redrawIfNotFrozen(*this);
 				}
-				if(previouslyMatchedBrackets	// clear the previous highlight
-						&& kernel::line(previouslyMatchedBrackets->first) != kernel::line(newPair->first) && kernel::line(previouslyMatchedBrackets->first) != kernel::line(newPair->second)) {
-					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(previouslyMatchedBrackets->first));
+				if(previouslyMatchedBrackets != boost::none	// clear the previous highlight
+						&& kernel::line(std::get<0>(boost::get(previouslyMatchedBrackets))) != kernel::line(std::get<0>(boost::get(newPair)))
+						&& kernel::line(std::get<0>(boost::get(previouslyMatchedBrackets))) != kernel::line(std::get<1>(boost::get(newPair)))) {
+					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(std::get<0>(boost::get(previouslyMatchedBrackets))));
 					redrawIfNotFrozen(*this);
 				}
-				if(previouslyMatchedBrackets && kernel::line(previouslyMatchedBrackets->second) != kernel::line(newPair->first)
-						&& kernel::line(previouslyMatchedBrackets->second) != kernel::line(newPair->second) && kernel::line(previouslyMatchedBrackets->second) != kernel::line(previouslyMatchedBrackets->first))
-					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(previouslyMatchedBrackets->second));
+				if(previouslyMatchedBrackets != boost::none
+						&& kernel::line(std::get<1>(boost::get(previouslyMatchedBrackets))) != kernel::line(std::get<0>(boost::get(newPair)))
+						&& kernel::line(std::get<1>(boost::get(previouslyMatchedBrackets))) != kernel::line(std::get<1>(boost::get(newPair)))
+						&& kernel::line(std::get<1>(boost::get(previouslyMatchedBrackets))) != kernel::line(std::get<0>(boost::get(previouslyMatchedBrackets))))
+					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(std::get<1>(boost::get(previouslyMatchedBrackets))));
 			} else {
-				if(previouslyMatchedBrackets) {	// clear the previous highlight
-					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(previouslyMatchedBrackets->first));
+				if(previouslyMatchedBrackets != boost::none) {	// clear the previous highlight
+					ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(std::get<0>(boost::get(previouslyMatchedBrackets))));
 					redrawIfNotFrozen(*this);
-					if(kernel::line(previouslyMatchedBrackets->second) != kernel::line(previouslyMatchedBrackets->first))
-						ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(previouslyMatchedBrackets->second));
+					if(kernel::line(std::get<1>(boost::get(previouslyMatchedBrackets))) != kernel::line(std::get<0>(boost::get(previouslyMatchedBrackets))))
+						ASCENSION_REDRAW_TEXT_AREA_LINE(kernel::line(std::get<1>(boost::get(previouslyMatchedBrackets))));
 				}
 			}
 		}
@@ -482,7 +485,7 @@ namespace ascension {
 		void TextArea::selectionShapeChanged(const Caret& caret) {
 			if(viewer_ != nullptr) {
 				if(!textViewer().isFrozen() && !isSelectionEmpty(caret))
-					ASCENSION_REDRAW_TEXT_AREA_LINES(boost::irange(kernel::line(caret.beginning()), kernel::line(caret.end()) + 1));
+					ASCENSION_REDRAW_TEXT_AREA_LINES(caret.selectedRegion().lines());
 			}
 		}
 

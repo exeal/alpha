@@ -418,7 +418,7 @@ namespace ascension {
 				// adjust visualLine_ and visualSubine_ according to the visual lines modification
 				if(*lines.end() <= kernel::line(*this))
 					lineNumberCaches_->line += sublineDifference;
-				else if(*lines.begin() == kernel::line(*this)) {
+				else if(*boost::const_begin(lines) == kernel::line(*this)) {
 					if(const graphics::font::TextLayout* const layout = textArea().textRenderer().layouts().at(kernel::line(*this))) {
 						lineNumberCaches_->line -= lineNumberCaches_->subline;
 						lineNumberCaches_->subline =
@@ -426,7 +426,7 @@ namespace ascension {
 						lineNumberCaches_->line += lineNumberCaches_->subline;
 					} else
 						lineNumberCaches_ = boost::none;
-				} else if(*lines.begin() < kernel::line(*this))
+				} else if(*boost::const_begin(lines) < kernel::line(*this))
 					lineNumberCaches_ = boost::none;
 			}
 		}

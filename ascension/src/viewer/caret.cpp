@@ -603,7 +603,7 @@ namespace ascension {
 		std::pair<const StringPiece, StringPiece::const_iterator> Caret::querySurroundingText() const {
 			const StringPiece lineString(document().lineString(kernel::line(*this)));
 			StringPiece::const_iterator position(lineString.cbegin());
-			if(kernel::line(*this) == kernel::line(anchor()))
+			if(boost::size(selectedRegion().lines()) == 1)
 				position += kernel::offsetInLine(beginning());
 			return std::make_pair(lineString, position);
 		}

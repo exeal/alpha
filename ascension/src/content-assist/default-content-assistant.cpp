@@ -139,8 +139,8 @@ namespace ascension {
 			if(completionSession_.get() != nullptr) {
 				// exit or update the replacement region
 				if(!completionSession_->incremental
-						|| kernel::line(change.erasedRegion().first) != kernel::line(change.erasedRegion().second)
-						|| kernel::line(change.insertedRegion().first) != kernel::line(change.insertedRegion().second))
+						|| boost::size(change.erasedRegion().lines()) == 1
+						|| boost::size(change.insertedRegion().lines()) == 1)
 					close();
 				const kernel::Region& replacementRegion = completionSession_->replacementRegion;
 				if(!change.erasedRegion().isEmpty() && !replacementRegion.encompasses(change.erasedRegion()))

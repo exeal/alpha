@@ -183,7 +183,7 @@ namespace ascension {
 			void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
 				documentChangePhase_ = CHANGING;
 				assert(change.erasedRegion().isNormalized() && change.insertedRegion().isNormalized());
-				if(kernel::line(change.erasedRegion().first) != kernel::line(change.erasedRegion().second)) {	// erased region includes newline(s)
+				if(boost::size(change.erasedRegion().lines()) > 1) {	// erased region includes newline(s)
 					const kernel::Region& region = change.erasedRegion();
 					clearCaches(boost::irange(kernel::line(region.first) + 1, kernel::line(region.second) + 1), false);
 					BOOST_FOREACH(NumberedLayout& layout, layouts_) {
@@ -191,7 +191,7 @@ namespace ascension {
 							layout.lineNumber -= kernel::line(region.second) - kernel::line(region.first);	// $friendly-access
 					}
 				}
-				if(kernel::line(change.insertedRegion().first) != kernel::line(change.insertedRegion().second)) {	// inserted text is multiline
+				if(boost::size(change.insertedRegion().lines()) > 1) {	// inserted text is multiline
 					const kernel::Region& region = change.insertedRegion();
 					BOOST_FOREACH(NumberedLayout& layout, layouts_) {
 						if(layout.lineNumber > kernel::line(region.first))
@@ -211,7 +211,7 @@ namespace ascension {
 
 			/// @see kernel#DocumentPartitioningListener#documentPartitioningChanged
 			void LineLayoutVector::documentPartitioningChanged(const kernel::Region& changedRegion) {
-				invalidate(boost::irange(kernel::line(changedRegion.beginning()), kernel::line(changedRegion.end()) + 1));
+				invalidate(changedRegion.lines());
 			}
 
 			void LineLayoutVector::fireVisualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines) {
