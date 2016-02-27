@@ -8,7 +8,7 @@
 #ifndef ASCENSION_LISTENERS_HPP
 #define ASCENSION_LISTENERS_HPP
 #include <boost/core/noncopyable.hpp>
-#include <algorithm>	// std.find
+#include <boost/range/algorithm/find.hpp>
 #include <list>
 #include <stdexcept>	// std.invalid_argument
 
@@ -23,20 +23,20 @@ namespace ascension {
 		public:
 			Listeners() BOOST_NOEXCEPT {}
 			void add(Listener& listener) {
-				if(std::find(listeners_.begin(), listeners_.end(), &listener) != listeners_.end())
+				if(boost::find(listeners_, &listener) != boost::const_end(listeners_))
 					throw std::invalid_argument("The listener already has been registered.");
 				listeners_.push_back(&listener);
 			}
 			void remove(Listener& listener) {
-				const Iterator i(std::find(listeners_.begin(), listeners_.end(), &listener));
-				if(i == listeners_.end())
+				const Iterator i(boost::find(listeners_, &listener));
+				if(i == boost::end(listeners_))
 					throw std::invalid_argument("The listener is not registered.");
 				listeners_.erase(i);
 			}
 			void clear() BOOST_NOEXCEPT {listeners_.clear();}
 			bool isEmpty() const BOOST_NOEXCEPT {return listeners_.empty();}
 			void notify(void(Listener::*method)()) {
-				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {
+				for(Iterator i(std::begin(listeners_)), e(std::end(listeners_)), next; i != e; i = next) {
 					next = i;
 					++next;
 					((*i)->*method)();
@@ -44,7 +44,7 @@ namespace ascension {
 			}
 			template<typename Argument>
 			void notify(void(Listener::*method)(Argument), Argument argument) {
-				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {
+				for(Iterator i(std::begin(listeners_)), e(std::end(listeners_)), next; i != e; i = next) {
 					next = i;
 					++next;
 					((*i)->*method)(argument);
@@ -52,7 +52,7 @@ namespace ascension {
 			}
 			template<typename Arg1, typename Arg2>
 			void notify(void(Listener::*method)(Arg1, Arg2), Arg1 arg1, Arg2 arg2) {
-				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {
+				for(Iterator i(std::begin(listeners_)), e(std::end(listeners_)), next; i != e; i = next) {
 					next = i;
 					++next;
 					((*i)->*method)(arg1, arg2);
@@ -60,7 +60,7 @@ namespace ascension {
 			}
 			template<typename Arg1, typename Arg2, typename Arg3>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3), Arg1 arg1, Arg2 arg2, Arg3 arg3) {
-				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {
+				for(Iterator i(std::begin(listeners_)), e(std::end(listeners_)), next; i != e; i = next) {
 					next = i;
 					++next;
 					((*i)->*method)(arg1, arg2, arg3);
@@ -68,7 +68,7 @@ namespace ascension {
 			}
 			template<typename Arg1, typename Arg2, typename Arg3, typename Arg4>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3, Arg4), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4) {
-				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next)  {
+				for(Iterator i(std::begin(listeners_)), e(std::end(listeners_)), next; i != e; i = next)  {
 					next = i;
 					++next;
 					((*i)->*method)(arg1, arg2, arg3, arg4);
@@ -76,7 +76,7 @@ namespace ascension {
 			}
 			template<typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
 			void notify(void(Listener::*method)(Arg1, Arg2, Arg3, Arg4, Arg5), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4, Arg5 arg5) {
-				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {
+				for(Iterator i(std::begin(listeners_)), e(std::end(listeners_)), next; i != e; i = next) {
 					next = i;
 					++next;
 					((*i)->*method)(arg1, arg2, arg3, arg4, arg5);
