@@ -20,7 +20,7 @@ namespace ascension {
 			class SingleStyledPartitionPresentationReconstructorIterator : public presentation::DeclaredStyledTextRunIterator {
 			public:
 				SingleStyledPartitionPresentationReconstructorIterator(const kernel::Region& region,
-						std::shared_ptr<const DeclaredTextRunStyle> style) BOOST_NOEXCEPT : region_(region), style_(style), done_(region.isEmpty()) {
+						std::shared_ptr<const DeclaredTextRunStyle> style) BOOST_NOEXCEPT : region_(region), style_(style), done_(boost::empty(region)) {
 				}
 
 			private:
@@ -34,7 +34,7 @@ namespace ascension {
 					done_ = true;
 				}
 				kernel::Position position() const BOOST_NOEXCEPT override {
-					return !done_ ? region_.beginning() : region_.end();
+					return !done_ ? *boost::const_begin(region_) : *boost::const_end(region_);
 				}
 				std::shared_ptr<const DeclaredTextRunStyle> style() const override {
 					if(done_)

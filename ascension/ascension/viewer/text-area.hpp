@@ -25,6 +25,7 @@ namespace ascension {
 	}
 
 	namespace viewer {
+		class SelectedRegion;
 		class TextAreaMouseInputStrategy;
 
 		namespace widgetapi {
@@ -110,7 +111,7 @@ namespace ascension {
 		protected:
 			/// @name Overridable @c Caret Signal Slots
 			/// @{
-			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
+			virtual void caretMoved(const Caret& caret, const SelectedRegion& oldRegion);
 			virtual void matchBracketsChanged(const Caret& caret,
 				const boost::optional<std::pair<kernel::Position, kernel::Position>>& previouslyMatchedBrackets,
 				bool outsideOfView);

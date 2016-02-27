@@ -58,8 +58,8 @@ namespace ascension {
 				const viewer::TextViewer& textViewer, const kernel::Region& replacementRegion,
 				std::shared_ptr<const CompletionProposal> currentProposals[], std::size_t numberOfCurrentProposals) const BOOST_NOEXCEPT {
 			// select the partially matched proposal
-			String precedingIdentifier(textViewer.document().lineString(kernel::line(replacementRegion.first)).substr(
-				kernel::offsetInLine(replacementRegion.beginning()), kernel::offsetInLine(replacementRegion.end()) - kernel::offsetInLine(replacementRegion.beginning())));
+			String precedingIdentifier(textViewer.document().lineString(kernel::line(*boost::const_begin(replacementRegion))).substr(
+				kernel::offsetInLine(*boost::const_begin(replacementRegion)), kernel::offsetInLine(*boost::const_end(replacementRegion)) - kernel::offsetInLine(*boost::const_begin(replacementRegion))));
 			if(precedingIdentifier.empty())
 				return std::shared_ptr<CompletionProposal>();
 			std::shared_ptr<const CompletionProposal> activeProposal(*std::lower_bound(currentProposals,
@@ -78,31 +78,32 @@ namespace ascension {
 		/// @see ContentAssistProcessor#computCompletionProposals
 		void IdentifiersProposalProcessor::computeCompletionProposals(const viewer::Caret& caret,
 				bool& incremental, kernel::Region& replacementRegion, std::set<std::shared_ptr<const CompletionProposal>>& proposals) const {
-			replacementRegion.second = caret;
-
 			// find the preceding identifier
 			static const Index MAXIMUM_IDENTIFIER_LENGTH = 100;
-			if(!incremental || kernel::locations::isBeginningOfLine(caret))
-				replacementRegion.first = caret;
-			else if(viewer::utils::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, nullptr))
-				replacementRegion.first.line = kernel::line(caret);
-			else
-				replacementRegion.first = caret;
+			{
+				Index startOffsetInLine;
+				if(!incremental || kernel::locations::isBeginningOfLine(caret))
+					replacementRegion = kernel::Region::makeEmpty(caret.position());
+				else if(viewer::utils::getNearestIdentifier(caret.document(), caret, &startOffsetInLine, nullptr))
+					replacementRegion = kernel::Region::makeSingleLine(kernel::line(caret), boost::irange(startOffsetInLine, kernel::offsetInLine(caret)));
+				else
+					replacementRegion = kernel::Region::makeEmpty(caret.position());
+			}
 
 			// collect identifiers in the document
 			static const Index MAXIMUM_BACKTRACKING_LINES = 500;
 			const kernel::Document& document = caret.document();
 			kernel::DocumentCharacterIterator i(document, kernel::Region(kernel::Position(
 				(kernel::line(caret) > MAXIMUM_BACKTRACKING_LINES) ?
-					kernel::line(caret) - MAXIMUM_BACKTRACKING_LINES : 0, 0), replacementRegion.first));
+					kernel::line(caret) - MAXIMUM_BACKTRACKING_LINES : 0, 0), *boost::const_begin(replacementRegion)));
 			kernel::DocumentPartition currentPartition;
 			std::set<String> identifiers;
 			bool followingNIDs = false;
 			document.partitioner().partition(i.tell(), currentPartition);
 			while(i.hasNext()) {
 				if(currentPartition.contentType != contentType_)
-					i.seek(currentPartition.region.end());
-				if(i.tell() >= currentPartition.region.end()) {
+					i.seek(*boost::const_end(currentPartition.region));
+				if(i.tell() >= *boost::const_end(currentPartition.region)) {
 					if(kernel::offsetInLine(i.tell()) == i.lineString().length())
 						++i;
 					document.partitioner().partition(i.tell(), currentPartition);

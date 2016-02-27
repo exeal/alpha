@@ -46,7 +46,7 @@ namespace ascension {
 				// find the start of the identifier
 				if(startOffsetInLine != nullptr) {
 					kernel::DocumentCharacterIterator i(document,
-						kernel::Region(std::max(partition.region.beginning(), kernel::Position::bol(position)), position), position);
+						kernel::Region(std::max(*boost::const_begin(partition.region), kernel::Position::bol(position)), position), position);
 					do {
 						--i;
 						if(!syntax.isIdentifierContinueCharacter(*i)) {
@@ -64,7 +64,7 @@ namespace ascension {
 				// find the end of the identifier
 				if(endOffsetInLine != nullptr) {
 					kernel::DocumentCharacterIterator i(document, kernel::Region(position,
-						std::min(partition.region.end(), kernel::Position(kernel::line(position), document.lineLength(kernel::line(position))))), position);
+						std::min(*boost::const_end(partition.region), kernel::Position(kernel::line(position), document.lineLength(kernel::line(position))))), position);
 					while(i.hasNext()) {
 						if(!syntax.isIdentifierContinueCharacter(*i)) {
 							end = kernel::offsetInLine(i.tell());
@@ -92,7 +92,7 @@ namespace ascension {
 			boost::optional<kernel::Region> getNearestIdentifier(const kernel::Document& document, const kernel::Position& position) {
 				std::pair<Index, Index> offsetsInLine;
 				if(getNearestIdentifier(document, position, &std::get<0>(offsetsInLine), &std::get<1>(offsetsInLine)))
-					return boost::make_optional(kernel::Region(kernel::line(position), boost::irange(std::get<0>(offsetsInLine), std::get<1>(offsetsInLine))));
+					return boost::make_optional(kernel::Region::makeSingleLine(kernel::line(position), boost::irange(std::get<0>(offsetsInLine), std::get<1>(offsetsInLine))));
 				else
 					return boost::none;
 			}

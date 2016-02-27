@@ -124,11 +124,11 @@ namespace alpha {
 		bool messageIsFormat = true;
 
 		if(result == ascension::searcher::IncrementalSearchCallback::EMPTY_PATTERN) {
-			textArea().caret().select(isearch.matchedRegion());
+			textArea().caret().select(ascension::viewer::SelectedRegion(isearch.matchedRegion()));
 			message = forward ? _("Incremental search : (empty pattern)") : _("Reversal incremental search : (empty pattern)");
 			messageIsFormat = false;
 		} else if(result == ascension::searcher::IncrementalSearchCallback::FOUND) {
-			textArea().caret().select(isearch.matchedRegion());
+			textArea().caret().select(ascension::viewer::SelectedRegion(isearch.matchedRegion()));
 			message = forward ? _("Incremental search : %1") : _("Reversal incremental search : %1");
 		} else {
 			if(result == ascension::searcher::IncrementalSearchCallback::NOT_FOUND)

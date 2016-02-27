@@ -49,12 +49,13 @@ namespace ascension {
 				if(viewer() != nullptr && lineSelectionAnchorLine_ != boost::none) {
 					const kernel::Document& document = viewer()->document();
 					const Index nlines = document.numberOfLines();
-					kernel::Region newSelection;
-					newSelection.first.line = (to.line >= boost::get(lineSelectionAnchorLine_)) ? boost::get(lineSelectionAnchorLine_) : boost::get(lineSelectionAnchorLine_) + 1;
-					newSelection.first.offsetInLine = (kernel::line(newSelection.first) > nlines - 1) ? document.lineLength(--newSelection.first.line) : 0;
-					newSelection.second.line = (to.line >= boost::get(lineSelectionAnchorLine_)) ? kernel::line(to) + 1 : kernel::line(to);
-					newSelection.second.offsetInLine = (kernel::line(newSelection.second) > nlines - 1) ? document.lineLength(--newSelection.second.line) : 0;
-					viewer()->textArea().caret().select(newSelection);
+					kernel::Position anchor;
+					anchor.line = (kernel::line(to) >= boost::get(lineSelectionAnchorLine_)) ? boost::get(lineSelectionAnchorLine_) : boost::get(lineSelectionAnchorLine_) + 1;
+					anchor.offsetInLine = (kernel::line(anchor) > nlines - 1) ? document.lineLength(--anchor.line) : 0;
+					kernel::Position caret;
+					caret.line = (kernel::line(to) >= boost::get(lineSelectionAnchorLine_)) ? kernel::line(to) + 1 : kernel::line(to);
+					caret.offsetInLine = (kernel::line(caret) > nlines - 1) ? document.lineLength(--caret.line) : 0;
+					viewer()->textArea().caret().select((_anchor = anchor, _caret = caret));
 				}
 			}
 

@@ -6,9 +6,10 @@
  * @date 2014-11-23 Separated from document.cpp
  */
 
+#include <ascension/corelib/numeric-range-algorithm/clamp.hpp>
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
-
 
 namespace ascension {
 	namespace kernel {
@@ -42,7 +43,7 @@ namespace ascension {
 		 */
 		DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Position& position)
 				: document_(&document), region_(document.region()), position_(position) {
-			if(!region_.includes(position_))
+			if(!encompasses(region_, position_))
 				throw BadPositionException(position_);
 		}
 
@@ -53,9 +54,8 @@ namespace ascension {
 		 * @throw BadRegionException @a region intersects outside of the document
 		 */
 		DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region)
-				: document_(&document), region_(region), position_(region.beginning()) {
-			region_.normalize();
-			if(!document.region().encompasses(region_))
+				: document_(&document), region_(region), position_(*boost::const_begin(region)) {
+			if(!encompasses(document.region(), region_))
 				throw BadRegionException(region_);
 		}
 		
@@ -69,10 +69,9 @@ namespace ascension {
 		 */
 		DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region, const Position& position)
 				: document_(&document), region_(region), position_(position) {
-			region_.normalize();
-			if(!document.region().encompasses(region_))
+			if(!encompasses(document.region(), region_))
 				throw BadRegionException(region_);
-			else if(!region_.includes(position_))
+			else if(!encompasses(region_, position_))
 				throw BadPositionException(position_);
 		}
 
@@ -99,7 +98,7 @@ namespace ascension {
 		}
 
 		CodePoint DocumentCharacterIterator::dereference() const BOOST_NOEXCEPT {
-			assert(document_ != nullptr && tell() != region().second);
+			assert(document_ != nullptr && tell() != *boost::const_end(region()));
 			const String& s = lineString();
 			if(kernel::offsetInLine(tell()) == s.length())
 				return text::LINE_SEPARATOR;
@@ -138,6 +137,16 @@ namespace ascension {
 		const String& DocumentCharacterIterator::lineString() const BOOST_NOEXCEPT {
 			return document().lineString(line(*this));
 		}
+		
+		/**
+		 * Moves to the specified position.
+		 * @param to The position. If this is outside of the iteration region, the start/end of the region will be used
+		 * @return This iterator
+		 */
+		DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
+			position_ = clamp(to, region());
+			return *this;
+		}
 
 		/**
 		 * Sets the region of the iterator. The current position will adjusted.
@@ -145,10 +154,10 @@ namespace ascension {
 		 * @throw BadRegionException @a newRegion intersects outside of the document
 		 */
 		void DocumentCharacterIterator::setRegion(const Region& newRegion) {
-			const Position e(document_->region().second);
-			if(newRegion.first > e || newRegion.second > e)
+			const Position e(*boost::const_end(document_->region()));
+			if(*boost::const_begin(newRegion) > e || *boost::const_end(newRegion) > e)
 				throw BadRegionException(newRegion);
-			if(!(region_ = newRegion).includes(tell()))
+			if(!encompasses(region_ = newRegion, tell()))
 				seek(tell());
 		}
 	}

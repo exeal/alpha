@@ -464,7 +464,9 @@ namespace ascension {
 							}
 						} else if(snapPolicy == kernel::locations::GRAPHEME_CLUSTER) {
 							text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
-								kernel::DocumentCharacterIterator(document, kernel::Region(line.line, boost::irange<Index>(0, s.length())), kernel::Position(line.line, hitInLine.characterIndex())));
+								kernel::DocumentCharacterIterator(document,
+									kernel::Region::makeSingleLine(line.line, boost::irange<Index>(0, s.length())),
+									kernel::Position(line.line, hitInLine.characterIndex())));
 							if(interveningSurrogates || !i.isBoundary(i.base())) {
 								--i;
 								const TextHit<> leading(TextHit<>::leading(kernel::offsetInLine(i.base().tell())));

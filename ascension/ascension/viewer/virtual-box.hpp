@@ -13,7 +13,6 @@
 #include <array>
 #include <utility>
 
-
 namespace ascension {
 	namespace viewer {
 		class TextArea;

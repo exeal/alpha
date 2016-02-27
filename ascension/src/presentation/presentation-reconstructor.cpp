@@ -58,11 +58,11 @@ namespace ascension {
 			Index offsetInLine = 0;
 			for(const Index lineLength = presentation_.document().lineLength(line);;) {
 				partitioner.partition(kernel::Position(line, offsetInLine), currentPartition_);	// this may throw BadPositionException
-				if(!currentPartition_.region.isEmpty())
+				if(!boost::empty(currentPartition_.region))
 					break;
 				if(++offsetInLine >= lineLength) {	// rare case...
 					currentPartition_.contentType = kernel::DEFAULT_CONTENT_TYPE;
-					currentPartition_.region = kernel::Region(line, boost::irange(static_cast<Index>(0), lineLength));
+					currentPartition_.region = kernel::Region::makeSingleLine(line, boost::irange(static_cast<Index>(0), lineLength));
 					break;
 				}
 			}
@@ -71,7 +71,7 @@ namespace ascension {
 
 		/// @see StyledTextRunIterator#isDone
 		bool PresentationReconstructorIterator::isDone() const BOOST_NOEXCEPT {
-			return currentPartition_.region.isEmpty();
+			return boost::empty(currentPartition_.region);
 		}
 		
 		/// @see StyledTextRunIterator#next
@@ -84,20 +84,20 @@ namespace ascension {
 			if(subiterator_.get() == nullptr) {
 				const kernel::Document& document = presentation_.document();
 				const Index lineLength = document.lineLength(line_);
-				if(currentPartition_.region.end() >= kernel::Position(line_, lineLength)) {
+				if(*boost::const_end(currentPartition_.region) >= kernel::Position(line_, lineLength)) {
 					// done
-					currentPartition_.region = kernel::Region(currentPartition_.region.end());
+					currentPartition_.region = kernel::Region::makeEmpty(*boost::const_end(currentPartition_.region));
 					return;
 				}
 				// find the next partition
 				const kernel::DocumentPartitioner& partitioner = document.partitioner();
-				for(Index offsetInLine = kernel::offsetInLine(currentPartition_.region.end()); ; ) {
+				for(Index offsetInLine = kernel::offsetInLine(*boost::const_end(currentPartition_.region)); ; ) {
 					partitioner.partition(kernel::Position(line_, offsetInLine), currentPartition_);
-					if(!currentPartition_.region.isEmpty())
+					if(!boost::empty(currentPartition_.region))
 						break;
 					if(++offsetInLine >= lineLength) {	// rare case...
 						currentPartition_.contentType = kernel::DEFAULT_CONTENT_TYPE;
-						currentPartition_.region = kernel::Region(line_,  boost::irange(offsetInLine, lineLength));
+						currentPartition_.region = kernel::Region::makeSingleLine(line_,  boost::irange(offsetInLine, lineLength));
 					}
 				}
 				updateSubiterator();
@@ -129,7 +129,7 @@ namespace ascension {
 			else
 				subiterator_.reset();
 			if(subiterator_.get() == nullptr) {
-				currentRange_ = boost::irange(kernel::offsetInLine(currentPartition_.region.beginning()), kernel::offsetInLine(currentPartition_.region.end()));
+				currentRange_ = boost::irange(kernel::offsetInLine(*boost::const_begin(currentPartition_.region)), kernel::offsetInLine(*boost::const_end(currentPartition_.region)));
 				currentStyle_ = std::shared_ptr<const DeclaredTextRunStyle>(&DeclaredTextRunStyle::unsetInstance(), boost::null_deleter());
 			}
 		}

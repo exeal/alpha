@@ -7,6 +7,7 @@
  * @date 2015-03-25 Separated from caret.cpp
  */
 
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
@@ -82,7 +83,7 @@ namespace ascension {
 				if(level == 0)
 					return;
 				const String indent(abs(level), character);
-				const kernel::Region region(caret.selectedRegion());
+				const SelectedRegion region(caret.selectedRegion());
 
 				if(boost::size(region.lines()) == 1) {
 					// number of selected lines is one -> just insert tab character(s)
@@ -90,14 +91,14 @@ namespace ascension {
 					return;
 				}
 
-				const kernel::Position oldPosition(caret.position());
-				kernel::Position otherResult(caret.anchor());
-				Index line = kernel::line(region.beginning());
+				const kernel::Position oldPosition(region.caret());
+				kernel::Position otherResult(region.anchor());
+				Index line = kernel::line(*boost::const_begin(region));
 
 				// indent/unindent the first line
 				kernel::Document& document = caret.document();
 				if(level > 0) {
-					insert(document, kernel::Position(line, rectangle ? kernel::offsetInLine(region.beginning()) : 0), indent);
+					insert(document, kernel::Position(line, rectangle ? kernel::offsetInLine(*boost::const_begin(region)) : 0), indent);
 					if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 						otherResult.offsetInLine += level;
 					if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
@@ -112,7 +113,7 @@ namespace ascension {
 					}
 					if(indentLength > 0) {
 						const Index deleteLength = std::min<Index>(-level, indentLength);
-						erase(document, kernel::Position::bol(line), kernel::Position(line, deleteLength));
+						kernel::erase(document, kernel::Region(kernel::Position::bol(line), kernel::Position(line, deleteLength)));
 						if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 							otherResult.offsetInLine -= deleteLength;
 						if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
@@ -122,8 +123,8 @@ namespace ascension {
 
 				// indent/unindent the following selected lines
 				if(level > 0) {
-					for(++line; line <= kernel::line(region.end()); ++line) {
-						if(document.lineLength(line) != 0 && (line != kernel::line(region.end()) || kernel::offsetInLine(region.end()) > 0)) {
+					for(++line; line <= kernel::line(*boost::const_end(region)); ++line) {
+						if(document.lineLength(line) != 0 && (line != kernel::line(*boost::const_end(region)) || kernel::offsetInLine(*boost::const_end(region)) > 0)) {
 							boost::optional<Index> insertPosition(0);	// zero is suitable for linear selection
 							if(rectangle) {
 								// TODO: recognize wrap (second parameter).
@@ -142,7 +143,7 @@ namespace ascension {
 						}
 					}
 				} else {
-					for(++line; line <= kernel::line(region.end()); ++line) {
+					for(++line; line <= kernel::line(*boost::const_end(region)); ++line) {
 						const String& s = document.lineString(line);
 						Index indentLength;
 						for(indentLength = 0; indentLength < s.length(); ++indentLength) {
@@ -152,7 +153,7 @@ namespace ascension {
 						}
 						if(indentLength > 0) {
 							const Index deleteLength = std::min<Index>(-level, indentLength);
-							erase(document, kernel::Position::bol(line), kernel::Position(line, deleteLength));
+							kernel::erase(document, kernel::Region(kernel::Position::bol(line), kernel::Position(line, deleteLength)));
 							if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 								otherResult.offsetInLine -= deleteLength;
 							if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
@@ -333,13 +334,13 @@ namespace ascension {
 				if(kernel::locations::isBeginningOfLine(caret))	// an empty line
 					caret.moveTo(caret);
 				else	// eol
-					caret.select((--i).base().tell(), caret);
+					caret.select((_anchor = (--i).base().tell(), _caret = caret));
 			} else if(kernel::locations::isBeginningOfLine(caret))	// bol
-				caret.select(caret, (++i).base().tell());
+				caret.select((_anchor = caret, _caret = (++i).base().tell()));
 			else {
 				const kernel::Position p((++i).base().tell());
-				i.base().seek(kernel::Position(line(caret), offsetInLine(caret) + 1));
-				caret.select((--i).base().tell(), p);
+				i.base().seek(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) + 1));
+				caret.select((_anchor = (--i).base().tell(), _caret = p));
 			}
 		}
 
@@ -369,36 +370,36 @@ namespace ascension {
 
 			if(text::ucd::BinaryProperty::is<text::ucd::BinaryProperty::GRAPHEME_EXTEND>(kernel::locations::characterAt(caret)))	// not the start of a grapheme
 				return false;
-			else if(!region.includes(caret.position()))	// inaccessible
+			else if(!encompasses(region, caret.position()))	// inaccessible
 				return false;
 
-			if(offsetInLine(caret) == 0 || caret.position() == region.first) {
+			if(offsetInLine(caret) == 0 || caret.position() == *boost::const_begin(region)) {
 				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
 					kernel::DocumentCharacterIterator(caret.document(), pos[0] = caret.position()));
 				pos[1] = (++i).base().tell();
-				if(kernel::line(pos[1]) != kernel::line(pos[0]) || pos[1] == pos[0] || !region.includes(pos[1]))
+				if(kernel::line(pos[1]) != kernel::line(pos[0]) || pos[1] == pos[0] || !encompasses(region, pos[1]))
 					return false;
 				pos[2] = (++i).base().tell();
-				if(kernel::line(pos[2]) != kernel::line(pos[1]) || pos[2] == pos[1] || !region.includes(pos[2]))
+				if(kernel::line(pos[2]) != kernel::line(pos[1]) || pos[2] == pos[1] || !encompasses(region, pos[2]))
 					return false;
-			} else if(kernel::offsetInLine(caret) == caret.document().lineLength(kernel::line(caret)) || caret.position() == region.second) {
+			} else if(kernel::offsetInLine(caret) == caret.document().lineLength(kernel::line(caret)) || caret.position() == *boost::const_end(region)) {
 				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
 					kernel::DocumentCharacterIterator(caret.document(), pos[2] = caret.position()));
 				pos[1] = (--i).base().tell();
-				if(kernel::line(pos[1]) != kernel::line(pos[2]) || pos[1] == pos[2] || !region.includes(pos[1]))
+				if(kernel::line(pos[1]) != kernel::line(pos[2]) || pos[1] == pos[2] || !encompasses(region, pos[1]))
 					return false;
 				pos[0] = (--i).base().tell();
-				if(kernel::line(pos[0]) != kernel::line(pos[1]) || pos[0] == pos[1] || !region.includes(pos[0]))
+				if(kernel::line(pos[0]) != kernel::line(pos[1]) || pos[0] == pos[1] || !encompasses(region, pos[0]))
 					return false;
 			} else {
 				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
 					kernel::DocumentCharacterIterator(caret.document(), pos[1] = caret.position()));
 				pos[2] = (++i).base().tell();
-				if(kernel::line(pos[2]) != kernel::line(pos[1]) || pos[2] == pos[1] || !region.includes(pos[2]))
+				if(kernel::line(pos[2]) != kernel::line(pos[1]) || pos[2] == pos[1] || !encompasses(region, pos[2]))
 					return false;
 				i.base().seek(pos[1]);
 				pos[0] = (--i).base().tell();
-				if(kernel::line(pos[0]) != kernel::line(pos[1]) || pos[0] == pos[1] || !region.includes(pos[0]))
+				if(kernel::line(pos[0]) != kernel::line(pos[1]) || pos[0] == pos[1] || !encompasses(region, pos[0]))
 					return false;
 			}
 

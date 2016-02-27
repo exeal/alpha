@@ -678,7 +678,7 @@ namespace ascension {
 
 			/// Returns @c true if the given position is the first printable character in the line.
 			bool isFirstPrintableCharacterOfLine(const viewer::VisualPoint& p) {
-				const Position np(p.normalized()), bob(p.document().accessibleRegion().first);
+				const Position np(p.normalized()), bob(*boost::const_begin(p.document().accessibleRegion()));
 				const Index offset = (kernel::line(bob) == kernel::line(np)) ? kernel::offsetInLine(bob) : 0;
 				const String& line = p.document().lineString(kernel::line(np));
 				return line.data() + kernel::offsetInLine(np) - offset
@@ -693,7 +693,7 @@ namespace ascension {
 
 			/// Returns @c true if the given position is the last printable character in the line.
 			bool isLastPrintableCharacterOfLine(const viewer::VisualPoint& p) {
-				const Position np(p.normalized()), eob(p.document().accessibleRegion().second);
+				const Position np(p.normalized()), eob(*boost::const_end(p.document().accessibleRegion()));
 				const String& line = p.document().lineString(kernel::line(np));
 				const Index lineLength = (kernel::line(eob) == kernel::line(np)) ? kernel::offsetInLine(eob) : line.length();
 				return line.data() + lineLength - kernel::offsetInLine(np)

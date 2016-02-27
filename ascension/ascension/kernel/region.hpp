@@ -1,5 +1,5 @@
 /**
- * @file position.hpp
+ * @file region.hpp
  * @author exeal
  * @date 2011-01-21 separated from document.hpp
  * @date 2015-05-02 Separated from position.hpp.
@@ -13,80 +13,95 @@
 
 namespace ascension {
 	namespace kernel {
+		namespace detail {
+			/// @internal
+			class RegionIterator : public boost::iterator_facade<
+				RegionIterator, const Position, boost::incrementable_traversal_tag, const Position&/*, void */
+			> {
+				typedef boost::iterator_facade<
+					RegionIterator, const Position&, boost::incrementable_traversal_tag, const Position&/*, void */
+				> Super;
+			public:
+				typedef Super::value_type value_type;
+//				typedef Super::difference_type void;
+				typedef Super::reference reference;
+				typedef std::input_iterator_tag iterator_category;
+			public:
+				RegionIterator() BOOST_NOEXCEPT {}
+				explicit RegionIterator(const Position& value) BOOST_NOEXCEPT : value_(value) {}
+			private:
+				reference dereference() const BOOST_NOEXCEPT {return value_;}
+				bool equal(const RegionIterator& other) const BOOST_NOEXCEPT {return value_ == other.value_;}
+				void increment() BOOST_NOEXCEPT {assert(false);}
+			private:
+				friend class boost::iterator_core_access;
+				Position value_;
+			};
+		}
+
 		/**
-		 * A region consists of two positions and represents a linear range in a document. There are no restriction
-		 * about greater/less relationship between the two positions, but the region is called "normalized" when the
-		 * first position is less than or equal to the second.
-		 * @note This class is not intended to be subclassed.
+		 * A region consists of two positions and represents a linear range in a document.
+		 * @c Region satisfies Single Pass Range concept.
+		 * @note This class is not intended to be subclassed by clients.
 		 */
-		class Region : public std::pair<Position, Position>, public FastArenaObject<Region> {
+		class Region : public boost::iterator_range<detail::RegionIterator>, public FastArenaObject<Region>, private boost::equality_comparable<Region> {
+			typedef detail::RegionIterator Iterator;
+			typedef boost::iterator_range<Iterator> Super;
+
 		public:
 			/// Default constructor does not initialize the two positions.
 			Region() BOOST_NOEXCEPT {}
-			/// Constructor creates an empty region.
-			explicit Region(const Position& p) BOOST_NOEXCEPT : std::pair<Position, Position>(p, p) {}
-			/// Constructor.
-			Region(const Position& first, const Position& second) BOOST_NOEXCEPT
-				: std::pair<Position, Position>(first, second) {}
-			/// Constructor creates a region in a line.
-			Region(Index line, const boost::integer_range<Index>& rangeInLine) BOOST_NOEXCEPT
-				: std::pair<Position, Position>(Position(line, *rangeInLine.begin()), Position(line, *rangeInLine.end())) {}
-			/// Returns an intersection of the two regions. Same as @c #getIntersection.
-			Region operator&(const Region& other) const BOOST_NOEXCEPT {
-				return getIntersection(other);
+			/**
+			 * Creates a region with the specified two positions.
+			 * @param p1 A position
+			 * @param p2 An another position
+			 */
+			Region(const Position& p1, const Position& p2) BOOST_NOEXCEPT : Super(Iterator(std::min(p1, p2)), Iterator(std::max(p1, p2))) {}
+			/**
+			 * Creates a region with the specified two positions.
+			 * @tparam SinglePassReadableRange The type of @a range
+			 * @param positions An array, tuple, ... whose size is 2
+			 */
+			template<typename SinglePassReadableRange>
+			static Region fromRange(const SinglePassReadableRange& range) {
+				BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<SinglePassReadableRange>));
+				return Region(*boost::const_begin(range), *boost::const_end(range));
 			}
-			/// Returns a union of the two regions. Same as @c #getUnion.
-			Region operator|(const Region& other) const {return getUnion(other);}
-			/// Returns the result of Region(Position::zero()).
-			static BOOST_CONSTEXPR Region zero() BOOST_NOEXCEPT {
-				return Region(Position::zero());
+			/**
+			 * Creates a region with the specified two positions.
+			 * @tparam Positions The type of @a positions
+			 * @param positions An array, tuple, ... whose size is 2
+			 */
+			template<typename Positions>
+			static Region fromTuple(const Positions& positions) {
+				static_assert(std::tuple_size<Positions>::value == 2, "");
+				return Region(std::get<0>(positions), std::get<1>(positions));
 			}
-			/// Returns the beginning of the region.
-			Position& beginning() BOOST_NOEXCEPT {return (first < second) ? first : second;}
-			/// Returns the beginning of the region.
-			const Position& beginning() const BOOST_NOEXCEPT {
-				return (first < second) ? first : second;
+			/**
+			 * Creates an empty region with the specified position.
+			 * @param position The position
+			 */
+			static Region makeEmpty(const Position& position) BOOST_NOEXCEPT {
+				return Region(position, position);
 			}
-			/// Returns @c true if the region encompasses the other region.
-			bool encompasses(const Region& other) const BOOST_NOEXCEPT {
-				return beginning() <= other.beginning() && end() >= other.end();
+			/**
+			 * Creates a single-line region.
+			 * @tparam SinglePassReadableRange The type of @a rangeInLine
+			 * @param line The line number
+			 * @param rangeInLine Offsets in the line
+			 */
+			template<typename SinglePassReadableRange>
+			static Region makeSingleLine(Index line, const SinglePassReadableRange& rangeInLine) BOOST_NOEXCEPT {
+				BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<SinglePassReadableRange>));
+				return Region(Position(line, *boost::const_begin(rangeInLine)), Position(line, *boost::const_end(rangeInLine)));
 			}
-			/// Returns the end of the region.
-			Position& end() BOOST_NOEXCEPT {return (first > second) ? first : second;}
-			/// Returns the end of the region.
-			const Position& end() const BOOST_NOEXCEPT {return (first > second) ? first : second;}
-			/// Returns an intersection of the two regions. If the regions don't intersect, returns @c Region().
-			Region getIntersection(const Region& other) const BOOST_NOEXCEPT {
-				return intersectsWith(other) ?
-					Region(std::max(beginning(), other.beginning()), std::min(end(), other.end())) : Region();
-			}
-			/// Returns a union of the two regions. If the two regions don't intersect, throws @c std#invalid_argument.
-			Region getUnion(const Region& other) const {
-				if(!intersectsWith(other))
-					throw std::invalid_argument("can't make a union.");
-				return Region(beginning(), other.end());
-			}
-			/// Returns @c true if @a p is contained by the region.
-			bool includes(const Position& p) const BOOST_NOEXCEPT {
-				return p >= beginning() && p <= end();
-			}
-			/// Returns @c true if the region intersects with the other region.
-			bool intersectsWith(const Region& other) const BOOST_NOEXCEPT {
-				return includes(other.first) || includes(other.second);
-			}
-			/// Returns @c true if the region is empty.
-			bool isEmpty() const BOOST_NOEXCEPT {return first == second;}
-			/// Returns @c true if the region is normalized.
-			bool isNormalized() const BOOST_NOEXCEPT {return first <= second;}
 			/// Returns a range of lines. @c boost#size(lines()) returns the number of lines this range covers.
-			boost::integer_range<Index> lines() const BOOST_NOEXCEPT {
-				return boost::irange(line(beginning()), line(end()) + 1);
+			auto lines() const BOOST_NOEXCEPT -> decltype(boost::irange<Index>(0, 0)) {
+				return boost::irange(line(*boost::const_begin(*this)), line(*boost::const_end(*this)) + 1);
 			}
-			/// Normalizes the region.
-			Region& normalize() BOOST_NOEXCEPT {
-				if(!isNormalized())
-					std::swap(first, second);
-				return *this;
+			/// Returns the result of @c Region(Position::zero()).
+			static BOOST_CONSTEXPR Region zero() BOOST_NOEXCEPT {
+				return makeEmpty(Position::zero());
 			}
 		};
 
@@ -106,7 +121,7 @@ namespace ascension {
 			s.flags(out.flags());
 			s.imbue(out.getloc());
 			s.precision(out.precision());
-			s << value.first << ct.widen('-') << value.second;
+			s << *boost::const_begin(value) << ct.widen('-') << *boost::const_end(value);
 			return out << s.str().c_str();
 		}
 
@@ -141,6 +156,8 @@ namespace ascension {
 		private:
 			const boost::optional<Region> requestedRegion_;
 		};
+
+		BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<Region>));
 	}
 } // namespace ascension.kernel
 

@@ -79,8 +79,8 @@ namespace ascension {
 		 */
 		std::basic_ostream<Char>& kernel::writeDocumentToStream(std::basic_ostream<Char>& out,
 				const Document& document, const Region& region, const text::Newline& newline /* = text::Newline::USE_INTRINSIC_VALUE */) {
-			const Position& beginning = region.beginning();
-			const Position end(std::min(region.end(), document.region().second));
+			const Position& beginning = *boost::const_begin(region);
+			const Position end(std::min(*boost::const_end(region), *boost::const_end(document.region())));
 			if(line(beginning) == line(end)) {	// shortcut for single-line
 				if(out) {
 					// TODO: this cast may be danger.
@@ -118,10 +118,10 @@ namespace ascension {
 		 * @throw BadPositionException @a at is outside of the document
 		 */
 		Index positions::absoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
-			if(at > document.region().second)
+			if(at > *boost::const_end(document.region()))
 				throw BadPositionException(at);
 			Index offset = 0;
-			const Position start((fromAccessibleStart ? document.accessibleRegion() : document.region()).first);
+			const Position start(*boost::const_begin(fromAccessibleStart ? document.accessibleRegion() : document.region()));
 			for(Index i = line(start); ; ++i) {
 				if(i == line(at)) {
 					offset += offsetInLine(at);
@@ -146,33 +146,33 @@ namespace ascension {
 		 */
 		Position positions::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) BOOST_NOEXCEPT {
 			Position newPosition(position);
-			if(!change.erasedRegion().isEmpty()) {	// deletion
-				if(position < change.erasedRegion().second) {	// the end is behind the current line
-					if(position <= change.erasedRegion().first)
+			if(!boost::empty(change.erasedRegion())) {	// deletion
+				if(position < *boost::const_end(change.erasedRegion())) {	// the end is behind the current line
+					if(position <= *boost::const_begin(change.erasedRegion()))
 						return newPosition;
 					else	// in the region
-						newPosition = change.erasedRegion().first;
-				} else if(line(position) > line(change.erasedRegion().second))	// in front of the current line
-					newPosition.line -= line(change.erasedRegion().second) - line(change.erasedRegion().first);
+						newPosition = *boost::const_begin(change.erasedRegion());
+				} else if(line(position) > line(*boost::const_end(change.erasedRegion())))	// in front of the current line
+					newPosition.line -= boost::size(change.erasedRegion().lines()) - 1;
 				else {	// the end is the current line
-					if(position.line == change.erasedRegion().first.line)	// the region is single-line
-						newPosition.offsetInLine -= offsetInLine(change.erasedRegion().second) - offsetInLine(change.erasedRegion().first);
+					if(line(position) == line(*boost::const_begin(change.erasedRegion())))	// the region is single-line
+						newPosition.offsetInLine -= offsetInLine(*boost::const_end(change.erasedRegion())) - offsetInLine(*boost::const_begin(change.erasedRegion()));
 					else {	// the region is multiline
-						newPosition.line -= line(change.erasedRegion().second) - line(change.erasedRegion().first);
-						newPosition.offsetInLine -= offsetInLine(change.erasedRegion().second) - offsetInLine(change.erasedRegion().first);
+						newPosition.line -= boost::size(change.erasedRegion().lines()) - 1;
+						newPosition.offsetInLine -= offsetInLine(*boost::const_end(change.erasedRegion())) - offsetInLine(*boost::const_begin(change.erasedRegion()));
 					}
 				}
 			}
-			if(!change.insertedRegion().isEmpty()) {	// insertion
-				if(position < change.insertedRegion().first)	// behind the current position
+			if(!boost::empty(change.insertedRegion())) {	// insertion
+				if(position < *boost::const_begin(change.insertedRegion()))	// behind the current position
 					return newPosition;
-				else if(position == change.insertedRegion().first && gravity == Direction::BACKWARD) // the current position + backward gravity
+				else if(position == *boost::const_begin(change.insertedRegion()) && gravity == Direction::BACKWARD) // the current position + backward gravity
 					return newPosition;
-				else if(line(position) > line(change.insertedRegion().first))	// in front of the current line
-					newPosition.line += line(change.insertedRegion().second) - line(change.insertedRegion().first);
+				else if(line(position) > line(*boost::const_begin(change.insertedRegion())))	// in front of the current line
+					newPosition.line += boost::size(change.insertedRegion().lines()) - 1;
 				else {	// in the current line
-					newPosition.line += line(change.insertedRegion().second) - line(change.insertedRegion().first);
-					newPosition.offsetInLine += offsetInLine(change.insertedRegion().second) - offsetInLine(change.insertedRegion().first);
+					newPosition.line += boost::size(change.insertedRegion().lines()) - 1;
+					newPosition.offsetInLine += offsetInLine(*boost::const_end(change.insertedRegion())) - offsetInLine(*boost::const_begin(change.insertedRegion()));
 				}
 			}
 			return newPosition;
@@ -235,8 +235,6 @@ namespace ascension {
 		 */
 		DocumentChange::DocumentChange(const Region& erasedRegion, const Region& insertedRegion)
 				BOOST_NOEXCEPT : erasedRegion_(erasedRegion), insertedRegion_(insertedRegion) {
-			const_cast<Region&>(erasedRegion_).normalize();
-			const_cast<Region&>(erasedRegion_).normalize();
 		}
 
 		/// Private destructor.
@@ -294,16 +292,16 @@ namespace ascension {
 			// update markedLines_ based on the change
 			if(&document_ != &document || markedLines_.empty())
 				return;
-			if(line(change.erasedRegion().first) != line(change.erasedRegion().second)) {
+			if(boost::size(change.erasedRegion().lines()) > 1) {
 				// remove the marks on the deleted lines
-				const Index lines = line(change.erasedRegion().second) - line(change.erasedRegion().first);
+				const Index lines = boost::size(change.erasedRegion().lines()) - 1;
 				const auto e(std::end(markedLines_));
-				auto top(find(line(change.erasedRegion().first)));
+				auto top(find(line(*boost::const_begin(change.erasedRegion()))));
 				if(top != e) {
-					if(*top == line(change.erasedRegion().first))
+					if(*top == line(*boost::const_begin(change.erasedRegion())))
 						++top;
-					auto bottom(find(line(change.erasedRegion().second)));
-					if(bottom != e && *bottom == line(change.erasedRegion().second))
+					auto bottom(find(line(*boost::const_end(change.erasedRegion()))));
+					if(bottom != e && *bottom == line(*boost::const_end(change.erasedRegion())))
 						++bottom;
 					// slide the following lines before removing
 					if(bottom != e) {
@@ -313,11 +311,11 @@ namespace ascension {
 					markedLines_.erase(top, bottom);	// GapVector<>.erase does not return an iterator
 				}
 			}
-			if(line(change.insertedRegion().first) != line(change.insertedRegion().second)) {
-				const Index lines = line(change.insertedRegion().second) - line(change.insertedRegion().first);
-				auto i(find(line(change.insertedRegion().first)));
+			if(boost::size(change.insertedRegion().lines()) > 1) {
+				const Index lines = boost::size(change.insertedRegion().lines()) - 1;
+				auto i(find(line(*boost::const_begin(change.insertedRegion()))));
 				if(i != std::end(markedLines_)) {
-					if(*i == line(change.insertedRegion().first) && offsetInLine(change.insertedRegion().first) != 0)
+					if(*i == line(*boost::const_begin(change.insertedRegion())) && offsetInLine(*boost::const_begin(change.insertedRegion())) != 0)
 						++i;
 					for(const auto e(std::end(markedLines_)); i != e; ++i)
 						*i += lines;	// ??? - C4267@MSVC9
@@ -568,7 +566,7 @@ namespace ascension {
 		 * @see #region, DocumentAccessViolationException
 		 */
 		Region Document::accessibleRegion() const BOOST_NOEXCEPT {
-			return (accessibleRegion_.get() != nullptr) ? Region(accessibleRegion_->first, *accessibleRegion_->second) : region();
+			return (accessibleRegion_.get() != nullptr) ? Region(std::get<0>(*accessibleRegion_), *std::get<1>(*accessibleRegion_)) : region();
 		}
 
 		/// Returns the @c AccessibleRegionChangedSignal signal connector.
@@ -744,16 +742,16 @@ namespace ascension {
 		 * @see #isNarrowed, #widen, #AccessibleRegionChangedSignal
 		 */
 		void Document::narrowToRegion(const Region& region) {
-			if(region.end() > this->region().end())
+			if(*boost::const_end(region) > *boost::const_end(this->region()))
 				throw BadRegionException(region);
 			else if(region == accessibleRegion())
 				return;
 			if(accessibleRegion_.get() == 0) {
 				accessibleRegion_.reset(new std::pair<Position, std::unique_ptr<Point>>);
-				accessibleRegion_->second.reset(new Point(*this, region.end()));
+				accessibleRegion_->second.reset(new Point(*this, *boost::const_end(region)));
 			} else
-				accessibleRegion_->second->moveTo(region.end());
-			accessibleRegion_->first = region.beginning();
+				accessibleRegion_->second->moveTo(*boost::const_end(region));
+			accessibleRegion_->first = *boost::const_begin(region);
 //			BOOST_FOREACH(Point* p, points_) {
 //				if(p->isExcludedFromRestriction())
 //					p->normalize();
@@ -846,7 +844,7 @@ namespace ascension {
 					length_ = 0;
 					++revisionNumber_;
 				}
-				const DocumentChange ca(region(), Region(region().beginning()));
+				const DocumentChange ca(region(), Region::makeEmpty(*boost::const_begin(region())));
 				fireDocumentChanged(ca, false);
 			}
 		
@@ -1041,7 +1039,7 @@ namespace ascension {
 		/// @see DocumentPartitioner#doGetPartition
 		void NullPartitioner::doGetPartition(const Position&, DocumentPartition& partition) const BOOST_NOEXCEPT {
 			if(changed_) {
-				const_cast<NullPartitioner*>(this)->p_.region.second = document()->region().second;
+				const_cast<NullPartitioner*>(this)->p_.region = Region(*boost::const_begin(p_.region), *boost::const_end(document()->region()));
 				changed_ = false;
 			}
 			partition = p_;

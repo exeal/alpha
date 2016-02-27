@@ -1300,6 +1300,12 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\standard-caret-painter.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\encompasses.hpp">
+      <Filter>ascension\Header Files\corelib\numeric-range-algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\selected-region.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

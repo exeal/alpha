@@ -4,9 +4,10 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2013 was viewer.cpp
  * @date 2013-04-29 separated from viewer.cpp
- * @date 2013-2015
+ * @date 2013-2016
  */
 
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
@@ -50,7 +51,7 @@ namespace ascension {
 		 * @see #includes, viewer#selectedRangeOnLine, viewer#selectedRangeOnVisualLine
 		 */
 		boost::optional<boost::integer_range<Index>> VirtualBox::characterRangeInVisualLine(const graphics::font::VisualLine& line) const BOOST_NOEXCEPT {
-			if(line < *lines_.begin() || line > *lines_.end())
+			if(!encompasses(lines_, line))
 				return boost::none;	// out of the region
 
 			const graphics::font::TextRenderer& renderer = textArea_.textRenderer();
@@ -60,22 +61,23 @@ namespace ascension {
 				layout = (isolatedLayout = renderer.layouts().createIsolatedLayout(line.line)).get();
 			const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
 			const graphics::Scalar baseline = graphics::font::TextLayout::LineMetricsIterator(*layout, line.subline).baselineOffset();
-			graphics::Scalar first = *ipds_.begin(), second = *ipds_.end();
 			const graphics::Scalar lineStartOffset = renderer.lineStartEdge(graphics::font::VisualLine(line.line, 0));
-			first -= lineStartOffset;
-			first = mapTextRendererInlineProgressionDimensionToLineLayout(writingMode, first);
-			second -= lineStartOffset;
-			second = mapTextRendererInlineProgressionDimensionToLineLayout(writingMode, second);
+			auto ipds(ipds_);
+			ipds.advance_begin(-lineStartOffset);
+			ipds.advance_end(-lineStartOffset);
+			ipds = boost::irange(
+				mapTextRendererInlineProgressionDimensionToLineLayout(writingMode, *boost::const_begin(ipds)),
+				mapTextRendererInlineProgressionDimensionToLineLayout(writingMode, *boost::const_end(ipds)));
 
-			const boost::integer_range<Index> result(
+			const auto result(
 				boost::irange(
 					layout->hitTestCharacter(presentation::FlowRelativeTwoAxes<graphics::Scalar>(
-						presentation::_ipd = std::min(first, second), presentation::_bpd = baseline)).insertionIndex(),		
+						presentation::_ipd = *boost::const_begin(ipds), presentation::_bpd = baseline)).insertionIndex(),		
 					layout->hitTestCharacter(presentation::FlowRelativeTwoAxes<graphics::Scalar>(
-						presentation::_ipd = std::max(first, second), presentation::_bpd = baseline)).insertionIndex())
+						presentation::_ipd = *boost::const_end(ipds), presentation::_bpd = baseline)).insertionIndex())
 				| adaptors::ordered());
-			assert(layout->lineAt(*result.begin()) == line.subline);
-			assert(result.empty() || layout->lineAt(*result.end()) == line.subline);
+			assert(layout->lineAt(*boost::const_begin(result)) == line.subline);
+			assert(boost::empty(result) || layout->lineAt(*boost::const_end(result)) == line.subline);
 			return result;
 		}
 
@@ -144,19 +146,19 @@ namespace ascension {
 			const graphics::font::TextRenderer& renderer = textArea_.textRenderer();
 
 			// first
-			const graphics::font::TextLayout* layout = renderer.layouts().at(std::get<0>(lines).line = kernel::line(region.first));
+			const graphics::font::TextLayout* layout = renderer.layouts().at(std::get<0>(lines).line = kernel::line(*boost::const_begin(region)));
 			const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
-			std::get<0>(ipds) = layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(region.first))).ipd();
+			std::get<0>(ipds) = layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(*boost::const_begin(region)))).ipd();
 			std::get<0>(ipds) = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, std::get<0>(ipds));
 			std::get<0>(ipds) += renderer.lineStartEdge(graphics::font::VisualLine(std::get<0>(lines).line, 0));
-			std::get<0>(lines).subline = layout->lineAt(kernel::offsetInLine(region.first));
+			std::get<0>(lines).subline = layout->lineAt(kernel::offsetInLine(*boost::const_begin(region)));
 
 			// second
-			layout = renderer.layouts().at(std::get<1>(lines).line = kernel::line(region.second));
-			std::get<1>(ipds) = layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(region.second))).ipd();
+			layout = renderer.layouts().at(std::get<1>(lines).line = kernel::line(*boost::const_end(region)));
+			std::get<1>(ipds) = layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(*boost::const_end(region)))).ipd();
 			std::get<1>(ipds) = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, std::get<1>(ipds));
 			std::get<1>(ipds) += renderer.lineStartEdge(graphics::font::VisualLine(std::get<1>(lines).line, 0));
-			std::get<1>(lines).subline = layout->lineAt(kernel::offsetInLine(region.second));
+			std::get<1>(lines).subline = layout->lineAt(kernel::offsetInLine(*boost::const_end(region)));
 
 			// commit
 			lines_ = boost::irange(std::get<0>(lines), std::get<1>(lines)) | adaptors::ordered();

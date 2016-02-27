@@ -117,7 +117,7 @@ namespace ascension {
 		}
 
 		/// @see Caret#MotionSignal
-		void TextArea::caretMoved(const Caret& self, const kernel::Region& oldRegion) {
+		void TextArea::caretMoved(const Caret& self, const SelectedRegion& regionBeforeMotion) {
 			if(viewer_ == nullptr || !widgetapi::isVisible(textViewer()))
 				return;
 
@@ -125,32 +125,35 @@ namespace ascension {
 			const kernel::Region newRegion(self.selectedRegion());
 			boost::optional<boost::integer_range<Index>> linesToRedraw;
 			if(self.isSelectionRectangle()) {	// rectangle
-				if(!oldRegion.isEmpty())
-					linesToRedraw = oldRegion.lines();
-				if(!newRegion.isEmpty())
+				if(!boost::empty(regionBeforeMotion))
+					linesToRedraw = regionBeforeMotion.lines();
+				if(!boost::empty(newRegion))
 					linesToRedraw = newRegion.lines();
-			} else if(newRegion != oldRegion) {	// the selection actually changed
-				if(oldRegion.isEmpty()) {	// the selection was empty...
-					if(!newRegion.isEmpty())	// the selection is not empty now
+			} else if(newRegion != regionBeforeMotion) {	// the selection actually changed
+				if(boost::empty(regionBeforeMotion)) {	// the selection was empty...
+					if(!boost::empty(newRegion))	// the selection is not empty now
 						linesToRedraw = newRegion.lines();
 				} else {	// ...if the there is selection
-					if(newRegion.isEmpty())	// the selection became empty
-						linesToRedraw = oldRegion.lines();
-					else if(oldRegion.beginning() == newRegion.beginning()) {	// the beginning point didn't change
-						const Index i[2] = {kernel::line(oldRegion.end()), kernel::line(newRegion.end())};
+					if(boost::empty(newRegion))	// the selection became empty
+						linesToRedraw = regionBeforeMotion.lines();
+					else if(*boost::const_begin(regionBeforeMotion) == *boost::const_begin(newRegion)) {	// the beginning point didn't change
+						const Index i[2] = {kernel::line(*boost::const_end(regionBeforeMotion)), kernel::line(*boost::const_end(newRegion))};
 						linesToRedraw = boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1);
-					} else if(oldRegion.end() == newRegion.end()) {	// the end point didn't change
-						const Index i[2] = {kernel::line(oldRegion.beginning()), kernel::line(newRegion.beginning())};
+					} else if(*boost::const_end(regionBeforeMotion) == *boost::const_end(newRegion)) {	// the end point didn't change
+						const Index i[2] = {kernel::line(*boost::const_begin(regionBeforeMotion)), kernel::line(*boost::const_begin(newRegion))};
 						linesToRedraw = boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1);
 					} else {	// the both points changed
-						if((kernel::line(oldRegion.beginning()) >= kernel::line(newRegion.beginning()) && kernel::line(oldRegion.beginning()) <= kernel::line(newRegion.end()))
-								|| (kernel::line(oldRegion.end()) >= kernel::line(newRegion.beginning()) && kernel::line(oldRegion.end()) <= kernel::line(newRegion.end()))) {
+						if((kernel::line(*boost::const_begin(regionBeforeMotion)) >= kernel::line(*boost::const_begin(newRegion))
+								&& kernel::line(*boost::const_begin(regionBeforeMotion)) <= kernel::line(*boost::const_end(newRegion)))
+								|| (kernel::line(*boost::const_end(regionBeforeMotion)) >= kernel::line(*boost::const_begin(newRegion))
+								&& kernel::line(*boost::const_end(regionBeforeMotion)) <= kernel::line(*boost::const_end(newRegion)))) {
 							const Index i[2] = {
-								std::min(kernel::line(oldRegion.beginning()), kernel::line(newRegion.beginning())), std::max(kernel::line(oldRegion.end()), kernel::line(newRegion.end()))
+								std::min(kernel::line(*boost::const_begin(regionBeforeMotion)), kernel::line(*boost::const_begin(newRegion))),
+								std::max(kernel::line(*boost::const_end(regionBeforeMotion)), kernel::line(*boost::const_end(newRegion)))
 							};
 							linesToRedraw = boost::irange(std::min(i[0], i[1]), std::max(i[0], i[1]) + 1);
 						} else {
-							ASCENSION_REDRAW_TEXT_AREA_LINES(oldRegion.lines());
+							ASCENSION_REDRAW_TEXT_AREA_LINES(regionBeforeMotion.lines());
 							redrawIfNotFrozen(*this);
 							linesToRedraw = newRegion.lines();
 						}
@@ -204,28 +207,30 @@ namespace ascension {
 					Index b = *boost::const_begin(linesToRedraw_);
 					Index e = *boost::const_end(linesToRedraw_);
 					if(boost::size(change.erasedRegion().lines()) > 1) {
-						const Index first = kernel::line(change.erasedRegion().first) + 1, last = kernel::line(change.erasedRegion().second);
-						if(b > last)
-							b -= last - first + 1;
-						else if(b > first)
-							b = first;
+						const auto range(boost::irange(
+							kernel::line(*boost::const_begin(change.erasedRegion())) + 1, kernel::line(*boost::const_end(change.erasedRegion()))));
+						if(b > *boost::const_end(range))
+							b -= boost::size(range) + 1;
+						else if(b > *boost::const_begin(range))
+							b = *boost::const_begin(range);
 						if(e != std::numeric_limits<Index>::max()) {
-							if(e > last)
-								e -= last - first + 1;
-							else if(e > first)
-								e = first;
+							if(e > *boost::const_end(range))
+								e -= boost::size(range) + 1;
+							else if(e > *boost::const_begin(range))
+								e = *boost::const_begin(range);
 						}
 					}
 					if(boost::size(change.insertedRegion().lines()) > 1) {
-						const Index first = kernel::line(change.insertedRegion().first) + 1, last = kernel::line(change.insertedRegion().second);
-						if(b >= first)
-							b += last - first + 1;
-						if(e >= first && e != std::numeric_limits<Index>::max())
-							e += last - first + 1;
+						const auto range(boost::irange(
+							kernel::line(*boost::const_begin(change.insertedRegion())) + 1, kernel::line(*boost::const_end(change.insertedRegion()))));
+						if(b >= *boost::const_begin(range))
+							b += boost::size(range) + 1;
+						if(e >= *boost::const_begin(range) && e != std::numeric_limits<Index>::max())
+							e += boost::size(range) + 1;
 					}
 					linesToRedraw_ = boost::irange(b, e);
 				}
-//				ASCENSION_REDRAW_TEXT_AREA_LINES(kernel::line(region.beginning()), !multiLine ? kernel::line(region.end()) : INVALID_INDEX);
+//				ASCENSION_REDRAW_TEXT_AREA_LINES(kernel::line(*boost::const_begin(region)), !multiLine ? kernel::line(*boost::const_end(region)) : INVALID_INDEX);
 			}
 		}
 

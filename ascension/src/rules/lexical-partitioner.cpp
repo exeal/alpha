@@ -55,15 +55,15 @@ namespace ascension {
 		
 			// move the partitions adapting to the document change. this does not affect partitions out of
 			// the deleted region
-			if(!change.erasedRegion().isEmpty()) {
+			if(!boost::empty(change.erasedRegion())) {
 				for(std::size_t i = 1, c = partitions_.size(); i < c; ++i) {
 					Partition& p = *partitions_[i];
-					if(p.start < change.erasedRegion().beginning())
+					if(p.start < *boost::const_begin(change.erasedRegion()))
 						continue;
-					else if(p.start > change.erasedRegion().end()) {
+					else if(p.start > *boost::const_end(change.erasedRegion())) {
 						p.start = kernel::positions::updatePosition(p.start, change, Direction::FORWARD);
 						p.tokenStart = kernel::positions::updatePosition(p.tokenStart, change, Direction::FORWARD);
-					} else if(((i + 1 < c) ? partitions_[i + 1]->start : doc.region().end()) <= change.erasedRegion().end()) {
+					} else if(((i + 1 < c) ? partitions_[i + 1]->start : *boost::const_end(doc.region())) <= *boost::const_end(change.erasedRegion())) {
 						// this partition is encompassed with the deleted region
 						delete partitions_[i];
 						partitions_.erase(std::begin(partitions_) + i);
@@ -77,10 +77,10 @@ namespace ascension {
 							break;
 					} else
 						// this partition will be erased later
-						p.start = p.tokenStart = change.erasedRegion().beginning();
+						p.start = p.tokenStart = *boost::const_begin(change.erasedRegion());
 				}
 			}
-			if(!change.insertedRegion().isEmpty()) {
+			if(!boost::empty(change.insertedRegion())) {
 				for(std::size_t i = 1, c = partitions_.size(); i < c; ++i) {
 					Partition& p = *partitions_[i];
 					p.start = kernel::positions::updatePosition(p.start, change, Direction::FORWARD);
@@ -93,8 +93,8 @@ namespace ascension {
 			std::vector<Partition*> newPartitions;	// newly computed partitions for the affected region
 			kernel::DocumentCharacterIterator i(doc,	// the beginning of the region to parse ~ the end of the document
 				kernel::Region(
-					kernel::Position::bol(std::min(kernel::line(change.erasedRegion().beginning()), kernel::line(change.insertedRegion().beginning()))),
-					doc.region().end()));
+					kernel::Position::bol(std::min(kernel::line(*boost::const_begin(change.erasedRegion())), kernel::line(*boost::const_begin(change.insertedRegion())))),
+					*boost::const_end(doc.region())));
 			kernel::ContentType contentType, destination;
 			contentType = (kernel::line(i.tell()) == 0) ? kernel::DEFAULT_CONTENT_TYPE
 				: (*partitionAt(kernel::Position(kernel::line(i.tell()), doc.lineLength(kernel::line(i.tell()) - 1))))->contentType;
@@ -120,7 +120,7 @@ namespace ascension {
 					if(!i.hasNext())
 						break;
 					// if reached the end of the affected region and content types are same, we are done
-					else if(i.tell() >= std::max(change.erasedRegion().second, change.insertedRegion().second) && transitionStateAt(i.tell()) == contentType)
+					else if(i.tell() >= std::max(*boost::const_end(change.erasedRegion()), *boost::const_end(change.insertedRegion())) && transitionStateAt(i.tell()) == contentType)
 						break;
 				}
 				// go to the next character if no transition occurred
@@ -132,8 +132,8 @@ namespace ascension {
 			}
 		
 			// replace partitions encompassed with the affected region
-			erasePartitions(i.region().beginning(), i.tell());
-			partitions_.insert(partitionAt(i.region().beginning()) + 1, std::begin(newPartitions), std::end(newPartitions));
+			erasePartitions(*boost::const_begin(i.region()), i.tell());
+			partitions_.insert(partitionAt(*boost::const_begin(i.region())) + 1, std::begin(newPartitions), std::end(newPartitions));
 
 #ifdef _DEBUG
 			static bool trace = false;
@@ -142,7 +142,7 @@ namespace ascension {
 #endif
 			verify();
 			notifyDocument(kernel::Region(kernel::Position(std::min(
-				kernel::line(change.erasedRegion().beginning()), kernel::line(change.insertedRegion().beginning())), 0), i.tell()));
+				kernel::line(*boost::const_begin(change.erasedRegion())), kernel::line(*boost::const_begin(change.insertedRegion()))), 0), i.tell()));
 		}
 
 		/// @see kernel#DocumentPartitioner#doGetPartition
@@ -150,8 +150,7 @@ namespace ascension {
 			auto i(partitionAt(at));
 			const Partition& p = **i;
 			partition.contentType = p.contentType;
-			partition.region.first = p.start;
-			partition.region.second = (i < std::end(partitions_) - 1) ? (*++i)->start : document()->region().second;
+			partition.region = kernel::Region(p.start, (i < std::end(partitions_) - 1) ? (*++i)->start : *boost::const_end(document()->region()));
 		}
 
 		/// @see kernel#DocumentPartitioner#doInstall
@@ -162,7 +161,7 @@ namespace ascension {
 			partitions_.insert(std::begin(partitions_), new Partition(kernel::DEFAULT_CONTENT_TYPE, kernel::Position::zero(), kernel::Position::zero(), 0));
 			kernel::Region dummy;
 			const kernel::Region entire(document()->region());
-			computePartitioning(entire.first, entire.second, dummy);
+			computePartitioning(*boost::const_begin(entire), *boost::const_end(entire), dummy);
 		}
 
 		/// Dumps the partitions information.
@@ -201,18 +200,18 @@ namespace ascension {
 
 			// push a default partition if no partition includes the start of the document
 			const kernel::Document& d = *document();
-			if(partitions_.empty() || partitions_[0]->start != d.region().first) {
+			if(partitions_.empty() || partitions_[0]->start != *boost::const_begin(d.region())) {
 				if(partitions_.empty() || partitions_[0]->contentType != kernel::DEFAULT_CONTENT_TYPE) {
-					const kernel::Position bob(d.region().first);
+					const kernel::Position bob(*boost::const_begin(d.region()));
 					partitions_.insert(std::begin(partitions_), new Partition(kernel::DEFAULT_CONTENT_TYPE, bob, bob, 0));
 				} else {
-					partitions_[0]->start = partitions_[0]->tokenStart = d.region().first;
+					partitions_[0]->start = partitions_[0]->tokenStart = *boost::const_begin(d.region());
 					partitions_[0]->tokenLength = 0;
 				}
 			}
 
 			// delete the partition whose start position is the end of the document
-			if(partitions_.size() > 1 && partitions_.back()->start == d.region().second) {
+			if(partitions_.size() > 1 && partitions_.back()->start == *boost::const_end(d.region())) {
 				delete partitions_[partitions_.size() - 1];
 				partitions_.erase(std::end(partitions_) - 1);
 			}
@@ -232,7 +231,7 @@ namespace ascension {
 				LexicalPartitioner::partitionAt(const kernel::Position& at) const BOOST_NOEXCEPT {
 			auto p(ascension::detail::searchBound(std::begin(partitions_), std::end(partitions_), at, PartitionPositionCompare<Partition>()));
 			if(p == std::end(partitions_)) {
-				assert(partitions_.front()->start != document()->region().first);	// twilight context
+				assert(partitions_.front()->start != *boost::const_begin(document()->region()));	// twilight context
 				return std::begin(partitions_);
 			}
 			if(kernel::line(at) < document()->numberOfLines()
@@ -291,7 +290,7 @@ namespace ascension {
 		inline void LexicalPartitioner::verify() const {
 #ifdef _DEBUG
 			assert(!partitions_.empty());
-			assert(partitions_.front()->start == document()->region().first);
+			assert(partitions_.front()->start == *boost::const_begin(document()->region()));
 			bool previousWasEmpty = false;
 			for(std::size_t i = 0, e = partitions_.size(); i < e - 1; ++i) {
 				assert(partitions_[i]->contentType != partitions_[i + 1]->contentType);

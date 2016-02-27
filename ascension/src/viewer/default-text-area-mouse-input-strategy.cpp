@@ -11,6 +11,7 @@
 // TODO: This code does not support platforms other than Win32.
 
 #include <ascension/corelib/text/break-iterator.hpp>
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
@@ -83,19 +84,21 @@ namespace ascension {
 						text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
 							kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 						--i;
-						caret.select(kernel::Position(anchorLine_, *boost::const_end(anchorOffsetsInLine_)),
-							(kernel::line(i.base().tell()) == kernel::line(destination)) ? i.base().tell() : kernel::Position::bol(kernel::line(destination)));
+						caret.select((
+							_anchor = kernel::Position(anchorLine_, *boost::const_end(anchorOffsetsInLine_)),
+							_caret = (kernel::line(i.base().tell()) == kernel::line(destination)) ? i.base().tell() : kernel::Position::bol(kernel::line(destination))));
 					} else if(kernel::line(destination) > anchorLine_
 							|| (kernel::line(destination) == anchorLine_
 								&& kernel::offsetInLine(destination) > *boost::const_end(anchorOffsetsInLine_))) {
 						text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
 							kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 						++i;
-						caret.select(kernel::Position(anchorLine_, *boost::const_begin(anchorOffsetsInLine_)),
-							(kernel::line(i.base().tell()) == kernel::line(destination)) ?
-								i.base().tell() : kernel::Position(destination.line, document.lineLength(kernel::line(destination))));
+						caret.select((
+							_anchor = kernel::Position(anchorLine_, *boost::const_begin(anchorOffsetsInLine_)),
+							_caret = (kernel::line(i.base().tell()) == kernel::line(destination)) ?
+								i.base().tell() : kernel::Position(destination.line, document.lineLength(kernel::line(destination)))));
 					} else
-						caret.select(kernel::Region(anchorLine_, anchorOffsetsInLine_));
+						caret.select(SelectedRegion(kernel::Region::makeSingleLine(anchorLine_, anchorOffsetsInLine_)));
 				}
 			private:
 				Index anchorLine_;
@@ -131,7 +134,7 @@ namespace ascension {
 					Caret& caret, const graphics::Point& cursorPosition, bool highlightSelection,
 					boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>>& dimensions) {
 				// determine the range to draw
-				const kernel::Region selectedRegion(caret);
+				const auto selectedRegion(kernel::Region::makeEmpty(caret));
 //				const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
 //				const Index firstLine = viewport->firstVisibleLineInLogicalNumber();
 //				const Index firstSubline = viewport->firstVisibleSublineInLogicalLine();
@@ -150,7 +153,7 @@ namespace ascension {
 						graphics::geometry::make<graphics::Point>((
 							geometry::_x = std::numeric_limits<Scalar>::max(), geometry::_y = 0.0f)),
 						graphics::Dimension(geometry::_dx = std::numeric_limits<Scalar>::min(), geometry::_dy = 0.0f)));
-				for(Index line = kernel::line(selectedRegion.beginning()), e = kernel::line(selectedRegion.end()); line <= e; ++line) {
+				BOOST_FOREACH(Index line, selectedRegion.lines()) {
 					NumericRange<Scalar> yrange(geometry::crange<1>(selectionBounds) | adaptors::ordered());
 //					yrange.advance_end(widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
 					yrange = boost::irange(*yrange.begin(), *yrange.end() + widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
@@ -190,7 +193,7 @@ namespace ascension {
 
 					// render mask pattern
 					Scalar y = 0;
-					for(Index line = kernel::line(selectedRegion.beginning()), e = kernel::line(selectedRegion.end()); line <= e; ++line) {
+					BOOST_FOREACH(Index line, selectedRegion.lines()) {
 						// render each lines
 						const graphics::font::TextLayout& layout = renderer.layouts()[line];
 						const Scalar indent = graphics::font::lineIndent(layout, viewport->contentMeasure());
@@ -233,7 +236,7 @@ namespace ascension {
 						graphics::geometry::_dx = -geometry::left(selectionExtent), graphics::geometry::_dy = -geometry::top(selectionExtent)));
 					graphics::PaintContext context(move(image->createRenderingContext()), selectionExtent);
 					Scalar y = geometry::top(selectionBounds);
-					for(Index line = kernel::line(selectedRegion.beginning()), e = kernel::line(selectedRegion.end()); line <= e; ++line) {
+					BOOST_FOREACH(Index line, selectedRegion.lines()) {
 						renderer.paint(line, context,
 							graphics::geometry::make<graphics::Point>((
 								geometry::_x = graphics::font::lineIndent(renderer.layouts()[line], viewport->contentMeasure()) - geometry::left(selectionBounds),
@@ -276,7 +279,7 @@ namespace ascension {
 					graphics::geometry::_from = cursorPosition, graphics::geometry::_to = hotspot,
 					graphics::geometry::_dx = -(geometry::left(textArea.contentRectangle()) - viewport->scrollPositions().ipd() + geometry::left(selectionBounds)),
 					graphics::geometry::_dy = -geometry::y(modelToView(viewer,
-						graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(kernel::line(selectedRegion.beginning())))))));
+						graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(kernel::line(*boost::const_begin(selectedRegion))))))));
 
 				// calculate 'dimensions'
 				graphics::geometry::scale((
@@ -522,7 +525,7 @@ namespace ascension {
 			const graphics::Point caretPoint(input.location());
 			const kernel::Position destination(viewToModel(viewer, caretPoint).characterIndex());
 
-			if(!document.accessibleRegion().includes(destination))
+			if(!encompasses(document.accessibleRegion(), destination))
 				return input.ignore();
 
 			if(dragAndDrop_->state == DragAndDrop::PROCESSING_AS_TARGET) {	// dropped from the other widget
@@ -547,7 +550,7 @@ namespace ascension {
 						if(!failed) {
 							if(content.second)
 								caret.beginRectangleSelection();
-							caret.select(destination, caret);
+							caret.select((_anchor = destination, _caret = caret));
 							input.setDropAction(widgetapi::DROP_ACTION_COPY);
 						}
 					}
@@ -578,7 +581,7 @@ namespace ascension {
 							}
 							caret.enableAutoShow(true);
 							if(!failed) {
-								caret.select(destination, caret);
+								caret.select((_anchor = destination, _caret = caret));
 								input.setDropAction(widgetapi::DROP_ACTION_COPY);
 							}
 							document.insertUndoBoundary();
@@ -587,7 +590,7 @@ namespace ascension {
 						if((input.possibleActions() & widgetapi::DROP_ACTION_MOVE) != 0) {
 							document.insertUndoBoundary();
 							AutoFreeze af(&viewer);
-							std::pair<kernel::Point, kernel::Point> oldSelection(std::make_pair(kernel::Point(caret.anchor()), kernel::Point(caret)));
+							const auto oldSelection(caret.selectedRegion());
 							caret.enableAutoShow(false);
 							caret.moveTo(destination);
 							try {
@@ -596,11 +599,11 @@ namespace ascension {
 								failed = true;
 							}
 							if(!failed) {
-								caret.select(destination, caret);
+								caret.select((_anchor = destination, _caret = caret));
 								if(rectangle)
 									caret.beginRectangleSelection();
 								try {
-									erase(caret.document(), oldSelection.first, oldSelection.second);
+									kernel::erase(caret.document(), kernel::Region::fromRange(oldSelection));
 								} catch(...) {
 									failed = true;
 								}

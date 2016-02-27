@@ -182,24 +182,23 @@ namespace ascension {
 			/// @see kernel#DocumentListener#documentChanged
 			void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
 				documentChangePhase_ = CHANGING;
-				assert(change.erasedRegion().isNormalized() && change.insertedRegion().isNormalized());
 				if(boost::size(change.erasedRegion().lines()) > 1) {	// erased region includes newline(s)
 					const kernel::Region& region = change.erasedRegion();
-					clearCaches(boost::irange(kernel::line(region.first) + 1, kernel::line(region.second) + 1), false);
+					clearCaches(boost::irange(kernel::line(*boost::const_begin(region)) + 1, kernel::line(*boost::const_end(region)) + 1), false);
 					BOOST_FOREACH(NumberedLayout& layout, layouts_) {
-						if(layout.lineNumber > kernel::line(region.first))
-							layout.lineNumber -= kernel::line(region.second) - kernel::line(region.first);	// $friendly-access
+						if(layout.lineNumber > kernel::line(*boost::const_begin(region)))
+							layout.lineNumber -= boost::size(region.lines()) - 1;	// $friendly-access
 					}
 				}
 				if(boost::size(change.insertedRegion().lines()) > 1) {	// inserted text is multiline
 					const kernel::Region& region = change.insertedRegion();
 					BOOST_FOREACH(NumberedLayout& layout, layouts_) {
-						if(layout.lineNumber > kernel::line(region.first))
-							layout.lineNumber += kernel::line(region.second) - kernel::line(region.first);	// $friendly-access
+						if(layout.lineNumber > kernel::line(*boost::const_begin(region)))
+							layout.lineNumber += boost::size(region.lines()) - 1;	// $friendly-access
 					}
-					fireVisualLinesInserted(boost::irange(kernel::line(region.first) + 1, kernel::line(region.second) + 1));
+					fireVisualLinesInserted(boost::irange(kernel::line(*boost::const_begin(region)) + 1, kernel::line(*boost::const_end(region)) + 1));
 				}
-				const Index firstLine = std::min(kernel::line(change.erasedRegion().first), kernel::line(change.insertedRegion().first));
+				const Index firstLine = std::min(kernel::line(*boost::const_begin(change.erasedRegion())), kernel::line(*boost::const_begin(change.insertedRegion())));
 				if(!pendingCacheClearance_ || !includes(*pendingCacheClearance_, firstLine))
 					invalidate(firstLine);
 				documentChangePhase_ = NONE;

@@ -4,10 +4,11 @@
  * @date 2003-2006 (was TextLayout.cpp)
  * @date 2006-2011
  * @date 2010-11-20 renamed from ascension/layout.cpp
- * @date 2012, 2014-2015
+ * @date 2012, 2014-2016
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/numeric-range-algorithm/hull.hpp>
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
@@ -319,9 +320,9 @@ namespace ascension {
 					after = lastLineMetrics.baselineOffset() + lastLineMetrics.descent() + lastLineMetrics.leading();
 
 					// calculate start-edge and end-edge of fully covered lines
-					const bool firstLineIsFullyCovered = includes(orderedCharacterRange,
+					const bool firstLineIsFullyCovered = encompasses(orderedCharacterRange,
 						boost::irange(lineOffset(firstLine), lineOffset(firstLine) + lineLength(firstLine)));
-					const bool lastLineIsFullyCovered = includes(orderedCharacterRange,
+					const bool lastLineIsFullyCovered = encompasses(orderedCharacterRange,
 						boost::irange(lineOffset(lastLine), lineOffset(lastLine) + lineLength(lastLine)));
 					start = std::numeric_limits<Scalar>::max();
 					end = std::numeric_limits<Scalar>::min();

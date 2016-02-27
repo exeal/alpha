@@ -29,8 +29,8 @@ namespace ascension {
 		// DefaultCaretShaper /////////////////////////////////////////////////////////////////////////////////////////
 
 		/// @see Caret#MotionSignal
-		void DefaultCaretShaper::caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion) {
-			if(kernel::line(caret) != kernel::line(regionBeforeMotion.second))
+		void DefaultCaretShaper::caretMoved(const Caret& caret, const SelectedRegion& regionBeforeMotion) {
+			if(kernel::line(caret) != kernel::line(regionBeforeMotion.caret()))
 				signalStaticShapeChanged(caret);
 		}
 
@@ -230,7 +230,7 @@ namespace ascension {
 		// LocaleSensitiveCaretShaper /////////////////////////////////////////////////////////////////////////////////
 
 		/// @see Caret#MotionSignal
-		void LocaleSensitiveCaretShaper::caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion) {
+		void LocaleSensitiveCaretShaper::caretMoved(const Caret& caret, const SelectedRegion& regionBeforeMotion) {
 			if(caret.isOvertypeMode())
 				signalStaticShapeChanged(caret);
 			else

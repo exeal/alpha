@@ -72,12 +72,12 @@ namespace ascension {
 		
 		/// Returns @c true if the iterator has the next character.
 		inline bool DocumentCharacterIterator::hasNext() const BOOST_NOEXCEPT {
-			return tell() < region().second;
+			return tell() < *boost::const_end(region());
 		}
 		
 		/// Returns @c true if the iterator has the previous character.
 		inline bool DocumentCharacterIterator::hasPrevious() const BOOST_NOEXCEPT {
-			return tell() > region().first;
+			return tell() > *boost::const_begin(region());
 		}
 
 		/// Returns the relative position from where the iterator started.
@@ -88,16 +88,6 @@ namespace ascension {
 		/// Returns the iteration region.
 		inline const Region& DocumentCharacterIterator::region() const BOOST_NOEXCEPT {
 			return region_;
-		}
-		
-		/**
-		 * Moves to the specified position.
-		 * @param to The position. If this is outside of the iteration region, the start/end of the region will be used
-		 * @return This iterator
-		 */
-		inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
-			position_ = std::max(std::min(to, region().second), region().first);
-			return *this;
 		}
 		
 		/// Returns the document position the iterator addresses.

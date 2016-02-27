@@ -41,18 +41,18 @@ namespace ascension {
 					const kernel::Document& document, TokenScanner& tokenScanner,
 					const std::map<Token::Identifier, std::shared_ptr<const presentation::DeclaredTextRunStyle>>& styles,
 					std::shared_ptr<const presentation::DeclaredTextRunStyle> defaultStyle, const kernel::Region& region) :
-					tokenScanner_(tokenScanner), styles_(styles), defaultStyle_(defaultStyle), region_(region), position_(region.beginning()) {
+					tokenScanner_(tokenScanner), styles_(styles), defaultStyle_(defaultStyle), region_(region), position_(*boost::const_begin(region)) {
 				tokenScanner_.parse(document, region);
 				do {
 					if(!tokenScanner_.hasNext()
 							|| (next_ = std::move(tokenScanner_.nextToken())).get() == nullptr)	// tokenScanner_ didn't give a token
 						style_ = defaultStyle_;
-					else if(next_->position >= region_.end()) {	// the first token is far beyond region_
+					else if(next_->position >= *boost::const_end(region_)) {	// the first token is far beyond region_
 						style_ = defaultStyle_;
 						next_.reset();
-					} else if(next_->position > region_.beginning())	// the first token didn't start at the beginning of region_
+					} else if(next_->position > *boost::const_begin(region_))	// the first token didn't start at the beginning of region_
 						style_ = defaultStyle_;
-					else if(next_->position == region_.beginning()) {	// the first token starts at the beginning of region_ (usual case)
+					else if(next_->position == *boost::const_begin(region_)) {	// the first token starts at the beginning of region_ (usual case)
 						const auto style(styles_.find(next_->identifier));
 						style_ = (style != std::end(styles_)) ? style->second : defaultStyle_;
 						next_.reset();
@@ -64,7 +64,7 @@ namespace ascension {
 		
 			/// @see StyledTextRunIterator#isDone
 			bool StyledTextRunIteratorImpl::isDone() const BOOST_NOEXCEPT {
-				return position_ == region_.end();
+				return position_ == *boost::const_end(region_);
 			}
 		
 			/// @see StyledTextRunIterator#next
@@ -82,9 +82,9 @@ namespace ascension {
 				do {
 					if(!tokenScanner_.hasNext()
 							|| (next_ = std::move(tokenScanner_.nextToken())).get() == nullptr)	// tokenScanner_ didn't the next token
-						position_ = region_.end();	// done
-					else if(next_->position >= region_.end()) {	// the next token is far beyond region_
-						position_ = region_.end();	// done
+						position_ = *boost::const_end(region_);	// done
+					else if(next_->position >= *boost::const_end(region_)) {	// the next token is far beyond region_
+						position_ = *boost::const_end(region_);	// done
 						next_.reset();
 					} else if(next_->position > position_) {	// found the next valid token (usual case)
 						position_ = next_->position;

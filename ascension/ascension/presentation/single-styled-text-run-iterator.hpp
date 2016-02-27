@@ -26,7 +26,7 @@ namespace ascension {
 			 * @param style The style object this iterator returns
 			 */
 			SingleStyledTextRunIterator(const kernel::Region& region,
-					typename Interface::StyleType style) : position_(region.beginning()), end_(region.end()), style_(style) {
+					typename Interface::StyleType style) : position_(*boost::const_begin(region)), end_(*boost::const_end(region)), style_(style) {
 			}
 			/// @see StyledTextRunIterator#isDone
 			bool isDone() const BOOST_NOEXCEPT override {
