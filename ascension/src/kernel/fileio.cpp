@@ -1282,7 +1282,7 @@ private:
 				const bool recorded = document().isRecordingChanges();
 				document_.recordChanges(false);
 				try {
-					resultEncoding = insertFileContents(document_, document().region().beginning(), fileName(), encoding, encodingSubstitutionPolicy);
+					resultEncoding = insertFileContents(document_, *boost::const_begin(document().region()), fileName(), encoding, encodingSubstitutionPolicy);
 				} catch(...) {
 					document_.resetContent();
 					document_.recordChanges(recorded);

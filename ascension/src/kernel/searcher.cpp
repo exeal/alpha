@@ -2,9 +2,10 @@
  * @file searcher.cpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.cpp)
- * @date 2006-2014
+ * @date 2006-2014, 2016
  */
 
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
 #include <ascension/kernel/document.hpp>
@@ -155,10 +156,10 @@ namespace ascension {
 
 		namespace {
 			inline kernel::DocumentCharacterIterator beginningOfDocument(const kernel::Document& document) BOOST_NOEXCEPT {
-				return kernel::DocumentCharacterIterator(document, document.region().first);
+				return kernel::DocumentCharacterIterator(document, *boost::const_begin(document.region()));
 			}
 			inline kernel::DocumentCharacterIterator endOfDocument(const kernel::Document& document) BOOST_NOEXCEPT {
-				return kernel::DocumentCharacterIterator(document, document.region().second);
+				return kernel::DocumentCharacterIterator(document, *boost::const_end(document.region()));
 			}
 		}
 
@@ -403,7 +404,7 @@ namespace ascension {
 		std::size_t TextSearcher::replaceAll(kernel::Document& document, const kernel::Region& scope, const String& replacement, InteractiveReplacementCallback* callback) {
 			if(document.isReadOnly())
 				throw kernel::ReadOnlyDocumentException();
-			else if(!document.region().encompasses(scope))
+			else if(!encompasses(document.region(), scope))
 				throw kernel::BadRegionException(scope);
 
 //			const String replacement(!storedReplacements_.empty() ? storedReplacements_.front() : String());
@@ -414,11 +415,11 @@ namespace ascension {
 			InteractiveReplacementCallback::Action action;	// the action the callback returns
 			InteractiveReplacementCallback* const storedCallback = callback;
 			if(callback != nullptr)
-				callback->replacementStarted(document, kernel::Region(scope).normalize());
+				callback->replacementStarted(document, scope);
 
 			if(type() == LITERAL) {
 				kernel::DocumentCharacterIterator matchedFirst, matchedLast;
-				kernel::Point endOfScope(document, scope.end());
+				kernel::Point endOfScope(document, *boost::const_end(scope));
 				for(kernel::DocumentCharacterIterator i(document, scope); i.hasNext(); ) {
 					if(!literalPattern_->search(i, Direction::FORWARD, matchedFirst, matchedLast))
 						break;
@@ -437,8 +438,7 @@ namespace ascension {
 							break;
 						if(!history.empty()) {
 							// undo the last replacement
-							matchedRegion.first = history.top().first;
-							matchedRegion.second = history.top().second;
+							matchedRegion = kernel::Region::fromTuple(history.top());
 							history.pop();
 							document.undo();
 							documentRevision = document.revisionNumber();
@@ -457,7 +457,7 @@ namespace ascension {
 						// replace? -- yes
 						if(action == InteractiveReplacementCallback::REPLACE_ALL)
 							callback = nullptr;
-						if(!matchedRegion.isEmpty() || !replacement.empty()) {
+						if(!boost::empty(matchedRegion) || !replacement.empty()) {
 							kernel::Position e;
 							try {
 								document.replace(matchedRegion, replacement, &e);
@@ -467,13 +467,13 @@ namespace ascension {
 								throw ReplacementInterruptedException<std::bad_alloc>(numberOfReplacements);
 							}
 							i.seek(e);
-							i.setRegion(kernel::Region(scope.beginning(), endOfScope));
+							i.setRegion(kernel::Region(*boost::const_begin(scope), endOfScope));
 							documentRevision = document.revisionNumber();
 						}
 						++numberOfReplacements;
-						history.push(matchedRegion);
+						history.push(std::make_pair(*boost::const_begin(matchedRegion), *boost::const_end(matchedRegion)));
 					} else if(action == InteractiveReplacementCallback::SKIP)
-						i.seek(matchedRegion.second);
+						i.seek(*boost::const_end(matchedRegion));
 					if(action == InteractiveReplacementCallback::REPLACE_AND_EXIT || action == InteractiveReplacementCallback::EXIT)
 						break;
 				}
@@ -485,15 +485,15 @@ namespace ascension {
 					|| type() == MIGEMO
 #endif // !ASCENSION_NO_MIGEMO
 			) {
-				const kernel::Point endOfScope(document, scope.end());
+				const kernel::Point endOfScope(document, *boost::const_end(scope));
 				kernel::Position lastEOS(endOfScope);
 				kernel::DocumentCharacterIterator e(document, endOfScope);
 				kernel::DocumentCharacterIterator b(e);
 				std::unique_ptr<regex::Matcher<kernel::DocumentCharacterIterator>> matcher(
 					regexPattern_->matcher(beginningOfDocument(document), endOfDocument(document)));
 				matcher->region(
-					kernel::DocumentCharacterIterator(document, scope.beginning()),
-					kernel::DocumentCharacterIterator(document, scope.end()))
+					kernel::DocumentCharacterIterator(document, *boost::const_begin(scope)),
+					kernel::DocumentCharacterIterator(document, *boost::const_end(scope)))
 					.useAnchoringBounds(false).useTransparentBounds(true);
 				lastResult_.reset();
 
@@ -501,7 +501,7 @@ namespace ascension {
 					if(!checkBoundary(matcher->start(), matcher->end(), wholeMatch_))
 						matcher->region(++kernel::DocumentCharacterIterator(matcher->start()), matcher->end());
 					else {
-						kernel::Position next(document.region().first);
+						kernel::Position next(*boost::const_begin(document.region()));
 						// matched -> replace
 						++numberOfMatches;
 						kernel::Region matchedRegion(matcher->start().tell(), matcher->end().tell());
@@ -512,8 +512,7 @@ namespace ascension {
 								break;
 							if(!history.empty()) {
 								// undo the last replacement
-								matchedRegion.first = history.top().first;
-								matchedRegion.second = history.top().second;
+								matchedRegion = kernel::Region::fromTuple(history.top());
 								history.pop();
 								document.undo();
 								documentRevision = document.revisionNumber();
@@ -532,8 +531,8 @@ namespace ascension {
 							// replace? -- yes
 							if(action == InteractiveReplacementCallback::REPLACE_ALL)
 								callback = nullptr;
-							history.push(matchedRegion);
-							assert(!matchedRegion.isEmpty() || !replacement.empty());
+							history.push(std::make_pair(*boost::const_begin(matchedRegion), *boost::const_end(matchedRegion)));
+							assert(!boost::empty(matchedRegion) || !replacement.empty());
 							try {
 								document.replace(matchedRegion, matcher->replaceInplace(replacement));
 							} catch(const kernel::DocumentInput::ChangeRejectedException&) {
@@ -541,28 +540,28 @@ namespace ascension {
 							} catch(const std::bad_alloc&) {
 								throw ReplacementInterruptedException<std::bad_alloc>(numberOfReplacements);
 							}
-							if(!matchedRegion.isEmpty())
-								next = matchedRegion.beginning();
+							if(!boost::empty(matchedRegion))
+								next = *boost::const_begin(matchedRegion);
 							if(!replacement.empty()) {
 								matcher->endInplaceReplacement(beginningOfDocument(document), endOfDocument(document),
-									kernel::DocumentCharacterIterator(document, scope.beginning()), kernel::DocumentCharacterIterator(document, endOfScope),
+									kernel::DocumentCharacterIterator(document, *boost::const_begin(scope)), kernel::DocumentCharacterIterator(document, endOfScope),
 									kernel::DocumentCharacterIterator(document, next));
 								documentRevision = document.revisionNumber();
 							}
 						} else if(action == InteractiveReplacementCallback::SKIP)
-							next = matchedRegion.second;
+							next = *boost::const_end(matchedRegion);
 						if(action == InteractiveReplacementCallback::REPLACE_AND_EXIT || action == InteractiveReplacementCallback::EXIT)
 							break;
 
-						if(matchedRegion.second == e.tell())	// reached the end of the scope
+						if(*boost::const_end(matchedRegion) == e.tell())	// reached the end of the scope
 							break;
 						else if(endOfScope.position() != lastEOS) {
-							e.setRegion(kernel::Region(scope.beginning(), endOfScope));
+							e.setRegion(kernel::Region(*boost::const_begin(scope), endOfScope));
 							e.seek(endOfScope);
 							lastEOS = endOfScope;
 						}
-						if(next < matchedRegion.second)
-							next = matchedRegion.second;
+						if(next < *boost::const_end(matchedRegion))
+							next = *boost::const_end(matchedRegion);
 					}
 				}
 			}
@@ -588,7 +587,7 @@ namespace ascension {
 		 */
 		bool TextSearcher::search(const kernel::Document& document,
 				const kernel::Position& from, const kernel::Region& scope, Direction direction, kernel::Region& matchedRegion) const {
-			if(!scope.includes(from))
+			if(!encompasses(scope, from))
 				throw kernel::BadPositionException(from);
 			bool matched = false;
 			if(type() == LITERAL) {
@@ -599,8 +598,7 @@ namespace ascension {
 					if(!literalPattern_->search(i, direction, matchedFirst, matchedLast))
 						break;	// not found
 					else if(checkBoundary(matchedFirst, matchedLast, wholeMatch_)) {
-						matchedRegion.first = matchedFirst.tell();
-						matchedRegion.second = matchedLast.tell();
+						matchedRegion = kernel::Region(matchedFirst.tell(), matchedLast.tell());
 						matched = true;
 						break;
 					}
@@ -624,8 +622,8 @@ namespace ascension {
 				const bool maybeContinuous = lastResult_.matched()
 					&& direction == lastResult_.direction && lastResult_.checkDocumentRevision(document);
 				if(direction == Direction::FORWARD) {
-					const kernel::DocumentCharacterIterator eob(document, scope.end());
-					if(!maybeContinuous || from != lastResult_.matchedRegion->second)
+					const kernel::DocumentCharacterIterator eob(document, *boost::const_end(scope));
+					if(!maybeContinuous || from != *boost::const_end(*lastResult_.matchedRegion))
 						regexMatcher_->region(kernel::DocumentCharacterIterator(document, from), eob);
 					while(regexMatcher_->find()) {
 						if(matched = checkBoundary(regexMatcher_->start(), regexMatcher_->end(), wholeMatch_))
@@ -634,10 +632,10 @@ namespace ascension {
 					}
 				} else {
 					// ascension.regex does not support backward searches...
-					const bool continuous = maybeContinuous && from == lastResult_.matchedRegion->first;
-					const kernel::DocumentCharacterIterator e(document, continuous ? lastResult_.matchedRegion->second : from);
+					const bool continuous = maybeContinuous && from == *boost::const_begin(*lastResult_.matchedRegion);
+					const kernel::DocumentCharacterIterator e(document, continuous ? *boost::const_end(*lastResult_.matchedRegion) : from);
 					kernel::DocumentCharacterIterator b(document, from);	// position from where the match should start
-					if(!continuous || b.tell() > scope.beginning()) {
+					if(!continuous || b.tell() > *boost::const_begin(scope)) {
 						if(continuous)
 							--b;
 						while(true) {
@@ -645,16 +643,14 @@ namespace ascension {
 							if(matched = (regexMatcher_->lookingAt()
 									&& checkBoundary(regexMatcher_->start(), regexMatcher_->end(), wholeMatch_)))
 								break;
-							else if(b.tell() <= scope.beginning())
+							else if(b.tell() <= *boost::const_begin(scope))
 								break;
 							--b;	// move to the next search start
 						}
 					}
 				}
-				if(matched) {
-					matchedRegion.first = regexMatcher_->start().tell();
-					matchedRegion.second = regexMatcher_->end().tell();
-				}
+				if(matched)
+					matchedRegion = kernel::Region(regexMatcher_->start().tell(), regexMatcher_->end().tell());
 			}
 #endif // !ASCENSION_NO_REGEX
 
@@ -758,7 +754,7 @@ namespace ascension {
 				if(callback_ != nullptr) {
 					while(statusHistory_.size() > 1)
 						statusHistory_.pop();
-					callback_->incrementalSearchAborted(statusHistory_.top().matchedRegion.first);
+					callback_->incrementalSearchAborted(*boost::const_begin(statusHistory_.top().matchedRegion));
 				}
 				end();
 			}
@@ -1026,7 +1022,7 @@ namespace ascension {
 			try {
 #endif // !ASCENSION_NO_REGEX
 				matched_ = searcher_->search(*document_,
-					(lastStatus.direction == Direction::FORWARD) ? lastStatus.matchedRegion.second : lastStatus.matchedRegion.first,
+					(lastStatus.direction == Direction::FORWARD) ? *boost::const_end(lastStatus.matchedRegion) : *boost::const_begin(lastStatus.matchedRegion),
 					scope, lastStatus.direction, matchedRegion);
 #ifndef ASCENSION_NO_REGEX
 			} catch(boost::regex_error&) {

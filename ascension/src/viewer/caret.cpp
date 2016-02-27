@@ -3,9 +3,10 @@
  * @author exeal
  * @date 2003-2008 was point.cpp
  * @date 2008-2010 separated from point.cpp
- * @date 2010-2015
+ * @date 2010-2016
  */
 
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/utility.hpp>	// detail.ValueSaver<>
 #include <ascension/corelib/text/identifier-syntax.hpp>
 #include <ascension/corelib/text/utf.hpp>
@@ -395,7 +396,7 @@ namespace ascension {
 		}
 
 		/// @internal Invokes @c MotionSignal.
-		inline void Caret::fireCaretMoved(const kernel::Region& regionBeforeMotion) {
+		inline void Caret::fireCaretMoved(const SelectedRegion& regionBeforeMotion) {
 #ifdef ASCENSION_USE_SYSTEM_CARET
 			if(!isTextViewerDisposed() && !textViewer().isFrozen() && (widgetapi::hasFocus(textViewer()) /*|| widgetapi::hasFocus(*completionWindow_)*/))
 				updateLocation();
@@ -548,8 +549,8 @@ namespace ascension {
 
 		/// @see VisualPoint#moved
 		void Caret::moved(const kernel::Position& from) {
-			context_.regionBeforeMoved = boost::make_optional(kernel::Region(
-				anchor_->isInternalUpdating() ? anchor_->positionBeforeInternalUpdate() : anchor_->position(), from));
+			context_.regionBeforeMoved = boost::make_optional(SelectedRegion(
+				_anchor = anchor_->isInternalUpdating() ? anchor_->positionBeforeInternalUpdate() : anchor_->position(), _caret = from));
 			if(context_.leaveAnchorNext)
 				context_.leaveAnchorNext = false;
 			else {
@@ -570,7 +571,7 @@ namespace ascension {
 				return;
 			if((oldPosition == position()) != isSelectionEmpty(*this))
 				checkMatchBrackets();
-			fireCaretMoved(kernel::Region(oldPosition, position()));
+			fireCaretMoved(SelectedRegion(_anchor = oldPosition, _caret = position()));
 		}
 
 		/// @internal Should be called before change the document.
@@ -684,26 +685,23 @@ namespace ascension {
 #endif
 		/**
 		 * Selects the specified region. The active selection mode will be cleared.
-		 * @param anchor The position where the anchor moves to
-		 * @param caret The position where the caret moves to
-		 * @throw BadPositionException @a anchor or @a caret is outside of the document
+		 * @param region The region to select
+		 * @throw kernel#BadRegionException @a region intersects with outside of the document
 		 */
-		void Caret::select(const kernel::Position& anchor, const kernel::Position& caret) {
+		void Caret::select(const SelectedRegion& region) {
 			if(isTextAreaDisposed())
 				throw TextAreaDisposedException();
-			else if(kernel::positions::isOutsideOfDocumentRegion(document(), anchor))
-				throw kernel::BadPositionException(anchor);
-			else if(kernel::positions::isOutsideOfDocumentRegion(document(), caret))
-				throw kernel::BadPositionException(caret);
+			else if(!encompasses(document().region(), static_cast<const kernel::Region&>(region)))
+				throw kernel::BadRegionException(region);
 			context_.yanking = false;
-			if(anchor != anchor_->position() || caret != position()) {
-				const kernel::Region oldRegion(selectedRegion());
+			if(region.anchor() != anchor_->position() || region.caret() != position()) {
+				const SelectedRegion oldRegion(selectedRegion());
 				context_.leadingAnchor = true;
-				anchor_->moveTo(anchor);
+				anchor_->moveTo(region.anchor());
 				context_.leadingAnchor = false;
 				context_.leaveAnchorNext = true;
 				try {
-					VisualPoint::moveTo(caret);	// TODO: this may throw...
+					VisualPoint::moveTo(region.caret());	// TODO: this may throw...
 				} catch(...) {
 					context_.leaveAnchorNext = false;
 					throw;
@@ -822,7 +820,7 @@ namespace ascension {
 		inline void Caret::updateVisualAttributes() {
 			if(isSelectionRectangle())
 				context_.selectedRectangle->update(selectedRegion());
-			if(context_.regionBeforeMoved != boost::none && (context_.regionBeforeMoved->first != position() || context_.regionBeforeMoved->second != position()))
+			if(context_.regionBeforeMoved != boost::none && (context_.regionBeforeMoved->anchor() != position() || context_.regionBeforeMoved->caret() != position()))
 				fireCaretMoved(*context_.regionBeforeMoved);
 			if(autoShow_)
 				utils::show(*this);

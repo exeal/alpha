@@ -1,14 +1,15 @@
 /**
  * @file point.cpp
  * @author exeal
- * @date 2003-2014
+ * @date 2003-2014, 2016
  */
 
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
+#include <ascension/corelib/text/break-iterator.hpp>
+#include <ascension/corelib/text/character-property.hpp>	// text.ucd.BinaryProperty
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/point.hpp>
-#include <ascension/corelib/text/break-iterator.hpp>
-#include <ascension/corelib/text/character-property.hpp>	// text.ucd.BinaryProperty
 
 
 namespace ascension {
@@ -69,7 +70,7 @@ namespace ascension {
 		 */
 		Point::Point(Document& document, const Position& position /* = kernel::Position::zero() */) :
 				document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD) {
-			if(!document.region().includes(position))
+			if(!encompasses(document.region(), position))
 				throw BadPositionException(position);
 			static_cast<detail::PointCollection<Point>&>(document).addNewPoint(*this);
 		}
@@ -146,7 +147,7 @@ namespace ascension {
 		Point& Point::moveTo(const Position& to) {
 			if(isDocumentDisposed())
 				throw DocumentDisposedException();
-			else if(to > document().region().end())
+			else if(to > *boost::const_end(document().region()))
 				throw BadPositionException(to);
 			Position destination(to);
 			aboutToMove(destination);
@@ -290,7 +291,7 @@ namespace ascension {
 			 * @return The destination
 			 */
 			Position beginningOfDocument(const Point& p) {
-				return p.document().accessibleRegion().first;
+				return *boost::const_begin(p.document().accessibleRegion());
 			}
 
 			/**
@@ -299,7 +300,7 @@ namespace ascension {
 			 * @return The destination
 			 */
 			Position beginningOfLine(const Point& p) {
-				return std::max(Position::bol(p.normalized()), p.document().accessibleRegion().first);
+				return std::max(Position::bol(p.normalized()), *boost::const_begin(p.document().accessibleRegion()));
 			}
 
 			/**
@@ -322,7 +323,7 @@ namespace ascension {
 			 * @return The destination
 			 */
 			Position endOfDocument(const Point& p) {
-				return p.document().accessibleRegion().end();
+				return *boost::const_end(p.document().accessibleRegion());
 			}
 
 			/**
@@ -332,7 +333,7 @@ namespace ascension {
 			 */
 			Position endOfLine(const Point& p) {
 				const Position temp(p.normalized());
-				return std::min(Position(line(temp), p.document().lineLength(line(temp))), p.document().accessibleRegion().second);
+				return std::min(Position(line(temp), p.document().lineLength(line(temp))), *boost::const_end(p.document().accessibleRegion()));
 			}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -403,24 +404,24 @@ namespace ascension {
 
 			/// Returns @c true if the given point @a p is the beginning of the document.
 			bool isBeginningOfDocument(const Point& p) {
-				return p.position() == p.document().accessibleRegion().first;
+				return p.position() == *boost::const_begin(p.document().accessibleRegion());
 			}
 
 			/// Returns @c true if the given point @a p is the beginning of the line.
 			bool isBeginningOfLine(const Point& p) {
 				return offsetInLine(p) == 0
-					|| (p.document().isNarrowed() && p.position() == p.document().accessibleRegion().first);
+					|| (p.document().isNarrowed() && p.position() == *boost::const_begin(p.document().accessibleRegion()));
 			}
 
 			/// Returns @c true if the given point @a p is the end of the document.
 			bool isEndOfDocument(const Point& p) {
-				return p.position() == p.document().accessibleRegion().second;
+				return p.position() == *boost::const_end(p.document().accessibleRegion());
 			}
 
 			/// Returns @c true if the given point @a p is the end of the line.
 			bool isEndOfLine(const Point& p) {
 				return offsetInLine(p) == p.document().lineLength(line(p))
-					|| p.position() == p.document().accessibleRegion().second;
+					|| p.position() == *boost::const_end(p.document().accessibleRegion());
 			}
 
 			/**
@@ -455,7 +456,7 @@ namespace ascension {
 					return position;
 				else if(characterUnit == UTF16_CODE_UNIT) {
 					if(direction == Direction::FORWARD) {
-						const Position e(document.accessibleRegion().second);
+						const Position e(*boost::const_end(document.accessibleRegion()));
 						if(position >= e)
 							return e;
 						for(Position p(position); ; offset -= document.lineLength(p.line++) + 1, p.offsetInLine = 0) {
@@ -465,7 +466,7 @@ namespace ascension {
 								return p.offsetInLine += offset, p;
 						}
 					} else {
-						const Position e(document.accessibleRegion().first);
+						const Position e(*boost::const_begin(document.accessibleRegion()));
 						if(position <= e)
 							return e;
 						for(Position p(position); ; offset -= document.lineLength(line(p)) + 1, p.offsetInLine = document.lineLength(--p.line)) {
@@ -507,12 +508,12 @@ namespace ascension {
 			Position nextLine(const Point& p, Direction direction, Index lines /* = 1 */) {
 				Position result(p.normalized());
 				if(direction == Direction::FORWARD) {
-					const Position eob(p.document().accessibleRegion().end());
+					const Position eob(*boost::const_end(p.document().accessibleRegion()));
 					result.line = (line(result) + lines < line(eob)) ? line(result) + lines : line(eob);
 					if(line(result) == line(eob) && offsetInLine(result) > offsetInLine(eob))
 						--result.line;
 				} else {
-					const Position bob(p.document().accessibleRegion().beginning());
+					const Position bob(*boost::const_begin(p.document().accessibleRegion()));
 					result.line = (line(result) > line(bob) + lines) ? line(result) - lines : line(bob);
 					if(line(result) == line(bob) && offsetInLine(result) < offsetInLine(bob))
 						++result.line;

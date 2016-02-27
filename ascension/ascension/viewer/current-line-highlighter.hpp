@@ -39,7 +39,7 @@ namespace ascension {
 				Index line, boost::optional<graphics::Color>& foreground,
 				boost::optional<graphics::Color>& background) const;
 			// Caret.MotionSignal
-			void caretMoved(const Caret& self, const kernel::Region& oldRegion);
+			void caretMoved(const Caret& self, const SelectedRegion& regionBeforeMotion);
 			// kernel.Point.DestructionSignal
 			void caretDestructed();
 		private:

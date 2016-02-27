@@ -4,9 +4,10 @@
  * @date 2003-2006 was CompletionWindow.cpp
  * @date 2006-2012 was content-assist.cpp
  * @date 2012-03-12 renamed from content-assist.cpp
- * @date 2014-2015
+ * @date 2014-2016
  */
 
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/content-assist/default-content-assistant.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
@@ -58,8 +59,7 @@ namespace ascension {
 				if(!completionSession_->incremental)
 					close();
 				// incremental mode: close if the caret gone out of the replacement region
-				else if(caret.position() < completionSession_->replacementRegion.beginning()
-						|| caret.position() > completionSession_->replacementRegion.end())
+				else if(!encompasses(completionSession_->replacementRegion, caret.position()))
 					close();
 			}
 		}
@@ -75,7 +75,8 @@ namespace ascension {
 						viewer::Caret& caret = textViewer_->textArea().caret();
 						try {
 							document.insertUndoBoundary();
-							erase(document, kernel::locations::nextCharacter(caret, Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT), caret);
+							kernel::erase(document,
+								kernel::Region(kernel::locations::nextCharacter(caret, Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT), caret));
 							document.insertUndoBoundary();
 							complete();
 						} catch(...) {
@@ -143,11 +144,12 @@ namespace ascension {
 						|| boost::size(change.insertedRegion().lines()) == 1)
 					close();
 				const kernel::Region& replacementRegion = completionSession_->replacementRegion;
-				if(!change.erasedRegion().isEmpty() && !replacementRegion.encompasses(change.erasedRegion()))
+				if(!boost::empty(change.erasedRegion()) && !encompasses(replacementRegion, change.erasedRegion()))
 					close();
-				completionSession_->replacementRegion.second =
-					kernel::positions::updatePosition(completionSession_->replacementRegion.second, change, Direction::FORWARD);
-				if(!change.insertedRegion().isEmpty() && !replacementRegion.encompasses(change.insertedRegion()))
+				completionSession_->replacementRegion = kernel::Region(
+					*boost::const_begin(completionSession_->replacementRegion),
+					kernel::positions::updatePosition(*boost::const_end(completionSession_->replacementRegion), change, Direction::FORWARD));
+				if(!boost::empty(change.insertedRegion()) && !encompasses(replacementRegion, change.insertedRegion()))
 					close();
 
 				// rebuild proposals
@@ -343,7 +345,7 @@ namespace ascension {
 			}
 			graphics::Point origin(
 				viewer::modelToView(
-					*textViewer_, graphics::font::TextHit<kernel::Position>::leading(completionSession_->replacementRegion.beginning())));
+					*textViewer_, graphics::font::TextHit<kernel::Position>::leading(*boost::const_begin(completionSession_->replacementRegion))));
 			// TODO: This code does not support vertical writing mode.
 			if(writingMode.blockFlowDirection == presentation::LEFT_TO_RIGHT)
 				graphics::geometry::x(origin) = graphics::geometry::x(origin) - 3;

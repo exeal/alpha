@@ -70,14 +70,14 @@ namespace ascension {
 			caret_ = nullptr;
 		}
 
-		/// @see CaretListener#caretMoved
-		void CurrentLineHighlighter::caretMoved(const Caret&, const kernel::Region& oldRegion) {
-			if(oldRegion.isEmpty()) {
-				if(!isSelectionEmpty(*caret_) || kernel::line(*caret_) != kernel::line(oldRegion.first))
-					caret_->textArea().redrawLine(kernel::line(oldRegion.first), false);
+		/// @see Caret#MotionSignal
+		void CurrentLineHighlighter::caretMoved(const Caret&, const SelectedRegion& regionBeforeMotion) {
+			if(boost::empty(regionBeforeMotion)) {
+				if(!isSelectionEmpty(*caret_) || kernel::line(*caret_) != kernel::line(regionBeforeMotion.caret()))
+					caret_->textArea().redrawLine(kernel::line(regionBeforeMotion.caret()), false);
 			}
 			if(isSelectionEmpty(*caret_)) {
-				if(!oldRegion.isEmpty() || kernel::line(*caret_) != kernel::line(oldRegion.first))
+				if(!boost::empty(regionBeforeMotion) || kernel::line(*caret_) != kernel::line(regionBeforeMotion.caret()))
 					caret_->textArea().redrawLine(kernel::line(*caret_), false);
 			}
 		}

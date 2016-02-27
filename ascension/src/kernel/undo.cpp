@@ -2,12 +2,13 @@
  * @file undo.cpp
  * @author exeal
  * @date 2009 separated from document.cpp
- * @date 2010-2015
+ * @date 2010-2016
  */
 
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
+#include <ascension/corelib/utility.hpp>	// detail.ValueSaver
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/point.hpp>
-#include <ascension/corelib/utility.hpp>	// detail.ValueSaver
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/find_first_of.hpp>
 #include <stack>
@@ -57,7 +58,7 @@ namespace ascension {
 			public:
 				InsertionChange(const Position& position, const String& text) : position_(position), text_(text) {}
 				bool appendChange(AtomicChange&, const Document&) BOOST_NOEXCEPT {return false;}
-				bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || document.region().includes(position_);}
+				bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || encompasses(document.region(), position_);}
 				void perform(Document& document, Result& result);
 			private:
 				const TypeTag& type() const BOOST_NOEXCEPT {return type_;}
@@ -72,7 +73,7 @@ namespace ascension {
 			public:
 				explicit DeletionChange(const Region& region) BOOST_NOEXCEPT : region_(region), revisions_(1) {}
 				bool appendChange(AtomicChange& postChange, const Document&) BOOST_NOEXCEPT;
-				bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || document.region().encompasses(region_);}
+				bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || encompasses(document.region(), region_);}
 				void perform(Document& document, Result& result);
 			private:
 				const TypeTag& type() const BOOST_NOEXCEPT {return type_;}
@@ -87,7 +88,7 @@ namespace ascension {
 			public:
 				explicit ReplacementChange(const Region& region, const String& text) : region_(region), text_(text) {}
 				bool appendChange(AtomicChange&, const Document&) BOOST_NOEXCEPT {return false;}
-				bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || document.region().encompasses(region_);}
+				bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || encompasses(document.region(), region_);}
 				void perform(Document& document, Result& result);
 			private:
 				const TypeTag& type() const BOOST_NOEXCEPT {return type_;}
@@ -128,8 +129,8 @@ namespace ascension {
 			inline bool DeletionChange::appendChange(AtomicChange& postChange, const Document&) {
 				if(&postChange.type() != &type_)
 					return false;
-				const Position& bottom = region_.end();
-				if(offsetInLine(bottom) == 0 || bottom != static_cast<DeletionChange&>(postChange).region_.beginning())
+				const Position& bottom = *boost::const_end(region_);
+				if(offsetInLine(bottom) == 0 || bottom != *boost::const_begin(static_cast<DeletionChange&>(postChange).region_))
 					return false;
 				else {
 					region_.end() = static_cast<DeletionChange&>(postChange).region_.end();
@@ -148,7 +149,7 @@ namespace ascension {
 				}	// std.bad_alloc is ignored...
 				result.completed = true;
 				result.numberOfRevisions = revisions_;
-				result.endOfChange = region_.first;
+				result.endOfChange = *boost::const_begin(region_);
 			}
 
 			/// @internal Implements @c UndoableChange#perform.
@@ -544,13 +545,13 @@ namespace ascension {
 				throw IllegalStateException("called in IDocumentListeners' notification.");
 			else if(isReadOnly())
 				throw ReadOnlyDocumentException();
-			else if(kernel::line(region.end()) >= numberOfLines()
-					|| kernel::offsetInLine(region.first) > lineLength(kernel::line(region.first))
-					|| kernel::offsetInLine(region.second) > lineLength(kernel::line(region.second)))
+			else if(kernel::line(*boost::const_end(region)) >= numberOfLines()
+					|| kernel::offsetInLine(*boost::const_begin(region)) > lineLength(kernel::line(*boost::const_begin(region)))
+					|| kernel::offsetInLine(*boost::const_end(region)) > lineLength(kernel::line(*boost::const_end(region))))
 				throw BadRegionException(region);
-			else if(isNarrowed() && !accessibleRegion().encompasses(region))
+			else if(isNarrowed() && !encompasses(accessibleRegion(), region))
 				throw DocumentAccessViolationException();
-			else if(region.isEmpty() && (text.cbegin() == nullptr || text.empty()))
+			else if(boost::empty(region) && (text.cbegin() == nullptr || text.empty()))
 				return;	// nothing to do
 			ASCENSION_PREPARE_FIRST_CHANGE(rollbacking_);
 
@@ -560,8 +561,8 @@ namespace ascension {
 			fireDocumentAboutToBeChanged();
 
 			// change the content
-			const Position& beginning = region.beginning();
-			const Position& end = region.end();
+			const Position& beginning = *boost::const_begin(region);
+			const Position& end = *boost::const_end(region);
 			StringPiece::const_iterator nextNewline((text.cbegin() != nullptr) ? boost::find_first_of(text, text::NEWLINE_CHARACTERS) : text.cend());
 			std::basic_stringbuf<Char> erasedString;
 			Index erasedStringLength = 0, insertedStringLength = 0;
@@ -574,7 +575,7 @@ namespace ascension {
 					line.text_.erase(offsetInLine(beginning), offsetInLine(end) - offsetInLine(beginning));
 					erasedStringLength += offsetInLine(end) - offsetInLine(beginning);
 					endOfInsertedString = beginning;
-				} else if(region.isEmpty() && nextNewline == text.cend()) {	// insert single line
+				} else if(boost::empty(region) && nextNewline == text.cend()) {	// insert single line
 					lines_[kernel::line(beginning)]->text_.insert(offsetInLine(beginning), text.cbegin(), text.length());
 					insertedStringLength += text.length();
 					endOfInsertedString.line = kernel::line(beginning);
@@ -591,7 +592,7 @@ namespace ascension {
 				// complex case: erased region and/or inserted string are/is multi-line
 				else {
 					// 1. save undo information
-					if(!region.isEmpty()) {
+					if(!boost::empty(region)) {
 						for(Position p(beginning); ; ++p.line, p.offsetInLine = 0) {
 							const Line& line = *lines_[p.line];
 							const bool last = p.line == end.line;
@@ -677,7 +678,7 @@ namespace ascension {
 						throw;
 					}
 					// 5. remove lines to erase
-					if(!region.isEmpty()) {
+					if(!boost::empty(region)) {
 						const auto b(std::begin(lines_) + kernel::line(beginning) + 1), e(std::begin(lines_) + kernel::line(end) + 1);
 						std::for_each(b, e, std::default_delete<Line>());
 						lines_.erase(b, e);
@@ -685,13 +686,13 @@ namespace ascension {
 				}
 			} catch(...) {
 				// fire event even if change failed
-				const Region empty(beginning);
+				const auto empty(Region::makeEmpty(beginning));
 				fireDocumentChanged(DocumentChange(empty, empty));
 				throw;
 			}
 
 			if(isRecordingChanges()) {
-				if(region.isEmpty())
+				if(boost::empty(region))
 					undoManager_->addUndoableChange(*(new DeletionChange(Region(beginning, endOfInsertedString))));
 				else if(text.cbegin() == nullptr || text.empty())
 					undoManager_->addUndoableChange(*(new InsertionChange(beginning, erasedString.str())));
@@ -719,7 +720,7 @@ namespace ascension {
 			// TODO: this implementation is provisional and not exception-safe.
 			Position e;
 			std::array<Char, 0x8000> buffer;
-			for(Region r(region); in; r.first = r.second = e) {
+			for(Region r(region); in; r = Region::makeEmpty(e)) {
 				in.read(buffer.data(), buffer.size());
 				if(in.gcount() == 0)
 					break;

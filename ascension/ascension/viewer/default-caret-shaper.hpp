@@ -14,7 +14,6 @@
 #include <ascension/viewer/caret-shaper.hpp>
 #include <map>
 
-
 namespace ascension {
 	namespace viewer {
 		/**
@@ -32,7 +31,7 @@ namespace ascension {
 				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT override;
 			virtual void uninstall(Caret& caret) BOOST_NOEXCEPT override;
 			// Caret.MotionSignal
-			virtual void caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion);
+			virtual void caretMoved(const Caret& caret, const SelectedRegion& regionBeforeMotion);
 
 		private:
 			std::map<const Caret*, boost::signals2::connection> caretMotionConnections_;
@@ -48,7 +47,7 @@ namespace ascension {
 
 		private:
 			// DefaultCaretShaper overrides
-			void caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion) override;
+			void caretMoved(const Caret& caret, const SelectedRegion& regionBeforeMotion) override;
 			void install(Caret& caret) BOOST_NOEXCEPT override;
 			Shape shape(const Caret& caret,
 				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT override;

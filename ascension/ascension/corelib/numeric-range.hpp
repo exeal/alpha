@@ -3,7 +3,6 @@
  * Defines @c NumericRange class template.
  * @author exeal
  * @date 2015-03-10 Created.
- * @see range.hpp
  */
 
 #ifndef ASCENSION_NUMERIC_RANGE_HPP

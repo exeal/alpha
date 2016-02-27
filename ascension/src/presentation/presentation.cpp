@@ -407,7 +407,7 @@ namespace ascension {
 			}
 			return std::unique_ptr<ComputedStyledTextRunIterator>(
 				new SingleStyledTextRunIterator<ComputedStyledTextRunIterator>(
-					kernel::Region(line, boost::irange<Index>(0, document().lineLength(line))), computedStyles_->forRuns.get()));
+					kernel::Region::makeSingleLine(line, boost::irange<Index>(0, document().lineLength(line))), computedStyles_->forRuns.get()));
 		}
 
 		/**
@@ -490,22 +490,22 @@ namespace ascension {
 		
 		/// @see kernel#DocumentListener#documentChanged
 		void Presentation::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
-			const boost::integer_range<Index>
-				erasedLines(kernel::line(change.erasedRegion().first), kernel::line(change.erasedRegion().second)),
-				insertedLines(kernel::line(change.insertedRegion().first), kernel::line(change.insertedRegion().second));
+			auto erasedLines(change.erasedRegion().lines()), insertedLines(change.insertedRegion().lines());
+			erasedLines.advance_end(-1);
+			insertedLines.advance_end(-1);
 			for(std::list<Hyperlinks*>::iterator i(std::begin(hyperlinks_)), e(std::end(hyperlinks_)); i != e; ) {
 				const Index line = (*i)->lineNumber;
-				if(line == insertedLines.front() || includes(erasedLines, line)) {
+				if(line == *boost::const_begin(insertedLines) || includes(erasedLines, line)) {
 					for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
 						delete (*i)->hyperlinks[j];
 					delete *i;
 					i = hyperlinks_.erase(i);
 					continue;
 				} else {
-					if(line >= *erasedLines.end() && !erasedLines.empty())
-						(*i)->lineNumber -= erasedLines.size();
-					if(line >= *insertedLines.end() && !insertedLines.empty())
-						(*i)->lineNumber += insertedLines.size();
+					if(line >= *boost::const_end(erasedLines) && !boost::empty(erasedLines))
+						(*i)->lineNumber -= boost::size(erasedLines);
+					if(line >= *boost::const_end(insertedLines) && !boost::empty(insertedLines))
+						(*i)->lineNumber += boost::size(insertedLines);
 				}
 				++i;
 			}

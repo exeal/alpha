@@ -6,6 +6,7 @@
  * @date 2014-11-16 Separated from presentation.cpp
  */
 
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/presentation/hyperlink/hyperlink.hpp>
 #include <ascension/presentation/hyperlink/hyperlink-detector.hpp>
@@ -28,15 +29,15 @@ namespace ascension {
 				kernel::DocumentPartition partition;
 				for(kernel::Position p(line, *range.begin()), e(line, *range.end()); p < e;) {
 					partitioner.partition(p, partition);
-					assert(partition.region.includes(p));
+					assert(encompasses(partition.region, p));
 					std::map<kernel::ContentType, HyperlinkDetector*>::const_iterator detector(composites_.find(partition.contentType));
 					if(detector != composites_.end()) {
-						std::unique_ptr<Hyperlink> found = detector->second->nextHyperlink(
-							document, line, boost::irange(kernel::offsetInLine(p), kernel::offsetInLine(std::min(partition.region.end(), e))));
+						std::unique_ptr<Hyperlink> found(detector->second->nextHyperlink(
+							document, line, boost::irange(kernel::offsetInLine(p), kernel::offsetInLine(std::min(*boost::const_end(partition.region), e)))));
 						if(found.get() != nullptr)
 							return found;
 					}
-					p = partition.region.end();
+					p = *boost::const_end(partition.region);
 				}
 				return std::unique_ptr<Hyperlink>();
 			}

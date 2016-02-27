@@ -4,7 +4,7 @@
  * @author exeal
  * @date 2003-2008 was point.hpp
  * @date 2008 separated from point.hpp
- * @date 2009-2014
+ * @date 2009-2014, 2016
  */
 
 #ifndef ASCENSION_CARET_HPP
@@ -13,6 +13,7 @@
 #include <ascension/corelib/text/newline.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/viewer/detail/input-method.hpp>
+#include <ascension/viewer/selected-region.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>	// widgetapi.MimeData, widgetapi.MimeDataFormats
 
@@ -87,7 +88,7 @@ namespace ascension {
 			/// @{
 			const VirtualBox& boxForRectangleSelection() const;
 			bool isSelectionRectangle() const BOOST_NOEXCEPT;
-			kernel::Region selectedRegion() const BOOST_NOEXCEPT;
+			SelectedRegion selectedRegion() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Character Input
@@ -121,8 +122,8 @@ namespace ascension {
 			void extendSelectionTo(const VisualDestinationProxy& to);
 			void paste(bool useKillRing);
 			void replaceSelection(const StringPiece& text, bool rectangleInsertion = false);
-			void select(const kernel::Region& region);
-			void select(const kernel::Position& anchor, const kernel::Position& caret);
+			void select(const SelectedRegion& region);
+			template<typename Arguments> void select(const Arguments& arguments);
 			/// @}
 
 			/// @name Text Manipulation
@@ -148,7 +149,7 @@ namespace ascension {
 			typedef boost::signals2::signal<void(const Caret&, InputModeChangedSignalType)> InputModeChangedSignal;
 			typedef boost::signals2::signal<void(const Caret&,
 				const boost::optional<std::pair<kernel::Position, kernel::Position>>& oldPair, bool outsideOfView)> MatchBracketsChangedSignal;
-			typedef boost::signals2::signal<void(const Caret&, const kernel::Region&)> MotionSignal;
+			typedef boost::signals2::signal<void(const Caret&, const SelectedRegion&)> MotionSignal;
 			typedef boost::signals2::signal<void(const Caret&)> SelectionShapeChangedSignal;	// bad naming :(
 			SignalConnector<CharacterInputSignal> characterInputSignal() BOOST_NOEXCEPT;
 			SignalConnector<InputModeChangedSignal> inputModeChangedSignal() BOOST_NOEXCEPT;
@@ -161,7 +162,7 @@ namespace ascension {
 			void adjustInputMethodCompositionWindow();
 			bool canPastePlatformData() const;
 			void checkMatchBrackets();
-			void fireCaretMoved(const kernel::Region& regionBeforeMotion);
+			void fireCaretMoved(const SelectedRegion& regionBeforeMotion);
 			void internalExtendSelection(void (*algorithm)(void));
 			void prechangeDocument();
 			void update(const kernel::DocumentChange& change);
@@ -231,7 +232,7 @@ namespace ascension {
 				bool typing;			// true when inputCharacter called (see prechangeDocument)
 				bool inputMethodCompositionActivated, inputMethodComposingCharacter;
 				boost::optional<kernel::Position> lastTypedPosition;	// the position the caret input character previously
-				boost::optional<kernel::Region> regionBeforeMoved;
+				boost::optional<SelectedRegion> regionBeforeMoved;
 				boost::optional<std::pair<kernel::Position, kernel::Position>> matchBrackets;	// matched brackets' positions. boost.none for none
 				Context() BOOST_NOEXCEPT;
 			} context_;
@@ -360,13 +361,17 @@ namespace ascension {
 
 		/**
 		 * Selects the specified region.
-		 * @param region the region. @a pos1 member is the anchor, @a pos2 member is the caret
+		 * @tparam Arguments The type of @a arguments
+		 * @param arguments This value is passed to the constructor of @c SelectedRegion class
 		 */
-		inline void Caret::select(const kernel::Region& region) {select(region.first, region.second);}
+		template<typename Arguments>
+		inline void Caret::select(const Arguments& arguments) {
+			select(SelectedRegion(_anchor = arguments[_anchor], _caret = arguments[_caret]));
+		}
 
 		/// Returns the selected region.
-		inline kernel::Region Caret::selectedRegion() const BOOST_NOEXCEPT {
-			return kernel::Region(*anchor_, position());
+		inline SelectedRegion Caret::selectedRegion() const BOOST_NOEXCEPT {
+			return SelectedRegion(_anchor = *anchor_, _caret = position());
 		}
 
 		/**
@@ -384,7 +389,7 @@ namespace ascension {
 
 		/// Returns @c true if the selection of the given caret is empty.
 		inline bool isSelectionEmpty(const Caret& caret) BOOST_NOEXCEPT {
-			return caret.selectedRegion().isEmpty();
+			return boost::empty(caret.selectedRegion());
 		}
 
 		/**

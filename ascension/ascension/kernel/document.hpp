@@ -416,7 +416,7 @@ namespace ascension {
 		/// @see Document#replace
 		/// @{
 		void erase(Document& document, const Region& region);
-		void erase(Document& document, const Position& first, const Position& second);
+		template<typename SinglePassReadableRange> void erase(Document& document, const SinglePassReadableRange& range);
 		void insert(Document& document, const Position& at, const StringPiece& text, Position* endOfInsertedString = nullptr);
 		void insert(Document& document, const Position& at, std::basic_istream<Char>& in, Position* endOfInsertedString = nullptr);
 		/// @}
@@ -448,20 +448,21 @@ namespace ascension {
 		}
 
 		/// Calls @c Document#replace.
-		inline void erase(Document& document, const Position& first, const Position& second) {
-			return erase(document, Region(first, second));
+		template<typename SinglePassReadableRange>
+		inline void erase(Document& document, const SinglePassReadableRange& range) {
+			return erase(document, Region::fromRange(range));
 		}
 
 		/// Calls @c Document#replace.
 		inline void insert(Document& document, const Position& at,
 				const StringPiece& text, Position* endOfInsertedString /* = nullptr */) {
-			return document.replace(Region(at), text, endOfInsertedString);
+			return document.replace(Region::makeEmpty(at), text, endOfInsertedString);
 		}
 
 		/// Calls @c Document#replace.
 		inline void insert(Document& document, const Position& at,
 				std::basic_istream<Char>& in, Position* endOfInsertedString /* = nullptr */) {
-			return document.replace(Region(at), in, endOfInsertedString);
+			return document.replace(Region::makeEmpty(at), in, endOfInsertedString);
 		}
 
 		/// Returns @c true if the given position is outside of the document.
@@ -481,10 +482,10 @@ namespace ascension {
 			if(!document.isNarrowed())
 				return shrinkToDocumentRegion(document, position);
 			const Region accessibleRegion(document.accessibleRegion());
-			if(position < accessibleRegion.first)
-				return accessibleRegion.first;
-			else if(position > accessibleRegion.second)
-				return accessibleRegion.second;
+			if(position < *boost::const_begin(accessibleRegion))
+				return *boost::const_begin(accessibleRegion);
+			else if(position > *boost::const_end(accessibleRegion))
+				return *boost::const_end(accessibleRegion);
 			return Position(line(position), std::min(offsetInLine(position), document.lineLength(line(position))));
 		}
 		
@@ -495,7 +496,7 @@ namespace ascension {
 		 * @return The result. This may not be normalized
 		 */
 		inline Region positions::shrinkToAccessibleRegion(const Document& document, const Region& region) BOOST_NOEXCEPT {
-			return Region(shrinkToAccessibleRegion(document, region.first), shrinkToAccessibleRegion(document, region.second));
+			return Region(shrinkToAccessibleRegion(document, *boost::const_begin(region)), shrinkToAccessibleRegion(document, *boost::const_end(region)));
 		}
 		
 		/// Shrinks the given position into the document region.
@@ -507,7 +508,7 @@ namespace ascension {
 		
 		/// Shrinks the given region into the document region. The result may not be normalized.
 		inline Region positions::shrinkToDocumentRegion(const Document& document, const Region& region) BOOST_NOEXCEPT {
-			return Region(shrinkToDocumentRegion(document, region.first), shrinkToDocumentRegion(document, region.second));
+			return Region(shrinkToDocumentRegion(document, *boost::const_begin(region)), shrinkToDocumentRegion(document, *boost::const_end(region)));
 		}
 
 		/// Returns the bookmarker of the document.
@@ -674,7 +675,7 @@ namespace ascension {
 		inline void DocumentPartitioner::partition(const Position& at, DocumentPartition& partition) const {
 			if(document_ == nullptr)
 				throw IllegalStateException("the partitioner is not connected to any document.");
-			else if(at > document_->region().second)
+			else if(at > *boost::const_end(document_->region()))
 				throw BadPositionException(at);
 			return doGetPartition(at, partition);
 		}

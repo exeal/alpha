@@ -384,6 +384,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\future\scoped-enum-emulation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\type-traits.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\clamp.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\encompasses.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\hull.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\includes.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\numeric-range-algorithm\intersection.hpp" />
@@ -517,6 +518,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\detail\input-method.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\detail\weak-reference-for-points.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\mouse-input-strategy.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\selected-region.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\abstract-ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\composite-ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\source\indicator-margin.hpp" />

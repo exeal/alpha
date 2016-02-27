@@ -3,10 +3,12 @@
  * @author exeal
  * @date 2006-2011 was text-editor.cpp
  * @date 2011-05-06
- * @date 2011-2014
+ * @date 2011-2014, 2016
  */
 
 #include <ascension/content-assist/content-assist.hpp>
+#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
+#include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>	// text.WordBreakIterator
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
@@ -82,16 +84,23 @@ namespace ascension {
 					return false;
 
 				numberOfMarkedLines_ = 0;
-				kernel::Region scope(region_.isEmpty() ? document.accessibleRegion() : region_.getIntersection(document.accessibleRegion()));
+				kernel::Region scope;
+				if(boost::empty(region_))
+					scope = document.accessibleRegion();
+				else {
+					auto temp(intersection(region_, document.accessibleRegion()));
+					if(temp == boost::none)
+						return true;
+					scope = boost::get(temp);
+				}
 
 				kernel::Bookmarker& bookmarker = document.bookmarker();
 				kernel::Region matchedRegion;
 				while(s->search(document,
-						std::max<kernel::Position>(viewer.textArea().caret().beginning(), document.accessibleRegion().first),
+						std::max<kernel::Position>(*boost::const_begin(viewer.textArea().caret().selectedRegion()), *boost::const_begin(document.accessibleRegion())),
 						scope, Direction::FORWARD, matchedRegion)) {
-					bookmarker.mark(kernel::line(matchedRegion.first));
-					scope.first.line = kernel::line(matchedRegion.first) + 1;
-					scope.first.offsetInLine = 0;
+					bookmarker.mark(kernel::line(*boost::const_begin(matchedRegion)));
+					scope = kernel::Region(kernel::Position::bol(kernel::line(*boost::const_begin(matchedRegion)) + 1), *boost::const_end(scope));
 					++numberOfMarkedLines_;
 				}
 				return true;
@@ -333,20 +342,23 @@ namespace ascension {
 					viewer::Caret& caret = viewer.textArea().caret();
 					if(n == 1 && !viewer::isSelectionEmpty(caret)) {	// delete only the selected content
 						try {
-							viewer::eraseSelection(caret);;
+							viewer::eraseSelection(caret);
 						} catch(const kernel::DocumentInput::ChangeRejectedException&) {
 							return false;
 						}
 					} else {
 						viewer::AutoFreeze af((!isSelectionEmpty(caret) || n > 1) ? &viewer : nullptr);
 						kernel::Region region(caret.selectedRegion());
-						assert(region.isNormalized());
 						if(direction_ == Direction::FORWARD)
-							region.second = kernel::locations::nextCharacter(document, region.second,
-								Direction::FORWARD, kernel::locations::GRAPHEME_CLUSTER, viewer::isSelectionEmpty(caret) ? n : (n - 1));
+							region = kernel::Region(
+								*boost::const_begin(region),
+								kernel::locations::nextCharacter(document, *boost::const_end(region),
+									Direction::FORWARD, kernel::locations::GRAPHEME_CLUSTER, viewer::isSelectionEmpty(caret) ? n : (n - 1)));
 						else
-							region.first = kernel::locations::nextCharacter(document, region.first,
-								Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT, viewer::isSelectionEmpty(caret) ? n : (n - 1));
+							region = kernel::Region(
+								kernel::locations::nextCharacter(document, *boost::const_begin(region),
+									Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT, viewer::isSelectionEmpty(caret) ? n : (n - 1)),
+								*boost::const_end(region));
 						try {
 							kernel::erase(document, region);
 						} catch(const kernel::DocumentInput::ChangeRejectedException&) {
@@ -458,7 +470,7 @@ namespace ascension {
 				const kernel::Document& document = viewer.document();
 				const viewer::VisualPoint& eos = viewer.textArea().caret().end();
 				if(kernel::locations::isBeginningOfLine(eos)
-						|| (document.isNarrowed() && eos.position() == document.accessibleRegion().first))
+						|| (document.isNarrowed() && eos.position() == *boost::const_begin(document.accessibleRegion())))
 					return false;
 
 				viewer::Caret& caret = viewer.textArea().caret();
@@ -471,7 +483,7 @@ namespace ascension {
 				std::swprintf(buffer.data(), buffer.size(), L"%lX", c);
 #endif // _MSC_VER < 1400
 				viewer::AutoFreeze af(&viewer);
-				caret.select(kernel::Position(line(eos), offsetInLine(eos) - ((c > 0xffff) ? 2 : 1)), eos);
+				caret.select((viewer::_anchor = kernel::Position(kernel::line(eos), kernel::offsetInLine(eos) - ((c > 0xffff) ? 2 : 1)), viewer::_caret = kernel::position(eos)));
 				try {
 					caret.replaceSelection(buffer.data(), false);
 				} catch(const kernel::DocumentInput::ChangeRejectedException&) {
@@ -499,7 +511,7 @@ namespace ascension {
 				const kernel::Document& document = viewer.document();
 				const viewer::VisualPoint& eos = viewer.textArea().caret().end();
 				if(kernel::locations::isBeginningOfLine(eos)
-						|| (document.isNarrowed() && eos.position() == document.accessibleRegion().first))
+						|| (document.isNarrowed() && eos.position() == *boost::const_begin(document.accessibleRegion())))
 					return false;
 
 				viewer::Caret& caret = viewer.textArea().caret();
@@ -524,7 +536,7 @@ namespace ascension {
 						if(i >= 2 && lineString[i - 1] == L'+' && (lineString[i - 2] == L'U' || lineString[i - 2] == L'u'))
 							i -= 2;
 						viewer::AutoFreeze af(&viewer);
-						caret.select(kernel::Position(kernel::line(eos), i), eos);
+						caret.select((viewer::_anchor = kernel::Position(kernel::line(eos), i), viewer::_caret = eos));
 						try {
 							caret.replaceSelection(s, false);
 						} catch(const kernel::DocumentInput::ChangeRejectedException&) {
@@ -572,7 +584,7 @@ namespace ascension {
 			bool EntireDocumentSelectionCreationCommand::perform() {
 				endIncrementalSearch(target().document());
 				target().textArea().caret().endRectangleSelection();
-				target().textArea().caret().select(target().document().accessibleRegion());
+				target().textArea().caret().select(viewer::SelectedRegion(target().document().accessibleRegion()));
 				return true;
 			}
 
@@ -609,14 +621,14 @@ namespace ascension {
 				bool foundOnce = false;
 				for(NumericPrefix n(numericPrefix()); n > 0; --n) {	// search N times
 					if(!s->search(document, (direction_ == Direction::FORWARD) ?
-							std::max<kernel::Position>(matchedRegion.end(), scope.first)
-							: std::min<kernel::Position>(matchedRegion.beginning(), scope.second), scope, direction_, matchedRegion))
+							std::max<kernel::Position>(*boost::const_end(matchedRegion), *boost::const_begin(scope))
+							: std::min<kernel::Position>(*boost::const_begin(matchedRegion), *boost::const_end(scope)), scope, direction_, matchedRegion))
 						break;
 					foundOnce = true;
 				}
 
 				if(foundOnce) {
-					caret.select(matchedRegion);
+					caret.select(viewer::SelectedRegion(matchedRegion));
 //					viewer.highlightMatchTexts();
 				} else
 /*					viewer.highlightMatchTexts(false)*/;
@@ -763,9 +775,13 @@ namespace ascension {
 					if(!extends_)
 						caret.moveTo(matchBrackets->first);
 					else if(matchBrackets->first > caret)
-						caret.select(caret, kernel::Position(kernel::line(matchBrackets->first), kernel::offsetInLine(matchBrackets->first) + 1));
+						caret.select((
+							viewer::_anchor = kernel::position(caret),
+							viewer::_caret = kernel::Position(kernel::line(matchBrackets->first), kernel::offsetInLine(matchBrackets->first) + 1)));
 					else
-						caret.select(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) + 1), matchBrackets->first);
+						caret.select((
+							viewer::_anchor = kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) + 1),
+							viewer::_caret = std::get<0>(boost::get(matchBrackets))));
 					return true;
 				} else
 					return false;	// not found
@@ -805,7 +821,7 @@ namespace ascension {
 //				ASCENSION_CHECK_GUI_EDITABILITY(1);
 
 				viewer::Caret& caret = viewer.textArea().caret();
-				const kernel::Region oldSelection(caret.selectedRegion());
+				const viewer::SelectedRegion oldSelection(caret.selectedRegion());
 				kernel::Document& document = viewer.document();
 				viewer::AutoFreeze af(&viewer);
 
@@ -813,11 +829,11 @@ namespace ascension {
 					kernel::Position p;
 					if(*direction_ == Direction::FORWARD)
 						p = kernel::locations::endOfVisualLine(caret);
-					else if(kernel::line(caret) != kernel::line(document.region().beginning()))
+					else if(kernel::line(caret) != kernel::line(*boost::const_begin(document.region())))
 						p.offsetInLine = document.lineLength(p.line = kernel::line(caret) - 1);
 					else
-						p = document.region().beginning();
-					if(p < document.accessibleRegion().beginning() || p > document.accessibleRegion().end())
+						p = *boost::const_begin(document.region());
+					if(!encompasses(document.accessibleRegion(), p))
 						return false;
 					const bool autoShow = caret.isAutoShowEnabled();
 					caret.enableAutoShow(false);
@@ -975,9 +991,9 @@ namespace ascension {
 
 				kernel::Region scope(
 					onlySelection_ ? std::max<kernel::Position>(viewer.textArea().caret().beginning(),
-						document.accessibleRegion().first) : document.accessibleRegion().first,
+						*boost::const_begin(document.accessibleRegion())) : *boost::const_begin(document.accessibleRegion()),
 					onlySelection_ ? std::min<kernel::Position>(viewer.textArea().caret().end(),
-						document.accessibleRegion().second) : document.accessibleRegion().second);
+						*boost::const_end(document.accessibleRegion())) : *boost::const_end(document.accessibleRegion()));
 
 				// mark to restore the selection later
 				kernel::Point oldAnchor(document, viewer.textArea().caret().anchor());
@@ -994,7 +1010,7 @@ namespace ascension {
 					throw;
 				}
 				if(numberOfLastReplacements_ != 0)
-					viewer.textArea().caret().select(oldAnchor, oldCaret);
+					viewer.textArea().caret().select((viewer::_anchor = oldAnchor, viewer::_caret = oldCaret));
 				return true;
 			}
 
@@ -1260,7 +1276,7 @@ namespace ascension {
 					try {
 						viewer::AutoFreeze af(&viewer);
 						document.insertUndoBoundary();
-						kernel::erase(document, from, to.base().tell());
+						kernel::erase(document, kernel::Region(from, to.base().tell()));
 						caret.moveTo(std::min(from, to.base().tell()));
 						document.insertUndoBoundary();
 					} catch(const kernel::DocumentInput::ChangeRejectedException&) {
