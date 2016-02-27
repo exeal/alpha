@@ -7,7 +7,9 @@
  * @date 2015-11-26 Reverted from ascension/src/viewer/detail/.
  */
 
+#include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/kernel/document.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/caret-painter.hpp>
@@ -127,8 +129,9 @@ namespace ascension {
 					this->resetTimer();
 					this->pend();
 
-					if(kernel::line(regionBeforeMotion.caret()) != kernel::line(caret)) {
-						textArea.redrawLine(kernel::line(regionBeforeMotion.caret()));
+					const Index lineBeforeMotion = kernel::line(regionBeforeMotion.caret());
+					if(lineBeforeMotion != kernel::line(caret) && includes(caret.document().region().lines(), lineBeforeMotion)) {
+						textArea.redrawLine(lineBeforeMotion);
 						widgetapi::redrawScheduledRegion(textArea.textViewer());
 					}
 					textArea.redrawLine(kernel::line(caret));
