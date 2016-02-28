@@ -161,12 +161,12 @@ namespace ascension {
 		
 		/// Returns the document.
 		kernel::Document& TextViewer::document() BOOST_NOEXCEPT {
-			return presentation_.document();
+			return presentation().document();
 		}
 		
 		/// Returns the document.
 		const kernel::Document& TextViewer::document() const BOOST_NOEXCEPT {
-			return presentation_.document();
+			return presentation().document();
 		}
 
 		/// @see kernel#DocumentListener#documentAboutToBeChanged
