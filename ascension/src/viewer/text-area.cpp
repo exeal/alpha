@@ -421,7 +421,7 @@ namespace ascension {
 					assert(layout != nullptr);
 					std::get<0>(beforeAndAfter) += *boost::const_begin(layout->lineMetrics(0).extent());
 				}
-				baseline = graphics::font::BaselineIterator(*textRenderer().viewport(), graphics::font::VisualLine(*lines.end() - 1, 0), false);
+				baseline = graphics::font::BaselineIterator(*textRenderer().viewport(), graphics::font::VisualLine(*boost::const_end(lines) - 1, 0), false);
 				std::get<1>(beforeAndAfter) = *baseline;
 				if(std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::min() && std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::max()) {
 					const graphics::font::TextLayout* const layout = textRenderer().layouts().at(baseline.line()->line);

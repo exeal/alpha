@@ -133,7 +133,7 @@ namespace ascension {
 				if(offsetInLine(bottom) == 0 || bottom != *boost::const_begin(static_cast<DeletionChange&>(postChange).region_))
 					return false;
 				else {
-					region_.end() = static_cast<DeletionChange&>(postChange).region_.end();
+					region_ = Region(*boost::const_begin(region_), *boost::const_end(static_cast<DeletionChange&>(postChange).region_));
 					delete &postChange;
 					++revisions_;
 					return true;

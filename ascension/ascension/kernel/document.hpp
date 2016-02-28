@@ -626,7 +626,7 @@ namespace ascension {
 		 */
 		inline const String* Document::property(const DocumentPropertyKey& key) const BOOST_NOEXCEPT {
 			const std::map<const DocumentPropertyKey*, std::unique_ptr<String>>::const_iterator i(properties_.find(&key));
-			return (i != properties_.end()) ? i->second.get() : nullptr;
+			return (i != std::end(properties_)) ? i->second.get() : nullptr;
 		}
 
 		/// Returns the entire region of the document. The returned region is normalized.

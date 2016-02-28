@@ -236,7 +236,7 @@ namespace ascension {
 		 */
 		bool TextSearcher::match(const kernel::Document& document, const kernel::Region& target) const {
 			bool matched = false;
-			const kernel::DocumentCharacterIterator b(document, target.beginning()), e(document, target.end());
+			const kernel::DocumentCharacterIterator b(document, *boost::const_begin(target)), e(document, *boost::const_end(target));
 			compilePattern((options_.type == LITERAL && literalPattern_.get() != nullptr) ? literalPattern_->getDirection() : FORWARD);
 			switch(options_.type) {
 				case LITERAL:

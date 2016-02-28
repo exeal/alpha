@@ -247,7 +247,7 @@ namespace ascension {
 		 * @throw PatternSyntaxException the expression's syntax is invalid
 		 */
 		bool Pattern::matches(const StringPiece& regex, const StringPiece& input) {
-			return matches(regex, text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.end()));
+			return matches(regex, text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.cend()));
 		}
 
 #ifndef ASCENSION_NO_MIGEMO
@@ -576,7 +576,7 @@ namespace ascension {
 						expression += static_cast<char>(p1[i] & 0xff);
 					}
 					const std::map<const char*, int, PropertyNameComparer>::const_iterator i(names_.find(expression.c_str()));
-					if(i != names_.end())
+					if(i != std::end(names_))
 						klass.set(i->second);
 					else {
 #define ASCENSION_CHECK_PREFIX(lower, upper)					\

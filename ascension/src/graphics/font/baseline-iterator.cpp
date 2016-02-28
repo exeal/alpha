@@ -206,7 +206,7 @@ namespace ascension {
 						if(ended)
 							throw std::overflow_error("");	// TODO: Is this suitable?
 						newBaseline += *boost::const_end(lineMetrics.extentWithHalfLeadings()) - lineMetrics.baselineOffset();
-						if(!tracksOutOfViewport() && newBaseline >= *viewportExtent.end()) {
+						if(!tracksOutOfViewport() && newBaseline >= *boost::const_end(viewportExtent)) {
 							newBaseline = std::numeric_limits<decltype(newBaseline)>::max();	// over after-edge of the viewport
 							break;
 						}
