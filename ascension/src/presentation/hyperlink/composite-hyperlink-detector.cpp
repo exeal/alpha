@@ -27,11 +27,11 @@ namespace ascension {
 					const kernel::Document& document, Index line, const boost::integer_range<Index>& range) const BOOST_NOEXCEPT {
 				const kernel::DocumentPartitioner& partitioner = document.partitioner();
 				kernel::DocumentPartition partition;
-				for(kernel::Position p(line, *range.begin()), e(line, *range.end()); p < e;) {
+				for(kernel::Position p(line, *boost::const_begin(range)), e(line, *boost::const_end(range)); p < e;) {
 					partitioner.partition(p, partition);
 					assert(encompasses(partition.region, p));
 					std::map<kernel::ContentType, HyperlinkDetector*>::const_iterator detector(composites_.find(partition.contentType));
-					if(detector != composites_.end()) {
+					if(detector != std::end(composites_)) {
 						std::unique_ptr<Hyperlink> found(detector->second->nextHyperlink(
 							document, line, boost::irange(kernel::offsetInLine(p), kernel::offsetInLine(std::min(*boost::const_end(partition.region), e)))));
 						if(found.get() != nullptr)

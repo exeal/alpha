@@ -156,7 +156,9 @@ namespace ascension {
 				BOOST_FOREACH(Index line, selectedRegion.lines()) {
 					NumericRange<Scalar> yrange(geometry::crange<1>(selectionBounds) | adaptors::ordered());
 //					yrange.advance_end(widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
-					yrange = boost::irange(*yrange.begin(), *yrange.end() + widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
+					yrange = boost::irange(
+						*boost::const_begin(yrange),
+						*boost::const_end(yrange) + widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
 					geometry::range<1>(selectionBounds) = yrange;
 					if(geometry::dy(selectionBounds) > geometry::dy(clientBounds))
 						return std::unique_ptr<graphics::Image>();	// overflow
@@ -164,10 +166,10 @@ namespace ascension {
 					const presentation::WritingMode writingMode(graphics::font::writingMode(layout));
 					const Scalar indent = graphics::font::lineIndent(layout, viewport->contentMeasure());
 					for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
-						boost::optional<boost::integer_range<Index>> range(selectedRangeOnVisualLine(caret, graphics::font::VisualLine(line, subline)));
-						if(range) {
-							range = boost::irange(*range->begin(), std::min(viewer.document().lineLength(line), *range->end()));
-							const graphics::Rectangle sublineBounds(geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(writingMode, layout.bounds(*range))));
+						auto range(selectedRangeOnVisualLine(caret, graphics::font::VisualLine(line, subline)));
+						if(range != boost::none) {
+							range = boost::irange(*boost::const_begin(boost::get(range)), std::min(viewer.document().lineLength(line), *boost::const_end(boost::get(range))));
+							const graphics::Rectangle sublineBounds(geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(writingMode, layout.bounds(boost::get(range)))));
 							geometry::range<0>(selectionBounds) = boost::irange(
 								std::min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds)),
 								std::max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds)));
@@ -198,11 +200,11 @@ namespace ascension {
 						const graphics::font::TextLayout& layout = renderer.layouts()[line];
 						const Scalar indent = graphics::font::lineIndent(layout, viewport->contentMeasure());
 						for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
-							boost::optional<boost::integer_range<Index>> range(selectedRangeOnVisualLine(caret, graphics::font::VisualLine(line, subline)));
-							if(range) {
-								range = boost::irange(*range->begin(), std::min(viewer.document().lineLength(line), *range->end()));
+							auto range(selectedRangeOnVisualLine(caret, graphics::font::VisualLine(line, subline)));
+							if(range != boost::none) {
+								range = boost::irange(*boost::const_begin(boost::get(range)), std::min(viewer.document().lineLength(line), *boost::const_end(boost::get(range))));
 								boost::geometry::model::multi_polygon<boost::geometry::model::polygon<graphics::Point>> region;
-								layout.blackBoxBounds(*range, region);
+								layout.blackBoxBounds(boost::get(range), region);
 								geometry::translate((
 									geometry::_from = region, geometry::_to = region,
 									geometry::_dx = indent - geometry::left(selectionBounds), geometry::_dy = y - geometry::top(selectionBounds)));

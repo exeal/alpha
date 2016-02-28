@@ -60,13 +60,13 @@ namespace ascension {
 			std::unique_ptr<Hyperlink> URIHyperlinkDetector::nextHyperlink(
 					const kernel::Document& document, Index line, const boost::integer_range<Index>& range) const {
 				const String& s = document.lineString(line);
-				if(*range.end() > s.length())
+				if(*boost::const_end(range) > s.length())
 					throw std::out_of_range("range");
 				const Char* bol = s.data();
-				const StringPiece result(uriDetector_->search(StringPiece(bol + range.front(), range.size())));
-				if(result.begin() != nullptr)
+				const StringPiece result(uriDetector_->search(StringPiece(bol + *boost::const_begin(range), boost::size(range))));
+				if(result.cbegin() != nullptr)
 					return std::unique_ptr<Hyperlink>(new URIHyperlink(
-						boost::irange<Index>(result.begin() - bol, result.end() - bol), String(result.begin(), result.end())));
+						boost::irange<Index>(result.cbegin() - bol, result.cend() - bol), String(result.cbegin(), result.cend())));
 				else
 					return std::unique_ptr<Hyperlink>();
 			}

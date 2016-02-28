@@ -19,6 +19,7 @@
 #include <boost/flyweight/key_value.hpp>
 #include <boost/foreach.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/range/algorithm/copy.hpp>
 #include <boost/range/algorithm/find.hpp>
 
 
@@ -552,15 +553,15 @@ namespace ascension {
 					break;
 				// check result
 				const boost::integer_range<Index>& r(h->region());
-				if(*r.begin() < offsetInLine)
+				if(*boost::const_begin(r) < offsetInLine)
 					break;
-				offsetInLine = *r.end();
+				offsetInLine = *boost::const_end(r);
 				temp.push_back(h.release());
 			}
 			std::unique_ptr<Hyperlinks> newItem(new Hyperlinks);
 			newItem->lineNumber = line;
 			newItem->hyperlinks.reset(new hyperlink::Hyperlink*[numberOfHyperlinks = newItem->numberOfHyperlinks = temp.size()]);
-			std::copy(temp.begin(), temp.end(), newItem->hyperlinks.get());
+			boost::copy(temp, newItem->hyperlinks.get());
 			hyperlinks_.push_front(newItem.release());
 			return hyperlinks_.front()->hyperlinks.get();
 		}

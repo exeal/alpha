@@ -47,7 +47,7 @@ namespace ascension {
 					presentation::mapFlowRelativeToPhysical(
 						graphics::font::writingMode(*layout),
 						presentation::FlowRelativeFourSides<graphics::Scalar>(
-							presentation::_blockStart = *extent.begin(), presentation::_blockEnd = *extent.end(),
+							presentation::_blockStart = *boost::const_begin(extent), presentation::_blockEnd = *boost::const_end(extent),
 							presentation::_inlineStart = 0.0f, presentation::_inlineEnd = trailing)));
 			}
 			return boost::none;

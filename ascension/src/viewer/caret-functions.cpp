@@ -239,8 +239,8 @@ namespace ascension {
 		namespace {
 			boost::optional<boost::integer_range<Index>> selectedRangeOnVisualLine(const Caret& caret, const graphics::font::VisualLine& line, bool useCalculatedLayout) {
 				if(!caret.isSelectionRectangle()) {
-					boost::optional<boost::integer_range<Index>> range(selectedRangeOnLine(caret, line.line));
-					if(!range)
+					auto range(selectedRangeOnLine(caret, line.line));
+					if(range == boost::none)
 						return boost::none;
 					const graphics::font::TextLayout* const layout = useCalculatedLayout ?
 						&const_cast<Caret&>(caret).textArea().textRenderer().layouts().at(line.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)
@@ -251,8 +251,8 @@ namespace ascension {
 						maximumEnd = sublineOffset + layout->lineLength(line.subline) + ((line.subline < layout->numberOfLines() - 1) ? 0 : 1);
 					else
 						maximumEnd = caret.document().lineLength(line.line);
-					range = boost::irange(std::max(*range->begin(), sublineOffset), std::min(*range->end(), maximumEnd));
-					if(range->empty())
+					range = boost::irange(std::max(*boost::const_begin(boost::get(range)), sublineOffset), std::min(*boost::const_end(boost::get(range)), maximumEnd));
+					if(boost::get(range).empty())
 						range = boost::none;
 					return range;
 				} else
