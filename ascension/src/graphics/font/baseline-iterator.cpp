@@ -235,7 +235,7 @@ namespace ascension {
 						if(newLine.subline == 0 && newLine.line == 0)
 							throw std::underflow_error("");	// TODO: Is this suitable?
 						newBaseline -= lineMetrics.baselineOffset() - *boost::const_begin(lineMetrics.extentWithHalfLeadings());
-						if(!tracksOutOfViewport() && newBaseline < *viewportExtent.begin()) {
+						if(!tracksOutOfViewport() && newBaseline < *boost::const_begin(viewportExtent)) {
 							newBaseline = std::numeric_limits<decltype(newBaseline)>::min();	// over before-edge of the viewport
 							break;
 						}
