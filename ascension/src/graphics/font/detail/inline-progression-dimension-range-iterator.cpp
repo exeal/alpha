@@ -22,8 +22,8 @@ namespace ascension {
 						effectiveCharacterRange_(effectiveCharacterRange), layoutDirection_(layoutDirection),
 						currentRunAllocationStartEdge_(firstLineEdgeIpd) {
 					const presentation::ReadingDirection scanningReadingDirection = computeScanningReadingDirection(layoutDirection, scanningDirection);
-					currentRun_ = (scanningReadingDirection == presentation::LEFT_TO_RIGHT) ? textRunsOfLine.begin() : textRunsOfLine.end() - 1;
-					lastRun_ = (scanningReadingDirection == presentation::LEFT_TO_RIGHT) ? textRunsOfLine.end() : textRunsOfLine.begin() - 1;
+					currentRun_ = (scanningReadingDirection == presentation::LEFT_TO_RIGHT) ? boost::const_begin(textRunsOfLine) : boost::const_end(textRunsOfLine) - 1;
+					lastRun_ = (scanningReadingDirection == presentation::LEFT_TO_RIGHT) ? boost::const_end(textRunsOfLine) : boost::begin(textRunsOfLine) - 1;
 					next(true);
 				}
 

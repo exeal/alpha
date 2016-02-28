@@ -214,7 +214,7 @@ namespace ascension {
 		 * @throw PatternSyntaxException The expression's syntax is invalid
 		 */
 		Pattern::Pattern(const StringPiece& regex, boost::regex_constants::syntax_option_type nativeSyntax) : flags_(0) {
-			if(regex.begin() == nullptr)
+			if(regex.cbegin() == nullptr)
 				throw NullPointerException("regex");
 			try {
 				impl_.assign(text::utf::CharacterDecodeIterator<const Char*>(regex.cbegin(), regex.cend()),
