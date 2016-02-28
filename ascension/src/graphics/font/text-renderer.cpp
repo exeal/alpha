@@ -461,6 +461,7 @@ namespace ascension {
 					const SolidColor background(actualLineBackgroundColor);
 					context.setFillStyle(std::shared_ptr<const Paint>(&background, boost::null_deleter()));
 					context.fillRectangle(physicalLineArea);
+
 					// paint the text content
 					const graphics::PhysicalTwoAxes<graphics::Scalar> p(
 						presentation::mapFlowRelativeToPhysical(
@@ -468,7 +469,7 @@ namespace ascension {
 							presentation::makeFlowRelativeTwoAxes((
 								presentation::_bpd = lineToPaint.baseline,
 								presentation::_ipd = -inlineProgressionOffsetInViewerGeometry(*viewport())))));
-					layout.draw(context, graphics::geometry::make<graphics::Point>(p));
+					paint(layout, lineToPaint.lineNumber, context, graphics::geometry::make<graphics::Point>(p));
 				}
 #	ifdef _DEBUG
 				if(!boost::empty(linesToPaint)) {
@@ -483,6 +484,22 @@ namespace ascension {
 			}
 
 			/**
+			 * @internal Paints the specified output device with the text layout of the specified line.
+			 * @param layout The line layout
+			 * @param line The line number
+			 * @param context The graphics context
+			 * @param alignmentPoint The alignment point of the text layout of the line to draw
+			 */
+			inline void TextRenderer::paint(const TextLayout& layout, Index line, PaintContext& context, const Point& alignmentPoint) const {
+//				if(!enablesDoubleBuffering_) {
+					layout.draw(context, alignmentPoint,
+						(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textPaintOverride(line) : nullptr,
+						(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->endOfLine(line) : nullptr,
+						(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textWrappingMark(line) : nullptr);
+//				}
+			}
+
+			/**
 			 * Paints the specified output device with text layout of the specified line. The line rendering
 			 * options provided by @c #setLineRenderingOptions method is considered.
 			 * @param line The line number
@@ -492,13 +509,7 @@ namespace ascension {
 			 *       the layout
 			 */
 			void TextRenderer::paint(Index line, PaintContext& context, const Point& alignmentPoint) const BOOST_NOEXCEPT {
-//				if(!enablesDoubleBuffering_) {
-					const_cast<TextRenderer*>(this)->layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT).draw(context, alignmentPoint,
-						(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textPaintOverride(line) : nullptr,
-						(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->endOfLine(line) : nullptr,
-						(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textWrappingMark(line) : nullptr);
-					return;
-//				}
+				return paint(const_cast<TextRenderer*>(this)->layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT), line, context, alignmentPoint);
 
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 				// TODO: this code uses deprecated terminologies for text coordinates.

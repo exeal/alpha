@@ -118,6 +118,7 @@ namespace ascension {
 
 			private:
 				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
+				void paint(const TextLayout& layout, Index line, PaintContext& context, const Point& alignmentPoint) const;
 				void updateDefaultFont();
 			private:
 				presentation::Presentation& presentation_;
