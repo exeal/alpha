@@ -433,8 +433,8 @@ namespace ascension {
 				win32::AutoZeroSize<SCROLLINFO> si;
 				if(range/* != boost::none*/) {
 					si.fMask |= SIF_RANGE;
-					si.nMin = *range->begin();
-					si.nMax = *range->end();
+					si.nMin = *boost::const_begin(range);
+					si.nMax = *boost::const_end(range);
 				}
 				if(pageSize != boost::none) {
 					si.fMask |= SIF_PAGE;

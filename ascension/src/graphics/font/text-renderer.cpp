@@ -92,8 +92,8 @@ namespace ascension {
 			void FontSelector::linkPrimaryFont() BOOST_NOEXCEPT {
 				// TODO: this does not support nested font linking.
 				assert(linkedFonts_ != nullptr);
-				for(vector<Fontset*>::iterator i(linkedFonts_->begin()), e(linkedFonts_->end()); i != e; ++i)
-					delete *i;
+				BOOST_FOREACH(Fontset*& fontset, linkedFonts_)
+					delete fontset;
 				linkedFonts_->clear();
 
 				// read font link settings from registry
@@ -216,22 +216,22 @@ namespace ascension {
 			Scalar TextRenderer::baselineDistance(const boost::integer_range<VisualLine>& lines) const {
 				// TODO: This code does not consider 'line-stacking-strategy'.
 				TextRenderer& self = const_cast<TextRenderer&>(*this);
-				if(lines.empty()) {
-					if(lines.begin()->subline == lines.end()->subline)
+				if(boost::empty(lines)) {
+					if(boost::const_begin(lines)->subline == boost::const_end(lines)->subline)
 						return 0;
-					const TextLayout& layout = self.layouts().at(lines.begin()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-					return TextLayout::LineMetricsIterator(layout, lines.end()->subline).baselineOffset()
-						- TextLayout::LineMetricsIterator(layout, lines.begin()->subline).baselineOffset();
+					const TextLayout& layout = self.layouts().at(boost::const_begin(lines)->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
+					return TextLayout::LineMetricsIterator(layout, boost::const_end(lines)->subline).baselineOffset()
+						- TextLayout::LineMetricsIterator(layout, boost::const_begin(lines)->subline).baselineOffset();
 				} else {
-					const TextLayout* layout = &self.layouts().at(lines.begin()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-					Scalar bpd = *layout->extent().end() - TextLayout::LineMetricsIterator(*layout, lines.begin()->subline).baselineOffset();
-					for(Index line = lines.begin()->line + 1; line < lines.end()->line; ++line) {
+					const TextLayout* layout = &self.layouts().at(boost::const_begin(lines)->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
+					Scalar bpd = *boost::const_end(layout->extent()) - TextLayout::LineMetricsIterator(*layout, boost::const_begin(lines)->subline).baselineOffset();
+					for(Index line = boost::const_begin(lines)->line + 1; line < boost::const_end(lines)->line; ++line) {
 //						bpd += layouts().at(line).height();
 						const NumericRange<Scalar> lineExtent(self.layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT).extent() | adaptors::ordered());
-						bpd += *lineExtent.end() - *lineExtent.begin();
+						bpd += *boost::const_end(lineExtent) - *boost::const_begin(lineExtent);
 					}
-					layout = &self.layouts().at(lines.end()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-					return bpd += TextLayout::LineMetricsIterator(*layout, lines.end()->subline).baselineOffset() - layout->extent().front();
+					layout = &self.layouts().at(boost::const_end(lines)->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
+					return bpd += TextLayout::LineMetricsIterator(*layout, boost::const_end(lines)->subline).baselineOffset() - layout->extent().front();
 				}
 			}
 

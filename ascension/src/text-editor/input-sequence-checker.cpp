@@ -36,7 +36,7 @@ namespace ascension {
 		 * @throw NullPointerException @a receding is @c null
 		 */
 		bool InputSequenceCheckers::check(const StringPiece& preceding, CodePoint c) const {
-			if(preceding.begin() == nullptr)
+			if(preceding.cbegin() == nullptr)
 				throw NullPointerException("preceding");
 			BOOST_FOREACH(const std::unique_ptr<InputSequenceChecker>& isc, strategies_) {
 				if(!isc->check(locale_, preceding, c))
