@@ -160,7 +160,7 @@ namespace ascension {
 				if(!newProposals.empty()) {
 					completionSession_->proposals.reset();
 					if(newProposals.size() == 1 && (*std::begin(newProposals))->isAutoInsertable()) {
-						(*begin(newProposals))->replace(textViewer_->document(), completionSession_->replacementRegion);
+						(*std::begin(newProposals))->replace(textViewer_->document(), completionSession_->replacementRegion);
 						return close();
 					}
 					completionSession_->proposals.reset(new std::shared_ptr<const CompletionProposal>[completionSession_->numberOfProposals = newProposals.size()]);
@@ -234,7 +234,7 @@ namespace ascension {
 				if(!proposals.empty()) {
 					if(proposals.size() == 1 && (*std::begin(proposals))->isAutoInsertable()) {
 						// proposal is only one which is auto insertable => insert it without popup
-						(*begin(proposals))->replace(textViewer_->document(), completionSession_->replacementRegion);
+						(*std::begin(proposals))->replace(textViewer_->document(), completionSession_->replacementRegion);
 						completionSession_.reset();
 					} else {
 						assert(completionSession_->proposals.get() == nullptr);
