@@ -79,10 +79,10 @@ namespace ascension {
 			bool AinuInputSequenceChecker::check(const std::locale&, const StringPiece& preceding, CodePoint c) const {
 				// only check a pair consists of combining semi-voiced sound mark is valid
 				return c != 0x309au || (preceding.cbegin() < preceding.cend() && (
-					preceding.end()[-1] == L'\x30bb'		// se (セ)
-					|| preceding.end()[-1] == L'\x30c4'		// tu (ツ)
-					|| preceding.end()[-1] == L'\x30c8'		// to (ト)
-					|| preceding.end()[-1] == L'\x31f7'));	// small fu (小さいフ)
+					preceding.cend()[-1] == L'\x30bb'		// se (セ)
+					|| preceding.cend()[-1] == L'\x30c4'	// tu (ツ)
+					|| preceding.cend()[-1] == L'\x30c8'	// to (ト)
+					|| preceding.cend()[-1] == L'\x31f7'));	// small fu (小さいフ)
 			}
 
 
@@ -132,7 +132,7 @@ namespace ascension {
 				// if there is not a preceding character, as if a control is
 				// Sara Am -> Nikhahit + Sara Aa
 				return doCheck(
-					!preceding.empty() ? getCharacterClass(preceding.end()[-1]) : CTRL,
+					!preceding.empty() ? getCharacterClass(preceding.cend()[-1]) : CTRL,
 					getCharacterClass((c != 0x0e33u) ? c : 0x0e4du),
 					mode_ == STRICT_MODE);
 			}
@@ -172,7 +172,7 @@ namespace ascension {
 				if(vietnamese.first.get() == nullptr && lc != *vietnamese.first)
 					return true;
 				else if(!preceding.empty() && boost::binary_search(TONE_MARKS, c))
-					return boost::binary_search(VOWELS, preceding.end()[-1]);
+					return boost::binary_search(VOWELS, preceding.cend()[-1]);
 				return true;
 			}
 		}

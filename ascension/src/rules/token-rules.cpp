@@ -225,11 +225,11 @@ namespace ascension {
 			std::list<String> wordList;
 			const Char* p = boost::find_if(words, std::bind(std::not_equal_to<Char>(), separator, std::placeholders::_1));
 			for(const Char* next; ; p = ++next) {
-				next = std::find(p, words.end(), separator);
+				next = std::find(p, words.cend(), separator);
 				if(next == p)
 					continue;
 				wordList.push_back(String(p, next));
-				if(next == words.end())
+				if(next == words.cend())
 					break;
 			}
 			if(wordList.empty())

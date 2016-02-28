@@ -54,7 +54,7 @@ namespace ascension {
 				if(detector.get() == nullptr)
 					throw NullPointerException("detector");
 				std::map<kernel::ContentType, HyperlinkDetector*>::iterator old(composites_.find(contentType));
-				if(old != composites_.end()) {
+				if(old != std::end(composites_)) {
 					composites_.erase(old);
 					delete old->second;
 				}

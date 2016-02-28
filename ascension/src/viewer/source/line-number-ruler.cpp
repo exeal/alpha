@@ -291,7 +291,7 @@ namespace ascension {
 			void LineNumberRuler::visualLinesDeleted(const boost::integer_range<Index>& lines,
 					Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
 				if(const SourceViewer* const sourceViewer = viewer()) {
-					if(*lines.end() < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// deleted before visible area
+					if(*boost::const_end(lines) < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// deleted before visible area
 						invalidate();
 				}
 			}
@@ -299,7 +299,7 @@ namespace ascension {
 			/// @see graphics#font#VisualLinesListener#visualLinesInserted
 			void LineNumberRuler::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
 				if(const SourceViewer* const sourceViewer = viewer()) {
-					if(*lines.end() < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// inserted before visible area
+					if(*boost::const_end(lines) < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// inserted before visible area
 						invalidate();
 				}
 			}
@@ -309,7 +309,7 @@ namespace ascension {
 					SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT {
 				if(const SourceViewer* const sourceViewer = viewer()) {
 					if(sublinesDifference != 0) {	// number of visual lines was changed
-						if(*lines.end() < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// changed before visible area
+						if(*boost::const_end(lines) < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// changed before visible area
 							invalidate();
 					}
 				}

@@ -422,12 +422,12 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QScrollBar* const scrollBar = (coordinate == 0) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
 				if(range != boost::none)
-					scrollBar->setRange(range->beginning(), range->end());
+					scrollBar->setRange(*boost::const_begin(boost::get(range)), *boost::const_end(boost::get(range)));
 				scrollBar->setSingleStep((coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer));
 				if(pageSize != boost::none)
-					scrollBar->setPageStep(*pageSize);
+					scrollBar->setPageStep(boost::get(pageSize));
 				if(position != boost::none)
-					scrollBar->setSliderPosition(*position);
+					scrollBar->setSliderPosition(boost::get(position));
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::AutoZeroSize<SCROLLINFO> si;
@@ -809,7 +809,7 @@ namespace ascension {
 				if(positions.ipd())
 					// TODO: Use reverseScrollPosition().
 					position = (writingMode.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
-						viewport->scrollPositions().ipd() : (*viewportRange.end() - viewport->scrollPositions().ipd() - 1);
+						viewport->scrollPositions().ipd() : (*boost::const_end(viewportRange) - viewport->scrollPositions().ipd() - 1);
 				if(properties.ipd()) {
 					const float realSize = graphics::font::pageSize<presentation::ReadingDirection>(*viewport);
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -830,7 +830,7 @@ namespace ascension {
 				if(positions.bpd())
 					// TODO: Use reverseScrollPosition().
 					position = (writingMode.blockFlowDirection != presentation::VERTICAL_RL) ?
-						viewport->scrollPositions().bpd() : (*viewportRange.end() - viewport->scrollPositions().bpd() - 1);
+						viewport->scrollPositions().bpd() : (*boost::const_end(viewportRange) - viewport->scrollPositions().bpd() - 1);
 				if(properties.bpd()) {
 					const float realSize = graphics::font::pageSize<presentation::BlockFlowDirection>(*viewport);
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD

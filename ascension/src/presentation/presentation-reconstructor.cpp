@@ -171,7 +171,7 @@ namespace ascension {
 			if(reconstructor.get() == nullptr)
 				throw NullPointerException("reconstructor");
 			const std::map<kernel::ContentType, PartitionPresentationReconstructor*>::iterator old(reconstructors_.find(contentType));
-			if(old != reconstructors_.end()) {
+			if(old != std::end(reconstructors_)) {
 				delete old->second;
 				reconstructors_.erase(old);
 			}

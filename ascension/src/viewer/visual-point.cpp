@@ -416,7 +416,7 @@ namespace ascension {
 		void VisualPoint::visualLinesModified(const boost::integer_range<Index>& lines, SignedIndex sublineDifference, bool, bool) BOOST_NOEXCEPT {
 			if(isFullyAvailable() && lineNumberCaches_ != boost::none) {
 				// adjust visualLine_ and visualSubine_ according to the visual lines modification
-				if(*lines.end() <= kernel::line(*this))
+				if(*boost::const_end(lines) <= kernel::line(*this))
 					lineNumberCaches_->line += sublineDifference;
 				else if(*boost::const_begin(lines) == kernel::line(*this)) {
 					if(const graphics::font::TextLayout* const layout = textArea().textRenderer().layouts().at(kernel::line(*this))) {

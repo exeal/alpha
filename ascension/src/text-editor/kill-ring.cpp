@@ -24,7 +24,7 @@ namespace ascension {
 		 *                             @c #setMaximumNumberOfKills later
 		 */
 		KillRing::KillRing(std::size_t maximumNumberOfKills /* = ASCENSION_DEFAULT_MAXIMUM_KILLS */) BOOST_NOEXCEPT
-				: yankPointer_(contents_.end()), maximumNumberOfKills_(maximumNumberOfKills) {
+				: yankPointer_(std::end(contents_)), maximumNumberOfKills_(maximumNumberOfKills) {
 		}
 
 		/**
