@@ -83,8 +83,8 @@ namespace ascension {
 			}
 
 			void MimeData::setData(Format format, const boost::iterator_range<const std::uint8_t*>& range) {
-				impl_->set(format, 8, range.begin(), range.size());
-//				impl_->set(::gdk_atom_intern(format.c_str(), true), 8, range.begin(), range.size());
+				impl_->set(format, 8, boost::const_begin(range), boost::size(range));
+//				impl_->set(::gdk_atom_intern(format.c_str(), true), 8, boost::begin(range), boost::size(range));
 			}
 
 			void MimeData::setText(const StringPiece& text) {
