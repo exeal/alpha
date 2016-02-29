@@ -491,6 +491,7 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\text.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\styles\writing-modes.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\text-line-style.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-override-style.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\text-run-style.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\text-style.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\text-toplevel-style.hpp" />

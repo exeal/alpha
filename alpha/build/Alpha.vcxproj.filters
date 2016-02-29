@@ -1306,6 +1306,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\selected-region.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-override-style.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

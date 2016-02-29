@@ -10,41 +10,65 @@
 
 #ifndef ASCENSION_TEXT_RENDERER_OBSERVERS_HPP
 #define ASCENSION_TEXT_RENDERER_OBSERVERS_HPP
-
 #include <ascension/corelib/basic-types.hpp>	// Index
+#include <boost/range/irange.hpp>
+#include <memory>
+#include <vector>
 
 namespace ascension {
 	namespace graphics {
+		class Paint;
+
 		namespace font {
 			class InlineObject;
-			class TextPaintOverride;
 
 			/**
 			 * Options for line rendering of @c TextRenderer object.
 			 * @see TextRenderer#setLineRenderingOptions
 			 */
 			class LineRenderingOptions {
-			private:
+			public:
+				/// Returned by @c #overrideTextPaint methods.
+				struct OverriddenSegment {
+					/// The length of this segment.
+					Index length;
+					/// The overridden foreground or @c null if does not override.
+					std::shared_ptr<const Paint> foreground;
+					/// The transparency of the overridden foreground. This value should be in the range from 0.0
+					/// (fully transparent) to 1.0 (no additional transparency).
+					double foregroundAlpha;
+					/// The overridden background or @c null if does not override.
+					std::shared_ptr<const Paint> background;
+					/// The transparency of the overridden background. This value should be in the range from 0.0
+					/// (fully transparent) to 1.0 (no additional transparency).
+					double backgroundAlpha;
+					/// Set @c false to paint only the glyphs' bounds with @c #background. Otherwise the logical
+					/// highlight bounds of characters are painted as background.
+					bool usesLogicalHighlightBounds;
+				};
+
 				/**
 				 * Returns the inline object renders the end of line.
 				 * @param line The line to render
 				 * @return The inline object renders the end of line, or @c null
 				 */
-				virtual const InlineObject* endOfLine(Index line) const BOOST_NOEXCEPT = 0;
+				virtual std::unique_ptr<const InlineObject> endOfLine(Index line) const BOOST_NOEXCEPT = 0;
 				/**
-				 * Returns the object overrides text paint properties for line rendering.
-				 * For the detail semantics of paint override, see the documentation of @c TextPaintOverride class.
+				 * Returns a vector of text segments which describe override the paints of the specified character
+				 * range in the line.
 				 * @param line The line to render
-				 * @return The object overrides text paint properties for line rendering, or @c null
+				 * @param rangeInLine The character range in the line
+				 * @param[out] segments The result. Empty if there is no overrides
 				 */
-				virtual const TextPaintOverride* textPaintOverride(Index line) const BOOST_NOEXCEPT = 0;
+				virtual void overrideTextPaint(Index line,
+					const boost::integer_range<Index>& rangeInLine,
+					std::vector<const OverriddenSegments>& segments) const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns the inline object renders the mark of text wrapping.
 				 * @param line The line to render
 				 * @return The inline object renders the mark of text wrapping, or @c null
 				 */
-				virtual const InlineObject* textWrappingMark(Index line) const BOOST_NOEXCEPT = 0;
-				friend class TextRenderer;
+				virtual std::unique_ptr<const InlineObject> textWrappingMark(Index line) const BOOST_NOEXCEPT = 0;
 			};
 		}
 	}

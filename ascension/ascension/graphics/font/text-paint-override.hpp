@@ -9,7 +9,6 @@
 
 #ifndef ASCENSION_TEXT_PAINT_OVERRIDE_HPP
 #define ASCENSION_TEXT_PAINT_OVERRIDE_HPP
-
 #include <ascension/corelib/basic-types.hpp>
 #include <boost/range/irange.hpp>
 #include <memory>
@@ -20,6 +19,9 @@ namespace ascension {
 		class Paint;
 
 		namespace font {
+			/**
+			 * @see LineRenderingOptions
+			 */
 			class TextPaintOverride {
 			public:
 				struct Segment {

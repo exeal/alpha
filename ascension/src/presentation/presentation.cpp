@@ -2,7 +2,7 @@
  * @file presentation.cpp
  * @author exeal
  * @date 2003-2007 (was LineLayout.cpp)
- * @date 2007-2015
+ * @date 2007-2016
  */
 
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
@@ -12,6 +12,7 @@
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/presentation/single-styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
+#include <ascension/presentation/text-override-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <boost/core/null_deleter.hpp>
@@ -160,7 +161,7 @@ namespace ascension {
 			document_.removeListener(*this);
 			clearHyperlinksCache();
 		}
-
+#ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
 		/**
 		 * Registers the text line color specifier.
 		 * This method does not call @c TextRenderer#invalidate and the layout is not updated.
@@ -172,7 +173,7 @@ namespace ascension {
 				throw NullPointerException("specifier");
 			textLineColorSpecifiers_.push_back(specifier);
 		}
-
+#endif
 		void Presentation::clearHyperlinksCache() BOOST_NOEXCEPT {
 			BOOST_FOREACH(Hyperlinks* p, hyperlinks_) {
 				for(size_t j = 0; j < p->numberOfHyperlinks; ++j)
@@ -565,7 +566,7 @@ namespace ascension {
 			hyperlinks_.push_front(newItem.release());
 			return hyperlinks_.front()->hyperlinks.get();
 		}
-
+#ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
 		/**
 		 * Removes the specified text line color specifier.
 		 * @param specifier The director to remove
@@ -579,7 +580,7 @@ namespace ascension {
 				}
 			}
 		}
-
+#endif
 		/**
 		 * Sets the default direction.
 		 */
@@ -659,7 +660,19 @@ namespace ascension {
 			if(previouslyDeclared.get() != nullptr)
 				computedTextToplevelStyleChangedSignal_(*this, *previouslyDeclared, previouslyComputed.get());
 		}
-		
+
+		/**
+		 * Registers the specified @c TextOverrideStyle.
+		 * @param newStyle A @c TextOverrideStyle to register. If @c null, the default instance is used
+		 */
+		void Presentation::setOverrideStyle(std::shared_ptr<const TextOverrideStyle> newStyle) BOOST_NOEXCEPT {
+			static const TextOverrideStyle defaultStyle;
+			if(newStyle.get() != nullptr)
+				textOverrideStyle_ = newStyle;
+			else
+				textOverrideStyle_.reset(&defaultStyle, boost::null_deleter());
+		}
+#ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER		
 		/**
 		 * Returns the colors of the specified text line.
 		 * @param line The line
@@ -682,5 +695,6 @@ namespace ascension {
 				}
 			}
 		}
+#endif
 	}
 }
