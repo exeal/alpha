@@ -9,8 +9,8 @@
  * @date 2014-09-27 Separated from text-style.hpp
  */
 
-#ifndef ASCENSION_TEXT_TOP_LEVEL_STYLE_HPP
-#define ASCENSION_TEXT_TOP_LEVEL_STYLE_HPP
+#ifndef ASCENSION_TEXT_TOPLEVEL_STYLE_HPP
+#define ASCENSION_TEXT_TOPLEVEL_STYLE_HPP
 #include <ascension/corelib/memory.hpp>
 #include <ascension/presentation/detail/style-sequence.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
@@ -28,8 +28,7 @@ namespace ascension {
 		 * A text toplevel style collection.
 		 * The writing modes specified by this style may be overridden by @c graphics#font#TextRenderer#writingMode.
 		 * @see DeclaredTextToplevelStyle, SpecifiedTextToplevelStyle, ComputedTextToplevelStyle
-		 * @see TextRunStyle1, TextRunStyle2, TextLineStyle, Presentation#textToplevelStyle,
-		 *      Presentation#setTextToplevelStyle
+		 * @see TextRunStyle, TextLineStyle, Presentation#textToplevelStyle, Presentation#setTextToplevelStyle
 		 */
 		typedef boost::fusion::vector<
 			// Writing Modes

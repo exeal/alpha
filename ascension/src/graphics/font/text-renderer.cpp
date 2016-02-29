@@ -452,7 +452,9 @@ namespace ascension {
 					boost::geometry::intersection(physicalLineArea, context.boundsToPaint(), physicalLineArea);
 					// paint the background
 					boost::optional<Color> foregroundOverride, backgroundOverride;
+#ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
 					presentation().textLineColors(lineToPaint.lineNumber, foregroundOverride, backgroundOverride);
+#endif
 					const Color usedLineBackgroundColor(
 						boost::get_optional_value_or(
 							backgroundOverride,

@@ -3,7 +3,7 @@
  * Provides classes define appearance and presentation of a text editor user interface.
  * @author exeal
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2015
+ * @date 2006-2016
  */
 
 #ifndef ASCENSION_PRESENTATION_HPP
@@ -27,6 +27,7 @@ namespace ascension {
 
 	namespace presentation {
 		class DeclaredTextLineStyle;
+		struct TextOverrideStyle;
 
 		/**
 		 * Interface for objects which declare style of a text line.
@@ -47,7 +48,7 @@ namespace ascension {
 			virtual std::shared_ptr<const DeclaredTextLineStyle> declareTextLineStyle(Index line) const = 0;
 			friend class Presentation;
 		};
-
+#ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
 		/**
 		 * Interface for objects which specify color of a text line.
 		 * @see Presentation#addTextLineColorS
@@ -71,7 +72,7 @@ namespace ascension {
 				boost::optional<graphics::Color>& background) const = 0;
 			friend class Presentation;
 		};
-
+#endif
 		struct ComputedStyledTextRunIterator;
 		struct ComputedTextLineStyle;
 		struct ComputedTextRunStyle;
@@ -102,8 +103,10 @@ namespace ascension {
 			void setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle> newStyle);
 			void setTextLineStyleDeclarator(std::shared_ptr<TextLineStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
 			void setTextRunStyleDeclarator(std::shared_ptr<TextRunStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
+#ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
 			void textLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const;
+#endif
 			/// @}
 
 			/// @name Default Writing Modes
@@ -131,6 +134,12 @@ namespace ascension {
 			WritingMode computeWritingMode(boost::optional<Index> line = boost::none) const;
 			/// @}
 
+			/// @name Override Styles
+			/// @{
+			const TextOverrideStyle& overrideStyle() const BOOST_NOEXCEPT;
+			void setOverrideStyle(std::shared_ptr<const TextOverrideStyle> newStyle) BOOST_NOEXCEPT;
+			/// @}
+
 			/// @name Hyperlinks
 			/// @{
 			const hyperlink::Hyperlink* const* getHyperlinks(
@@ -141,8 +150,10 @@ namespace ascension {
 
 			/// @name Strategies
 			/// @{
+#ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
 			void addTextLineColorSpecifier(std::shared_ptr<TextLineColorSpecifier> specifier);
 			void removeTextLineColorSpecifier(TextLineColorSpecifier& specifier) BOOST_NOEXCEPT;
+#endif
 			/// @}
 
 		private:
@@ -156,10 +167,13 @@ namespace ascension {
 			std::shared_ptr<const DeclaredTextToplevelStyle> declaredTextToplevelStyle_;
 			std::shared_ptr<TextLineStyleDeclarator> textLineStyleDeclarator_;
 			std::shared_ptr<TextRunStyleDeclarator> textRunStyleDeclarator_;
+#ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
 			std::list<std::shared_ptr<TextLineColorSpecifier>> textLineColorSpecifiers_;
+#endif
 			ReadingDirection defaultDirection_;
 			struct ComputedStyles;
 			std::unique_ptr<ComputedStyles> computedStyles_;
+			std::shared_ptr<const TextOverrideStyle> textOverrideStyle_;
 			ComputedTextToplevelStyleChanged computedTextToplevelStyleChangedSignal_;
 			std::shared_ptr<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
@@ -180,6 +194,12 @@ namespace ascension {
 		/// Returns the default direction.
 		inline ReadingDirection Presentation::defaultDirection() const BOOST_NOEXCEPT {
 			return defaultDirection_;
+		}
+
+		/// Returns the registered @c TextOverrideStyle.
+		inline const TextOverrideStyle& Presentation::overrideStyle() const BOOST_NOEXCEPT {
+			assert(textOverrideStyle_.get() != nullptr);
+			return *textOverrideStyle_;
 		}
 
 	}
