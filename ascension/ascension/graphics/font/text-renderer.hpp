@@ -12,7 +12,6 @@
 #include <ascension/corelib/signals.hpp>
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
-#include <ascension/graphics/font/text-renderer-observers.hpp>
 #include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>	// presentation.BlockFlowDirection
@@ -32,6 +31,7 @@ namespace ascension {
 		namespace font {
 			class Font;
 			class LineLayoutVector;
+			class LineRenderingOptions;
 			class TextLayout;
 			class TextViewport;
 
@@ -104,9 +104,9 @@ namespace ascension {
 
 				/// @name Painting
 				/// @{
-				void paint(PaintContext& context) const;
-				void paint(Index line, PaintContext& context, const Point& alignmentPoint) const;
-				void setLineRenderingOptions(const std::shared_ptr<LineRenderingOptions> options);
+				void paint(PaintContext& context, const LineRenderingOptions* options = nullptr) const;
+				void paint(Index line, PaintContext& context,
+					const Point& alignmentPoint, const LineRenderingOptions* options = nullptr) const;
 				/// @}
 
 			protected:
@@ -118,7 +118,8 @@ namespace ascension {
 
 			private:
 				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
-				void paint(const TextLayout& layout, Index line, PaintContext& context, const Point& alignmentPoint) const;
+				void paint(const TextLayout& layout, Index line,
+					PaintContext& context, const Point& alignmentPoint, const LineRenderingOptions* options) const;
 				void updateDefaultFont();
 			private:
 				presentation::Presentation& presentation_;
@@ -128,7 +129,6 @@ namespace ascension {
 				std::unique_ptr<LineLayoutVector> layouts_;
 				const FontCollection fontCollection_;
 				std::shared_ptr<const Font> defaultFont_;
-				std::shared_ptr<const LineRenderingOptions> lineRenderingOptions_;
 				std::shared_ptr<TextViewport> viewport_;
 //				class SpacePainter;
 //				std::unique_ptr<SpacePainter> spacePainter_;

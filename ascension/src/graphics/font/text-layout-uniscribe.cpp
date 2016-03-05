@@ -24,9 +24,9 @@
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/glyph-metrics.hpp>
+#include <ascension/graphics/font/line-rendering-options.hpp>
 #include <ascension/graphics/font/tab-expander.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
-#include <ascension/graphics/font/text-paint-override.hpp>
 #include <ascension/graphics/font/text-run.hpp>
 #include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
@@ -2776,12 +2776,12 @@ namespace ascension {
 			 * Draws the specified line layout to the output device.
 			 * @param context The rendering context
 			 * @param origin The alignment point of the text layout
-			 * @param paintOverride Can be @c null
+			 * @param overriddenSegments A sequence of @c OverriddenSegment
 			 * @param endOfLine The inline object which paints an end-of-line. Can be @c null
 			 * @param lineWrappingMark The inline object which paints line-wrapping-mark. Can be @c null
 			 */
 			void TextLayout::draw(PaintContext& context,
-					const Point& origin, const TextPaintOverride* paintOverride /* = nullptr */,
+					const Point& origin, const std::vector<const OverriddenSegment>& overriddenSegments /* = empty */,
 					const InlineObject* endOfLine/* = nullptr */, const InlineObject* lineWrappingMark /* = nullptr */) const {
 #if defined(_DEBUG) && defined(ASCENSION_DIAGNOSE_INHERENT_DRAWING)
 				ASCENSION_LOG_TRIVIAL(debug) << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";

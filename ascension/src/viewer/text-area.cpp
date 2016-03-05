@@ -36,6 +36,7 @@
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/text-viewer-model-conversion.hpp>
+#include <ascension/viewer/virtual-box.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
@@ -234,6 +235,11 @@ namespace ascension {
 			}
 		}
 
+		/// @see graphics#font#LineRenderingOptions#endOfLine
+		std::unique_ptr<const graphics::font::InlineObject> TextArea::endOfLine(Index line) const BOOST_NOEXCEPT {
+			return std::unique_ptr<const graphics::font::InlineObject>();
+		}
+
 		/// @see TextViewer#FocusChangedSignal
 		void TextArea::focusChanged(const TextViewer& viewer) {
 			if(&viewer == &textViewer()) {
@@ -353,6 +359,48 @@ namespace ascension {
 			return std::weak_ptr<MouseInputStrategy>(mouseInputStrategy_);
 		}
 
+		/// @see graphics#font#LineRenderingOptions#overrideTextPaint
+		void TextArea::overrideTextPaint(Index line, std::vector<const graphics::font::OverriddenSegment>& segments) const BOOST_NOEXCEPT {
+			segments.clear();
+			if(!isSelectionEmpty(caret())) {
+				std::vector<boost::integer_range<Index>> selectedRanges;
+				if(!caret().isSelectionRectangle()) {
+					const auto range(selectedRangeOnLine(caret(), line));
+					if(range != boost::none)
+						selectedRanges.push_back(boost::get(range));
+				} else {
+					const Index nlines = textRenderer().layouts().numberOfSublinesOfLine(line);
+					const VirtualBox& selection = caret().boxForRectangleSelection();
+					for(graphics::font::VisualLine i(line, 0); i.subline < nlines; ++i.subline) {
+						const auto range(selection.characterRangeInVisualLine(i));
+						if(range != boost::none)
+							selectedRanges.push_back(boost::get(range));
+					}
+				}
+
+				if(!selectedRanges.empty()) {
+					graphics::font::OverriddenSegment outside, inside;
+					outside.usesLogicalHighlightBounds = inside.usesLogicalHighlightBounds = true;
+					Index p = 0;
+					BOOST_FOREACH(const auto& selectedRange, selectedRanges) {
+						inside.length = boost::size(selectedRange);
+						if((outside.length = *boost::const_begin(selectedRange) - p) != 0) {
+							segments.push_back(outside);
+							p += outside.length;
+							segments.push_back(inside);
+						} else if(p == 0)
+							segments.push_back(inside);
+						else {
+							inside.length += segments.back().length;
+							segments.pop_back();
+							segments.push_back(inside);
+						}
+						p = *boost::const_end(selectedRange);
+					}
+				}
+			}
+		}
+
 		/// @see TextViewerComponent#paint
 		void TextArea::paint(graphics::PaintContext& context) {
 //			Timer tm(L"TextViewer.paint");
@@ -365,7 +413,7 @@ namespace ascension {
 				context.translate(graphics::geometry::left(cr) - graphics::geometry::left(ar), graphics::geometry::top(cr) - graphics::geometry::top(ar));
 				context.rectangle(graphics::geometry::make<graphics::Rectangle>(boost::geometry::make_zero<graphics::Point>(), graphics::geometry::size(cr))).clip();
 			}
-			textRenderer().paint(context);
+			textRenderer().paint(context, this);
 			if(narrowed)
 				context.restore();
 
@@ -521,6 +569,11 @@ namespace ascension {
 		void TextArea::showCaret() BOOST_NOEXCEPT {
 			if(caretPainter_.get() != nullptr)
 				static_cast<detail::CaretPainterBase&>(*caretPainter_).show();
+		}
+
+		/// @see graphics#font#LineRenderingOptions#textWrappingMark
+		std::unique_ptr<const graphics::font::InlineObject> TextArea::textWrappingMark(Index line) const BOOST_NOEXCEPT {
+			return std::unique_ptr<const graphics::font::InlineObject>();
 		}
 
 		/// @see TextViewerComponent#uninstall
