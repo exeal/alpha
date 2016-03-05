@@ -8,6 +8,7 @@
 #ifndef ASCENSION_TEXT_AREA_HPP
 #define ASCENSION_TEXT_AREA_HPP
 #include <ascension/corelib/signals.hpp>
+#include <ascension/graphics/font/line-rendering-options.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport-base.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
@@ -21,6 +22,7 @@ namespace ascension {
 	namespace graphics {
 		namespace font {
 			class TextLayout;
+			class TextRenderer;
 		}
 	}
 
@@ -34,7 +36,8 @@ namespace ascension {
 
 		class TextArea :
 			public TextViewerComponent, public graphics::font::VisualLinesListener,
-			public kernel::DocumentListener, public detail::WeakReferenceForPoints<TextArea> {
+			public kernel::DocumentListener, public detail::WeakReferenceForPoints<TextArea>,
+			private graphics::font::LineRenderingOptions {
 		public:
 			TextArea();
 			~TextArea() BOOST_NOEXCEPT;
@@ -152,6 +155,10 @@ namespace ascension {
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
+			// graphics.font.LineRenderingOptions
+			std::unique_ptr<const graphics::font::InlineObject> endOfLine(Index line) const BOOST_NOEXCEPT override;
+			void overrideTextPaint(Index line, std::vector<const graphics::font::OverriddenSegment>& segments) const BOOST_NOEXCEPT override;
+			std::unique_ptr<const graphics::font::InlineObject> textWrappingMark(Index line) const BOOST_NOEXCEPT override;
 		private:
 			TextViewer* viewer_;
 			const Locator* locator_;
