@@ -44,7 +44,7 @@ namespace ascension {
 		 * @c Region satisfies Single Pass Range concept.
 		 * @note This class is not intended to be subclassed by clients.
 		 */
-		class Region : public boost::iterator_range<detail::RegionIterator>, public FastArenaObject<Region>, private boost::equality_comparable<Region> {
+		class Region : public boost::iterator_range<detail::RegionIterator>, public FastArenaObject<Region> {
 			typedef detail::RegionIterator Iterator;
 			typedef boost::iterator_range<Iterator> Super;
 
@@ -160,5 +160,24 @@ namespace ascension {
 		BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<Region>));
 	}
 } // namespace ascension.kernel
+
+namespace boost {
+	namespace range {
+		inline bool equal(
+				const iterator_range<::ascension::kernel::detail::RegionIterator>& lhs,
+				const iterator_range<::ascension::kernel::detail::RegionIterator>& rhs) {
+			return *const_begin(lhs) == *const_begin(rhs) && *const_end(lhs) == *const_end(rhs);
+		}
+		template<typename BinaryPredicate>
+		inline bool equal(
+				const iterator_range<::ascension::kernel::detail::RegionIterator>& lhs,
+				const iterator_range<::ascension::kernel::detail::RegionIterator>& rhs,
+				BinaryPredicate pred) {
+			return pred(*const_begin(lhs), *const_begin(rhs)) && pred(*const_end(lhs), *const_end(rhs));
+		}
+	}
+
+	using ::boost::range::equal;
+}
 
 #endif // !ASCENSION_REGION_HPP
