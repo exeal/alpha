@@ -14,6 +14,7 @@
 #include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
+#include <ascension/graphics/font/line-rendering-options.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
@@ -397,8 +398,9 @@ namespace ascension {
 			 * Paints the specified output device with text layout. The line rendering options provided by
 			 * @c #setLineRenderingOptions method is considered.
 			 * @param context The graphics context
+			 * @param options The optional @c LineRenderingOptions
 			 */
-			void TextRenderer::paint(PaintContext& context) const {
+			void TextRenderer::paint(PaintContext& context, const LineRenderingOptions* options /* = nullptr */) const {
 				const Color computedToplevelBackgroundColor(
 					boost::fusion::at_key<presentation::styles::BackgroundColor>(presentation().computedTextRunStyle().backgroundsAndBorders));
 				const Color actualToplevelBackgroundColor(alphaBlend(Color::OPAQUE_WHITE, computedToplevelBackgroundColor));
@@ -471,7 +473,7 @@ namespace ascension {
 							presentation::makeFlowRelativeTwoAxes((
 								presentation::_bpd = lineToPaint.baseline,
 								presentation::_ipd = -inlineProgressionOffsetInViewerGeometry(*viewport())))));
-					paint(layout, lineToPaint.lineNumber, context, graphics::geometry::make<graphics::Point>(p));
+					paint(layout, lineToPaint.lineNumber, context, graphics::geometry::make<graphics::Point>(p), options);
 				}
 #	ifdef _DEBUG
 				if(!boost::empty(linesToPaint)) {
@@ -491,13 +493,17 @@ namespace ascension {
 			 * @param line The line number
 			 * @param context The graphics context
 			 * @param alignmentPoint The alignment point of the text layout of the line to draw
+			 * @param options The optional @c LineRenderingOptions
 			 */
-			inline void TextRenderer::paint(const TextLayout& layout, Index line, PaintContext& context, const Point& alignmentPoint) const {
+			inline void TextRenderer::paint(const TextLayout& layout, Index line,
+					PaintContext& context, const Point& alignmentPoint, const LineRenderingOptions* options) const {
 //				if(!enablesDoubleBuffering_) {
-					layout.draw(context, alignmentPoint,
-						(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textPaintOverride(line) : nullptr,
-						(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->endOfLine(line) : nullptr,
-						(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textWrappingMark(line) : nullptr);
+					std::vector<const OverriddenSegment> overriddenSegments;
+					if(options != nullptr)
+						options->overrideTextPaint(line, overriddenSegments);
+					layout.draw(context, alignmentPoint, overriddenSegments,
+						(options != nullptr) ? options->endOfLine(line).get() : nullptr,
+						(options != nullptr) ? options->textWrappingMark(line).get() : nullptr);
 //				}
 			}
 
@@ -507,11 +513,13 @@ namespace ascension {
 			 * @param line The line number
 			 * @param context The graphics context
 			 * @param alignmentPoint The alignment point of the text layout of the line to draw
+			 * @param options The optional @c LineRenderingOptions
 			 * @note This method calls LineLayoutVector#at(Index, const UseCalculatedLayoutTag&amp;) which may change
 			 *       the layout
 			 */
-			void TextRenderer::paint(Index line, PaintContext& context, const Point& alignmentPoint) const BOOST_NOEXCEPT {
-				return paint(const_cast<TextRenderer*>(this)->layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT), line, context, alignmentPoint);
+			void TextRenderer::paint(Index line, PaintContext& context,
+					const Point& alignmentPoint, const LineRenderingOptions* options /* = nullptr */) const BOOST_NOEXCEPT {
+				return paint(const_cast<TextRenderer*>(this)->layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT), line, context, alignmentPoint, options);
 
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 				// TODO: this code uses deprecated terminologies for text coordinates.

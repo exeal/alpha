@@ -916,9 +916,6 @@
     <ClInclude Include="..\src\win32\module.hpp">
       <Filter>Header Files\win32</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer-observers.hpp">
-      <Filter>ascension\Header Files\graphics\font</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\current-line-highlighter.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
@@ -1052,9 +1049,6 @@
       <Filter>ascension\Header Files\presentation\styles</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\font\tab-expander.hpp">
-      <Filter>ascension\Header Files\graphics\font</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-paint-override.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\styled-text-run-iterator.hpp">
@@ -1308,6 +1302,12 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\text-override-style.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\standard-line-rendering-options.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-rendering-options.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

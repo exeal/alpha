@@ -77,6 +77,28 @@ namespace ascension {
 //				}
 			};
 
+			/**
+			 * Specifies an overridden segment in the @c TextLayout.
+			 * @see TextLayout#draw
+			 */
+			struct OverriddenSegment {
+				/// The length of this segment.
+				Index length;
+				/// The overridden foreground or @c null if does not override.
+				std::shared_ptr<const Paint> foreground;
+				/// The transparency of the overridden foreground. This value should be in the range from 0.0 (fully
+				/// transparent) to 1.0 (no additional transparency).
+				double foregroundAlpha;
+				/// The overridden background or @c null if does not override.
+				std::shared_ptr<const Paint> background;
+				/// The transparency of the overridden background. This value should be in the range from 0.0 (fully
+				/// transparent) to 1.0 (no additional transparency).
+				double backgroundAlpha;
+				/// Set @c false to paint only the glyphs' bounds with @c #background. Otherwise the logical highlight
+				/// bounds of characters are painted as background.
+				bool usesLogicalHighlightBounds;
+			};
+
 			class Font;
 			class FontCollection;
 			class FontRenderContext;
@@ -230,7 +252,7 @@ namespace ascension {
 				/// @name Painting
 				/// @{
 				void draw(PaintContext& context, const Point& origin,
-					const TextPaintOverride* paintOverride = nullptr,
+					const std::vector<const OverriddenSegment>& overriddenSegments = std::vector<const OverriddenSegment>(),
 					const InlineObject* endOfLine = nullptr,
 					const InlineObject* lineWrappingMark = nullptr) const BOOST_NOEXCEPT;
 				/// @}

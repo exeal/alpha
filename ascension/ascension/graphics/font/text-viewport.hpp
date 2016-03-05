@@ -14,7 +14,6 @@
 #include <ascension/corelib/signals.hpp>
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
-#include <ascension/graphics/font/text-renderer-observers.hpp>
 #include <ascension/graphics/font/text-viewport-base.hpp>
 #include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
@@ -37,6 +36,7 @@ namespace ascension {
 
 	namespace graphics {
 		namespace font {
+			class TextRenderer;
 			class TextViewport;
 			class UseCalculatedLayoutTag;
 
