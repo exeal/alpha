@@ -17,21 +17,22 @@ namespace ascension {
 			 * Returns the measure of the 'allocation-rectangle' of the specified text run in user units.
 			 * @see #measure
 			 */
-			Scalar allocationMeasure(const TextRun& textRun) {
-				Scalar result = measure(textRun);
+			NumericRange<Scalar> allocationMeasure(const TextRun& textRun) {
+				Scalar start = 0, end = 0;
 				if(const presentation::FlowRelativeFourSides<ActualBorderSide>* const border = textRun.border()) {
-					result += border->start().actualWidth();
-					result += border->end().actualWidth();
+					start += border->start().actualWidth();
+					end += border->end().actualWidth();
 				}
 				if(const presentation::FlowRelativeFourSides<Scalar>* const margin = textRun.margin()) {
-					result += margin->start();
-					result += margin->end();
+					start += margin->start();
+					end += margin->end();
 				}
 				if(const presentation::FlowRelativeFourSides<Scalar>* const padding = textRun.padding()) {
-					result += padding->start();
-					result += padding->end();
+					start += padding->start();
+					end += padding->end();
 				}
-				return result;
+				const NumericRange<Scalar> content(measure(textRun));
+				return nrange(*boost::const_begin(content) - start, *boost::const_end(content) + end);
 			}
 
 			/**

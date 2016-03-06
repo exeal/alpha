@@ -40,6 +40,10 @@ namespace ascension {
 			/**
 			 * Abstract class represents a minimum text run whose characters can shaped by single font and has single
 			 * text reading direction.
+			 * @note All character indices (other than the return value of @c #characterRange method) are relative to
+			 *       the beginning of the @c TextRun. An index 0 addresses the beginning of the text run.
+			 * @note All geometries used by @c TextRun and related free functions are relative to the 'alignment-point'
+			 *       of the @c TextRun.
 			 * @see GlyphVector, TextLayout
 			 */
 			class TextRun : public GlyphVector {
@@ -79,7 +83,8 @@ namespace ascension {
 				 * @param bounds The bounds of the @c TextRun. If @c boost#none, the inline-progression-dimension of
 				 *               this text run is used
 				 * @param[out] outOfBounds @c true if @a position is out of @a bounds. Can be @c null if not needed
-				 * @return A hit describing the character and edge (leading or trailing) under the specified position
+				 * @return A hit describing the character and edge (leading or trailing) under the specified position.
+				 *         Note that the indices are relative to the beginning of this text run.
 				 * @see TextLayout#hitTestCharacter
 				 */
 				virtual TextHit<> hitTestCharacter(Scalar position,
@@ -89,7 +94,7 @@ namespace ascension {
 				 * Returns the logical position of the specified character in this text run. This is the distance from
 				 * the line-left edge of the glyph content (not the allocation box) of this text run to the specified
 				 * character.
-				 * @param hit The hit to check. This must be a valid hit on the @c TextRun
+				 * @param hit The hit to check. Note that the index is relative to the beginning of this text run
 				 * @return The logical character position in user units
 				 * @throw IndexOutOfBounds @a hit is not valid for the @c TextRun
 				 * @see GlyphVector#glyphPosition, TextLayout#hitToPoint
@@ -133,7 +138,7 @@ namespace ascension {
 				}
 			};
 
-			/// @name Free Functions to Compute Box of Text Run
+			/// @defgroup text_run_boxes Free Functions to Compute Box of Text Run
 			/// @{
 			presentation::FlowRelativeFourSides<Scalar> contentBox(const TextRun& textRun) BOOST_NOEXCEPT;
 			/**
@@ -165,25 +170,26 @@ namespace ascension {
 				}
 				return bounds;
 			}
+			NumericRange<Scalar> allocationMeasure(const TextRun& textRun);
 			/**
-			 * Returns the 'allocation-rectangle' of the specified text run in user units.
+			 * Returns the 'allocation-box' of the specified text run in user units.
+			 * @note The 'allocation-box' of @c TextRun consists of 'margin-start' and 'margin-end' edges in
+			 *       'inline-dimension' and 'content-before' and 'content-after' edges in 'block-dimension'.
 			 */
 			inline presentation::FlowRelativeFourSides<Scalar> allocationBox(const TextRun& textRun) BOOST_NOEXCEPT {
-				presentation::FlowRelativeFourSides<Scalar> bounds(borderBox(textRun));
-				if(const presentation::FlowRelativeFourSides<Scalar>* const marginWidths = textRun.margin()) {
-					bounds.start() -= marginWidths->start();
-					bounds.end() += marginWidths->end();
-				}
+				presentation::FlowRelativeFourSides<Scalar> bounds(contentBox(textRun));
+				const NumericRange<Scalar> am(allocationMeasure(textRun));
+				bounds[presentation::FlowRelativeDirection::INLINE_START] = *boost::const_begin(am);
+				bounds[presentation::FlowRelativeDirection::INLINE_END] = *boost::const_end(am);
 				return bounds;
 			}
 			/**
 			 * Returns the measure of the 'content-box' of the specified text run in user units.
 			 * @see #allocationMeasure
 			 */
-			inline Scalar measure(const TextRun& textRun) {
-				return textRun.hitToLogicalPosition(TextHit<>::leading(textRun.characterRange().length()));
+			inline NumericRange<Scalar> measure(const TextRun& textRun) {
+				return nrange<Scalar>(0, textRun.hitToLogicalPosition(TextHit<>::leading(textRun.characterRange().length())));
 			}
-			Scalar allocationMeasure(const TextRun& textRun);
 			/// @}
 		}
 	}
