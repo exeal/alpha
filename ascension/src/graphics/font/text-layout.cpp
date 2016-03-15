@@ -468,7 +468,7 @@ namespace ascension {
 						x += run->hitToLogicalPosition(TextHit<>::leading(std::distance(boost::const_begin(run->characterRange()), at)));
 						break;
 					}
-					x += allocationMeasure(*run);
+					x += boost::size(allocationMeasure(*run));
 				}
 				Scalar ipd = (wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ? x : (measure(line) - x);
 				ipd += lineStartEdge(line);
@@ -527,7 +527,7 @@ namespace ascension {
 					// 'x' is distance from line-left of 'line' to 'point' in inline-progression-dimension
 					// 'runLineLeft' is distance from line-left of 'line' to line-left of 'run' in ...
 					BOOST_FOREACH(const std::unique_ptr<const TextRun>& run, runsInLine) {
-						const Scalar runLineRight = runLineLeft + allocationMeasure(*run);
+						const Scalar runLineRight = runLineLeft + boost::size(allocationMeasure(*run));
 						if(runLineRight > x) {
 							const TextHit<> hitInRun(run->hitTestCharacter(
 								x - runLineLeft - lineRelativeGlyphContentOffset(*run, wm.inlineFlowDirection), boost::none, nullptr));
@@ -737,7 +737,7 @@ namespace ascension {
 					if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 						x = measure(line) - x;
 					for(RunVector::const_iterator run(boost::const_begin(runsInLine)); run != boost::const_end(runsInLine); ++run) {
-						const Scalar nextDx = dx + allocationMeasure(**run);
+						const Scalar nextDx = dx + boost::size(allocationMeasure(**run));
 						if(nextDx >= x) {
 							const Scalar ipdInRun = ((*run)->direction() == LEFT_TO_RIGHT) ? x - dx : nextDx - x;
 							return make_pair(boost::get((*run)->characterEncompassesPosition(ipdInRun)), (*run)->characterHasClosestLeadingEdge(ipdInRun));
@@ -809,7 +809,7 @@ namespace ascension {
 						// 'x' is line-left edge of the run, here
 						if(linearBounds != boost::none && x >= *boost::const_end(boost::get(linearBounds)))
 							break;
-						const Scalar runAllocationMeasure = allocationMeasure(*run);
+						const Scalar runAllocationMeasure = boost::size(allocationMeasure(*run));
 						if(linearBounds == boost::none || x + runAllocationMeasure > *boost::const_begin(boost::get(linearBounds))) {
 							auto selectionInRun(intersection(
 								boost::irange<Index>(boost::const_begin(run->characterRange()) - textString_.data(), boost::const_end(run->characterRange()) - textString_.data()), orderedRange));
@@ -823,8 +823,8 @@ namespace ascension {
 								// compute leading and trailing edges highlight shape in the run
 								Scalar leading = run->hitToLogicalPosition(TextHit<>::leading(*boost::const_begin(boost::get(selectionInRun))));
 								Scalar trailing = run->hitToLogicalPosition(TextHit<>::leading(*boost::const_end(boost::get(selectionInRun))));
-								leading = glyphsLeft + ltr ? leading : (font::measure(*run) - leading);
-								trailing = glyphsLeft + ltr ? trailing : (font::measure(*run) - trailing);
+								leading = glyphsLeft + ltr ? leading : (boost::size(font::measure(*run)) - leading);
+								trailing = glyphsLeft + ltr ? trailing : (boost::size(font::measure(*run)) - trailing);
 								Rectangle rectangle(
 									geometry::make<Rectangle>(
 										mapLineRelativeToPhysical(wm,
@@ -978,7 +978,7 @@ namespace ascension {
 						return lineMeasures_[line];
 				}
 				const Scalar ipd = boost::accumulate(runsForLine(line), 0.0f, [](Scalar ipd, const std::unique_ptr<const TextRun>& run) {
-					return ipd + allocationMeasure(*run);
+					return ipd + boost::size(allocationMeasure(*run));
 				});
 				assert(ipd >= 0);
 				if(numberOfLines() == 1)
