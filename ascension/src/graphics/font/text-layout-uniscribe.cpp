@@ -2707,7 +2707,7 @@ namespace ascension {
 
 				// traverse all text runs intersect with 'characterRange'
 				const presentation::WritingMode wm(writingMode(*this));
-				const boost::integer_range<Index> lines(lineAt(firstCharacter), lineAt(lastCharacter) + 1);
+				const auto lines(boost::irange(lineAt(firstCharacter), lineAt(lastCharacter) + 1));
 				LineMetricsIterator lm(*this, lines.front());
 				BOOST_FOREACH(Index line, lines) {
 					// move to line-left edge of the line
@@ -2720,8 +2720,7 @@ namespace ascension {
 
 					const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line));
 					for(RunVector::const_iterator run(boost::const_begin(runs)); run != boost::const_end(runs); ++run, ++lm) {
-						const boost::integer_range<Index> runRange = boost::irange<Index>(
-							boost::const_begin((*run)->characterRange()) - textString_.data(), boost::const_end((*run)->characterRange()) - textString_.data());
+						const auto runRange(characterIndices(**run, textString_));
 						const auto intersection = ascension::intersection(runRange, characterRange);
 						if(intersection != boost::none) {
 							const std::ptrdiff_t beginningOfRun = boost::const_begin((*run)->characterRange()) - textString_.data();
@@ -2750,11 +2749,11 @@ namespace ascension {
 
 						// move to the line-left edge of the next run
 						if(isHorizontal(wm.blockFlowDirection))
-							geometry::x(runTypographicOrigin) += allocationMeasure(**run);
+							geometry::x(runTypographicOrigin) += boost::size(allocationMeasure(**run));
 						else if(resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT)
-							geometry::y(runTypographicOrigin) += allocationMeasure(**run);
+							geometry::y(runTypographicOrigin) += boost::size(allocationMeasure(**run));
 						else
-							geometry::y(runTypographicOrigin) -= allocationMeasure(**run);
+							geometry::y(runTypographicOrigin) -= boost::size(allocationMeasure(**run));
 					}
 				}
 				return std::swap(result, bounds);
@@ -2899,11 +2898,11 @@ namespace ascension {
 						// compute next position of 'p', 'border-box' and 'allocation-box'
 						Point q(p);
 						if(horizontalLayout)
-							geometry::x(q) += allocationMeasure(*run);
+							geometry::x(q) += boost::size(allocationMeasure(*run));
 						else if(resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT)
-							geometry::y(q) += allocationMeasure(*run);
+							geometry::y(q) += boost::size(allocationMeasure(*run));
 						else
-							geometry::y(q) -= allocationMeasure(*run);
+							geometry::y(q) -= boost::size(allocationMeasure(*run));
 						bool skipThisRun = boost::geometry::equals(q, p);	// skip empty box
 
 						// check if this text run intersects with bounds to paint
@@ -3275,7 +3274,7 @@ namespace ascension {
 							// for each runs... (at this time, 'textRuns' is in logical order)
 							BOOST_FOREACH(TextRunImpl* run, textRuns) {
 								run->expandTabCharacters(context, tabSize, lengthContext, textString_, ipd, boost::none);
-								ipd += allocationMeasure(*run);
+								ipd += boost::size(allocationMeasure(*run));
 							}
 							maximumMeasure_ = ipd;
 						}
@@ -3333,7 +3332,7 @@ namespace ascension {
 					const Scalar ipd = measure(line);
 					for(auto i(firstRunInLine(line)), e(firstRunInLine(line + 1)); i != e; ++i) {
 						TextRunImpl& run = *const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(i->get()));
-						const Scalar newRunMeasure = allocationMeasure(run) * lineMeasure / ipd;	// TODO: There is more precise way.
+						const Scalar newRunMeasure = boost::size(allocationMeasure(run)) * lineMeasure / ipd;	// TODO: There is more precise way.
 						run.justify(static_cast<int>(newRunMeasure));
 					}
 				}
@@ -3396,10 +3395,10 @@ namespace ascension {
 					if(run->expandTabCharacters(context, tabSize.get(), lengthContext,
 							textString_, (ipd1 < measure) ? ipd1 : 0, measure - ((ipd1 < measure) ? ipd1 : 0))) {
 						if(ipd1 < measure) {
-							ipd1 += allocationMeasure(*run);
+							ipd1 += boost::size(allocationMeasure(*run));
 							runs.push_back(run);
 						} else {
-							ipd1 = allocationMeasure(*run);
+							ipd1 = boost::size(allocationMeasure(*run));
 							runs.push_back(run);
 							firstRunsInLines.push_back(boost::size(runs));
 						}

@@ -46,15 +46,15 @@ namespace ascension {
 					Scalar startInRun = currentRun.hitToLogicalPosition(TextHit<>::leading(boost::const_begin(boost::get(subrange)) - boost::const_begin(range)));
 					Scalar endInRun = currentRun.hitToLogicalPosition(TextHit<>::trailing(boost::const_end(boost::get(subrange)) - boost::const_begin(range)));
 					if(currentRun.direction() == presentation::RIGHT_TO_LEFT) {
-						const Scalar runMeasure = measure(currentRun);
+						const Scalar runMeasure = boost::size(measure(currentRun));
 						startInRun = runMeasure - startInRun;
 						endInRun = runMeasure - endInRun;
 					}
 					startInRun += allocationStartOffset;
 					endInRun += allocationStartOffset;
 					assert(startInRun <= endInRun);
-					const Scalar startOffset = (currentRun.direction() == layoutDirection_) ? startInRun : allocationMeasure(currentRun) - endInRun;
-					const Scalar endOffset = (currentRun.direction() == layoutDirection_) ? endInRun : allocationMeasure(currentRun) - startInRun;
+					const Scalar startOffset = (currentRun.direction() == layoutDirection_) ? startInRun : boost::size(allocationMeasure(currentRun)) - endInRun;
+					const Scalar endOffset = (currentRun.direction() == layoutDirection_) ? endInRun : boost::size(allocationMeasure(currentRun)) - startInRun;
 					assert(startOffset <= endOffset);
 					return boost::irange(currentRunAllocationStartEdge_ + startOffset, currentRunAllocationStartEdge_ + endOffset);
 				}
@@ -70,9 +70,9 @@ namespace ascension {
 						if(sd == Direction::FORWARD) {
 							if(initializing && overlaps(boost::make_iterator_range((*nextRun)->characterRange()), boost::make_iterator_range(effectiveCharacterRange())))
 								break;
-							nextIpd += allocationMeasure(**nextRun);
+							nextIpd += boost::size(allocationMeasure(**nextRun));
 						} else {
-							nextIpd -= allocationMeasure(**nextRun);
+							nextIpd -= boost::size(allocationMeasure(**nextRun));
 							if(initializing && overlaps(boost::make_iterator_range((*nextRun)->characterRange()), boost::make_iterator_range(effectiveCharacterRange())))
 								break;
 						}
