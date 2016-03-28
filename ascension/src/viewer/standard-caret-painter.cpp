@@ -58,8 +58,11 @@ namespace ascension {
 				logicalShape.inlineEnd() = logicalShape.inlineStart() + advance;
 			}
 			graphics::Rectangle box;
-			boost::geometry::assign(box,
-				graphics::geometry::make<graphics::Rectangle>(presentation::mapFlowRelativeToPhysical(writingMode, logicalShape)));
+			{
+				graphics::PhysicalFourSides<graphics::Scalar> temp;
+				presentation::mapDimensions(writingMode, presentation::_from = logicalShape, presentation::_to = temp);
+				boost::geometry::assign(box, graphics::geometry::make<graphics::Rectangle>(temp));
+			}
 			graphics::geometry::translate((
 				graphics::geometry::_to = box, graphics::geometry::_from = box,
 				graphics::geometry::_dx = graphics::geometry::x(alignmentPoint), graphics::geometry::_dy = graphics::geometry::y(alignmentPoint)));

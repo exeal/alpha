@@ -39,9 +39,9 @@ namespace ascension {
 				/// 'line-right' means nominally the side from which RTL text would start.
 				LINE_RIGHT,
 				/// 'line-over' is an alias of 'over'.
-				LINE_OVER,
+				LINE_OVER = OVER,
 				/// 'line-under' is an alias of 'under'.
-				LINE_UNDER
+				LINE_UNDER = UNDER
 			ASCENSION_SCOPED_ENUM_DECLARE_END(LineRelativeDirection)
 
 			/**
@@ -116,7 +116,7 @@ namespace ascension {
 					return *this;
 				}
 				/// Compound-subtract operator calls same operators of @c T for @c #u and @c #v.
-				PhysicalTwoAxes& operator-=(const PhysicalTwoAxes<T>& other) {
+				LineRelativePoint& operator-=(const PhysicalTwoAxes<T>& other) {
 					u() -= other.u();
 					v() -= other.v();
 					return *this;

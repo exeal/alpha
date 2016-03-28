@@ -18,10 +18,18 @@
 #include <ascension/graphics/font/line-relative-directions-dimensions.hpp>
 #include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <ascension/presentation/writing-mode.hpp>	// WritingMode, ...
+#include <boost/parameter/name.hpp>
+#include <boost/parameter/preprocessor.hpp>
 #include <type_traits>
 
 namespace ascension {
 	namespace presentation {
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+		BOOST_PARAMETER_NAME(writingMode)
+		BOOST_PARAMETER_NAME(from)
+		BOOST_PARAMETER_NAME(to)
+#endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+
 		static_assert(
 			static_cast<int>(graphics::font::LineRelativeDirection::OVER) == 0
 			&& static_cast<int>(graphics::font::LineRelativeDirection::UNDER) == 1
@@ -148,180 +156,137 @@ namespace ascension {
 		}
 		/// @}
 
-		/// @defgroup abstract_physical_axes Abstract and Physical Axes Mappings
-		/// @brief Free functions map between abstract and physical axes.
-		/// @note These mappings are not described in "W3C CSS Writing Modes Level 3". Any mappings are performed based
-		///       on the neutral origin (0, 0) which is a both abstract and physical point.
-		/// @{
-		/**
-		 * Maps flow-relative axes into corresponding physical one.
-		 * @tparam T An arithmetic type
-		 * @param writingMode The writing mode
-		 * @param from The flow-relative axes to map
-		 * @return The mapped physical axes
-		 * @throw UnknownValueException @a writingMode or @a from is invalid
-		 * @see mapPhysicalToFlowRelative
-		 */
-		template<typename T>
-		inline graphics::PhysicalTwoAxes<T> mapFlowRelativeToPhysical(const WritingMode& writingMode,
-				const FlowRelativeTwoAxes<T>& from, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr) {
-			switch(writingMode.blockFlowDirection) {
-				case HORIZONTAL_TB:
-					return graphics::PhysicalTwoAxes<T>(
-						graphics::_x = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.ipd() : -from.ipd(),
-						graphics::_y = from.bpd()
-					);
-				case VERTICAL_RL:
-				case VERTICAL_LR: {
-					bool ttb = writingMode.inlineFlowDirection == LEFT_TO_RIGHT;
-					ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
-					return graphics::PhysicalTwoAxes<T>(
-						graphics::_x = (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.bpd() : +from.bpd(),
-						graphics::_y = ttb ? +from.ipd() : -from.ipd()
-					);
+
+		namespace detail {
+			namespace dispatch {
+				template<typename T>
+				inline void mapDimensions(const WritingMode& writingMode, const FlowRelativeTwoAxes<T>& from, graphics::PhysicalTwoAxes<T>& to, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr) {
+					switch(writingMode.blockFlowDirection) {
+						case HORIZONTAL_TB:
+							to.x() = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.ipd() : -from.ipd();
+							to.y() = from.bpd();
+							break;
+						case VERTICAL_RL:
+						case VERTICAL_LR: {
+							bool ttb = writingMode.inlineFlowDirection == LEFT_TO_RIGHT;
+							ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
+							to.x() = (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.bpd() : +from.bpd();
+							to.y() = ttb ? +from.ipd() : -from.ipd();
+							break;
+						}
+						default:
+							throw UnknownValueException("writingMode.blockFlowDirection");
+					}
 				}
-				default:
-					throw UnknownValueException("writingMode.blockFlowDirection");
+
+				template<typename T>
+				inline void mapDimensions(const WritingMode& writingMode, const graphics::PhysicalTwoAxes<T>& from, FlowRelativeTwoAxes<T>& to, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr) {
+					switch(writingMode.blockFlowDirection) {
+						case HORIZONTAL_TB:
+							to.ipd() = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.x() : -from.x();
+							to.bpd() = from.y();
+							break;
+						case VERTICAL_RL:
+						case VERTICAL_LR: {
+							bool ttb = writingMode.inlineFlowDirection == LEFT_TO_RIGHT;
+							ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
+							to.ipd() = ttb ? +from.y() : -from.y();
+							to.bpd() = (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.x() : +from.x();
+							break;
+						}
+						default:
+							throw UnknownValueException("writingMode.blockFlowDirection");
+					}
+				}
+
+				template<typename T>
+				inline void mapDimensions(const WritingMode& writingMode, const FlowRelativeFourSides<T>& from, graphics::PhysicalFourSides<T>& to) {
+					const bool ltr = writingMode.blockFlowDirection == LEFT_TO_RIGHT;
+					if(isHorizontal(writingMode.blockFlowDirection))
+						to = graphics::PhysicalFourSides<T>(
+							graphics::_top = from.blockStart(), graphics::_right = ltr ? from.inlineEnd() : from.inlineStart(),
+							graphics::_bottom = from.blockEnd(), graphics::_left = ltr ? from.inlineStart() : from.inlineEnd());
+					else {
+						const bool verticalRl = writingMode.blockFlowDirection == VERTICAL_RL;
+						bool ttb = ltr;
+						if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
+							ttb = !ttb;
+						to = graphics::PhysicalFourSides<T>(
+							graphics::_top = ttb ? from.inlineStart() : from.inlineEnd(), graphics::_right = verticalRl ? from.blockStart() : from.blockEnd(),
+							graphics::_bottom = ttb ? from.inlineEnd() : from.inlineStart(), graphics::_left = verticalRl ? from.blockEnd() : from.blockStart());
+					}
+				}
+
+				template<typename T>
+				inline void mapDimensions(const WritingMode& writingMode, const graphics::font::LineRelativeFourSides<T>& from, graphics::PhysicalFourSides<T>& to) {
+					using namespace graphics;
+					if(isHorizontal(writingMode.blockFlowDirection))
+						to = PhysicalFourSides<T>(_top = from.over(), _right = from.lineRight(), _bottom = from.under(), _left = from.lineLeft());
+					else if(resolveTextOrientation(writingMode) != SIDEWAYS_LEFT)
+						to = PhysicalFourSides<T>(_top = from.lineLeft(), _right = from.over(), _bottom = from.lineRight(), _left = from.under());
+					else
+						to = PhysicalFourSides<T>(_top = from.lineRight(), _right = from.under(), _bottom = from.lineLeft(), _left = from.over());
+				}
+
+				template<typename T>
+				inline void mapDimensions(const WritingMode& writingMode, const graphics::PhysicalFourSides<T>& from, FlowRelativeFourSides<T>& to) {
+					const bool ltr = writingMode.blockFlowDirection == LEFT_TO_RIGHT;
+					if(isHorizontal(writingMode.blockFlowDirection))
+						to = FlowRelativeFourSides<T>(
+							_blockStart = from.top(), _blockEnd = from.bottom(),
+							_inlineStart = ltr ? from.left() : from.right(), _inlineEnd = ltr ? from.right() : from.left());
+					else {
+						const bool verticalRl = writingMode.blockFlowDirection == VERTICAL_RL;
+						bool ttb = ltr;
+						if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
+							ttb = !ttb;
+						to = FlowRelativeFourSides<T>(
+							_blockStart = verticalRl ? from.right() : from.left(), _blockEnd = verticalRl ? from.left() : from.right(),
+							_inlineStart = ttb ? from.top() : from.bottom(), _inlineEnd = ttb ? from.bottom() : from.top());
+					}
+				}
+
+				template<typename T>
+				inline void mapDimensions(const WritingMode& writingMode, const graphics::PhysicalFourSides<T>& from, graphics::font::LineRelativeFourSides<T>& to) {
+					using namespace graphics::font;
+					if(isHorizontal(writingMode.blockFlowDirection))
+						to = LineRelativeFourSides<T>(_over = from.top(), _under = from.bottom(), _lineLeft = from.left(), _lineRight = from.right());
+					else if(resolveTextOrientation(writingMode) != SIDEWAYS_LEFT)
+						to = LineRelativeFourSides<T>(_over = from.right(), _under = from.left(), _lineLeft = from.top(), _lineRight = from.bottom());
+					else
+						to = LineRelativeFourSides<T>(_over = from.left(), _under = from.right(), _lineLeft = from.bottom(), _lineRight = from.top());
+				}
 			}
 		}
 
-		/**
-		 * Maps physical axes into corresponding flow-relative one.
-		 * @tparam T An arithmetic type
-		 * @param writingMode The writing mode
-		 * @param from The physical axes to map
-		 * @return The mapped flow-relative axes
-		 * @throw UnknownValueException @a writingMode or @a from is invalid
-		 * @see mapFlowRelativeToPhysical
-		 */
-		template<typename T>
-		inline FlowRelativeTwoAxes<T> mapPhysicalToFlowRelative(const WritingMode& writingMode,
-				const graphics::PhysicalTwoAxes<T>& from, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr) {
-			switch(writingMode.blockFlowDirection) {
-				case HORIZONTAL_TB:
-					return FlowRelativeTwoAxes<T>(
-						_ipd = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.x() : -from.x(),
-						_bpd = from.y()
-					);
-				case VERTICAL_RL:
-				case VERTICAL_LR: {
-					bool ttb = writingMode.inlineFlowDirection == LEFT_TO_RIGHT;
-					ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
-					return FlowRelativeTwoAxes<T>(
-						_ipd = ttb ? +from.y() : -from.y(),
-						_bpd = (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.x() : +from.x()
-					);
-				}
-				default:
-					throw UnknownValueException("writingMode.blockFlowDirection");
-			}
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+		BOOST_PARAMETER_FUNCTION(
+			(void), mapDimensions, tag,
+			(required
+				(writingMode, *)
+				(from, *)
+				(out(to), *))) {
+			typedef std::decay<decltype(from)>::type From;
+			typedef std::decay<decltype(to)>::type To;
+			detail::dispatch::mapDimensions(writingMode, from, to);
 		}
-		/// @}
+#else
+		/**
+		 * Maps between abstract and physical dimensions.
+		 * @param writingMode The writing mode
+		 * @param from The source dimensions
+		 * @param[out] to The destination dimensions
+		 * @throw UnknownValueException @a writingMode or @a from is invalid
+		 * @note Mappings about twoaxes are not described in "W3C CSS Writing Modes Level 3". Any mappings are
+		 *       performed based on the neutral origin (0, 0) which is a both abstract and physical point.
+		 */
+		template<typename From, typename To>
+		void mapDimensions(const WritingMode& writingMode, const From& from, To& to);
+#endif
 
 		/// @defgroup abstract_physical_bounds Abstract and Physical Bounds Mappings
 		/// @brief Free functions map between abstract and physical bounds.
-		/// @{ 
-		/**
-		 * Maps flow-relative bounds into corresponding physical one.
-		 * @param writingMode The writing mode
-		 * @param from The flow-relative bounds to map
-		 * @return The mapped physical bounds
-		 * @throw UnknownValueException @a writingMode or @a from is invalid
-		 * @see mapPhysicalToFlowRelative
-		 */
-		template<typename T>
-		inline graphics::PhysicalFourSides<T> mapFlowRelativeToPhysical(const WritingMode& writingMode, const FlowRelativeFourSides<T>& from) {
-			const bool ltr = writingMode.blockFlowDirection == LEFT_TO_RIGHT;
-			if(isHorizontal(writingMode.blockFlowDirection))
-				return graphics::PhysicalFourSides<T>(
-					graphics::_top = from.blockStart(),
-					graphics::_right = ltr ? from.inlineEnd() : from.inlineStart(),
-					graphics::_bottom = from.blockEnd(),
-					graphics::_left = ltr ? from.inlineStart() : from.inlineEnd()
-				);
-			else {
-				const bool verticalRl = writingMode.blockFlowDirection == VERTICAL_RL;
-				bool ttb = ltr;
-				if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
-					ttb = !ttb;
-				return graphics::PhysicalFourSides<T>(
-					graphics::_top = ttb ? from.inlineStart() : from.inlineEnd(),
-					graphics::_right = verticalRl ? from.blockStart() : from.blockEnd(),
-					graphics::_bottom = ttb ? from.inlineEnd() : from.inlineStart(),
-					graphics::_left = verticalRl ? from.blockEnd() : from.blockStart()
-				);
-			}
-		}
-
-		/**
-		 * Maps line-relative bounds into corresponding physical one.
-		 * @param writingMode The writing mode
-		 * @param from The line-relative bounds to map
-		 * @return The mapped physical bounds
-		 * @throw UnknownValueException @a writingMode or @a from is invalid
-		 * @see mapPhysicalToFlowRelative
-		 */
-		template<typename T>
-		inline graphics::PhysicalFourSides<T> mapLineRelativeToPhysical(const WritingMode& writingMode, const graphics::font::LineRelativeFourSides<T>& from) {
-			using namespace graphics;
-			if(isHorizontal(writingMode.blockFlowDirection))
-				return PhysicalFourSides<T>(_top = from.over(), _right = from.lineRight(), _bottom = from.under(), _left = from.lineLeft());
-			else if(resolveTextOrientation(writingMode) != SIDEWAYS_LEFT)
-				return PhysicalFourSides<T>(_top = from.lineLeft(), _right = from.over(), _bottom = from.lineRight(), _left = from.under());
-			else
-				return PhysicalFourSides<T>(_top = from.lineRight(), _right = from.under(), _bottom = from.lineLeft(), _left = from.over());
-		}
-
-		/**
-		 * Maps physical bounds into corresponding flow-relative one.
-		 * @param writingMode The writing mode
-		 * @param from The physical bounds to map
-		 * @return The mapped flow-relative bounds
-		 * @throw UnknownValueException @a writingMode or @a from is invalid
-		 * @see mapFlowRelativeToPhysical
-		 */
-		template<typename T>
-		inline FlowRelativeFourSides<T> mapPhysicalToFlowRelative(const WritingMode& writingMode, const graphics::PhysicalFourSides<T>& from) {
-			const bool ltr = writingMode.blockFlowDirection == LEFT_TO_RIGHT;
-			if(isHorizontal(writingMode.blockFlowDirection))
-				return FlowRelativeFourSides<T>(
-					_blockStart = from.top(),
-					_blockEnd = from.bottom(),
-					_inlineStart = ltr ? from.left() : from.right(),
-					_inlineEnd = ltr ? from.right() : from.left()
-				);
-			else {
-				const bool verticalRl = writingMode.blockFlowDirection == VERTICAL_RL;
-				bool ttb = ltr;
-				if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
-					ttb = !ttb;
-				return FlowRelativeFourSides<T>(
-					_blockStart = verticalRl ? from.right() : from.left(),
-					_blockEnd = verticalRl ? from.left() : from.right(),
-					_inlineStart = ttb ? from.top() : from.bottom(),
-					_inlineEnd = ttb ? from.bottom() : from.top()
-				);
-			}
-		}
-
-		/**
-		 * Maps physical bounds into corresponding line-relative one.
-		 * @param writingMode The writing mode
-		 * @param from The physical bounds to map
-		 * @return The mapped line-relative bounds
-		 * @throw UnknownValueException @a writingMode or @a from is invalid
-		 * @see mapLineRelativeToPhysical
-		 */
-		template<typename T>
-		inline graphics::font::LineRelativeFourSides<T> mapPhysicalToLineRelative(const WritingMode& writingMode, const graphics::PhysicalFourSides<T>& from) {
-			using namespace graphics::font;
-			if(isHorizontal(writingMode.blockFlowDirection))
-				return LineRelativeFourSides<T>(_over = from.top(), _under = from.bottom(), _lineLeft = from.left(), _lineRight = from.right());
-			else if(resolveTextOrientation(writingMode) != SIDEWAYS_LEFT)
-				return LineRelativeFourSides<T>(_over = from.right(), _under = from.left(), _lineLeft = from.top(), _lineRight = from.bottom());
-			else
-				return LineRelativeFourSides<T>(_over = from.left(), _under = from.right(), _lineLeft = from.bottom(), _lineRight = from.top());
-		}
+		/// @{
 
 		/**
 		 * 

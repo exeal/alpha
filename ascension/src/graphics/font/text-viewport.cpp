@@ -152,7 +152,12 @@ namespace ascension {
 						presentation::_ipd = renderer.lineStartEdge(line) - viewport.scrollPositions().ipd(), presentation::_bpd = static_cast<Scalar>(0));
 
 					const presentation::WritingMode wm((layout != nullptr) ? writingMode(*layout) : renderer.presentation().computeWritingMode());
-					Point result(geometry::make<Point>(presentation::mapFlowRelativeToPhysical(wm, lineStart)));
+					Point result;
+					{
+						PhysicalTwoAxes<Scalar> temp;
+						presentation::mapDimensions(wm, presentation::_from = lineStart, presentation::_to = temp);
+						boost::geometry::assign(result, geometry::make<Point>(temp));
+					}
 
 					switch(renderer.lineRelativeAlignment()) {
 						case TextRenderer::LEFT:
@@ -293,7 +298,8 @@ namespace ascension {
 					TextHit<>::leading(kernel::offsetInLine(position.characterIndex())) : TextHit<>::trailing(kernel::offsetInLine(position.characterIndex())));
 				presentation::FlowRelativeTwoAxes<Scalar> abstractOffset(layout->hitToPoint(hitInLine));
 				abstractOffset.bpd() = 0;	// because subline is already known
-				const PhysicalTwoAxes<Scalar> physicalOffset(presentation::mapFlowRelativeToPhysical(writingMode(*layout), abstractOffset));
+				PhysicalTwoAxes<Scalar> physicalOffset;
+				presentation::mapDimensions(writingMode(*layout), presentation::_from = abstractOffset, presentation::_to = physicalOffset);
 
 				// compute the result
 				geometry::translate((geometry::_from = p, geometry::_to = p, geometry::_dx = physicalOffset.x(), geometry::_dy = physicalOffset.y()));
@@ -380,8 +386,8 @@ namespace ascension {
 			 * @param pages The number of pages to scroll
 			 */
 			void scrollPage(TextViewport& viewport, const PhysicalTwoAxes<TextViewport::SignedScrollOffset>& pages) {
-				presentation::FlowRelativeTwoAxes<TextViewport::SignedScrollOffset> delta(
-					mapPhysicalToFlowRelative(viewport.textRenderer().presentation().computeWritingMode(), pages));
+				presentation::FlowRelativeTwoAxes<TextViewport::SignedScrollOffset> delta;
+				presentation::mapDimensions(viewport.textRenderer().presentation().computeWritingMode(), presentation::_from = pages, presentation::_to = delta);
 				viewport.scrollBlockFlowPage(delta.bpd());
 				delta.bpd() = 0;
 				delta.ipd() *= static_cast<TextViewport::ScrollOffset>(pageSize<presentation::ReadingDirection>(viewport));
@@ -442,7 +448,9 @@ namespace ascension {
 						: geometry::make<Point>((
 							geometry::_x = geometry::x(point) - geometry::x(baseline.positionInViewport()),
 							geometry::_y = mapViewportIpdToLineLayout(viewport, *layout, geometry::y(point)))));
-					TextHit<> hitInLine(layout->hitTestCharacter(mapPhysicalToFlowRelative(wm, lineLocalPoint), &outside));
+					presentation::FlowRelativeTwoAxes<Scalar> abstractLineLocalPoint;
+					presentation::mapDimensions(wm, presentation::_from = lineLocalPoint, presentation::_to = abstractLineLocalPoint);
+					TextHit<> hitInLine(layout->hitTestCharacter(abstractLineLocalPoint, &outside));
 					if(abortNoCharacter && outside)
 						return boost::none;
 
@@ -1037,7 +1045,9 @@ namespace ascension {
 			 * @param offsets The offsets to scroll in physical dimensions in user units
 			 */
 			void TextViewport::scroll(const PhysicalTwoAxes<SignedScrollOffset>& offsets) {
-				return scroll(mapPhysicalToFlowRelative(textRenderer().presentation().computeWritingMode(), offsets));
+				presentation::FlowRelativeTwoAxes<SignedScrollOffset> abstractOffsets;
+				presentation::mapDimensions(textRenderer().presentation().computeWritingMode(), presentation::_from = offsets, presentation::_to = abstractOffsets);
+				return scroll(abstractOffsets);
 			}
 
 			/**
@@ -1053,7 +1063,8 @@ namespace ascension {
 				if(pages > 0) {
 					const TextViewportNotificationLocker notificationLockGuard(this);
 					for(; pages > 0 && scrollPositions().bpd() < rangeBeforeScroll.back(); --pages) {
-						const presentation::FlowRelativeTwoAxes<SignedScrollOffset> delta(presentation::_bpd = pageSize<presentation::BlockFlowDirection>(*this), presentation::_ipd = 0);
+						const presentation::FlowRelativeTwoAxes<SignedScrollOffset> delta(
+							presentation::_bpd = static_cast<SignedScrollOffset>(pageSize<presentation::BlockFlowDirection>(*this)), presentation::_ipd = 0);
 						scroll(delta);
 					}
 				} else if(pages < 0) {

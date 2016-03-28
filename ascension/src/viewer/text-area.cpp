@@ -654,8 +654,9 @@ namespace ascension {
 
 			if(abstractScrollOffsetInPixels.bpd() != 0 || abstractScrollOffsetInPixels.ipd() != 0) {
 				// 1-3. calculate physical offsets
-				const auto scrollOffsetsInPixels(presentation::mapFlowRelativeToPhysical(
-					textViewer().presentation().computeWritingMode(), abstractScrollOffsetInPixels));
+				graphics::PhysicalTwoAxes<std::int32_t> scrollOffsetsInPixels;
+				presentation::mapDimensions(textViewer().presentation().computeWritingMode(),
+					presentation::_from = abstractScrollOffsetInPixels, presentation::_to = scrollOffsetsInPixels);
 
 				// 2. scroll the graphics device
 				const graphics::Rectangle boundsToScroll(contentRectangle());
@@ -674,7 +675,7 @@ namespace ascension {
 #else
 					Cairo::Region regionToScroll(::cairo_region_create_rectangle(&graphics::toNative<Cairo::RectangleInt>(boundsToScroll)), false);
 					::gdk_window_move_region(textViewer().get_window()->gobj(), regionToScroll.cobj(),
-						graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels));
+						static_cast<int>(graphics::geometry::x(scrollOffsetsInPixels)), static_cast<int>(graphics::geometry::y(scrollOffsetsInPixels)));
 #endif
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)

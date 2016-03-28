@@ -43,12 +43,14 @@ namespace ascension {
 				else
 					trailing = layout->hitToPoint(graphics::font::TextHit<>::trailing(kernel::offsetInLine(caret))).ipd() - leading.ipd();
 
-				return graphics::geometry::make<graphics::Rectangle>(
-					presentation::mapFlowRelativeToPhysical(
-						graphics::font::writingMode(*layout),
-						presentation::FlowRelativeFourSides<graphics::Scalar>(
-							presentation::_blockStart = *boost::const_begin(extent), presentation::_blockEnd = *boost::const_end(extent),
-							presentation::_inlineStart = 0.0f, presentation::_inlineEnd = trailing)));
+				graphics::PhysicalFourSides<graphics::Scalar> temp;
+				presentation::mapDimensions(
+					graphics::font::writingMode(*layout),
+					presentation::_from = presentation::FlowRelativeFourSides<graphics::Scalar>(
+						presentation::_blockStart = *boost::const_begin(extent), presentation::_blockEnd = *boost::const_end(extent),
+						presentation::_inlineStart = 0.0f, presentation::_inlineEnd = trailing),
+					presentation::_to = temp);
+				return graphics::geometry::make<graphics::Rectangle>(temp);
 			}
 			return boost::none;
 		}

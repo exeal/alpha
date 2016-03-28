@@ -114,10 +114,12 @@ namespace ascension {
 					advance = systemDefinedCaretMeasure();
 				if(advance != boost::none) {
 					const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
-					presentation::FlowRelativeFourSides<std::int32_t> temp(
-						presentation::mapPhysicalToFlowRelative(writingMode, graphics::PhysicalFourSides<std::int32_t>(bounds)));
-					temp.end() = temp.start() + *advance;
-					boost::geometry::assign(bounds, graphics::geometry::make<graphics::Rectangle>(presentation::mapFlowRelativeToPhysical(writingMode, temp)));
+					presentation::FlowRelativeFourSides<std::int32_t> abstractBounds;
+					graphics::PhysicalFourSides<std::int32_t> physicalBounds(bounds);
+					presentation::mapDimensions(writingMode, presentation::_from = physicalBounds, presentation::_to = abstractBounds);
+					abstractBounds.end() = abstractBounds.start() + *advance;
+					presentation::mapDimensions(writingMode, presentation::_from = abstractBounds, presentation::_to = physicalBounds);
+					boost::geometry::assign(bounds, graphics::geometry::make<graphics::Rectangle>(physicalBounds));
 				}
 			} else
 				boost::geometry::assign_zero(bounds);
