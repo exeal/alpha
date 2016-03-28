@@ -169,7 +169,12 @@ namespace ascension {
 						auto range(selectedRangeOnVisualLine(caret, graphics::font::VisualLine(line, subline)));
 						if(range != boost::none) {
 							range = boost::irange(*boost::const_begin(boost::get(range)), std::min(viewer.document().lineLength(line), *boost::const_end(boost::get(range))));
-							const graphics::Rectangle sublineBounds(geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(writingMode, layout.bounds(boost::get(range)))));
+							graphics::Rectangle sublineBounds;
+							{
+								graphics::PhysicalFourSides<graphics::Scalar> temp;
+								presentation::mapDimensions(writingMode, presentation::_from = layout.bounds(boost::get(range)), presentation::_to = temp);
+								boost::geometry::assign(sublineBounds, geometry::make<graphics::Rectangle>(temp));
+							}
 							geometry::range<0>(selectionBounds) = boost::irange(
 								std::min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds)),
 								std::max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds)));
@@ -956,8 +961,8 @@ namespace ascension {
 					const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> physicalPages(
 						graphics::_x = static_cast<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::dx(input.wheelRotation())),
 						graphics::_y = static_cast<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::dy(input.wheelRotation())));
-					presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::SignedScrollOffset> flowRelativePages(
-						presentation::mapPhysicalToFlowRelative(textArea_->textRenderer().presentation().computeWritingMode(), physicalPages));
+					presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::SignedScrollOffset> flowRelativePages;
+					presentation::mapDimensions(textArea_->textRenderer().presentation().computeWritingMode(), presentation::_from = physicalPages, presentation::_to = flowRelativePages);
 					if(flowRelativePages.bpd() != 0) {
 						viewport->scrollBlockFlowPage(flowRelativePages.bpd());
 						flowRelativePages.bpd() = 0;

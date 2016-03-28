@@ -450,7 +450,12 @@ namespace ascension {
 					const presentation::FlowRelativeFourSides<Scalar> abstractLineArea(
 						presentation::_blockStart = *boost::const_begin(lineToPaint.extent), presentation::_blockEnd = *boost::const_end(lineToPaint.extent),
 						presentation::_inlineStart = std::numeric_limits<Scalar>::lowest(), presentation::_inlineEnd = std::numeric_limits<Scalar>::max());
-					auto physicalLineArea(geometry::make<Rectangle>(presentation::mapFlowRelativeToPhysical(writingMode(layout), abstractLineArea)));
+					Rectangle physicalLineArea;
+					{
+						PhysicalFourSides<Scalar> temp;
+						presentation::mapDimensions(writingMode(layout), presentation::_from = abstractLineArea, presentation::_to = temp);
+						boost::geometry::assign(physicalLineArea, geometry::make<Rectangle>(temp));
+					}
 					boost::geometry::intersection(physicalLineArea, context.boundsToPaint(), physicalLineArea);
 					// paint the background
 					boost::optional<Color> foregroundOverride, backgroundOverride;
@@ -467,12 +472,13 @@ namespace ascension {
 					context.fillRectangle(physicalLineArea);
 
 					// paint the text content
-					const graphics::PhysicalTwoAxes<graphics::Scalar> p(
-						presentation::mapFlowRelativeToPhysical(
-							writingMode(layout),
-							presentation::makeFlowRelativeTwoAxes((
-								presentation::_bpd = lineToPaint.baseline,
-								presentation::_ipd = -inlineProgressionOffsetInViewerGeometry(*viewport())))));
+					graphics::PhysicalTwoAxes<graphics::Scalar> p;
+					presentation::mapDimensions(
+						writingMode(layout),
+						presentation::_from = presentation::makeFlowRelativeTwoAxes((
+							presentation::_bpd = lineToPaint.baseline,
+							presentation::_ipd = -inlineProgressionOffsetInViewerGeometry(*viewport()))),
+						presentation::_to = p);
 					paint(layout, lineToPaint.lineNumber, context, graphics::geometry::make<graphics::Point>(p), options);
 				}
 #	ifdef _DEBUG

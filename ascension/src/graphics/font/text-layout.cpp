@@ -825,12 +825,13 @@ namespace ascension {
 								Scalar trailing = run->hitToLogicalPosition(TextHit<>::leading(*boost::const_end(boost::get(selectionInRun))));
 								leading = glyphsLeft + ltr ? leading : (boost::size(font::measure(*run)) - leading);
 								trailing = glyphsLeft + ltr ? trailing : (boost::size(font::measure(*run)) - trailing);
-								Rectangle rectangle(
-									geometry::make<Rectangle>(
-										mapLineRelativeToPhysical(wm,
-											LineRelativeFourSides<Scalar>(
-												_over = lineOver, _under = lineUnder,
-												_lineLeft = std::min(leading, trailing), _lineRight = std::max(leading, trailing)))));
+								PhysicalFourSides<Scalar> temp;
+								presentation::mapDimensions(wm,
+									presentation::_from = LineRelativeFourSides<Scalar>(
+										_over = lineOver, _under = lineUnder,
+										_lineLeft = std::min(leading, trailing), _lineRight = std::max(leading, trailing)),
+									presentation::_to = temp);
+								Rectangle rectangle(geometry::make<Rectangle>(temp));
 
 								if(bounds != boost::none)
 									boost::geometry::intersection(rectangle, boost::get(bounds), rectangle);	// clip by 'bounds'
