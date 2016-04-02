@@ -6,7 +6,6 @@
 
 #ifndef ASCENSION_RENDERING_CONTEXT_HPP
 #define ASCENSION_RENDERING_CONTEXT_HPP
-
 #include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/graphics/color.hpp>
@@ -15,11 +14,13 @@
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/geometry/affine-transform.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
+#include <ascension/graphics/geometry/named-parameters.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/geometry/rectangle.hpp>
 #include <ascension/graphics/object.hpp>
 #include <boost/geometry/algorithms/make.hpp>	// boost.geometry.make_zero
 #include <boost/optional.hpp>
+#include <boost/parameter/preprocessor.hpp>
 #include <memory>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <cairomm/context.h>
@@ -452,9 +453,17 @@ namespace ascension {
 			 * @return This object
 			 * @see #rotate, #translate, #transform, #setTransform
 			 */
-			RenderingContext2D& scale(double sx, double sy) {
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+			BOOST_PARAMETER_MEMBER_FUNCTION(
+				(RenderingContext2D&), scale, geometry::tag,
+				(required
+					(sx, (double))
+					(sy, (double)))) {
 				return transform(geometry::makeScalingTransform(geometry::_sx = sx, geometry::_sy = sy));
 			}
+#else
+			RenderingContext2D& scale(double sx, double sy);
+#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 			/**
 			 * Adds the rotation transformation described by @a angle to the transformation matrix.
 			 * @tparam DegreeOrRadian @c boost#geometry#degree or @c boost#geometry#radian
@@ -484,9 +493,17 @@ namespace ascension {
 			 * @return This object
 			 * @see #scale, #rotate, #transform, #setTransform
 			 */
-			RenderingContext2D& translate(double dx, double dy) {
-				return transform(geometry::makeTranslationTransform(geometry::_tx = dx, geometry::_ty = dy));
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+			BOOST_PARAMETER_MEMBER_FUNCTION(
+				(RenderingContext2D&), translate, geometry::tag,
+				(required
+					(tx, (double))
+					(ty, (double)))) {
+				return transform(geometry::makeTranslationTransform(geometry::_tx = tx, geometry::_ty = ty));
 			}
+#else
+			RenderingContext2D& translate(double tx, double ty);
+#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 			/**
 			 * Replaces the current transformation matrix with the result of multiplying the current transformation
 			 * matrix with the matrix described by @a matrix.

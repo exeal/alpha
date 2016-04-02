@@ -8,7 +8,7 @@
 
 #ifndef ASCENSION_GEOMETRY_NAMED_PARAMETERS_HPP
 #define ASCENSION_GEOMETRY_NAMED_PARAMETERS_HPP
-#include <boost/parameter.hpp>
+#include <boost/parameter/name.hpp>
 
 namespace ascension {
 	namespace graphics {
