@@ -1409,8 +1409,8 @@ namespace ascension {
 					const GlyphMetrics gm(glyphMetrics(index));
 					const GOFFSET& offset = glyphOffsets()[index];
 					graphics::Rectangle result;
-//					return geometry::translate(temp, Dimension(geometry::_dx = static_cast<Scalar>(originX + offset.du), geometry::_dy = static_cast<Scalar>(offset.dv)));
-					geometry::translate((geometry::_from = gm.bounds(), geometry::_to = result, geometry::_dx = static_cast<Scalar>(originX + offset.du), geometry::_dy = static_cast<Scalar>(offset.dv)));
+					geometry::translate(geometry::_from = gm.bounds(), geometry::_to = result,
+						geometry::_tx = static_cast<Scalar>(originX + offset.du), geometry::_ty = static_cast<Scalar>(offset.dv));
 					return result;
 				}
 
@@ -2819,11 +2819,11 @@ namespace ascension {
 				boost::integer_range<Index> linesToPaint(0, numberOfLines());
 				{
 					graphics::Rectangle boundsToPaint;
-					geometry::translate((
+					geometry::translate(
 						geometry::_from = context.boundsToPaint(), geometry::_to = boundsToPaint,
-						geometry::_dx = -geometry::x(origin), geometry::_dy = -geometry::y(origin)));
-					const presentation::FlowRelativeFourSides<Scalar> abstractBoundsToPaint(	// relative to the alignment point of this layout
-						presentation::mapPhysicalToFlowRelative<Scalar>(wm, PhysicalFourSides<Scalar>(boundsToPaint)));
+						geometry::_tx = -geometry::x(origin), geometry::_ty = -geometry::y(origin));
+					presentation::FlowRelativeFourSides<Scalar> abstractBoundsToPaint;	// relative to the alignment point of this layout
+					presentation::mapDimensions(wm, presentation::_from = PhysicalFourSides<Scalar>(boundsToPaint), presentation::_to = abstractBoundsToPaint);
 					for(LineMetricsIterator line(*this, linesToPaint.front()); line.line() != *boost::const_end(linesToPaint); ++line) {
 						const Scalar bpd = line.baselineOffset();
 						const Scalar lineBeforeEdge = bpd - line.ascent();
@@ -2979,7 +2979,7 @@ namespace ascension {
 							PhysicalFourSides<const ActualBorderSide*> physicalBorders;
 							for(auto border(std::begin(runStyle.borders)), e(std::end(runStyle.borders)); border != e; ++border) {
 								const presentation::FlowRelativeDirection direction = static_cast<presentation::FlowRelativeDirection>(border - std::begin(runStyle.borders));
-								physicalBorders[mapFlowRelativeToPhysical(writingMode(*this), direction)] = &*border;
+								physicalBorders[mapDirection(writingMode(*this), direction)] = &*border;
 							}
 							for(auto border(std::begin(physicalBorders)), e(std::end(physicalBorders)); border != e; ++border) {
 								if(!(*border)->hasVisibleStyle()) {
