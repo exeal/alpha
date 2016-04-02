@@ -60,7 +60,7 @@ namespace ascension {
 		 * @throw UnknownValueException @a writingMode or @a from is invalid
 		 * @see mapPhysicalToFlowRelative
 		 */
-		inline graphics::PhysicalDirection mapFlowRelativeToPhysical(const WritingMode& writingMode, FlowRelativeDirection from) {
+		inline graphics::PhysicalDirection mapDirection(const WritingMode& writingMode, FlowRelativeDirection from) {
 			using graphics::PhysicalDirection;
 			static const PhysicalDirection
 				horizontalMappings[]  = {PhysicalDirection::TOP, PhysicalDirection::BOTTOM, PhysicalDirection::LEFT, PhysicalDirection::RIGHT},
@@ -89,7 +89,7 @@ namespace ascension {
 		 * @throw UnknownValueException @a writingMode or @a from is invalid
 		 * @see mapPhysicalToLineRelative
 		 */
-		inline graphics::PhysicalDirection mapLineRelativeToPhysical(const WritingMode& writingMode, graphics::font::LineRelativeDirection from) {
+		inline graphics::PhysicalDirection mapDirection(const WritingMode& writingMode, graphics::font::LineRelativeDirection from) {
 			using graphics::PhysicalDirection;
 			static const PhysicalDirection
 				horizontalMappings[] = {PhysicalDirection::TOP, PhysicalDirection::BOTTOM, PhysicalDirection::LEFT, PhysicalDirection::RIGHT},
@@ -102,57 +102,59 @@ namespace ascension {
 				return verticalMappings[boost::underlying_cast<std::size_t>((resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? from : !from)];
 		}
 
-		/**
-		 * Maps physical direction into corresponding flow-relative one.
-		 * @param writingMode The writing mode
-		 * @param from The physical direction to map
-		 * @return The mapped flow-relative direction
-		 * @throw UnknownValueException @a writingMode or @a from is invalid
-		 * @see mapFlowRelativeToPhysical
-		 */
-		inline FlowRelativeDirection mapPhysicalToFlowRelative(const WritingMode& writingMode, graphics::PhysicalDirection from) {
-			static const FlowRelativeDirection
-				horizontalMappings[] = {FlowRelativeDirection::BEFORE, FlowRelativeDirection::END, FlowRelativeDirection::AFTER, FlowRelativeDirection::START},
-				verticalMappings[] = {FlowRelativeDirection::START, FlowRelativeDirection::BEFORE, FlowRelativeDirection::END, FlowRelativeDirection::AFTER};
-			if(boost::native_value(from) < 0 || boost::underlying_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
-				throw UnknownValueException("from");
-			if(isHorizontal(writingMode.blockFlowDirection)) {	// this may throw UnknownValueException
-				if(writingMode.inlineFlowDirection == RIGHT_TO_LEFT && (from == graphics::PhysicalDirection::LEFT || from == graphics::PhysicalDirection::RIGHT))
-					from = !from;
-				return horizontalMappings[boost::underlying_cast<std::size_t>(from)];
-			} else {
-				if(from == graphics::PhysicalDirection::LEFT || from == graphics::PhysicalDirection::RIGHT) {
-					if(writingMode.blockFlowDirection == VERTICAL_LR)
-						from = !from;
-				} else {
-					if(writingMode.inlineFlowDirection == RIGHT_TO_LEFT)
-						from = !from;
-					if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
-						from = !from;
+		namespace detail {
+			namespace dispatch {
+				inline FlowRelativeDirection mapDirection(const WritingMode& writingMode, graphics::PhysicalDirection from, const FlowRelativeDirection*) {
+					static const FlowRelativeDirection
+						horizontalMappings[] = {FlowRelativeDirection::BEFORE, FlowRelativeDirection::END, FlowRelativeDirection::AFTER, FlowRelativeDirection::START},
+						verticalMappings[] = {FlowRelativeDirection::START, FlowRelativeDirection::BEFORE, FlowRelativeDirection::END, FlowRelativeDirection::AFTER};
+					if(boost::native_value(from) < 0 || boost::underlying_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
+						throw UnknownValueException("from");
+					if(isHorizontal(writingMode.blockFlowDirection)) {	// this may throw UnknownValueException
+						if(writingMode.inlineFlowDirection == RIGHT_TO_LEFT && (from == graphics::PhysicalDirection::LEFT || from == graphics::PhysicalDirection::RIGHT))
+							from = !from;
+						return horizontalMappings[boost::underlying_cast<std::size_t>(from)];
+					} else {
+						if(from == graphics::PhysicalDirection::LEFT || from == graphics::PhysicalDirection::RIGHT) {
+							if(writingMode.blockFlowDirection == VERTICAL_LR)
+								from = !from;
+						} else {
+							if(writingMode.inlineFlowDirection == RIGHT_TO_LEFT)
+								from = !from;
+							if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
+								from = !from;
+						}
+						return verticalMappings[boost::underlying_cast<std::size_t>(from)];
+					}
 				}
-				return verticalMappings[boost::underlying_cast<std::size_t>(from)];
+
+				inline graphics::font::LineRelativeDirection mapDirection(const WritingMode& writingMode, graphics::PhysicalDirection from, const graphics::font::LineRelativeDirection*) {
+					using graphics::font::LineRelativeDirection;
+					static const LineRelativeDirection
+						horizontalMappings[] = {LineRelativeDirection::OVER, LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::UNDER, LineRelativeDirection::LINE_LEFT},
+						verticalMappings[] = {LineRelativeDirection::LINE_LEFT, LineRelativeDirection::OVER, LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::UNDER};
+					if(boost::native_value(from) < 0 || boost::underlying_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
+						throw UnknownValueException("from");
+					if(isHorizontal(writingMode.blockFlowDirection))	// this may throw UnknownValueException
+						return horizontalMappings[boost::underlying_cast<std::size_t>(from)];
+					else
+						return verticalMappings[boost::underlying_cast<std::size_t>((resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? from : !from)];
+				}
 			}
 		}
 
 		/**
-		 * Maps physical direction into corresponding line-relative one.
+		 * Maps physical direction into corresponding abstract one.
+		 * @tparam To The return type
 		 * @param writingMode The writing mode
 		 * @param from The physical direction to map
-		 * @return The mapped line-relative direction
+		 * @return The mapped abstract direction
 		 * @throw UnknownValueException @a writingMode or @a from is invalid
-		 * @see mapLineRelativeToPhysical
+		 * @see mapDimensions
 		 */
-		inline graphics::font::LineRelativeDirection mapPhysicalToLineRelative(const WritingMode& writingMode, graphics::PhysicalDirection from) {
-			using graphics::font::LineRelativeDirection;
-			static const LineRelativeDirection
-				horizontalMappings[] = {LineRelativeDirection::OVER, LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::UNDER, LineRelativeDirection::LINE_LEFT},
-				verticalMappings[] = {LineRelativeDirection::LINE_LEFT, LineRelativeDirection::OVER, LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::UNDER};
-			if(boost::native_value(from) < 0 || boost::underlying_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
-				throw UnknownValueException("from");
-			if(isHorizontal(writingMode.blockFlowDirection))	// this may throw UnknownValueException
-				return horizontalMappings[boost::underlying_cast<std::size_t>(from)];
-			else
-				return verticalMappings[boost::underlying_cast<std::size_t>((resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? from : !from)];
+		template<typename To>
+		inline To mapDirection(const WritingMode& writingMode, graphics::PhysicalDirection from) {
+			return detail::dispatch::mapDirection(writingMode, from, static_cast<To*>(nullptr));
 		}
 		/// @}
 
@@ -180,6 +182,25 @@ namespace ascension {
 				}
 
 				template<typename T>
+				inline void mapDimensions(const WritingMode& writingMode, const graphics::font::LineRelativePoint<T>& from, graphics::PhysicalTwoAxes<T>& to, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr) {
+					switch(writingMode.blockFlowDirection) {
+						case HORIZONTAL_TB:
+							to.x() = from.u();
+							to.y() = from.v();
+							break;
+						case VERTICAL_RL:
+						case VERTICAL_LR: {
+							const bool sidewaysLr = resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
+							to.x() = !sidewaysLr ? -from.v() : +from.v();
+							to.y() = !sidewaysLr ? +from.u() : -from.v();
+							break;
+						}
+						default:
+							throw UnknownValueException("writingMode.blockFlowDirection");
+					}
+				}
+
+				template<typename T>
 				inline void mapDimensions(const WritingMode& writingMode, const graphics::PhysicalTwoAxes<T>& from, FlowRelativeTwoAxes<T>& to, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr) {
 					switch(writingMode.blockFlowDirection) {
 						case HORIZONTAL_TB:
@@ -192,6 +213,25 @@ namespace ascension {
 							ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
 							to.ipd() = ttb ? +from.y() : -from.y();
 							to.bpd() = (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.x() : +from.x();
+							break;
+						}
+						default:
+							throw UnknownValueException("writingMode.blockFlowDirection");
+					}
+				}
+
+				template<typename T>
+				inline void mapDimensions(const WritingMode& writingMode, const graphics::PhysicalTwoAxes<T>& from, graphics::font::LineRelativePoint<T>& to, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr) {
+					switch(writingMode.blockFlowDirection) {
+						case HORIZONTAL_TB:
+							to.u() = from.x();
+							to.v() = from.y();
+							break;
+						case VERTICAL_RL:
+						case VERTICAL_LR: {
+							const bool sidewaysLr = resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
+							to.u() = !sidewaysLr ? +from.y() : -from.y();
+							to.v() = !sidewaysLr ? -from.x() : +from.x();
 							break;
 						}
 						default:
