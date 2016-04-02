@@ -286,9 +286,9 @@ namespace ascension {
 				if(baseline.line() == boost::none)
 					return p;	// 'position' is outside of the viewport and can't calculate more
 				const Point lineStart(lineStartEdge(viewport, VisualLine(position.characterIndex().line, 0)));
-				geometry::translate((
+				geometry::translate(
 					geometry::_from = p, geometry::_to = p,
-					geometry::_dx = geometry::x(lineStart), geometry::_dy = geometry::y(lineStart)));
+					geometry::_tx = geometry::x(lineStart), geometry::_ty = geometry::y(lineStart));
 				const bool horizontal = isHorizontal(viewport.textRenderer().computedBlockFlowDirection());
 
 				// compute offset in the line layout
@@ -302,7 +302,7 @@ namespace ascension {
 				presentation::mapDimensions(writingMode(*layout), presentation::_from = abstractOffset, presentation::_to = physicalOffset);
 
 				// compute the result
-				geometry::translate((geometry::_from = p, geometry::_to = p, geometry::_dx = physicalOffset.x(), geometry::_dy = physicalOffset.y()));
+				geometry::translate(geometry::_from = p, geometry::_to = p, geometry::_tx = physicalOffset.x(), geometry::_ty = physicalOffset.y());
 
 				return p;
 			}

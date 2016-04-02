@@ -210,9 +210,9 @@ namespace ascension {
 								range = boost::irange(*boost::const_begin(boost::get(range)), std::min(viewer.document().lineLength(line), *boost::const_end(boost::get(range))));
 								boost::geometry::model::multi_polygon<boost::geometry::model::polygon<graphics::Point>> region;
 								layout.blackBoxBounds(boost::get(range), region);
-								geometry::translate((
+								geometry::translate(
 									geometry::_from = region, geometry::_to = region,
-									geometry::_dx = indent - geometry::left(selectionBounds), geometry::_dy = y - geometry::top(selectionBounds)));
+									geometry::_tx = indent - geometry::left(selectionBounds), geometry::_ty = y - geometry::top(selectionBounds));
 								context->setFillStyle(std::make_shared<graphics::SolidColor>(graphics::Color::OPAQUE_WHITE));
 								BOOST_FOREACH(const auto& polygon, region) {
 									context->beginPath();
@@ -238,9 +238,9 @@ namespace ascension {
 				{
 					// render the lines
 					graphics::Rectangle selectionExtent;
-					graphics::geometry::translate((
+					graphics::geometry::translate(
 						graphics::geometry::_from = selectionBounds, graphics::geometry::_to = selectionExtent,
-						graphics::geometry::_dx = -geometry::left(selectionExtent), graphics::geometry::_dy = -geometry::top(selectionExtent)));
+						graphics::geometry::_tx = -geometry::left(selectionExtent), graphics::geometry::_ty = -geometry::top(selectionExtent));
 					graphics::PaintContext context(move(image->createRenderingContext()), selectionExtent);
 					Scalar y = geometry::top(selectionBounds);
 					BOOST_FOREACH(Index line, selectedRegion.lines()) {
@@ -282,16 +282,16 @@ namespace ascension {
 				// locate the hotspot of the image based on the cursor position
 				// TODO: This code can't handle vertical writing mode.
 				std::decay<decltype(cursorPosition)>::type hotspot;
-				graphics::geometry::translate((
+				graphics::geometry::translate(
 					graphics::geometry::_from = cursorPosition, graphics::geometry::_to = hotspot,
-					graphics::geometry::_dx = -(geometry::left(textArea.contentRectangle()) - viewport->scrollPositions().ipd() + geometry::left(selectionBounds)),
-					graphics::geometry::_dy = -geometry::y(modelToView(viewer,
-						graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(kernel::line(*boost::const_begin(selectedRegion))))))));
+					graphics::geometry::_tx = -(geometry::left(textArea.contentRectangle()) - viewport->scrollPositions().ipd() + geometry::left(selectionBounds)),
+					graphics::geometry::_ty = -geometry::y(modelToView(viewer,
+						graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(kernel::line(*boost::const_begin(selectedRegion)))))));
 
 				// calculate 'dimensions'
-				graphics::geometry::scale((
+				graphics::geometry::scale(
 					graphics::geometry::_from = hotspot, graphics::geometry::_to = hotspot,
-					graphics::geometry::_dx = static_cast<graphics::Scalar>(-1), graphics::geometry::_dy = static_cast<graphics::Scalar>(-1)));
+					graphics::geometry::_sx = static_cast<graphics::Scalar>(-1), graphics::geometry::_sy = static_cast<graphics::Scalar>(-1));
 				boost::geometry::assign(dimensions,
 					geometry::make<boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::uint16_t>>>(
 						hotspot, static_cast<geometry::BasicDimension<std::uint16_t>>(size)));
@@ -321,9 +321,9 @@ namespace ascension {
 			boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>> imageDimensions;
 			std::unique_ptr<graphics::Image> image(createSelectionImage(caret, dragAndDrop_->approachedPosition, true, imageDimensions));
 			boost::geometry::model::d2::point_xy<std::uint32_t> hotspot;
-			graphics::geometry::scale((
+			graphics::geometry::scale(
 				graphics::geometry::_from = graphics::geometry::topLeft(imageDimensions), graphics::geometry::_to = hotspot,
-				graphics::geometry::_dx = -1, graphics::geometry::_dy = -1));
+				graphics::geometry::_sx = -1, graphics::geometry::_sy = -1);
 			d.setImage(*image, hotspot);
 
 			widgetapi::DropAction possibleActions = widgetapi::DROP_ACTION_COPY;

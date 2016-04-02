@@ -147,7 +147,7 @@ namespace ascension {
 				static kernel::Position(*const nextCharacterLocation)(const kernel::Point&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
 
 				const presentation::WritingMode writingMode(viewer.presentation().computeWritingMode());
-				const FlowRelativeDirection abstractDirection = mapPhysicalToFlowRelative(writingMode, direction);
+				const FlowRelativeDirection abstractDirection = presentation::mapDirection<FlowRelativeDirection>(writingMode, direction);
 				const Direction logicalDirection = (abstractDirection == FlowRelativeDirection::AFTER || abstractDirection == FlowRelativeDirection::END) ? Direction::FORWARD : Direction::BACKWARD;
 				switch(boost::native_value(abstractDirection)) {
 					case FlowRelativeDirection::BEFORE:

@@ -20,28 +20,39 @@ namespace ascension {
 			 * @param arguments The named parameters
 			 * @return The returned value of @c boost#geometry#transform
 			 */
-			template<typename Arguments>
-			inline bool scale(const Arguments& arguments) {
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+			BOOST_PARAMETER_FUNCTION(
+				(bool), scale, tag,
+				(required
+					(from, *)
+					(out(to), *)
+					(sx, *, 1)
+					(sy, *, 1))) {
 				return boost::geometry::transform(
-					arguments[_from], arguments[_to],
+					from, to,
 					boost::geometry::strategy::transform::scale_transformer<
-						boost::geometry::coordinate_type<std::decay<decltype(arguments[_from])>::type>::type,
-						boost::geometry::dimension<decltype(arguments[_from])>::value,
-						boost::geometry::dimension<decltype(arguments[_to])>::value
-					>(arguments[_dx], arguments[_dy]));
+						boost::geometry::coordinate_type<std::decay<decltype(from)>::type>::type,
+						boost::geometry::dimension<decltype(from)>::value,
+						boost::geometry::dimension<decltype(to)>::value
+					>(sx, sy));
 			}
+#else
+			template<typename From, typename To, typename Sx, typename Sy>
+			inline bool scale(const From& from, To& to, Sx sx = 1, Sy sy = 1);
+#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 			/**
 			 * Calls @c boost#geometry#transform with @c boost#geometry#strategy#transform#scale_transformer.
+			 * @tparam Geometry The type of @a g
 			 * @tparam Arguments The type of @a arguments
-			 * @tparam Delta The type of @a delta
-			 * @param arguments The named parameters
-			 * @param delta The distance to translate
+			 * @param g The geometry to scale
+			 * @param arguments The named parameters. 'sx' : The x coordinate of the scale factor. 'sy' : The y
+			 *        coordinate of the scale factor.
 			 * @return The returned value of @c boost#geometry#transform
 			 */
-			template<typename Arguments, typename Delta>
-			inline bool scale(const Arguments& arguments, const Delta& delta, typename detail::EnableIfTagIs<Delta, DimensionTag>::type* = nullptr) {
-				return scale((_from = arguments[_from], _to = arguments[_to], _dx = dx(delta), _dy(delta)));
+			template<typename Geometry, typename Arguments>
+			inline bool scale(Geometry& g, const Arguments& arguments) {
+				return scale(_from = g, _to = g, _sx = arguments[_sx | 1], _sy = arguments[_sy | 1]);
 			}
 		}
 	}

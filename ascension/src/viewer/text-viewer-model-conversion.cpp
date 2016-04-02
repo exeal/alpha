@@ -25,12 +25,12 @@ namespace ascension {
 				Point pointInViewer(pointInViewport);
 				auto offset(graphics::geometry::origin(textViewer.textArea().contentRectangle()));
 				if(!toViewer)
-					graphics::geometry::scale((
+					graphics::geometry::scale(
 					graphics::geometry::_from = offset, graphics::geometry::_to = offset,
-					graphics::geometry::_dx = static_cast<graphics::geometry::Scalar>(-1), graphics::geometry::_dy = static_cast<graphics::geometry::Scalar>(-1)));
-				graphics::geometry::translate((
+					graphics::geometry::_sx = static_cast<graphics::geometry::Scalar>(-1), graphics::geometry::_sy = static_cast<graphics::geometry::Scalar>(-1));
+				graphics::geometry::translate(
 					graphics::geometry::_from = pointInViewer, graphics::geometry::_to = pointInViewer,
-					graphics::geometry::_dx = graphics::geometry::x(offset), graphics::geometry::_dy = graphics::geometry::y(offset)));
+					graphics::geometry::_tx = graphics::geometry::x(offset), graphics::geometry::_ty = graphics::geometry::y(offset));
 				return pointInViewer;
 			}
 
