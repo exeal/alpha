@@ -27,8 +27,7 @@ namespace ascension {
 				(bool), translate, tag,
 				(required
 					(from, *)
-					(out(to), *))
-				(optional
+					(out(to), *)
 					(tx, *, 0)
 					(ty, *, 0))) {
 				return boost::geometry::transform(
@@ -41,7 +40,7 @@ namespace ascension {
 			}
 #else
 			template<typename From, typename To, typename Tx, typename Ty>
-			bool translate(const From& from, To& to, Tx tx, Ty ty);
+			bool translate(const From& from, To& to, Tx tx = 0, Ty ty = 0);
 #endif
 
 			/**

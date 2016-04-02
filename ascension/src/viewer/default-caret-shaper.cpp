@@ -129,9 +129,9 @@ namespace ascension {
 			shape.image = createSolidCaretImage(
 				static_cast<graphics::geometry::BasicDimension<std::uint32_t>>(graphics::geometry::size(bounds)),
 				boost::get_optional_value_or(color, graphics::Color::OPAQUE_BLACK));
-			graphics::geometry::scale((
+			graphics::geometry::scale(
 				graphics::geometry::_from = graphics::geometry::topLeft(bounds), graphics::geometry::_to = shape.alignmentPoint,
-				graphics::geometry::_dx = -1, graphics::geometry::_dy = -1));
+				graphics::geometry::_sx = -1, graphics::geometry::_sy = -1);
 			return shape;
 		}
 

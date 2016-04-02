@@ -63,9 +63,9 @@ namespace ascension {
 				presentation::mapDimensions(writingMode, presentation::_from = logicalShape, presentation::_to = temp);
 				boost::geometry::assign(box, graphics::geometry::make<graphics::Rectangle>(temp));
 			}
-			graphics::geometry::translate((
+			graphics::geometry::translate(
 				graphics::geometry::_to = box, graphics::geometry::_from = box,
-				graphics::geometry::_dx = graphics::geometry::x(alignmentPoint), graphics::geometry::_dy = graphics::geometry::y(alignmentPoint)));
+				graphics::geometry::_tx = graphics::geometry::x(alignmentPoint), graphics::geometry::_ty = graphics::geometry::y(alignmentPoint));
 
 			context.save();
 			try {

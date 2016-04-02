@@ -135,16 +135,16 @@ namespace ascension {
 					graphics::PhysicalDirection physicalAlignment;
 					switch(boost::native_value(abstractAlignment)) {
 						case graphics::font::TextAlignment::START:
-							physicalAlignment = presentation::mapFlowRelativeToPhysical(writingMode, presentation::FlowRelativeDirection::INLINE_START);
+							physicalAlignment = presentation::mapDirection(writingMode, presentation::FlowRelativeDirection::INLINE_START);
 							break;
 						case graphics::font::TextAlignment::END:
-							physicalAlignment = presentation::mapFlowRelativeToPhysical(writingMode, presentation::FlowRelativeDirection::INLINE_END);
+							physicalAlignment = presentation::mapDirection(writingMode, presentation::FlowRelativeDirection::INLINE_END);
 							break;
 						case graphics::font::TextAlignment::LEFT:
-							physicalAlignment = presentation::mapLineRelativeToPhysical(writingMode, graphics::font::LineRelativeDirection::LINE_LEFT);
+							physicalAlignment = presentation::mapDirection(writingMode, graphics::font::LineRelativeDirection::LINE_LEFT);
 							break;
 						case graphics::font::TextAlignment::RIGHT:
-							physicalAlignment = presentation::mapLineRelativeToPhysical(writingMode, graphics::font::LineRelativeDirection::LINE_RIGHT);
+							physicalAlignment = presentation::mapDirection(writingMode, graphics::font::LineRelativeDirection::LINE_RIGHT);
 							break;
 						default:
 							throw UnknownValueException("abstractAlignment");
