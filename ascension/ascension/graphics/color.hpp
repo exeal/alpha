@@ -68,20 +68,22 @@ namespace ascension {
 		namespace detail {
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
 			template<typename T>
-			inline T fromNative(const Gdk::RGBA& native, typename std::enable_if<std::is_same<T, Color>::value>::type* = nullptr) BOOST_NOEXCEPT {
+			inline T fromNative(const Gdk::RGBA& native, typename std::enable_if<std::is_same<T, Color>::value>::type* = nullptr) {
+				if(native.get_red() > 1.0 || native.get_green() > 1.0 || native.get_blue() > 1.0 || native.get_alpha() > 1.0)
+					throw std::overflow_error("native");
 				return Color(
-					static_cast<Byte>(boost::math::iround(native.get_red() * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
-					static_cast<Byte>(boost::math::iround(native.get_green() * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
-					static_cast<Byte>(boost::math::iround(native.get_blue() * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
-					static_cast<Byte>(boost::math::iround(native.get_alpha() * static_cast<double>(std::numeric_limits<uint16_t>::max()))));
+					static_cast<Byte>(boost::math::iround(native.get_red() * static_cast<double>(std::numeric_limits<Byte>::max()))),
+					static_cast<Byte>(boost::math::iround(native.get_green() * static_cast<double>(std::numeric_limits<Byte>::max()))),
+					static_cast<Byte>(boost::math::iround(native.get_blue() * static_cast<double>(std::numeric_limits<Byte>::max()))),
+					static_cast<Byte>(boost::math::iround(native.get_alpha() * static_cast<double>(std::numeric_limits<Byte>::max()))));
 			}
 			inline Gdk::RGBA toNative(const Color& from, const Gdk::RGBA* = nullptr) BOOST_NOEXCEPT {
 				Gdk::RGBA temp;
 				temp.set_rgba(
 					from.red() / static_cast<double>(std::numeric_limits<Byte>::max()),
-					from.green() / static_cast<double>(std::numeric_limits<uint16_t>::max()),
-					from.blue() / static_cast<double>(std::numeric_limits<uint16_t>::max()),
-					from.alpha() / static_cast<double>(std::numeric_limits<uint16_t>::max()));
+					from.green() / static_cast<double>(std::numeric_limits<Byte>::max()),
+					from.blue() / static_cast<double>(std::numeric_limits<Byte>::max()),
+					from.alpha() / static_cast<double>(std::numeric_limits<Byte>::max()));
 				return temp;
 			}
 #endif
