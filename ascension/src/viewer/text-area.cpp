@@ -359,6 +359,21 @@ namespace ascension {
 			return std::weak_ptr<MouseInputStrategy>(mouseInputStrategy_);
 		}
 
+		namespace {
+			std::pair<graphics::Color, graphics::Color> selectionColors(const TextViewer& textViewer) {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				const Glib::RefPtr<const Gtk::StyleContext> styleContext(textViewer.get_style_context());
+				const Gtk::StateFlags state(textViewer.get_state_flags() | Gtk::STATE_FLAG_SELECTED);
+				return std::make_pair(
+					graphics::fromNative<graphics::Color>(styleContext->get_color(state)),
+					graphics::fromNative<graphics::Color>(styleContext->get_background_color(state)));	// TODO: Gtk.StyleContext.get_background_color is deprecated.
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#endif
+			}
+		}
+
 		/// @see graphics#font#LineRenderingOptions#overrideTextPaint
 		void TextArea::overrideTextPaint(Index line, std::vector<const graphics::font::OverriddenSegment>& segments) const BOOST_NOEXCEPT {
 			segments.clear();
@@ -379,26 +394,24 @@ namespace ascension {
 				}
 
 				if(!selectedRanges.empty()) {
-					graphics::font::OverriddenSegment outside, inside;
-					outside.usesLogicalHighlightBounds = inside.usesLogicalHighlightBounds = true;
-					Index p = 0;
+					const auto colors(selectionColors(textViewer()));
+					graphics::font::OverriddenSegment segment;
+#if 0
+					segment.foreground = std::make_shared<graphics::SolidColor>(std::get<0>(colors));
+#else
+					segment.color = boost::make_optional(std::get<0>(colors));
+#endif
+					segment.background = std::make_shared<graphics::SolidColor>(std::get<1>(colors));
+					segment.foregroundAlpha = segment.backgroundAlpha = 1.0;
+					segment.usesLogicalHighlightBounds = true;
 					BOOST_FOREACH(const auto& selectedRange, selectedRanges) {
-						inside.length = boost::size(selectedRange);
-						if((outside.length = *boost::const_begin(selectedRange) - p) != 0) {
-							segments.push_back(outside);
-							p += outside.length;
-							segments.push_back(inside);
-						} else if(p == 0)
-							segments.push_back(inside);
-						else {
-							inside.length += segments.back().length;
-							segments.pop_back();
-							segments.push_back(inside);
-						}
-						p = *boost::const_end(selectedRange);
+						segment.range = selectedRange;
+						segments.push_back(segment);
 					}
 				}
 			}
+
+			// TODO: Highlight search results.
 		}
 
 		/// @see TextViewerComponent#paint
