@@ -82,10 +82,15 @@ namespace ascension {
 			 * @see TextLayout#draw
 			 */
 			struct OverriddenSegment {
-				/// The length of this segment.
-				Index length;
+				/// The character range in the line of this segment. Initial value is [0, 0).
+				boost::integer_range<Index> range;
+#if 0
 				/// The overridden foreground or @c null if does not override.
 				std::shared_ptr<const Paint> foreground;
+#else
+				/// The overridden foreground color or @c boost#none if does not override.
+				boost::optional<Color> color;
+#endif
 				/// The transparency of the overridden foreground. This value should be in the range from 0.0 (fully
 				/// transparent) to 1.0 (no additional transparency).
 				double foregroundAlpha;
@@ -97,6 +102,9 @@ namespace ascension {
 				/// Set @c false to paint only the glyphs' bounds with @c #background. Otherwise the logical highlight
 				/// bounds of characters are painted as background.
 				bool usesLogicalHighlightBounds;
+
+				/// The default constructor initializes only @c range, @c foreground and @c background.
+				OverriddenSegment() : range(boost::irange<Index>(0, 0)) {}
 			};
 
 			class Font;

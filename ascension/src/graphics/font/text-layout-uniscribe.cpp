@@ -30,6 +30,7 @@
 #include <ascension/graphics/font/text-run.hpp>
 #include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
+#include <ascension/graphics/geometry/rectangle-corners.hpp>
 #include <ascension/graphics/geometry/rectangle-odxdy.hpp>
 #include <ascension/graphics/geometry/rectangle-range.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
@@ -169,6 +170,12 @@ namespace ascension {
 
 			// file-local free functions //////////////////////////////////////////////////////////////////////////////
 			namespace {
+				inline auto characterIndices(const TextRun& textRun, const String& textString) -> decltype(boost::irange<Index>(0, 0)) {
+					return boost::irange<Index>(
+						boost::const_begin(textRun.characterRange()) - textString.data(),
+						boost::const_end(textRun.characterRange()) - textString.data());
+				}
+
 				void dumpRuns(const TextLayout& layout) {
 #ifdef _DEBUG
 					std::ostringstream s;
@@ -1554,9 +1561,6 @@ namespace ascension {
 //						return;
 
 					context.setFont(font());
-//					RECT temp;
-//					if(dirtyRect != nullptr)
-//						::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
 					if(onlyStroke && !win32::boole(::BeginPath(context.native().get())))
 						throw makePlatformError();
 					assert(analysis_.fLogicalOrder == 0);
@@ -2836,13 +2840,6 @@ namespace ascension {
 						}
 					}
 				}
-#if 0
-				// calculate inline area range to draw
-				const Range<const RunVector::const_iterator> textRunsToPaint(
-					firstRunInLine(linesToPaint.beginning()),
-					(boost::const_end(linesToPaint) < numberOfLines()) ? firstRunInLine(boost::const_end(linesToPaint)) : boost::const_end(runs_));
-				AbstractTwoAxes<Scalar> alignmentPoint;	// alignment-point of text run relative to this layout
-#endif
 				context.save();
 //				context.setTextAlign();
 //				context.setTextBaseline();
@@ -2850,132 +2847,157 @@ namespace ascension {
 
 				// 2. paint backgrounds and borders
 				const bool horizontalLayout = isHorizontal(wm.blockFlowDirection);
-				std::vector<std::tuple<const std::reference_wrapper<const TextRunImpl>, const graphics::Rectangle, const Point>> textRunsToPaint;
+				assert(horizontalLayout || isVertical(wm.blockFlowDirection));
+				typedef std::tuple<
+					const std::reference_wrapper<const TextRunImpl>,	// text run
+					const graphics::Rectangle,							// 'content-rectangle'
+					const Point											// 'alignment-point'
+				> TextRunToPaint;
+				std::vector<TextRunToPaint> textRunsToPaint;
+				std::vector<
+					std::tuple<
+						const std::reference_wrapper<const TextRunToPaint>,
+						const std::reference_wrapper<const OverriddenSegment>,
+						const Rectangle
+					>
+				> overriddenSegmentsToPaint;
 				for(LineMetricsIterator line(*this, linesToPaint.front()); line.line() != *boost::const_end(linesToPaint); ++line) {
-					Point p(origin);	// a point at which baseline and (logical) 'line-left' edge of 'allocation-rectangle' of text run
-					Scalar over, under;		// 'over' and 'under' edges of this line (x for vertical layout or y for horizontal layout)
-
-					// move 'p' to start of line and compute 'over/under' of line
-					if(horizontalLayout) {
-						geometry::x(p) += (wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
-							lineStartEdge(line.line()) : -(lineStartEdge(line.line()) + measure(line.line()));
-						geometry::y(p) += line.baselineOffset();
-						over = geometry::y(p) - line.ascent();
-						under = geometry::y(p) + line.descent();
-					} else {
-						assert(isVertical(wm.blockFlowDirection));
-						geometry::x(p) += (wm.blockFlowDirection == presentation::VERTICAL_RL) ? -line.baselineOffset() : line.baselineOffset();
-						over = geometry::x(p) + line.ascent();
-						under = geometry::x(p) - line.descent();
-						if(resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT)
-							geometry::y(p) += (wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
-								lineStartEdge(line.line()) : -(lineStartEdge(line.line()) + measure(line.line()));
-						else {
-							geometry::y(p) -= (wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
-								lineStartEdge(line.line()) : -(lineStartEdge(line.line()) + measure(line.line()));
-							std::swap(over, under);
-						}
+					Point lineLeftPoint(origin);	// position of the baseline on the 'line-left' edge of this 'line-area'
+					{
+						PhysicalTwoAxes<Scalar> delta;
+						presentation::mapDimensions(wm,
+							presentation::_from = LineRelativePoint<Scalar>(
+								_u = (wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
+									lineStartEdge(line.line()) : (measure(line.line()) - lineStartEdge(line.line())),
+								_v = line.baselineOffset()),
+							presentation::_to = delta);
+						geometry::translate(lineLeftPoint, (geometry::_tx = delta.x(), geometry::_ty = delta.y()));
 					}
 
-					graphics::Rectangle allocationRectangle;
-					if(horizontalLayout)
-						geometry::range<1>(allocationRectangle) = boost::irange(over, under);
+					LineRelativePoint<Scalar> p(
+						_u = horizontalLayout ? geometry::x(origin) : geometry::y(origin),
+						_v = horizontalLayout ? geometry::y(origin) : geometry::x(origin));
+					if(wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT)
+						p.u() += lineStartEdge(line.line());
 					else
-						geometry::range<0>(allocationRectangle) = boost::irange(over, under);
+						p.u() += measure(line.line()) - lineStartEdge(line.line());
+					p.v() += line.baselineOffset();
+
+					LineRelativeFourSides<Scalar> runAllocationBox;	// relative to 'lineLeftPoint'
+					runAllocationBox.over() = p.v() - line.ascent();
+					runAllocationBox.under() = p.v() + line.descent();
 //					context.setGlobalAlpha(1.0);
 //					context.setGlobalCompositeOperation(SOURCE_OVER);
 					BOOST_FOREACH(const std::unique_ptr<const TextRun>& run, runsForLine(line.line())) {
 						// check if this text run is beyond bounds to paint
 						// TODO: Consider overhangs.
-						if(horizontalLayout) {
-							if(geometry::x(p) >= geometry::right(context.boundsToPaint()))
-								break;
-						} else {
-							if(geometry::y(p) >= geometry::bottom(context.boundsToPaint()))
-								break;
-						}
+						if((horizontalLayout && p.u() >= geometry::right(context.boundsToPaint()))
+								|| (!horizontalLayout && p.v() >= geometry::bottom(context.boundsToPaint())))
+							break;
 
 						// compute next position of 'p', 'border-box' and 'allocation-box'
-						Point q(p);
-						if(horizontalLayout)
-							geometry::x(q) += boost::size(allocationMeasure(*run));
-						else if(resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT)
-							geometry::y(q) += boost::size(allocationMeasure(*run));
-						else
-							geometry::y(q) -= boost::size(allocationMeasure(*run));
-						bool skipThisRun = boost::geometry::equals(q, p);	// skip empty box
+						auto q(p);
+						q.u() += boost::size(allocationMeasure(*run));
+						bool skipThisRun = p == q;	// skip empty box
 
-						// check if this text run intersects with bounds to paint
-						// TODO: Consider overhangs.
-						if(!skipThisRun)
-							skipThisRun = horizontalLayout ?
-								(geometry::x(q) < geometry::left(context.boundsToPaint()))
-								: (geometry::y(q) < geometry::top(context.boundsToPaint()));
+						// compute 'allocation-rectangle' of this text run
+						Rectangle runAllocationRectangle;
+						if(!skipThisRun) {
+							runAllocationBox.lineLeft() = p.u();
+							runAllocationBox.lineRight() = q.u();
+							PhysicalFourSides<Scalar> r;
+							presentation::mapDimensions(wm, presentation::_from = runAllocationBox, presentation::_to = r);
+							runAllocationRectangle = geometry::make<Rectangle>(r);
+
+							// check if this text run intersects with bounds to paint
+							// TODO: Consider overhangs.
+							skipThisRun = !boost::geometry::intersects(runAllocationRectangle, context.boundsToPaint());
+						}
 						if(!skipThisRun) {
 							// 2-1. paint 'allocation-rectangle'
-							if(horizontalLayout)
-								geometry::range<0>(allocationRectangle) = boost::irange(geometry::x(p), geometry::x(q));
-							else
-								geometry::range<1>(allocationRectangle) = boost::irange(geometry::y(p), geometry::y(q));
+							const auto background(boost::fusion::at_key<presentation::styles::BackgroundColor>(defaultRunStyle().backgroundsAndBorders));
+							if(!background.isFullyTransparent()) {
+								const SolidColor backgroundColor(background);
+								context.setFillStyle(std::shared_ptr<const SolidColor>(&backgroundColor, boost::null_deleter()));
+								context.fillRectangle(runAllocationRectangle);
+							}
+
+							// 2-2. compute 'alignment-point' and 'content-rectangle'
+							Point runAlignmentPoint;
 							{
-								const auto background(boost::fusion::at_key<presentation::styles::BackgroundColor>(defaultRunStyle().backgroundsAndBorders));
-								if(!background.isFullyTransparent()) {
-									const SolidColor backgroundColor(background);
-									context.setFillStyle(std::shared_ptr<const SolidColor>(&backgroundColor, boost::null_deleter()));
-									context.fillRectangle(allocationRectangle);
-								}
+								PhysicalFourSides<Scalar> temp;
+								presentation::mapDimensions(wm, presentation::_from = allocationBox(*run), presentation::_to = temp);
+								geometry::translate(
+									geometry::_from = geometry::topLeft(runAllocationRectangle), geometry::_to = runAlignmentPoint,
+									geometry::_tx = -temp.left(), geometry::_ty = -temp.top());
+							}
+							Rectangle runContentRectangle;
+							{
+								PhysicalFourSides<Scalar> temp;
+								presentation::mapDimensions(wm, presentation::_from = contentBox(*run), presentation::_to = temp);
+								geometry::translate(
+									geometry::_from = geometry::make<Rectangle>(temp), geometry::_to = runContentRectangle,
+									geometry::_tx = geometry::x(runAlignmentPoint), geometry::_ty = geometry::y(runAlignmentPoint));
 							}
 
-							// 2-2. compute 'content-rectangle'
-							const presentation::FlowRelativeFourSides<Scalar> abstractContentBox(contentBox(*run)), abstractAllocationBox(allocationBox(*run));
-							graphics::Rectangle contentRectangle;
-							if(horizontalLayout) {
-								if(wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT)
-									geometry::range<0>(contentRectangle) = boost::irange(
-										geometry::x(p) + abstractContentBox.start() - abstractAllocationBox.start(),
-										geometry::x(p) + abstractContentBox.end() - abstractAllocationBox.start());
-								else
-									geometry::range<0>(contentRectangle) = boost::irange(
-										geometry::x(p) + abstractContentBox.end() - abstractAllocationBox.end(),
-										geometry::x(p) + abstractContentBox.start() - abstractAllocationBox.end());
-								geometry::range<1>(contentRectangle) =
-									boost::irange(geometry::y(p) + abstractContentBox.before(), geometry::y(p) + abstractContentBox.after());
-							} else {
-								if(wm.blockFlowDirection == presentation::VERTICAL_RL)
-									geometry::range<0>(contentRectangle) =
-										boost::irange(geometry::x(p) - abstractContentBox.before(), geometry::x(p) - abstractContentBox.after());
-								else {
-									assert(wm.blockFlowDirection == presentation::VERTICAL_LR);
-									geometry::range<0>(contentRectangle) =
-										boost::irange(geometry::x(p) + abstractContentBox.before(), geometry::x(p) + abstractContentBox.after());
-								}
-								bool ttb = wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT;
-								ttb = (resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT) ? ttb : !ttb;
-								if(ttb)	// ttb
-									geometry::range<1>(contentRectangle) = boost::irange(
-										geometry::y(p) + abstractContentBox.start() - abstractAllocationBox.start(),
-										geometry::y(p) + abstractContentBox.end() - abstractAllocationBox.start());
-								else	// btt
-									geometry::range<1>(contentRectangle) = boost::irange(
-										geometry::y(p) + abstractContentBox.end() - abstractAllocationBox.end(),
-										geometry::y(p) + abstractContentBox.start() - abstractAllocationBox.end());
-							}
+							// 2-3. store this text run to paint the glyphs
+							textRunsToPaint.push_back(std::make_tuple(std::cref(static_cast<const TextRunImpl&>(*run)), runContentRectangle, runAlignmentPoint));
 
-							// compute 'border-rectangle' if needed
+							// 2-3. compute 'border-rectangle' if needed
 							const auto& runStyle = static_cast<const TextRunImpl&>(*run).style();
-							const Point& alignmentPoint = (wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ? p : q;
-							graphics::Rectangle borderRectangle;
-							if(!runStyle.backgroundColor.isFullyTransparent() || borderShouldBePainted(runStyle.borders))
-								borderRectangle = geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(wm, borderBox(*run)) + PhysicalTwoAxes<Scalar>(alignmentPoint));
+							graphics::Rectangle runBorderRectangle;
+							if(!runStyle.backgroundColor.isFullyTransparent() || borderShouldBePainted(runStyle.borders)) {
+								PhysicalFourSides<Scalar> temp;
+								presentation::mapDimensions(wm, presentation::_from = borderBox(*run), presentation::_to = temp);
+								geometry::translate(
+									geometry::_from = geometry::make<Rectangle>(temp), geometry::_to = runBorderRectangle,
+									geometry::_tx = geometry::x(runAlignmentPoint), geometry::_ty = geometry::y(runAlignmentPoint));
+							}
 
-							// 2-3. paint background
+							// 2-4. paint background
 							if(!runStyle.backgroundColor.isFullyTransparent()) {
 								const SolidColor fill(runStyle.backgroundColor);
 								context.setFillStyle(std::shared_ptr<const Paint>(&fill, boost::null_deleter()));
-								context.fillRectangle(borderRectangle);
+								context.fillRectangle(runBorderRectangle);
 							}
 
-							// 2-4. paint borders
+							// 2-5. paint overridden segments background
+							{
+								const auto runCharacterIndices(characterIndices(*run, textString_));
+								BOOST_FOREACH(const OverriddenSegment& segment, overriddenSegments) {
+									const auto overriddenRange(intersection(segment.range, runCharacterIndices));
+									if(overriddenRange == boost::none)
+										continue;
+
+									LineRelativeFourSides<Scalar> abstractOverriddenRectangle;
+									abstractOverriddenRectangle.lineLeft() =
+										run->hitToLogicalPosition(TextHit<>::afterOffset(*boost::const_begin(boost::get(overriddenRange)) - *boost::const_begin(runCharacterIndices)));
+									abstractOverriddenRectangle.lineRight() =
+										run->hitToLogicalPosition(TextHit<>::beforeOffset(*boost::const_end(boost::get(overriddenRange)) - *boost::const_begin(runCharacterIndices)));
+									if(segment.usesLogicalHighlightBounds) {
+										const auto extent(line.extentWithHalfLeadings());
+										abstractOverriddenRectangle.lineOver() = *boost::const_begin(extent);
+										abstractOverriddenRectangle.lineUnder() = *boost::const_end(extent);
+									} else {
+										// TODO:
+									}
+									PhysicalFourSides<Scalar> physicalOverriddenRectangle;
+									presentation::mapDimensions(wm, presentation::_from = abstractOverriddenRectangle, presentation::_to = physicalOverriddenRectangle);
+									Rectangle overriddenRectangle;
+									geometry::translate(
+										geometry::_from = geometry::make<Rectangle>(physicalOverriddenRectangle), geometry::_to = overriddenRectangle,
+										geometry::_tx = geometry::x(runAlignmentPoint), geometry::_ty = geometry::y(runAlignmentPoint));
+									if(segment.background.get() != nullptr) {
+										context.setFillStyle(segment.background);
+										context.fillRectangle(overriddenRectangle);
+									}
+
+									// mark that this text run has an overridden segment
+									overriddenSegmentsToPaint.push_back(std::make_tuple(std::cref(textRunsToPaint.back()), std::cref(segment), overriddenRectangle));
+								}
+							}
+
+							// 2-6. paint borders
 							PhysicalFourSides<const ActualBorderSide*> physicalBorders;
 							for(auto border(std::begin(runStyle.borders)), e(std::end(runStyle.borders)); border != e; ++border) {
 								const presentation::FlowRelativeDirection direction = static_cast<presentation::FlowRelativeDirection>(border - std::begin(runStyle.borders));
@@ -2988,9 +3010,6 @@ namespace ascension {
 								}
 								const PhysicalDirection direction = static_cast<PhysicalDirection>(border - std::begin(physicalBorders));
 							}
-
-							// store this text run to paint the glyphs
-							textRunsToPaint.push_back(std::make_tuple(std::cref(static_cast<const TextRunImpl&>(*run)), contentRectangle, alignmentPoint));
 						}
 
 //						::ExcludeClipRect(context.asNativeObject().get(),
@@ -3004,119 +3023,33 @@ namespace ascension {
 
 				// 3. for each text runs
 				BOOST_FOREACH(auto& textRun, textRunsToPaint) {
-					::SetTextColor(context.native().get(), toNative<COLORREF>(std::get<0>(textRun).get().style().color));
-					::SetBkMode(context.native().get(),TRANSPARENT);
+					const SolidColor foreground(std::get<0>(textRun).get().style().color);
+					context.setFillStyle(std::shared_ptr<const SolidColor>(&foreground, boost::null_deleter()));
 					std::get<0>(textRun).get().fillGlyphs(context, std::get<2>(textRun));
+				}
 
+				// . paint overridden segments glyphs
+				BOOST_FOREACH(auto& segment, overriddenSegmentsToPaint) {
 #if 0
-					// draw outside of the selection
-					Rect<> runRect;
-					runRect.top = y;
-					runRect.bottom = y + dy;
-					runRect.left = x = startX;
-					dc.setBkMode(TRANSPARENT);
-					for(std::size_t i = firstRun; i < lastRun; ++i) {
-						TextRun& run = *runs_[i];
-						COLORREF foreground;
-						if(lineForeground != Color())
-							foreground = lineForeground.asCOLORREF();
-						else if(run.requestedStyle().get() != nullptr && run.requestedStyle()->foreground != Color())
-							foreground = run.requestedStyle()->foreground.asCOLORREF();
-						else
-							foreground = defaultForeground;
-						if(line[run.beginning()] != L'\t') {
-							if(selection == nullptr /*|| run.overhangs()*/
-									|| !(run.beginning() >= selectedRange.beginning() && boost::const_end(run) <= boost::const_end(selectedRange))) {
-								dc.setTextColor(foreground);
-								runRect.left = x;
-								runRect.right = runRect.left + run.totalWidth();
-								hr = run.draw(dc, x, y + lip_.textMetrics().ascent(), false, &runRect);
-							}
-						}
-						// decoration (underline and border)
-						if(run.requestedStyle().get() != nullptr)
-							drawDecorationLines(dc, *run.requestedStyle(), foreground, x, y, run.totalWidth(), dy);
-						x += run.totalWidth();
-						runRect.left = x;
-					}
-
-					// draw selected text segment (also underline and border)
-					if(selection != nullptr) {
-						x = startX;
-						clipRegion.setRect(clipRect);
-						dc.selectClipRgn(clipRegion.get(), RGN_XOR);
-						for(std::size_t i = firstRun; i < lastRun; ++i) {
-							TextRun& run = *runs_[i];
-							// text
-							if(selection != nullptr && line[run.beginning()] != L'\t'
-									&& (/*run.overhangs() ||*/ (run.beginning() < selectedRange.end() && boost::const_end(run) > selectedRange.beginning()))) {
-								dc.setTextColor(selection->color().foreground.asCOLORREF());
-								runRect.left = x;
-								runRect.right = runRect.left + run.totalWidth();
-								hr = run.draw(dc, x, y + lip_.textMetrics().ascent(), false, &runRect);
-							}
-							// decoration (underline and border)
-							if(run.requestedStyle().get() != nullptr)
-								drawDecorationLines(dc, *run.requestedStyle(), selection->color().foreground.asCOLORREF(), x, y, run.totalWidth(), dy);
-							x += run.totalWidth();
-						}
-					}
-
-					// special character substitution
-					if(specialCharacterRenderer != nullptr) {
-						// white spaces and C0/C1 control characters
-						dc.selectClipRgn(clipRegion.get());
-						x = startX;
-						for(std::size_t i = firstRun; i < lastRun; ++i) {
-							TextRun& run = *runs_[i];
-							context.readingDirection = run.writingMode().inlineFlowDirection;
-							for(Index j = run.beginning(); j < run.end(); ++j) {
-								if(BinaryProperty::is(line[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
-									context.rect.setX(makeRange(x + run.x(j, false), x + run.x(j, true)));
-									specialCharacterRenderer->drawWhiteSpaceCharacter(context, line[j]);
-								} else if(isC0orC1Control(line[j])) {
-									context.rect.setX(makeRange(x + run.x(j, false), x + run.x(j, true)));
-									specialCharacterRenderer->drawControlCharacter(context, line[j]);
-								}
-							}
-							x += run.totalWidth();
-						}
-					}
-					if(line == numberOfLines_() - 1
-							&& resolveTextAlignment(alignment(), writingMode().inlineFlowDirection) == ALIGN_RIGHT)
-						x = startX;
-				} // end of nonempty line case
-	
-				// line terminator and line wrapping mark
-				const Document& document = lip_.presentation().document();
-				if(specialCharacterRenderer != nullptr) {
-					context.readingDirection = lineTerminatorOrientation(style(), lip_.presentation().defaultLineStyle());
-					if(line < numberOfLines() - 1) {	// line wrapping mark
-						const int markWidth = specialCharacterRenderer->getLineWrappingMarkWidth(context);
-						if(context.readingDirection == LEFT_TO_RIGHT)
-							context.rect.setX(makeRange(lip_.width() - markWidth, lip_.width());
-						else
-							context.rect.setX(makeRange(0, markWidth));
-						specialCharacterRenderer->drawLineWrappingMark(context);
-					} else if(lineNumber_ < document.numberOfLines() - 1) {	// line teminator
-						const kernel::Newline nlf(document.getLineInformation(lineNumber_).newline());
-						const int nlfWidth = specialCharacterRenderer->getLineTerminatorWidth(context, nlf);
-						if(context.readingDirection == LEFT_TO_RIGHT)
-							context.rect.setX(makeRange(x, x + nlfWidth));
-						else
-							context.rect.setX(makeRange(x - nlfWidth, x));
-						if(selection != nullptr) {
-							const Position eol(lineNumber_, document.lineLength(lineNumber_));
-							if(!selection->caret().isSelectionRectangle()
-									&& selection->caret().beginning().position() <= eol
-									&& selection->caret().end().position() > eol)
-								dc.fillSolidRect(x - (context.readingDirection == RIGHT_TO_LEFT ? nlfWidth : 0),
-									y, nlfWidth, dy, selection->color().background.asCOLORREF());
-						}
-						dc.setBkMode(TRANSPARENT);
-						specialCharacterRenderer->drawLineTerminator(context, nlf);
-					}
+					const auto& foreground = std::get<1>(segment).get().foreground;
+					if(foreground.get() == nullptr)
+#else
+					const auto& foreground = std::get<1>(segment).get().color;
+					if(foreground == boost::none)
 #endif
+						continue;
+					context.save();
+					context.beginPath();
+					context.rectangle(std::get<2>(segment));
+					context.clip();
+					const TextRunImpl& textRun = std::get<0>(std::get<0>(segment).get()).get();
+#if 0
+					context.setFillStyle(foreground);
+#else
+					::SetTextColor(context.native().get(), toNative<COLORREF>(boost::get(foreground)));
+#endif
+					textRun.fillGlyphs(context, std::get<2>(std::get<0>(segment).get()));
+					context.restore();
 				}
 				context.restore();
 			}
