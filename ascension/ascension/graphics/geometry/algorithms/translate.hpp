@@ -40,7 +40,7 @@ namespace ascension {
 			}
 #else
 			template<typename From, typename To, typename Tx, typename Ty>
-			bool translate(const From& from, To& to, Tx tx = 0, Ty ty = 0);
+			bool translate(const From& from, To& to, Tx tx, Ty ty);
 #endif
 
 			/**
@@ -67,7 +67,7 @@ namespace ascension {
 			 */
 			template<typename Geometry, typename Delta>
 			inline bool translate(Geometry& g, const Delta& delta, typename detail::DisableIfTagIs<Delta, DimensionTag>::type* = nullptr) {
-				return translate(_from = g, _to = g, _tx = delta[_tx | 0], _ty = delta[_ty | 0]);
+				return translate(_from = g, _to = g, _tx = delta[_tx], _ty = delta[_ty]);
 			}
 
 			/**
