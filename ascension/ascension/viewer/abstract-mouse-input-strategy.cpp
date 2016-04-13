@@ -173,7 +173,7 @@ namespace ascension {
 				// scroll the text viewer automatically
 				if(tracking_->autoScroll) {
 					const std::shared_ptr<graphics::font::TextViewport> viewport(viewer.textArea().textRenderer().viewport());
-					const graphics::Point p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
+					const graphics::Point p(widgetapi::Cursor::position(widgetapi::cwindow(viewer)));
 					const graphics::Rectangle contentRectangle(viewer.textArea().contentRectangle());
 					graphics::Dimension scrollUnits(
 						graphics::geometry::_dx = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),

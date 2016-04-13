@@ -6,10 +6,10 @@
 
 #ifndef ASCENSION_CURSOR_HPP
 #define ASCENSION_CURSOR_HPP
-
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/platforms.hpp>
+#include <ascension/viewer/widgetapi/widget-proxy.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gdkmm/cursor.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
@@ -99,6 +99,8 @@ namespace ascension {
 				static void hide();
 				/// Returns the position of the global cursor in pixels.
 				static graphics::Point position();
+				/// Returns the position of the global cursor in pixels relative to the origin of the given @a window.
+				static graphics::Point position(Proxy<const Window> window);
 //				/// Moves the global cursor to the specified position in pixels.
 //				static void setPosition(const graphics::Point& p);
 				/// Shows the global cursors.

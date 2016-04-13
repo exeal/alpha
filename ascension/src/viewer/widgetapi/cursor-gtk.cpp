@@ -102,15 +102,31 @@ namespace ascension {
 				// TODO: Not implemented.
 			}
 
-			graphics::Point Cursor::position() {
-				if(const Glib::RefPtr<const Gdk::Display> defaultDisplay = Gdk::Display::get_default()) {
-					if(const Glib::RefPtr<const Gdk::DeviceManager> deviceManager = defaultDisplay->get_device_manager()) {
-						if(const Glib::RefPtr<const Gdk::Device> clientPointer = deviceManager->get_client_pointer()) {
-							int x, y;
-							clientPointer->get_position(x, y);
-							return graphics::geometry::make<graphics::Point>((graphics::geometry::_x = x, graphics::geometry::_y = y));
-						}
+			namespace {
+				inline Glib::RefPtr<const Gdk::Device> defaultClientPointer() {
+					if(const Glib::RefPtr<const Gdk::Display> defaultDisplay = Gdk::Display::get_default()) {
+						if(const Glib::RefPtr<const Gdk::DeviceManager> deviceManager = defaultDisplay->get_device_manager())
+							return deviceManager->get_client_pointer();
 					}
+					return Glib::RefPtr<const Gdk::Device>();
+				}
+			}
+
+			graphics::Point Cursor::position() {
+				if(const auto clientPointer = defaultClientPointer()) {
+					int x, y;
+					clientPointer->get_position(x, y);
+					return graphics::geometry::make<graphics::Point>((graphics::geometry::_x = x, graphics::geometry::_y = y));
+				}
+				throw makePlatformError();
+			}
+
+			graphics::Point Cursor::position(Proxy<const Window> window) {
+				if(const auto clientPointer = defaultClientPointer()) {
+					int x, y;
+					Gdk::ModifierType dummy;
+					window->get_device_position(clientPointer, x, y, dummy);
+					return graphics::geometry::make<graphics::Point>((graphics::geometry::_x = x, graphics::geometry::_y = y));
 				}
 				throw makePlatformError();
 			}
