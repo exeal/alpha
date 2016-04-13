@@ -714,7 +714,7 @@ namespace ascension {
 					// shift => keep the anchor and move the caret to the cursor position
 					// ctrl  => begin word selection
 					// alt   => begin rectangle selection
-					if(const boost::optional<graphics::font::TextHit<kernel::Position>> to = viewToModelInBounds(viewer, input.location())) {
+					if(const boost::optional<graphics::font::TextHit<kernel::Position>> to = viewToModel(viewer, input.location())) {
 						if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN | widgetapi::event::UserInput::SHIFT_DOWN)) {
 							const bool shift = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN);
 							if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN)) {	// begin word selection
