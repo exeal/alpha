@@ -240,25 +240,32 @@ namespace ascension {
 				const Index nlines = viewport.textRenderer().presentation().document().numberOfLines();
 				LineLayoutVector& layouts = const_cast<TextViewport&>(viewport).textRenderer().layouts();
 				BaselineIterator baseline(viewport, false);
-				VisualLine previousLine(boost::get(baseline.line()));
-				bool snap = false;
+				VisualLine result(boost::get(baseline.line()));
+				bool snap = true;
 				if(bpd >= 0) {	// before 'before-edge' ?
+					boost::optional<std::reference_wrapper<const graphics::font::TextLayout>> lastLine;
 					for(; ; ++baseline) {
 						const boost::optional<VisualLine> line(baseline.line());
 						if(line == boost::none)	// after 'after-edge' ?
 							break;
 						else if(includes(baseline.extentWithHalfLeadings(), bpd)) {
-							previousLine = boost::get(line);
+							result = boost::get(line);
 							snap = false;
 							break;
-						} else if(line->line == nlines - 1 && line->subline == layouts.at(line->line, LineLayoutVector::USE_CALCULATED_LAYOUT).numberOfLines() - 1)
-							break;
+						} else if(line->line == nlines - 1) {
+							if(lastLine == boost::none)
+								lastLine = layouts.at(line->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
+							if(line->subline == boost::get(lastLine).get().numberOfLines() - 1) {
+								result = boost::get(line);
+								break;
+							}
+						}
 					}
 				}
 
 				if(snapped != nullptr)
 					*snapped = snap;
-				return previousLine;
+				return result;
 			}
 
 			/**
