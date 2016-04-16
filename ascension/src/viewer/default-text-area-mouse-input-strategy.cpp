@@ -68,9 +68,9 @@ namespace ascension {
 
 			class WordSelectionExtender : public DefaultTextAreaMouseInputStrategy::SelectionExtender {
 			public:
-				WordSelectionExtender(Caret& caret, const kernel::Position* initialPosition = nullptr) : anchorOffsetsInLine_(0, 0) {
-					if(initialPosition != nullptr)
-						caret.moveTo(*initialPosition);
+				WordSelectionExtender(Caret& caret, boost::optional<kernel::Position> initialPosition = boost::none) : anchorOffsetsInLine_(0, 0) {
+					if(initialPosition != boost::none)
+						caret.moveTo(boost::get(initialPosition));
 					selectWord(caret);
 					anchorLine_ = kernel::line(caret);
 					anchorOffsetsInLine_ = boost::irange(kernel::offsetInLine(caret.beginning()), kernel::offsetInLine(caret.end()));
@@ -718,16 +718,14 @@ namespace ascension {
 						if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN | widgetapi::event::UserInput::SHIFT_DOWN)) {
 							const bool shift = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN);
 							if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN)) {	// begin word selection
-								if(shift)
-									selectionExtender_.reset(new WordSelectionExtender(caret, &caret.anchor().position()));
-								else
-									selectionExtender_.reset(new WordSelectionExtender(caret, &to->insertionIndex()));
+								const auto& initialPosition = shift ? caret.anchor().position() : boost::get(to).insertionIndex();
+								selectionExtender_.reset(new WordSelectionExtender(caret, initialPosition));
 							}
 							if(shift)
-								selectionExtender_->continueSelection(caret, to->insertionIndex());
+								selectionExtender_->continueSelection(caret, boost::get(to).insertionIndex());
 						}
 						if(selectionExtender_.get() == nullptr)
-							selectionExtender_.reset(new CharacterSelectionExtender(caret, to->insertionIndex()));
+							selectionExtender_.reset(new CharacterSelectionExtender(caret, boost::get(to).insertionIndex()));
 						if(input.hasModifier(widgetapi::event::UserInput::ALT_DOWN))	// make the selection reactangle
 							caret.beginRectangleSelection();
 						else
