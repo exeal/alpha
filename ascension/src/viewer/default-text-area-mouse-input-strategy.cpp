@@ -670,7 +670,12 @@ namespace ascension {
 		 * @param input The input event. Call @c Event#consume() if processed the input; In this case, the original
 		 *              behavior of @c DefaultTextAreaMouseInputStrategy is suppressed. The default implementation ignores this
 		 */
-		void DefaultTextAreaMouseInputStrategy::handleLeftButtonDoubleClick(widgetapi::event::MouseButtonInput& input) {
+		void DefaultTextAreaMouseInputStrategy::handleLeftButtonDoubleClick(widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) {
+			if(selectionExtender_.get() == nullptr) {
+				selectionExtender_.reset(new WordSelectionExtender(textArea_->caret(), viewToModel(textArea_->textViewer(), input.location()).insertionIndex()));
+				beginLocationTracking(textArea_->textViewer(), &targetLocker, true, true);
+				return input.consume();
+			}
 			return input.ignore();
 		}
 
@@ -715,26 +720,29 @@ namespace ascension {
 					// shift => keep the anchor and move the caret to the cursor position
 					// ctrl  => begin word selection
 					// alt   => begin rectangle selection (only if !ctrl)
-					const graphics::font::TextHit<kernel::Position> to(viewToModel(viewer, input.location()));
+					const auto to(viewToModel(viewer, input.location()).insertionIndex());
 					assert(selectionExtender_.get() == nullptr);
 					if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
 						selectionExtender_.reset(
 							new WordSelectionExtender(caret,
 								input.hasModifier(widgetapi::event::SHIFT_DOWN) ?
-									boost::none : boost::make_optional(to.insertionIndex())));	// begin word selection
-					else
+									boost::none : boost::make_optional(to)));	// begin word selection
+					else if(input.hasAnyOfModifiers(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN))) {
 						selectionExtender_.reset(
 							new CharacterSelectionExtender(caret,
 								input.hasModifier(widgetapi::event::SHIFT_DOWN) ?
-									boost::none : boost::make_optional(to.insertionIndex())));	// begin character selection
-					if(input.hasModifier(widgetapi::event::SHIFT_DOWN))
-						continueSelectionExtension(to.insertionIndex());
+									boost::none : boost::make_optional(to)));	// begin character selection
+						if(input.hasModifier(widgetapi::event::ALT_DOWN))
+							caret.beginRectangleSelection();	// make the selection reactangle
+					} else
+						caret.moveTo(to);
 
-					if(input.hasModifier(widgetapi::event::ALT_DOWN) && !input.hasModifier(widgetapi::event::CONTROL_DOWN))
-						caret.beginRectangleSelection();	// make the selection reactangle
-					else
+					if(input.hasModifier(widgetapi::event::SHIFT_DOWN))
+						continueSelectionExtension(to);
+					if(!input.hasModifier(widgetapi::event::ALT_DOWN) || input.hasModifier(widgetapi::event::CONTROL_DOWN))
 						caret.endRectangleSelection();
-					beginLocationTracking(viewer, &targetLocker, true, true);
+					if(selectionExtender_.get() != nullptr)
+						beginLocationTracking(viewer, &targetLocker, true, true);
 				}
 			}
 
@@ -844,13 +852,7 @@ namespace ascension {
 						handleLeftButtonReleased(input);
 					else if(action == DOUBLE_CLICKED) {
 						texteditor::abortIncrementalSearch(textArea_->textViewer().document());
-						handleLeftButtonDoubleClick(input);
-						if(!input.isConsumed() && isStateNeutral()) {
-							// begin word selection
-							selectionExtender_.reset(new WordSelectionExtender(textArea_->caret()));
-							beginLocationTracking(textArea_->textViewer(), &targetLocker, true, true);
-							input.consume();
-						}
+						handleLeftButtonDoubleClick(input, targetLocker);
 					}
 					break;
 				case widgetapi::event::LocatedUserInput::BUTTON2_DOWN:
@@ -903,7 +905,7 @@ namespace ascension {
 		}
 
 		/// @see MouseInputStrategy#mouseMoved
-		void DefaultTextAreaMouseInputStrategy::mouseMoved(widgetapi::event::LocatedUserInput& input, TargetLocker&) {
+		void DefaultTextAreaMouseInputStrategy::mouseMoved(widgetapi::event::LocatedUserInput& input, TargetLocker& targetLocker) {
 			if((autoScroll_ != boost::none && autoScroll_->state == AutoScroll::APPROACHING)
 					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ dragAndDrop_ != boost::none && dragAndDrop_->state == DragAndDrop::APPROACHING)) {	// dragging starts?
 				if(dragAndDrop_ != boost::none && isSelectionEmpty(textArea_->caret())) {
@@ -928,8 +930,11 @@ namespace ascension {
 					input.consume();
 #endif
 				}
-			} else if(selectionExtender_.get() != nullptr) {
-				assert(isTrackingLocation());
+			} else if((input.buttons() & widgetapi::event::LocatedUserInput::BUTTON1_DOWN) != 0) {
+				if(selectionExtender_.get() == nullptr) {
+					selectionExtender_.reset(new CharacterSelectionExtender(textArea_->caret()));
+					beginLocationTracking(textArea_->textViewer(), &targetLocker, true, true);
+				}
 				continueSelectionExtension(viewToModel(textArea_->textViewer(), input.location()).insertionIndex());
 				input.consume();
 			}
