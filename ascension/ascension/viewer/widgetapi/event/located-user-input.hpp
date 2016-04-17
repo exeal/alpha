@@ -73,7 +73,7 @@ namespace ascension {
 					 * @param modifiers The keyboard modifier flags
 					 */
 					LocatedUserInput(const graphics::Point& location, MouseButton buttons,
-						KeyboardModifier modifiers) : UserInput(modifiers), location_(location), buttons_(buttons) {}
+						const KeyboardModifiers& modifiers) : UserInput(modifiers), location_(location), buttons_(buttons) {}
 					/// Returns the button state when the event was generated.
 					MouseButton buttons() const BOOST_NOEXCEPT {
 						return buttons_;

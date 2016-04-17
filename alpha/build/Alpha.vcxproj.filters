@@ -1309,6 +1309,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\line-rendering-options.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\keyboard-modifier.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi\event</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

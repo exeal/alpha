@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_KEY_INPUT_HPP
 #define ASCENSION_KEY_INPUT_HPP
-
 #include <ascension/viewer/widgetapi/event/user-input.hpp>
 
 namespace ascension {
@@ -36,10 +35,12 @@ namespace ascension {
 				public:
 					/**
 					 * Creates a @c KeyInput object with given keycode and modifiers.
+					 * @tparam KeyboardModifiersSequence The fixed-size sequence of @c KeyboardModifier
 					 * @param keyboardCode The integer code for an actual key
 					 * @param modifiers The keyboard modifier flags during event
 					 */
-					KeyInput(Code keyboardCode, KeyboardModifier modifiers) : UserInput(modifiers), keyboardCode_(keyboardCode) {}
+					template<typename KeyboardModifiersSequence>
+					KeyInput(Code keyboardCode, const KeyboardModifiersSequence& modifiers = std::make_tuple()) : UserInput(modifiers), keyboardCode_(keyboardCode) {}
 					/// Returns the integer key code associated with the key in this event.
 					Code keyboardCode() const BOOST_NOEXCEPT {
 						return keyboardCode_;

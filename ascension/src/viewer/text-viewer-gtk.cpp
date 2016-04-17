@@ -188,12 +188,12 @@ namespace ascension {
 			inline std::tuple<
 				graphics::Point,
 				widgetapi::event::LocatedUserInput::MouseButton,
-				widgetapi::event::UserInput::KeyboardModifier
+				widgetapi::event::KeyboardModifiers
 			> makeLocatedUserInput(const NativeEvent& event) {
 				return std::make_tuple(
 					graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event.x, graphics::geometry::_y = event.y)),
 					static_cast<widgetapi::event::LocatedUserInput::MouseButton>(event.state & NATIVE_BUTTON_MASK),
-					static_cast<widgetapi::event::UserInput::KeyboardModifier>(event.state & NATIVE_KEYBOARD_MASK));
+					widgetapi::event::KeyboardModifiers::fromNative(static_cast<Gdk::ModifierType>(event.state & NATIVE_KEYBOARD_MASK)));
 			}
 
 			widgetapi::event::MouseButtonInput makeMouseButtonInput(const GdkEventButton& event) {
@@ -374,7 +374,7 @@ namespace ascension {
 		bool TextViewer::on_key_press_event(GdkEventKey* event) {
 			if(::gtk_im_context_filter_keypress(inputMethodContext_.get(), event))
 				return true;
-			widgetapi::event::KeyInput input(event->keyval, static_cast<widgetapi::event::UserInput::KeyboardModifier>(event->state));
+			widgetapi::event::KeyInput input(event->keyval, widgetapi::event::KeyboardModifiers::fromNative(static_cast<Gdk::ModifierType>(event->state)));
 			keyPressed(input);
 			return input.isConsumed() || Gtk::Widget::on_key_press_event(event);
 		}
@@ -386,7 +386,7 @@ namespace ascension {
 		bool TextViewer::on_key_release_event(GdkEventKey* event) {
 			if(::gtk_im_context_filter_keypress(inputMethodContext_.get(), event))
 				return true;
-			widgetapi::event::KeyInput input(event->keyval, static_cast<widgetapi::event::UserInput::KeyboardModifier>(event->state));
+			widgetapi::event::KeyInput input(event->keyval, widgetapi::event::KeyboardModifiers::fromNative(static_cast<Gdk::ModifierType>(event->state)));
 			keyReleased(input);
 			return input.isConsumed() || Gtk::Widget::on_key_release_event(event);
 		}
@@ -464,7 +464,7 @@ namespace ascension {
 			}
 			widgetapi::event::MouseWheelInput input(
 				graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event->x, graphics::geometry::_y = event->y)),
-				event->state & NATIVE_BUTTON_MASK, event->state & NATIVE_KEYBOARD_MASK, scrollAmount, wheelRotation);
+				event->state & NATIVE_BUTTON_MASK, widgetapi::event::KeyboardModifiers::fromNative(static_cast<Gdk::ModifierType>(event->state & NATIVE_KEYBOARD_MASK)), scrollAmount, wheelRotation);
 			fireMouseWheelChanged(input);
 			return input.isConsumed();
 		}
