@@ -86,7 +86,7 @@ namespace ascension {
 
 		private:
 			void beginDragAndDrop(const widgetapi::event::LocatedUserInput& input);
-			virtual void handleLeftButtonDoubleClick(widgetapi::event::MouseButtonInput& input);
+			virtual void handleLeftButtonDoubleClick(widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker);
 			virtual void handleRightButton(Action action, widgetapi::event::MouseButtonInput& input);
 			virtual void handleX1Button(Action action, widgetapi::event::MouseButtonInput& input);
 			virtual void handleX2Button(Action action, widgetapi::event::MouseButtonInput& input);
