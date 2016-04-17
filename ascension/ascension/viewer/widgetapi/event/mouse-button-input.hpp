@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_MOUSE_BUTTON_INPUT_HPP
 #define ASCENSION_MOUSE_BUTTON_INPUT_HPP
-
 #include <ascension/viewer/widgetapi/event/located-user-input.hpp>
 
 namespace ascension {
@@ -26,7 +25,7 @@ namespace ascension {
 					 * @param modifiers The keyboard modifier flags
 					 */
 					MouseButtonInput(const graphics::Point& location, MouseButton button, MouseButton buttons,
-						KeyboardModifier modifiers) : LocatedUserInput(location, buttons, modifiers), button_(button) {}
+						const KeyboardModifiers& modifiers) : LocatedUserInput(location, buttons, modifiers), button_(button) {}
 					/// Returns the button that caused the event.
 					MouseButton button() const BOOST_NOEXCEPT {
 						return button_;

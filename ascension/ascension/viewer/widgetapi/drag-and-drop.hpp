@@ -70,7 +70,7 @@ namespace ascension {
 			ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 			DropAction resolveDefaultDropAction(DropAction possibleActions,
-				event::LocatedUserInput::MouseButton buttons, event::UserInput::KeyboardModifier modifiers);
+				event::LocatedUserInput::MouseButton buttons, const event::KeyboardModifiers& modifiers);
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			typedef Glib::RefPtr<Gtk::TargetList> NativeMimeData;

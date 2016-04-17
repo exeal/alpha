@@ -55,7 +55,7 @@ namespace ascension {
 
 			graphics::Point location;
 			widgetapi::event::LocatedUserInput::MouseButton buttons;
-			widgetapi::event::UserInput::KeyboardModifier modifiers;
+			widgetapi::event::KeyboardModifiers modifiers;
 
 			// invoked by the keyboard
 			if(byKeyboard) {
@@ -78,7 +78,7 @@ namespace ascension {
 					graphics::geometry::_x = static_cast<graphics::Scalar>(x), graphics::geometry::_y = static_cast<graphics::Scalar>(y)));
 				static const Gdk::ModifierType NATIVE_BUTTON_MASK = Gdk::BUTTON1_MASK | Gdk::BUTTON2_MASK | Gdk::BUTTON3_MASK | Gdk::BUTTON4_MASK | Gdk::BUTTON5_MASK;
 				buttons = !byKeyboard ? (state & NATIVE_BUTTON_MASK) : widgetapi::event::LocatedUserInput::NO_BUTTON;
-				modifiers = state & ~NATIVE_BUTTON_MASK;
+				modifiers = widgetapi::event::KeyboardModifiers::fromNative(state & ~NATIVE_BUTTON_MASK);
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -140,10 +140,9 @@ namespace ascension {
 		}
 
 		namespace {
-			void handleDirectionalKey(TextViewer& viewer, graphics::PhysicalDirection direction, widgetapi::event::UserInput::KeyboardModifier modifiers) {
+			void handleDirectionalKey(TextViewer& viewer, graphics::PhysicalDirection direction, const widgetapi::event::KeyboardModifiers& modifiers) {
 				using namespace ascension::texteditor::commands;
 				using presentation::FlowRelativeDirection;
-				using widgetapi::event::UserInput;
 				static kernel::Position(*const nextCharacterLocation)(const kernel::Point&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
 
 				const presentation::WritingMode writingMode(viewer.presentation().computeWritingMode());
@@ -152,26 +151,26 @@ namespace ascension {
 				switch(boost::native_value(abstractDirection)) {
 					case FlowRelativeDirection::BEFORE:
 					case FlowRelativeDirection::AFTER:
-						if((modifiers & ~(UserInput::SHIFT_DOWN | UserInput::ALT_DOWN)) == 0) {
-							if((modifiers & UserInput::ALT_DOWN) == 0)
+						if((modifiers & widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)).flip()).none()) {
+							if(modifiers.test(widgetapi::event::ALT_DOWN))
 								makeCaretMovementCommand(viewer, &kernel::locations::nextVisualLine,
-									logicalDirection, (modifiers & UserInput::SHIFT_DOWN) != 0)();
+									logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
 							else
 								makeRowSelectionExtensionCommand(viewer, &kernel::locations::nextVisualLine, logicalDirection)();
 						}
 						break;
 					case FlowRelativeDirection::START:
 					case FlowRelativeDirection::END:
-						if((modifiers & ~(UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN | UserInput::ALT_DOWN)) == 0) {
-							if((modifiers & UserInput::ALT_DOWN) == 0) {
-								if((modifiers & UserInput::CONTROL_DOWN) != 0)
+						if((modifiers & widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::CONTROL_DOWN, widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)).flip()).none()) {
+							if(modifiers.test(widgetapi::event::ALT_DOWN)) {
+								if(modifiers.test(widgetapi::event::CONTROL_DOWN))
 									makeCaretMovementCommand(viewer, &kernel::locations::nextWord,
-										logicalDirection, (modifiers & UserInput::SHIFT_DOWN) != 0)();
+										logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
 								else
 									makeCaretMovementCommand(viewer, nextCharacterLocation,
-										logicalDirection, (modifiers & UserInput::SHIFT_DOWN) != 0)();
-							} else if((modifiers & UserInput::SHIFT_DOWN) != 0) {
-								if((modifiers & UserInput::CONTROL_DOWN) != 0)
+										logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
+							} else if(modifiers.test(widgetapi::event::SHIFT_DOWN)) {
+								if(modifiers.test(widgetapi::event::CONTROL_DOWN))
 									makeRowSelectionExtensionCommand(viewer, &kernel::locations::nextWord, logicalDirection)();
 								else
 									makeRowSelectionExtensionCommand(viewer, nextCharacterLocation, logicalDirection)();
@@ -211,20 +210,13 @@ namespace ascension {
 				case VK_BACK:
 				case VK_F16:
 #endif
-				switch(input.modifiers()) {
-					case 0:
-					case UserInput::SHIFT_DOWN:
+					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
 						CharacterDeletionCommand(*this, Direction::BACKWARD)();
-						break;
-					case UserInput::CONTROL_DOWN:
+					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						WordDeletionCommand(*this, Direction::BACKWARD)();
-						break;
-					case UserInput::ALT_DOWN:
-					case UserInput::SHIFT_DOWN | UserInput::ALT_DOWN:
-						UndoCommand(*this, input.hasModifier(UserInput::SHIFT_DOWN))();
-						break;
-				}
-				break;
+					else if(!input.hasModifierOtherThan(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)) && input.hasModifier(widgetapi::event::ALT_DOWN))
+						UndoCommand(*this, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Clear:
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
@@ -232,7 +224,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_CLEAR:
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN)
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						EntireDocumentSelectionCreationCommand(*this)();
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -246,18 +238,12 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_RETURN:
 #endif
-					switch(input.modifiers()) {
-						case 0:
-						case UserInput::SHIFT_DOWN:
-							NewlineCommand(*this)();
-							break;
-						case UserInput::CONTROL_DOWN:
-							NewlineCommand(*this, Direction::BACKWARD)();
-							break;
-						case UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN:
-							NewlineCommand(*this, Direction::FORWARD)();
-							break;
-					}
+					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
+						NewlineCommand(*this)();
+					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
+						NewlineCommand(*this, Direction::BACKWARD)();
+					else if(input.modifiers() == widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::CONTROL_DOWN, widgetapi::event::SHIFT_DOWN)))
+						NewlineCommand(*this, Direction::FORWARD)();	
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Escape:
@@ -276,9 +262,9 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_PRIOR:
 #endif
-					if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN))
-						makeCaretMovementCommand(*this, &kernel::locations::nextPage, Direction::BACKWARD, input.hasModifier(UserInput::SHIFT_DOWN))();
-					else if(input.modifiers() == UserInput::CONTROL_DOWN) {
+					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
+						makeCaretMovementCommand(*this, &kernel::locations::nextPage, Direction::BACKWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
 						if(std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
 							viewport->scrollBlockFlowPage(+1);
 					}
@@ -290,9 +276,9 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_NEXT:
 #endif
-					if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN))
-						makeCaretMovementCommand(*this, &kernel::locations::nextPage, Direction::FORWARD, input.hasModifier(UserInput::SHIFT_DOWN))();
-					else if(input.modifiers() == UserInput::CONTROL_DOWN) {
+					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
+						makeCaretMovementCommand(*this, &kernel::locations::nextPage, Direction::FORWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
 						if(std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
 							viewport->scrollBlockFlowPage(-1);
 					}
@@ -304,11 +290,11 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_HOME:
 #endif
-					if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN | UserInput::CONTROL_DOWN)) {
-						if(input.hasModifier(UserInput::CONTROL_DOWN))
-							makeCaretMovementCommand(*this, &kernel::locations::beginningOfDocument, input.hasModifier(UserInput::SHIFT_DOWN))();
+					if(!input.hasModifierOtherThan(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::CONTROL_DOWN))) {
+						if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
+							makeCaretMovementCommand(*this, &kernel::locations::beginningOfDocument, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 						else
-							makeCaretMovementCommand(*this, &kernel::locations::beginningOfVisualLine, input.hasModifier(UserInput::SHIFT_DOWN))();
+							makeCaretMovementCommand(*this, &kernel::locations::beginningOfVisualLine, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					}
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -318,11 +304,11 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_END:
 #endif
-					if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN | UserInput::CONTROL_DOWN)) {
-						if(input.hasModifier(UserInput::CONTROL_DOWN))
-							makeCaretMovementCommand(*this, &kernel::locations::endOfDocument, input.hasModifier(UserInput::SHIFT_DOWN))();
+					if(!input.hasModifierOtherThan(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::CONTROL_DOWN))) {
+						if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
+							makeCaretMovementCommand(*this, &kernel::locations::endOfDocument, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 						else
-							makeCaretMovementCommand(*this, &kernel::locations::endOfVisualLine, input.hasModifier(UserInput::SHIFT_DOWN))();
+							makeCaretMovementCommand(*this, &kernel::locations::endOfVisualLine, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					}
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -368,10 +354,10 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_INSERT:
 #endif
-					if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN | UserInput::CONTROL_DOWN)) {
-						if(input.hasModifier(UserInput::SHIFT_DOWN))
-							PasteCommand(*this, input.hasModifier(UserInput::CONTROL_DOWN))();
-						else if(input.hasModifier(UserInput::CONTROL_DOWN))
+					if(!input.hasModifierOtherThan(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::CONTROL_DOWN))) {
+						if(input.hasModifier(widgetapi::event::SHIFT_DOWN))
+							PasteCommand(*this, input.hasModifier(widgetapi::event::CONTROL_DOWN))();
+						else if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
 							copySelection(textArea().caret(), true);
 						else
 							OvertypeModeToggleCommand(*this)();
@@ -385,17 +371,12 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_DELETE:
 #endif
-					switch(input.modifiers()) {
-						case 0:
-							CharacterDeletionCommand(*this, Direction::FORWARD)();
-							break;
-						case UserInput::SHIFT_DOWN:
-							cutSelection(textArea().caret(), true);
-							break;
-						case UserInput::CONTROL_DOWN:
-							WordDeletionCommand(*this, Direction::FORWARD)();
-							break;
-					}
+					if(input.modifiers() == widgetapi::event::KeyboardModifiers())
+						CharacterDeletionCommand(*this, Direction::FORWARD)();
+					else if(input.modifiers() == widgetapi::event::SHIFT_DOWN)
+						cutSelection(textArea().caret(), true);
+					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
+						WordDeletionCommand(*this, Direction::FORWARD)();
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_A:
@@ -404,7 +385,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'A':
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN)
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						EntireDocumentSelectionCreationCommand(*this)();	// ^A -> Select All
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -414,7 +395,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'C':
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN)
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						copySelection(textArea().caret(), true);	// ^C -> Copy
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -424,7 +405,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'H':
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN)
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;	// ^H -> Backspace
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -434,7 +415,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'I':
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN)
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						CharacterInputCommand(*this, 0x0009u)();	// ^I -> Tab
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -447,7 +428,7 @@ namespace ascension {
 				case 'J':
 				case 'M':
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN)
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						NewlineCommand(*this, boost::none)();	// ^J or ^M -> New Line
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -457,7 +438,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'V':
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN)
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						PasteCommand(*this, false)();	// ^V -> Paste
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -467,7 +448,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'X':
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN)
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						cutSelection(textArea().caret(), true);	// ^X -> Cut
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -477,7 +458,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'Y':
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN)
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						UndoCommand(*this, true)();	// ^Y -> Redo
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -487,7 +468,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'Z':
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN)
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						UndoCommand(*this, false)();	// ^Z -> Undo
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -497,7 +478,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_NUMPAD5:
 #endif
-					if(input.modifiers() == UserInput::CONTROL_DOWN) {
+					if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 						if(hasModifier<Qt::KeypadModifier>(input))
 #endif
@@ -511,7 +492,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_F12:
 #endif
-					if(input.modifiers() == (UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN))
+					if(input.modifiers() == widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::CONTROL_DOWN | widgetapi::event::SHIFT_DOWN)))
 						CodePointToCharacterConversionCommand(*this)();
 					break;
 
@@ -523,11 +504,11 @@ namespace ascension {
 					UndoCommand(*this, true)();
 					break;
 				case GDK_KEY_Shift_L:
-					if(input.hasModifier(UserInput::CONTROL_DOWN) && configuration_.readingDirection == presentation::RIGHT_TO_LEFT)
+					if(input.hasModifier(widgetapi::event::CONTROL_DOWN) && configuration_.readingDirection == presentation::RIGHT_TO_LEFT)
 						presentation().setDefaultDirection(presentation::LEFT_TO_RIGHT);
 					break;
 				case GDK_KEY_Shift_R:
-					if(input.hasModifier(UserInput::CONTROL_DOWN) && configuration_.readingDirection == presentation::LEFT_TO_RIGHT)
+					if(input.hasModifier(widgetapi::event::CONTROL_DOWN) && configuration_.readingDirection == presentation::LEFT_TO_RIGHT)
 						presentation().setDefaultDirection(presentation::RIGHT_TO_LEFT);
 					break;
 				case GDK_KEY_Copy:
@@ -551,7 +532,7 @@ namespace ascension {
 					break;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_SHIFT:
-					if(input.hasModifier(UserInput::CONTROL_DOWN)) {
+					if(input.hasModifier(widgetapi::event::CONTROL_DOWN)) {
 						if(::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == RIGHT_TO_LEFT)
 							presentation().setDefaultDirection(LEFT_TO_RIGHT);
 						else if(::GetKeyState(VK_RSHIFT) < 0 && configuration_.readingDirection == LEFT_TO_RIGHT)
@@ -567,7 +548,7 @@ namespace ascension {
 
 		/// Invoked when a key has been released.
 		void TextViewer::keyReleased(widgetapi::event::KeyInput& input) {
-			if(input.hasModifier(widgetapi::event::UserInput::ALT_DOWN)) {
+			if(input.hasModifier(widgetapi::event::ALT_DOWN)) {
 				restoreHiddenCursor();
 				if(const auto mouseInputStrategy = textArea().mouseInputStrategy().lock())
 					mouseInputStrategy->interruptMouseReaction(true);

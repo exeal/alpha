@@ -109,7 +109,7 @@ namespace ascension {
 							// select line(s)
 							Caret& caret = viewer()->textArea().caret();
 							const kernel::Position to(viewToModel(*viewer(), input.location()).insertionIndex());
-							const bool extend = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN) && kernel::line(to) != kernel::line(caret.anchor());
+							const bool extend = input.hasModifier(widgetapi::event::SHIFT_DOWN) && kernel::line(to) != kernel::line(caret.anchor());
 							lineSelectionAnchorLine_ = extend ? kernel::line(caret.anchor()) : kernel::line(to);
 							caret.endRectangleSelection();
 							continueLineSelection(to);

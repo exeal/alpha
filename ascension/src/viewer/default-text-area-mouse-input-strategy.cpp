@@ -58,8 +58,9 @@ namespace ascension {
 		namespace {
 			class CharacterSelectionExtender : public DefaultTextAreaMouseInputStrategy::SelectionExtender {
 			public:
-				CharacterSelectionExtender(Caret& caret, const kernel::Position& initialPosition) {
-					caret.moveTo(initialPosition);
+				CharacterSelectionExtender(Caret& caret, boost::optional<kernel::Position> initialPosition = boost::none) {
+					if(initialPosition != boost::none)
+						caret.moveTo(boost::get(initialPosition));
 				}
 				void continueSelection(Caret& caret, const kernel::Position& destination) override {
 					caret.extendSelectionTo(destination);
@@ -330,7 +331,7 @@ namespace ascension {
 			if(!viewer.document().isReadOnly())
 				possibleActions |= widgetapi::DROP_ACTION_MOVE;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			d.execute(possibleActions, input.modifiers(), nullptr);
+			d.execute(possibleActions, input.modifiers().native(), nullptr);
 #else
 			d.execute(possibleActions);
 #endif
@@ -499,7 +500,7 @@ namespace ascension {
 			}
 
 			if(acceptable) {
-				dropAction = input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN) ? widgetapi::DROP_ACTION_COPY : widgetapi::DROP_ACTION_MOVE;
+				dropAction = input.hasModifier(widgetapi::event::CONTROL_DOWN) ? widgetapi::DROP_ACTION_COPY : widgetapi::DROP_ACTION_MOVE;
 				const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> scrollOffset(calculateDnDScrollOffset(viewer));
 				if(scrollOffset.x() != 0 || scrollOffset.y() != 0) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -574,7 +575,7 @@ namespace ascension {
 				} else {
 					const bool rectangle = caret.isSelectionRectangle();
 					bool failed = false;
-					if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN)) {	// copy
+					if(input.hasModifier(widgetapi::event::CONTROL_DOWN)) {	// copy
 						if((input.possibleActions() & widgetapi::DROP_ACTION_COPY) != 0) {
 							document.insertUndoBoundary();
 							AutoFreeze af(&viewer);
@@ -697,7 +698,7 @@ namespace ascension {
 			else {
 				// try hyperlink
 				bool hyperlinkInvoked = false;
-				if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN)) {
+				if(input.hasModifier(widgetapi::event::CONTROL_DOWN)) {
 					if(!isPointOverSelection(caret, input.location())) {
 						if(const boost::optional<graphics::font::TextHit<kernel::Position>> p = viewToModelInBounds(viewer, input.location())) {
 							if(const presentation::hyperlink::Hyperlink* link = utils::getPointedHyperlink(viewer, p->characterIndex())) {
@@ -713,25 +714,27 @@ namespace ascension {
 					//
 					// shift => keep the anchor and move the caret to the cursor position
 					// ctrl  => begin word selection
-					// alt   => begin rectangle selection
-					if(const boost::optional<graphics::font::TextHit<kernel::Position>> to = viewToModel(viewer, input.location())) {
-						if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN | widgetapi::event::UserInput::SHIFT_DOWN)) {
-							const bool shift = input.hasModifier(widgetapi::event::UserInput::SHIFT_DOWN);
-							if(input.hasModifier(widgetapi::event::UserInput::CONTROL_DOWN)) {	// begin word selection
-								const auto& initialPosition = shift ? caret.anchor().position() : boost::get(to).insertionIndex();
-								selectionExtender_.reset(new WordSelectionExtender(caret, initialPosition));
-							}
-							if(shift)
-								selectionExtender_->continueSelection(caret, boost::get(to).insertionIndex());
-						}
-						if(selectionExtender_.get() == nullptr)
-							selectionExtender_.reset(new CharacterSelectionExtender(caret, boost::get(to).insertionIndex()));
-						if(input.hasModifier(widgetapi::event::UserInput::ALT_DOWN))	// make the selection reactangle
-							caret.beginRectangleSelection();
-						else
-							caret.endRectangleSelection();
-						beginLocationTracking(viewer, &targetLocker, true, true);
-					}
+					// alt   => begin rectangle selection (only if !ctrl)
+					const graphics::font::TextHit<kernel::Position> to(viewToModel(viewer, input.location()));
+					assert(selectionExtender_.get() == nullptr);
+					if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
+						selectionExtender_.reset(
+							new WordSelectionExtender(caret,
+								input.hasModifier(widgetapi::event::SHIFT_DOWN) ?
+									boost::none : boost::make_optional(to.insertionIndex())));	// begin word selection
+					else
+						selectionExtender_.reset(
+							new CharacterSelectionExtender(caret,
+								input.hasModifier(widgetapi::event::SHIFT_DOWN) ?
+									boost::none : boost::make_optional(to.insertionIndex())));	// begin character selection
+					if(input.hasModifier(widgetapi::event::SHIFT_DOWN))
+						continueSelectionExtension(to.insertionIndex());
+
+					if(input.hasModifier(widgetapi::event::ALT_DOWN) && !input.hasModifier(widgetapi::event::CONTROL_DOWN))
+						caret.beginRectangleSelection();	// make the selection reactangle
+					else
+						caret.endRectangleSelection();
+					beginLocationTracking(viewer, &targetLocker, true, true);
 				}
 			}
 
@@ -927,6 +930,7 @@ namespace ascension {
 				}
 			} else if(selectionExtender_.get() != nullptr) {
 				assert(isTrackingLocation());
+				continueSelectionExtension(viewToModel(textArea_->textViewer(), input.location()).insertionIndex());
 				input.consume();
 			}
 		}

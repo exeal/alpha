@@ -544,6 +544,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\drag-and-drop.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\event.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\key-input.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\keyboard-modifier.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\located-user-input.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\mouse-button-input.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\mouse-wheel-input.hpp" />

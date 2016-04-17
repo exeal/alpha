@@ -57,7 +57,7 @@ namespace ascension {
 
 			/// @see TextViewer#keyReleased
 			void SourceViewer::keyReleased(widgetapi::event::KeyInput& input) {
-				if(input.hasModifier(widgetapi::event::UserInput::ALT_DOWN) && ruler_.get() != nullptr) {
+				if(input.hasModifier(widgetapi::event::ALT_DOWN) && ruler_.get() != nullptr) {
 					if(const auto mouseInputStrategy = ruler_->mouseInputStrategy().lock())
 						mouseInputStrategy->interruptMouseReaction(true);
 				}
