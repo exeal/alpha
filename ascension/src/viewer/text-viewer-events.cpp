@@ -162,7 +162,7 @@ namespace ascension {
 					case FlowRelativeDirection::START:
 					case FlowRelativeDirection::END:
 						if((modifiers & widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::CONTROL_DOWN, widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)).flip()).none()) {
-							if(modifiers.test(widgetapi::event::ALT_DOWN)) {
+							if(!modifiers.test(widgetapi::event::ALT_DOWN)) {
 								if(modifiers.test(widgetapi::event::CONTROL_DOWN))
 									makeCaretMovementCommand(viewer, &kernel::locations::nextWord,
 										logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
