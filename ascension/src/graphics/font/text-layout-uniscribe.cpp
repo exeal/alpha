@@ -2848,16 +2848,18 @@ namespace ascension {
 				// 2. paint backgrounds and borders
 				const bool horizontalLayout = isHorizontal(wm.blockFlowDirection);
 				assert(horizontalLayout || isVertical(wm.blockFlowDirection));
-				typedef std::tuple<
-					const std::reference_wrapper<const TextRunImpl>,	// text run
-					const graphics::Rectangle,							// 'content-rectangle'
-					const Point											// 'alignment-point'
-				> TextRunToPaint;
+				struct TextRunToPaint {
+					const TextRunImpl* const p;
+					const graphics::Rectangle contentRectangle;
+					const Point alignmentPoint;
+					TextRunToPaint(const TextRunImpl& textRun, const graphics::Rectangle& contentRectangle,
+						const Point& alignmentPoint) : p(&textRun), contentRectangle(contentRectangle), alignmentPoint(alignmentPoint) {}
+				};
 				std::vector<TextRunToPaint> textRunsToPaint;
 				std::vector<
 					std::tuple<
-						const std::reference_wrapper<const TextRunToPaint>,
-						const std::reference_wrapper<const OverriddenSegment>,
+						const std::size_t,
+						const OverriddenSegment* const,
 						const Rectangle
 					>
 				> overriddenSegmentsToPaint;
@@ -2941,7 +2943,7 @@ namespace ascension {
 							}
 
 							// 2-3. store this text run to paint the glyphs
-							textRunsToPaint.push_back(std::make_tuple(std::cref(static_cast<const TextRunImpl&>(*run)), runContentRectangle, runAlignmentPoint));
+							textRunsToPaint.push_back(TextRunToPaint(static_cast<const TextRunImpl&>(*run), runContentRectangle, runAlignmentPoint));
 
 							// 2-3. compute 'border-rectangle' if needed
 							const auto& runStyle = static_cast<const TextRunImpl&>(*run).style();
@@ -2986,14 +2988,14 @@ namespace ascension {
 									Rectangle overriddenRectangle;
 									geometry::translate(
 										geometry::_from = geometry::make<Rectangle>(physicalOverriddenRectangle), geometry::_to = overriddenRectangle,
-										geometry::_tx = geometry::x(runAlignmentPoint), geometry::_ty = geometry::y(runAlignmentPoint));
+										geometry::_tx = geometry::x(runAlignmentPoint), geometry::_ty = geometry::y(origin));
 									if(segment.background.get() != nullptr) {
 										context.setFillStyle(segment.background);
 										context.fillRectangle(overriddenRectangle);
 									}
 
 									// mark that this text run has an overridden segment
-									overriddenSegmentsToPaint.push_back(std::make_tuple(std::cref(textRunsToPaint.back()), std::cref(segment), overriddenRectangle));
+									overriddenSegmentsToPaint.push_back(std::make_tuple(textRunsToPaint.size() - 1, &segment, overriddenRectangle));
 								}
 							}
 
@@ -3023,18 +3025,18 @@ namespace ascension {
 
 				// 3. for each text runs
 				BOOST_FOREACH(auto& textRun, textRunsToPaint) {
-					const SolidColor foreground(std::get<0>(textRun).get().style().color);
+					const SolidColor foreground(textRun.p->style().color);
 					context.setFillStyle(std::shared_ptr<const SolidColor>(&foreground, boost::null_deleter()));
-					std::get<0>(textRun).get().fillGlyphs(context, std::get<2>(textRun));
+					textRun.p->fillGlyphs(context, textRun.alignmentPoint);
 				}
 
 				// . paint overridden segments glyphs
 				BOOST_FOREACH(auto& segment, overriddenSegmentsToPaint) {
 #if 0
-					const auto& foreground = std::get<1>(segment).get().foreground;
+					const auto& foreground = segment.textRun->foreground;
 					if(foreground.get() == nullptr)
 #else
-					const auto& foreground = std::get<1>(segment).get().color;
+					const auto& foreground = std::get<1>(segment)->color;
 					if(foreground == boost::none)
 #endif
 						continue;
@@ -3042,13 +3044,13 @@ namespace ascension {
 					context.beginPath();
 					context.rectangle(std::get<2>(segment));
 					context.clip();
-					const TextRunImpl& textRun = std::get<0>(std::get<0>(segment).get()).get();
+					const TextRunImpl& textRun = *textRunsToPaint[std::get<0>(segment)].p;
 #if 0
 					context.setFillStyle(foreground);
 #else
 					::SetTextColor(context.native().get(), toNative<COLORREF>(boost::get(foreground)));
 #endif
-					textRun.fillGlyphs(context, std::get<2>(std::get<0>(segment).get()));
+					textRun.fillGlyphs(context, textRunsToPaint[std::get<0>(segment)].alignmentPoint);
 					context.restore();
 				}
 				context.restore();
