@@ -439,12 +439,12 @@ namespace ascension {
 						const Point& point, bool abortNoCharacter, kernel::locations::CharacterUnit snapPolicy) {
 					// locate the logical line
 					bool outside;
-					const VisualLine line(locateLine(viewport, point, &outside));
+					const Index line(locateLine(viewport, point, &outside).line);
 					if(abortNoCharacter && outside)
 						return boost::none;
-					const TextLayout* const layout = viewport.textRenderer().layouts().at(line.line);
+					const TextLayout* const layout = viewport.textRenderer().layouts().at(line);
 					assert(layout != nullptr);
-					const BaselineIterator baseline(viewport, line, false);
+					const BaselineIterator baseline(viewport, VisualLine(line, 0), false);
 					// locate the position in the line
 					const presentation::WritingMode wm(writingMode(*layout));
 					const bool horizontal = presentation::isHorizontal(wm.blockFlowDirection);
@@ -465,7 +465,7 @@ namespace ascension {
 					if(hitInLine.characterIndex() != 0 && snapPolicy != kernel::locations::UTF16_CODE_UNIT) {
 						using namespace text;
 						const kernel::Document& document = viewport.textRenderer().presentation().document();
-						const String& s = document.lineString(line.line);
+						const String& s = document.lineString(line);
 						const bool interveningSurrogates =
 							surrogates::isLowSurrogate(s[hitInLine.characterIndex()]) && surrogates::isHighSurrogate(s[hitInLine.characterIndex() - 1]);
 						const Scalar ipd = horizontal ? lineLocalPoint.x() : lineLocalPoint.y();
@@ -480,8 +480,8 @@ namespace ascension {
 						} else if(snapPolicy == kernel::locations::GRAPHEME_CLUSTER) {
 							text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
 								kernel::DocumentCharacterIterator(document,
-									kernel::Region::makeSingleLine(line.line, boost::irange<Index>(0, s.length())),
-									kernel::Position(line.line, hitInLine.characterIndex())));
+									kernel::Region::makeSingleLine(line, boost::irange<Index>(0, s.length())),
+									kernel::Position(line, hitInLine.characterIndex())));
 							if(interveningSurrogates || !i.isBoundary(i.base())) {
 								--i;
 								const TextHit<> leading(TextHit<>::leading(kernel::offsetInLine(i.base().tell())));
@@ -494,8 +494,8 @@ namespace ascension {
 							throw UnknownValueException("snapPolicy");
 					}
 					return hitInLine.isLeadingEdge() ?
-						TextHit<kernel::Position>::leading(kernel::Position(line.line, hitInLine.characterIndex()))
-						: TextHit<kernel::Position>::trailing(kernel::Position(line.line, hitInLine.characterIndex()));
+						TextHit<kernel::Position>::leading(kernel::Position(line, hitInLine.characterIndex()))
+						: TextHit<kernel::Position>::trailing(kernel::Position(line, hitInLine.characterIndex()));
 				}
 			}
 
