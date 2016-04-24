@@ -152,10 +152,10 @@ namespace ascension {
 					case FlowRelativeDirection::BEFORE:
 					case FlowRelativeDirection::AFTER:
 						if((modifiers & widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)).flip()).none()) {
-							if(modifiers.test(widgetapi::event::ALT_DOWN))
+							if(!modifiers.test(widgetapi::event::ALT_DOWN))
 								makeCaretMovementCommand(viewer, &kernel::locations::nextVisualLine,
 									logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
-							else
+							else if(modifiers.test(widgetapi::event::SHIFT_DOWN))
 								makeRowSelectionExtensionCommand(viewer, &kernel::locations::nextVisualLine, logicalDirection)();
 						}
 						break;
