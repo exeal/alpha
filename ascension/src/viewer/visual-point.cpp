@@ -223,7 +223,7 @@ namespace ascension {
 				const graphics::font::TextRenderer& renderer = textArea().textRenderer();
 				Index line = renderer.layouts().mapLogicalLineToVisualLine(kernel::line(p)), subline;
 				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(kernel::line(p)))
-					subline = layout->lineAt(kernel::offsetInLine(p));
+					subline = layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(p)));
 				else
 					subline = 0;
 				line += subline;
@@ -261,7 +261,7 @@ namespace ascension {
 				if(kernel::line(from) == kernel::line(*this) && lineNumberCaches_ != boost::none) {
 					const graphics::font::TextLayout* const layout = textArea().textRenderer().layouts().at(kernel::line(*this));
 					lineNumberCaches_->line -= lineNumberCaches_->subline;
-					lineNumberCaches_->subline = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(*this)) : 0;
+					lineNumberCaches_->subline = (layout != nullptr) ? layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(*this))) : 0;
 					lineNumberCaches_->line += lineNumberCaches_->subline;
 				} else
 					lineNumberCaches_ = boost::none;
@@ -421,8 +421,9 @@ namespace ascension {
 				else if(*boost::const_begin(lines) == kernel::line(*this)) {
 					if(const graphics::font::TextLayout* const layout = textArea().textRenderer().layouts().at(kernel::line(*this))) {
 						lineNumberCaches_->line -= lineNumberCaches_->subline;
-						lineNumberCaches_->subline =
-							layout->lineAt(std::min(kernel::offsetInLine(*this), document().lineLength(kernel::line(*this))));
+						lineNumberCaches_->subline = layout->lineAt(std::min(
+							graphics::font::TextHit<>::leading(kernel::offsetInLine(*this)),
+							graphics::font::TextHit<>::leading(document().lineLength(kernel::line(*this)))));
 						lineNumberCaches_->line += lineNumberCaches_->subline;
 					} else
 						lineNumberCaches_ = boost::none;
@@ -500,7 +501,7 @@ namespace ascension {
 			Position beginningOfVisualLine(const viewer::VisualPoint& p) {
 				const Position np(p.normalized());
 				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np)))
-					return Position(np.line, layout->lineOffset(layout->lineAt(kernel::offsetInLine(np))));
+					return Position(np.line, layout->lineOffset(layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np)))));
 				return beginningOfLine(p);
 			}
 
@@ -554,10 +555,10 @@ namespace ascension {
 			Position locations::endOfVisualLine(const viewer::VisualPoint& p) {
 				Position np(p.normalized());
 				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np))) {
-					const Index subline = layout->lineAt(kernel::offsetInLine(np));
+					const Index subline = layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np)));
 					np.offsetInLine = (subline < layout->numberOfLines() - 1) ?
 						layout->lineOffset(subline + 1) : p.document().lineLength(kernel::line(np));
-					if(layout->lineAt(kernel::offsetInLine(np)) != subline)
+					if(layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np))) != subline)
 						np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 					return np;
 				}
@@ -588,7 +589,7 @@ namespace ascension {
 				Position np(p.normalized());
 				const String& s = p.document().lineString(kernel::line(np));
 				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np))) {
-					const Index subline = layout->lineAt(kernel::offsetInLine(np));
+					const Index subline = layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np)));
 					np.offsetInLine = detail::identifierSyntax(p).eatWhiteSpaces(
 						s.begin() + layout->lineOffset(subline),
 						s.begin() + ((subline < layout->numberOfLines() - 1) ?
@@ -655,7 +656,7 @@ namespace ascension {
 					return true;
 				const Position np(p.normalized());
 				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np)))
-					return kernel::offsetInLine(np) == layout->lineOffset(layout->lineAt(kernel::offsetInLine(np)));
+					return kernel::offsetInLine(np) == layout->lineOffset(layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np))));
 				return isBeginningOfLine(p);
 			}
 
@@ -670,7 +671,7 @@ namespace ascension {
 					return true;
 				const Position np(p.normalized());
 				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np))) {
-					const Index subline = layout->lineAt(kernel::offsetInLine(np));
+					const Index subline = layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np)));
 					return kernel::offsetInLine(np) == layout->lineOffset(subline) + layout->lineLength(subline);
 				}
 				return isEndOfLine(p);
@@ -836,7 +837,7 @@ namespace ascension {
 				Position np(p.normalized());
 				const graphics::font::TextRenderer& renderer = p.textArea().textRenderer();
 				const graphics::font::TextLayout* layout = renderer.layouts().at(kernel::line(np));
-				Index subline = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(np)) : 0;
+				Index subline = (layout != nullptr) ? layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np))) : 0;
 				if(direction == Direction::FORWARD) {
 					if(kernel::line(np) == p.document().numberOfLines() - 1 && (layout == nullptr || subline == layout->numberOfLines() - 1))
 						return viewer::detail::VisualDestinationProxyMaker::make(np, true);
@@ -855,7 +856,7 @@ namespace ascension {
 						presentation::FlowRelativeTwoAxes<graphics::Scalar>(
 							presentation::_ipd = *p.positionInVisualLine_ - graphics::font::lineStartEdge(*layout, renderer.viewport()->contentMeasure()),
 							presentation::_bpd = graphics::font::TextLayout::LineMetricsIterator(*layout, visualLine.subline).baselineOffset())).insertionIndex();
-					if(layout->lineAt(kernel::offsetInLine(np)) != visualLine.subline)
+					if(layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np))) != visualLine.subline)
 						np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 				}
 				return viewer::detail::VisualDestinationProxyMaker::make(np, true);

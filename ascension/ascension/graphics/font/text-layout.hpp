@@ -177,7 +177,7 @@ namespace ascension {
 				/// @{
 				TextAnchor anchor(Index line) const;
 				std::uint8_t characterLevel() const BOOST_NOEXCEPT;
-				std::uint8_t characterLevel(Index offset) const;
+				std::uint8_t characterLevel(const TextHit<>& at) const;
 				bool isBidirectional() const BOOST_NOEXCEPT;
 				Index numberOfCharacters() const BOOST_NOEXCEPT;
 				/// @}
@@ -191,7 +191,7 @@ namespace ascension {
 
 				/// @name Visual Line Accesses
 				/// @{
-				Index lineAt(Index offset) const;
+				Index lineAt(const TextHit<>& at) const;
 				Index lineLength(Index line) const;
 				Index lineOffset(Index line) const;
 				void lineOffsets(std::vector<Index>& offsets) const BOOST_NOEXCEPT;
@@ -282,7 +282,7 @@ namespace ascension {
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const;
 //				void buildLineMetrics(Index line);
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
-				RunVector::const_iterator runForPosition(Index offset) const BOOST_NOEXCEPT;
+				RunVector::const_iterator runForPosition(const TextHit<>& at) const BOOST_NOEXCEPT;
 				boost::iterator_range<RunVector::const_iterator> runsForLine(Index line) const;
 				RunVector::const_iterator firstRunInLine(Index line) const BOOST_NOEXCEPT;
 				void initialize(
@@ -392,18 +392,18 @@ namespace ascension {
 
 			/**
 			 * Returns the wrapped line containing the specified offset in the logical line.
-			 * @param offset The offset in this layout
+			 * @param at The character offset in this layout
 			 * @return The wrapped line
-			 * @throw IndexOutOfBoundsException @a offset is greater than the length of the layout
+			 * @throw IndexOutOfBoundsException @a offset is outside of the layout
 			 */
-			inline Index TextLayout::lineAt(Index offset) const {
-				if(offset > numberOfCharacters())
-					throw IndexOutOfBoundsException("offset");
+			inline Index TextLayout::lineAt(const TextHit<>& at) const {
+				if(at.characterIndex() > numberOfCharacters())
+					throw IndexOutOfBoundsException("at");
 				if(numberOfLines() == 1)
 					return 0;
 				std::vector<Index> offsets;
 				lineOffsets(offsets);
-				return ascension::detail::searchBound(std::begin(offsets), std::end(offsets) - 1, offset) - std::begin(offsets);
+				return ascension::detail::searchBound(std::begin(offsets), std::end(offsets) - 1, at.characterIndex()) - std::begin(offsets);
 			}
 			/**
 			 * Returns the length of the specified visual line.

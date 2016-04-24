@@ -68,6 +68,7 @@ namespace ascension {
 				/// @}
 
 				/// @name Relational Operators
+				/// Relational operators of @c TextHit compare the @c #characterIndex.
 				/// @{
 				/** Equality operator. */
 				bool operator==(const TextHit& other) const BOOST_NOEXCEPT {

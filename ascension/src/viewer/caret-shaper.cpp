@@ -29,10 +29,11 @@ namespace ascension {
 		boost::optional<graphics::Rectangle> currentCharacterLogicalBounds(const Caret& caret) {
 			const graphics::font::TextRenderer& textRenderer = caret.textArea().textRenderer();
 			if(const graphics::font::TextLayout* const layout = textRenderer.layouts().at(kernel::line(caret))) {
-				const Index subline = layout->lineAt(kernel::offsetInLine(caret));
+				const auto p(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret)));
+				const Index subline = layout->lineAt(p);
 				NumericRange<graphics::Scalar> extent(layout->extent(boost::irange(subline, subline + 1)));
 
-				const presentation::FlowRelativeTwoAxes<graphics::Scalar> leading(layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret))));
+				const presentation::FlowRelativeTwoAxes<graphics::Scalar> leading(layout->hitToPoint(p));
 				extent.advance_begin(-leading.bpd());
 				extent.advance_end(-leading.bpd());
 

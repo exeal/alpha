@@ -365,7 +365,7 @@ namespace ascension {
 //				}
 				try {
 					const TextLayout* const layout = at(kernel::line(position));
-					const Index line = (layout != nullptr) ? layout->lineAt(kernel::offsetInLine(position)) : 0;
+					const Index line = (layout != nullptr) ? layout->lineAt(TextHit<>::leading(kernel::offsetInLine(position))) : 0;
 					if(offsetInVisualLine != nullptr)
 						*offsetInVisualLine = kernel::offsetInLine(position) - ((layout != nullptr) ? layout->lineOffset(line) : 0);
 					return mapLogicalLineToVisualLine(kernel::line(position)) + line;
