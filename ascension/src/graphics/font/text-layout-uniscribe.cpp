@@ -1561,8 +1561,11 @@ namespace ascension {
 //						return;
 
 					context.setFont(font());
-					if(onlyStroke && !win32::boole(::BeginPath(context.native().get())))
-						throw makePlatformError();
+					if(onlyStroke) {
+						if(!win32::boole(::BeginPath(context.native().get())))
+							throw makePlatformError();
+					} else
+						::SetTextColor(context.native().get(), context.fillStyle()->native().lbColor);
 					assert(analysis_.fLogicalOrder == 0);
 					// paint glyphs
 					const RECT boundsToPaint(toNative<RECT>(context.boundsToPaint()));
@@ -3044,21 +3047,19 @@ namespace ascension {
 #if 0
 					const auto& foreground = segment.segment.foreground;
 					if(foreground.get() == nullptr)
-#else
-					const auto& foreground = segment.segment.color;
-					if(foreground == boost::none)
-#endif
 						continue;
+#else
+					const auto& foregroundColor = segment.segment.color;
+					if(foregroundColor == boost::none)
+						continue;
+					const auto foreground(std::make_shared<SolidColor>(boost::get(foregroundColor)));
+#endif
 					context.save();
 					context.beginPath();
 					context.rectangle(segment.bounds);
 					context.clip();
 					const TextRunImpl& textRun = textRunsToPaint[segment.indexInTextRunsToPaint].impl;
-#if 0
 					context.setFillStyle(foreground);
-#else
-					::SetTextColor(context.native().get(), toNative<COLORREF>(boost::get(foreground)));
-#endif
 					textRun.fillGlyphs(context, textRunsToPaint[segment.indexInTextRunsToPaint].alignmentPoint);
 					context.restore();
 				}
