@@ -98,9 +98,10 @@ namespace ascension {
 		 */
 		std::pair<presentation::FlowRelativeFourSides<graphics::Scalar>, presentation::FlowRelativeTwoAxes<graphics::Scalar>>
 				CaretPainter::computeCharacterLogicalBounds(const kernel::Point& caret, const graphics::font::TextLayout& layout) {
-			const Index subline = layout.lineAt(kernel::offsetInLine(caret));
+			const auto p(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret)));
+			const Index subline = layout.lineAt(p);
 			const auto extent(layout.extent(boost::irange(subline, subline + 1)));
-			const auto leading(layout.hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret))));
+			const auto leading(layout.hitToPoint(p));
 			const auto trailing(kernel::locations::isEndOfLine(caret) ? leading : layout.hitToPoint(graphics::font::TextHit<>::trailing(kernel::offsetInLine(caret))));
 
 			return std::make_pair(

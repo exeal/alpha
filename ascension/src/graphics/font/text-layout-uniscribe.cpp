@@ -1461,6 +1461,7 @@ namespace ascension {
 
 					if((beyondLineLeft || beyondLineRight) && outOfBounds != nullptr)
 						*outOfBounds = true;
+					assert(length() != 0);
 					if(beyondLineLeft)
 						return (direction() == presentation::LEFT_TO_RIGHT) ? TextHit<>::leading(0) : TextHit<>::beforeOffset(length());
 					else if(beyondLineRight)
@@ -2714,7 +2715,7 @@ namespace ascension {
 
 				// traverse all text runs intersect with 'characterRange'
 				const presentation::WritingMode wm(writingMode(*this));
-				const auto lines(boost::irange(lineAt(firstCharacter), lineAt(lastCharacter) + 1));
+				const auto lines(boost::irange(lineAt(TextHit<>::afterOffset(firstCharacter)), lineAt(TextHit<>::beforeOffset(lastCharacter)) + 1));
 				LineMetricsIterator lm(*this, lines.front());
 				BOOST_FOREACH(Index line, lines) {
 					// move to line-left edge of the line

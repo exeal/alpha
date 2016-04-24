@@ -54,6 +54,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewport The text viewport
 			 * @param position The position gives a visual line
+			 * @param trackOutOfViewport
 			 */
 			BaselineIterator::BaselineIterator(const TextViewport& viewport, const TextHit<kernel::Position>& position, bool trackOutOfViewport)
 					: viewport_(&viewport), tracksOutOfViewport_(trackOutOfViewport) {
@@ -61,13 +62,17 @@ namespace ascension {
 				VisualLine line(kernel::line(position.characterIndex()), 0);
 				if(line.line < this->viewport().firstVisibleLine().line)
 					internalAdvance(&line, boost::none);	// should go beyond before-edge
-				else if(line.line == this->viewport().firstVisibleLine().line) {
-					line.subline = this->viewport().textRenderer().layouts().at(line.line)->lineAt(kernel::offsetInLine(position.insertionIndex()));
-					internalAdvance(&line, boost::none);
-				} else {
-					internalAdvance(&line, boost::none);
-					if(this->line() != boost::none)
-						std::advance(*this, this->viewport().textRenderer().layouts().at(line.line)->lineAt(kernel::offsetInLine(position.insertionIndex())));
+				else {
+					const Index offset = kernel::offsetInLine(position.characterIndex());
+					const TextHit<> hit(position.isLeadingEdge() ? TextHit<>::leading(offset) : TextHit<>::trailing(offset));
+					if(line.line == this->viewport().firstVisibleLine().line) {
+						line.subline = this->viewport().textRenderer().layouts().at(line.line)->lineAt(hit);
+						internalAdvance(&line, boost::none);
+					} else {
+						internalAdvance(&line, boost::none);
+						if(this->line() != boost::none)
+							std::advance(*this, this->viewport().textRenderer().layouts().at(line.line)->lineAt(hit));
+					}
 				}
 			}
 

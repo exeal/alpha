@@ -306,13 +306,14 @@ namespace ascension {
 					before = -lm.ascent();
 					end = +lm.descent();
 				} else if(boost::empty(orderedCharacterRange)) {	// an empty rectangle for an empty range
-					const auto lm(lineMetrics(lineAt(orderedCharacterRange.front())));
+					const auto lm(lineMetrics(lineAt(TextHit<>::leading(orderedCharacterRange.front()))));
 					const presentation::FlowRelativeTwoAxes<Scalar> leading(hitToPoint(TextHit<>::leading(orderedCharacterRange.front())));
 					before = leading.bpd() - lm.ascent();
 					after = leading.bpd() + lm.descent();
 					start = end = leading.ipd();
 				} else {
-					const Index firstLine = lineAt(*boost::const_begin(orderedCharacterRange)), lastLine = lineAt(*boost::const_end(orderedCharacterRange));
+					const Index firstLine = lineAt(TextHit<>::afterOffset(*boost::const_begin(orderedCharacterRange)));
+					const Index lastLine = lineAt(TextHit<>::beforeOffset(*boost::const_end(orderedCharacterRange)));	// TODO: Surrogates are OK?
 					const LineMetricsIterator firstLineMetrics(*this, firstLine), lastLineMetrics(*this, lastLine);
 
 					// calculate the block-progression-edges ('before' and 'after'; it's so easy)
@@ -368,16 +369,16 @@ namespace ascension {
 
 			/**
 			 * Returns the bidirectional embedding level of the character at the specified offset.
-			 * @param offset The index of the character from which to get the bidirectional embedding level
+			 * @param at The character from which to get the bidirectional embedding level
 			 * @return The bidirectional embedding level of the character at the specified offset
 			 * @throw IndexOutOfBoundsException @a offset &gt;= @c #numberOfCharacters()
 			 */
-			std::uint8_t TextLayout::characterLevel(Index offset) const {
-				if(offset >= numberOfCharacters())
-					throw IndexOutOfBoundsException("offset");
-				const auto run(runForPosition(offset));
+			std::uint8_t TextLayout::characterLevel(const TextHit<>& at) const {
+				if(at.characterIndex() >= numberOfCharacters())
+					throw IndexOutOfBoundsException("at");
+				const auto run(runForPosition(at));
 				if(run == boost::const_end(runs_))
-					throw IndexOutOfBoundsException("offset");
+					throw IndexOutOfBoundsException("at");
 				return (*run)->characterLevel();
 			}
 
@@ -456,11 +457,11 @@ namespace ascension {
 					return presentation::FlowRelativeTwoAxes<Scalar>(presentation::_ipd = 0.0f, presentation::_bpd = LineMetricsIterator(*this, 0).baselineOffset());
 
 				// locate line
-				const Index line = lineAt(hit.characterIndex());
+				const Index line = lineAt(hit);
 
 				// compute inline-progression-dimension
 				const presentation::WritingMode wm(writingMode(*this));
-				const StringPiece::const_iterator at(textString_.data() + hit.characterIndex());
+				const StringPiece::const_iterator at(textString_.data() + hit.insertionIndex());
 				Scalar x = 0;	// line-relative position
 				BOOST_FOREACH(const std::unique_ptr<const TextRun>& run, runsForLine(line)) {
 					if(at >= boost::const_begin(run->characterRange()) && at < boost::const_end(run->characterRange())) {
@@ -772,7 +773,9 @@ namespace ascension {
 				std::remove_reference<decltype(shape)>::type result;
 
 				const auto orderedRange(range | adaptors::ordered());
-				const auto lines(boost::irange(lineAt(*boost::const_begin(orderedRange)), lineAt(*boost::const_end(orderedRange))));
+				const auto lines(boost::irange(
+					lineAt(TextHit<>::afterOffset(*boost::const_begin(orderedRange))),
+					lineAt(!boost::empty(orderedRange) ? TextHit<>::beforeOffset(*boost::const_end(orderedRange)) : TextHit<>::afterOffset(*boost::const_begin(orderedRange)))));
 				const bool ltr = wm.inlineFlowDirection == presentation::LEFT_TO_RIGHT;
 				for(LineMetricsIterator line(lineMetrics(*boost::const_begin(lines))); line.line() != *boost::const_end(lines); ++line) {
 					Scalar lineOver, lineUnder;
@@ -871,7 +874,7 @@ namespace ascension {
 					assert(hits.back().isLeadingEdge());
 					hits.pop_back();
 					if(isLeftToRight(*this))
-						hits.push_back(TextHit<>::beforeOffset(numberOfCharacters()));
+						hits.push_back(TextHit<>::leading(numberOfCharacters()));
 					else {
 						const std::unique_ptr<const TextRun>& firstRunInLastLine = runsForLine(numberOfLines() - 1).front();
 						if(firstRunInLastLine->direction() == presentation::LEFT_TO_RIGHT)
@@ -882,7 +885,7 @@ namespace ascension {
 				}
 
 				std::vector<boost::integer_range<Index>> hashedResult;
-				BOOST_FOREACH(Index line, boost::irange(lineAt(hits.front().characterIndex()), lineAt(hits.back().characterIndex()) + 1)) {
+				BOOST_FOREACH(Index line, boost::irange(lineAt(hits.front()), lineAt(hits.back()) + 1)) {
 					BOOST_FOREACH(const std::unique_ptr<const TextRun>& run, runsForLine(line)) {
 						const auto runRange(boost::irange<Index>(boost::const_begin(run->characterRange()) - textString_.data(), boost::const_end(run->characterRange()) - textString_.data()));
 						// there are four patterns
@@ -1045,16 +1048,16 @@ namespace ascension {
 
 			/**
 			 * @internal Returns the text run containing the specified offset in this layout.
-			 * @param offset The offset in this layout
+			 * @param at The character offset in this layout
 			 * @return An iterator addresses the text run
 			 * @note If @a offset is equal to the length of this layout, returns the last text run.
 			 */
-			TextLayout::RunVector::const_iterator TextLayout::runForPosition(Index offset) const BOOST_NOEXCEPT {
+			TextLayout::RunVector::const_iterator TextLayout::runForPosition(const TextHit<>& at) const BOOST_NOEXCEPT {
 				assert(!isEmpty());
-				if(offset == numberOfCharacters())
+				if(at.characterIndex() == numberOfCharacters())
 					return boost::const_end(runs_) - 1;
-				const String::const_pointer p(textString_.data() + offset);
-				const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(lineAt(offset)));
+				const String::const_pointer p(textString_.data() + at.characterIndex());
+				const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(lineAt(at)));
 				for(RunVector::const_iterator run(boost::const_begin(runs)); run != boost::const_end(runs); ++run) {
 					if(p >= boost::const_begin((*run)->characterRange()) && p < boost::const_end((*run)->characterRange()))
 						return run;

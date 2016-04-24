@@ -76,8 +76,8 @@ namespace ascension {
 					layout->hitTestCharacter(presentation::FlowRelativeTwoAxes<graphics::Scalar>(
 						presentation::_ipd = *boost::const_end(ipds), presentation::_bpd = baseline)).insertionIndex())
 				| adaptors::ordered());
-			assert(layout->lineAt(*boost::const_begin(result)) == line.subline);
-			assert(boost::empty(result) || layout->lineAt(*boost::const_end(result)) == line.subline);
+			assert(layout->lineAt(graphics::font::TextHit<>::afterOffset(*boost::const_begin(result))) == line.subline);
+			assert(boost::empty(result) || layout->lineAt(graphics::font::TextHit<>::beforeOffset(*boost::const_end(result))) == line.subline);
 			return result;
 		}
 
@@ -151,14 +151,20 @@ namespace ascension {
 			std::get<0>(ipds) = layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(*boost::const_begin(region)))).ipd();
 			std::get<0>(ipds) = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, std::get<0>(ipds));
 			std::get<0>(ipds) += renderer.lineStartEdge(graphics::font::VisualLine(std::get<0>(lines).line, 0));
-			std::get<0>(lines).subline = layout->lineAt(kernel::offsetInLine(*boost::const_begin(region)));
+			std::get<0>(lines).subline = layout->lineAt(graphics::font::TextHit<>::afterOffset(kernel::offsetInLine(*boost::const_begin(region))));
 
 			// second
-			layout = renderer.layouts().at(std::get<1>(lines).line = kernel::line(*boost::const_end(region)));
-			std::get<1>(ipds) = layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(*boost::const_end(region)))).ipd();
-			std::get<1>(ipds) = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, std::get<1>(ipds));
-			std::get<1>(ipds) += renderer.lineStartEdge(graphics::font::VisualLine(std::get<1>(lines).line, 0));
-			std::get<1>(lines).subline = layout->lineAt(kernel::offsetInLine(*boost::const_end(region)));
+			if(!boost::empty(region)) {
+				layout = renderer.layouts().at(std::get<1>(lines).line = kernel::line(*boost::const_end(region)));
+				const auto e(graphics::font::TextHit<>::beforeOffset(kernel::offsetInLine(*boost::const_end(region))));
+				std::get<1>(ipds) = layout->hitToPoint(e).ipd();
+				std::get<1>(ipds) = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, std::get<1>(ipds));
+				std::get<1>(ipds) += renderer.lineStartEdge(graphics::font::VisualLine(std::get<1>(lines).line, 0));
+				std::get<1>(lines).subline = layout->lineAt(e);
+			} else {
+				std::get<1>(ipds) = std::get<0>(ipds);
+				std::get<1>(lines) = std::get<0>(lines);
+			}
 
 			// commit
 			lines_ = boost::irange(std::get<0>(lines), std::get<1>(lines)) | adaptors::ordered();
