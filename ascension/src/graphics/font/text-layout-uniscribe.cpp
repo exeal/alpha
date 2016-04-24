@@ -2849,20 +2849,21 @@ namespace ascension {
 				const bool horizontalLayout = isHorizontal(wm.blockFlowDirection);
 				assert(horizontalLayout || isVertical(wm.blockFlowDirection));
 				struct TextRunToPaint {
-					const TextRunImpl* const p;
+					const TextRunImpl& impl;
 					const graphics::Rectangle contentRectangle;
 					const Point alignmentPoint;
 					TextRunToPaint(const TextRunImpl& textRun, const graphics::Rectangle& contentRectangle,
-						const Point& alignmentPoint) : p(&textRun), contentRectangle(contentRectangle), alignmentPoint(alignmentPoint) {}
+						const Point& alignmentPoint) : impl(textRun), contentRectangle(contentRectangle), alignmentPoint(alignmentPoint) {}
 				};
 				std::vector<TextRunToPaint> textRunsToPaint;
-				std::vector<
-					std::tuple<
-						const std::size_t,
-						const OverriddenSegment* const,
-						const Rectangle
-					>
-				> overriddenSegmentsToPaint;
+				struct OverriddenSegmentToPaint {
+					const std::size_t indexInTextRunsToPaint;
+					const OverriddenSegment& segment;
+					const Rectangle bounds;
+					OverriddenSegmentToPaint(const std::size_t i, const OverriddenSegment& segment,
+						const Rectangle bounds) : indexInTextRunsToPaint(i), segment(segment), bounds(bounds) {}
+				};
+				std::vector<OverriddenSegmentToPaint> overriddenSegmentsToPaint;
 				for(LineMetricsIterator line(*this, linesToPaint.front()); line.line() != *boost::const_end(linesToPaint); ++line) {
 					Point lineLeftPoint(origin);	// position of the baseline on the 'line-left' edge of this 'line-area'
 					{
@@ -2943,7 +2944,11 @@ namespace ascension {
 							}
 
 							// 2-3. store this text run to paint the glyphs
+#ifdef BOOST_NO_CXX11_VARIADIC_TEMPLATES
 							textRunsToPaint.push_back(TextRunToPaint(static_cast<const TextRunImpl&>(*run), runContentRectangle, runAlignmentPoint));
+#else
+							textRunsToPaint.emplace_back(static_cast<const TextRunImpl&>(*run), runContentRectangle, runAlignmentPoint);
+#endif
 
 							// 2-3. compute 'border-rectangle' if needed
 							const auto& runStyle = static_cast<const TextRunImpl&>(*run).style();
@@ -2995,7 +3000,11 @@ namespace ascension {
 									}
 
 									// mark that this text run has an overridden segment
-									overriddenSegmentsToPaint.push_back(std::make_tuple(textRunsToPaint.size() - 1, &segment, overriddenRectangle));
+#ifdef BOOST_NO_CXX11_VARIADIC_TEMPLATES
+									overriddenSegmentsToPaint.push_back(OverriddenSegmentToPaint(textRunsToPaint.size() - 1, segment, overriddenRectangle));
+#else
+									overriddenSegmentsToPaint.emplace_back(textRunsToPaint.size() - 1, segment, overriddenRectangle);
+#endif
 								}
 							}
 
@@ -3025,32 +3034,32 @@ namespace ascension {
 
 				// 3. for each text runs
 				BOOST_FOREACH(auto& textRun, textRunsToPaint) {
-					const SolidColor foreground(textRun.p->style().color);
+					const SolidColor foreground(textRun.impl.style().color);
 					context.setFillStyle(std::shared_ptr<const SolidColor>(&foreground, boost::null_deleter()));
-					textRun.p->fillGlyphs(context, textRun.alignmentPoint);
+					textRun.impl.fillGlyphs(context, textRun.alignmentPoint);
 				}
 
 				// . paint overridden segments glyphs
 				BOOST_FOREACH(auto& segment, overriddenSegmentsToPaint) {
 #if 0
-					const auto& foreground = segment.textRun->foreground;
+					const auto& foreground = segment.segment.foreground;
 					if(foreground.get() == nullptr)
 #else
-					const auto& foreground = std::get<1>(segment)->color;
+					const auto& foreground = segment.segment.color;
 					if(foreground == boost::none)
 #endif
 						continue;
 					context.save();
 					context.beginPath();
-					context.rectangle(std::get<2>(segment));
+					context.rectangle(segment.bounds);
 					context.clip();
-					const TextRunImpl& textRun = *textRunsToPaint[std::get<0>(segment)].p;
+					const TextRunImpl& textRun = textRunsToPaint[segment.indexInTextRunsToPaint].impl;
 #if 0
 					context.setFillStyle(foreground);
 #else
 					::SetTextColor(context.native().get(), toNative<COLORREF>(boost::get(foreground)));
 #endif
-					textRun.fillGlyphs(context, textRunsToPaint[std::get<0>(segment)].alignmentPoint);
+					textRun.fillGlyphs(context, textRunsToPaint[segment.indexInTextRunsToPaint].alignmentPoint);
 					context.restore();
 				}
 				context.restore();
