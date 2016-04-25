@@ -66,7 +66,7 @@ namespace ascension {
 		 * @throw ... Any exceptions @c Document#insert and @c Document#erase throw
 		 */
 		void eraseSelection(Caret& caret) {
-			return caret.replaceSelection(0, 0);
+			return caret.replaceSelection(String());
 		}
 
 		namespace {
