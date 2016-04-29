@@ -625,6 +625,7 @@ namespace ascension {
 				document().replace(selectedRegion(), text, &e);
 			else {
 				// TODO: not implemented.
+				return;
 			}
 			moveTo(e);
 		}
