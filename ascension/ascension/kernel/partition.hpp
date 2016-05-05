@@ -10,8 +10,9 @@
 #include <ascension/kernel/region.hpp>
 
 namespace ascension {
-
-	namespace text {class IdentifierSyntax;}
+	namespace text {
+		class IdentifierSyntax;
+	}
 
 	namespace kernel {
 		class Document;
@@ -33,7 +34,9 @@ namespace ascension {
 			UNDETERMINED_CONTENT_TYPE = 2;
 
 		/// Returns @c true if the given content type value @a v is for special use.
-		inline bool isSpecialContentType(ContentType v) BOOST_NOEXCEPT {return v < 100;}
+		inline bool isSpecialContentType(ContentType v) BOOST_NOEXCEPT {
+			return v < 100;
+		}
 
 		/**
 		 * A document partition.
@@ -124,10 +127,10 @@ namespace ascension {
 		public:
 			NullPartitioner() BOOST_NOEXCEPT;
 		private:
-			void documentAboutToBeChanged() BOOST_NOEXCEPT;
-			void documentChanged(const DocumentChange& change) BOOST_NOEXCEPT;
-			void doGetPartition(const Position& at, DocumentPartition& partition) const BOOST_NOEXCEPT;
-			void doInstall() BOOST_NOEXCEPT;
+			void documentAboutToBeChanged() override BOOST_NOEXCEPT;
+			void documentChanged(const DocumentChange& change) override BOOST_NOEXCEPT;
+			void doGetPartition(const Position& at, DocumentPartition& partition) const override BOOST_NOEXCEPT;
+			void doInstall() override BOOST_NOEXCEPT;
 		private:
 			DocumentPartition p_;
 			mutable bool changed_;
@@ -150,10 +153,14 @@ namespace ascension {
 		}
 		
 		/// Returns the document to which the partitioner connects or @c null.
-		inline Document* DocumentPartitioner::document() BOOST_NOEXCEPT {return document_;}
+		inline Document* DocumentPartitioner::document() BOOST_NOEXCEPT {
+			return document_;
+		}
 		
 		/// Returns the document to which the partitioner connects or @c null.
-		inline const Document* DocumentPartitioner::document() const BOOST_NOEXCEPT {return document_;}		
+		inline const Document* DocumentPartitioner::document() const BOOST_NOEXCEPT {
+			return document_;
+		}		
 	}
 } // namespace ascension.kernel
 
