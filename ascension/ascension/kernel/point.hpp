@@ -151,7 +151,7 @@ namespace ascension {
 		// Point method inline implementation /////////////////////////////////////////////////////
 
 		/// Conversion operator for convenience.
-		inline Point::operator Position() const {
+		inline Point::operator Position() const BOOST_NOEXCEPT {
 			return position();
 		}
 
