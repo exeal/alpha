@@ -13,6 +13,7 @@
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/visual-line.hpp>
+#include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>	// presentation.BlockFlowDirection
 #include <memory>	// std.shared_ptr, std.unique_ptr

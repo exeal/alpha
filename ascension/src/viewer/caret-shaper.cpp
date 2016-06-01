@@ -12,6 +12,7 @@
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/kernel/locations.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
@@ -29,7 +30,7 @@ namespace ascension {
 		boost::optional<graphics::Rectangle> currentCharacterLogicalBounds(const Caret& caret) {
 			const graphics::font::TextRenderer& textRenderer = caret.textArea().textRenderer();
 			if(const graphics::font::TextLayout* const layout = textRenderer.layouts().at(kernel::line(caret))) {
-				const auto p(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret)));
+				const auto p(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret.hit().characterIndex())));
 				const Index subline = layout->lineAt(p);
 				NumericRange<graphics::Scalar> extent(layout->extent(boost::irange(subline, subline + 1)));
 
@@ -42,7 +43,7 @@ namespace ascension {
 //					trailing = widgetapi::createRenderingContext(caret.textViewer())->fontMetrics(textRenderer.defaultFont())->averageCharacterWidth();
 					trailing = 0;
 				else
-					trailing = layout->hitToPoint(graphics::font::TextHit<>::trailing(kernel::offsetInLine(caret))).ipd() - leading.ipd();
+					trailing = layout->hitToPoint(graphics::font::TextHit<>::trailing(kernel::offsetInLine(caret.hit().characterIndex()))).ipd() - leading.ipd();
 
 				graphics::PhysicalFourSides<graphics::Scalar> temp;
 				presentation::mapDimensions(

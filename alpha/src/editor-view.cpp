@@ -105,7 +105,7 @@ namespace alpha {
 	/// @see IncrementalSearchListener#incrementalSearchAborted
 	void EditorView::incrementalSearchAborted(const ascension::kernel::Position& initialPosition) {
 		incrementalSearchCompleted();
-		textArea().caret().moveTo(initialPosition);
+		textArea().caret().moveTo(ascension::viewer::TextHit::leading(initialPosition));
 	}
 
 	/// @see IncrementalSearchListener#incrementalSearchCompleted

@@ -44,9 +44,10 @@ namespace ascension {
 			String s(newline.asString());
 
 			if(inheritIndent) {	// simple auto-indent
-				const String& currentLine = caret.document().lineString(kernel::line(caret));
-				const Index len = detail::identifierSyntax(caret).eatWhiteSpaces(
-					currentLine.data(), currentLine.data() + offsetInLine(caret), true) - currentLine.data();
+				const auto ip(insertionPosition(caret));
+				const String& currentLine = caret.document().lineString(kernel::line(ip));
+				const Index len = kernel::detail::identifierSyntax(caret).eatWhiteSpaces(
+					currentLine.data(), currentLine.data() + kernel::offsetInLine(ip), true) - currentLine.data();
 				s += currentLine.substr(0, len);
 			}
 
@@ -91,9 +92,16 @@ namespace ascension {
 					return;
 				}
 
-				const kernel::Position oldPosition(region.caret());
 				kernel::Position otherResult(region.anchor());
 				Index line = kernel::line(*boost::const_begin(region));
+
+				struct AdvanceOffsetInLine {
+					explicit AdvanceOffsetInLine(SignedIndex offset) BOOST_NOEXCEPT : offset(offset) {}
+					kernel::Position operator()(const kernel::Position& p) const BOOST_NOEXCEPT {
+						return kernel::Position(kernel::line(p), kernel::offsetInLine(p) + offset);
+					}
+					SignedIndex offset;
+				};
 
 				// indent/unindent the first line
 				kernel::Document& document = caret.document();
@@ -101,8 +109,9 @@ namespace ascension {
 					insert(document, kernel::Position(line, rectangle ? kernel::offsetInLine(*boost::const_begin(region)) : 0), indent);
 					if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 						otherResult.offsetInLine += level;
-					if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
-						caret.moveTo(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) + level));
+					const auto ip(insertionPosition(caret));
+					if(line == kernel::line(ip) && kernel::offsetInLine(ip) != 0)
+						caret.moveTo(caret.hit().offsetHit(AdvanceOffsetInLine(level)));
 				} else {
 					const String& s = document.lineString(line);
 					Index indentLength;
@@ -116,8 +125,9 @@ namespace ascension {
 						kernel::erase(document, kernel::Region(kernel::Position::bol(line), kernel::Position(line, deleteLength)));
 						if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 							otherResult.offsetInLine -= deleteLength;
-						if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
-							caret.moveTo(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) - deleteLength));
+						const auto ip(insertionPosition(caret));
+						if(line == kernel::line(ip) && kernel::offsetInLine(ip) != 0)
+							caret.moveTo(caret.hit().offsetHit(AdvanceOffsetInLine(deleteLength)));
 					}
 				}
 
@@ -138,8 +148,9 @@ namespace ascension {
 								insert(document, kernel::Position(line, *insertPosition), indent);
 							if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 								otherResult.offsetInLine += level;
-							if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
-								caret.moveTo(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) + level));
+							const auto ip(insertionPosition(caret));
+							if(line == kernel::line(ip) && kernel::offsetInLine(ip) != 0)
+								caret.moveTo(caret.hit().offsetHit(AdvanceOffsetInLine(level)));
 						}
 					}
 				} else {
@@ -156,8 +167,9 @@ namespace ascension {
 							kernel::erase(document, kernel::Region(kernel::Position::bol(line), kernel::Position(line, deleteLength)));
 							if(line == kernel::line(otherResult) && kernel::offsetInLine(otherResult) != 0)
 								otherResult.offsetInLine -= deleteLength;
-							if(line == kernel::line(caret) && kernel::offsetInLine(caret) != 0)
-								caret.moveTo(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) - deleteLength));
+							const auto ip(insertionPosition(caret));
+							if(line == kernel::line(ip) && kernel::offsetInLine(ip) != 0)
+								caret.moveTo(caret.hit().offsetHit(AdvanceOffsetInLine(deleteLength)));
 						}
 					}
 				}
@@ -204,9 +216,10 @@ namespace ascension {
 				if(textViewer.hitTest(p) == &textArea) {	// ignore if on the margin
 					const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer, false));
 					if(graphics::geometry::x(p) <= graphics::geometry::right(viewerBounds) && graphics::geometry::y(p) <= graphics::geometry::bottom(viewerBounds)) {
-						const std::shared_ptr<const graphics::font::TextViewport> viewport(textArea.textRenderer().viewport());
-						const boost::optional<graphics::font::TextHit<kernel::Position>> hit(viewToModelInBounds(textViewer, p));
-						return hit != boost::none && hit->characterIndex() >= caret.beginning() && hit->characterIndex() <= caret.end();
+						const auto viewport(textArea.textRenderer().viewport());
+						const auto hit(viewToModelInBounds(textViewer, p));
+						const auto selection(caret.selectedRegion());
+						return hit != boost::none && hit->characterIndex() >= *boost::const_begin(selection) && hit->characterIndex() <= *boost::const_end(selection);
 					}
 				}
 			}
@@ -225,10 +238,10 @@ namespace ascension {
 		 * @see #selectedRangeOnVisualLine, VirtualBox#characterRangeInVisualLine
 		 */
 		boost::optional<boost::integer_range<Index>> viewer::selectedRangeOnLine(const Caret& caret, Index line) {
-			const kernel::Position bos(caret.beginning());
+			const kernel::Position bos(*boost::const_begin(caret.selectedRegion()));
 			if(kernel::line(bos) > line)
 				return boost::none;
-			const kernel::Position eos(caret.end());
+			const kernel::Position eos(*boost::const_end(caret.selectedRegion()));
 			if(kernel::line(eos) < line)
 				return boost::none;
 			return boost::irange(
@@ -306,12 +319,12 @@ namespace ascension {
 					writeDocumentToStream(out, caret.document(), caret.selectedRegion(), newline);
 				else {
 					const kernel::Document& document = caret.document();
-					const Index lastLine = line(caret.end());
-					for(Index line = kernel::line(caret.beginning()); line <= lastLine; ++line) {
+					const Index lastLine = kernel::line(*boost::const_end(caret.selectedRegion()));
+					for(Index line = kernel::line(*boost::const_begin(caret.selectedRegion())); line <= lastLine; ++line) {
 						const kernel::Document::Line& ln = document.lineContent(line);
 						// TODO: Recognize wrap (second parameter).
 						const boost::optional<boost::integer_range<Index>> selection(caret.boxForRectangleSelection().characterRangeInVisualLine(graphics::font::VisualLine(line, 0)));
-						if(selection)
+						if(selection != boost::none)
 							out.write(ln.text().data() + selection->front(), static_cast<std::streamsize>(selection->size()));
 						const String newlineString(ln.newline().asString());
 						out.write(newlineString.data(), static_cast<std::streamsize>(newlineString.length()));
@@ -327,20 +340,21 @@ namespace ascension {
 		 */
 		void selectWord(Caret& caret) {
 			text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
-				kernel::DocumentCharacterIterator(caret.document(), caret.position()),
-				text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, detail::identifierSyntax(caret));
+				kernel::DocumentCharacterIterator(caret.document(), insertionPosition(caret)),
+				text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, kernel::detail::identifierSyntax(caret));
 			caret.endRectangleSelection();
 			if(kernel::locations::isEndOfLine(caret)) {
 				if(kernel::locations::isBeginningOfLine(caret))	// an empty line
-					caret.moveTo(caret);
+					caret.moveTo(caret.hit());
 				else	// eol
-					caret.select((_anchor = (--i).base().tell(), _caret = caret));
+					caret.select((_anchor = (--i).base().tell(), _caret = caret.hit()));
 			} else if(kernel::locations::isBeginningOfLine(caret))	// bol
-				caret.select((_anchor = caret, _caret = (++i).base().tell()));
+				caret.select((_anchor = caret.hit().characterIndex(), _caret = TextHit::leading((++i).base().tell())));
 			else {
+				const auto ip(viewer::insertionPosition(caret));
 				const kernel::Position p((++i).base().tell());
-				i.base().seek(kernel::Position(kernel::line(caret), kernel::offsetInLine(caret) + 1));
-				caret.select((_anchor = (--i).base().tell(), _caret = p));
+				i.base().seek(kernel::Position(kernel::line(ip), kernel::offsetInLine(ip) + 1));
+				caret.select((_anchor = (--i).base().tell(), _caret = TextHit::leading(p)));
 			}
 		}
 
@@ -370,21 +384,20 @@ namespace ascension {
 
 			if(text::ucd::BinaryProperty::is<text::ucd::BinaryProperty::GRAPHEME_EXTEND>(kernel::locations::characterAt(caret)))	// not the start of a grapheme
 				return false;
-			else if(!encompasses(region, caret.position()))	// inaccessible
+			const auto ip(insertionPosition(caret));
+			if(!encompasses(region, ip))	// inaccessible
 				return false;
 
-			if(offsetInLine(caret) == 0 || caret.position() == *boost::const_begin(region)) {
-				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
-					kernel::DocumentCharacterIterator(caret.document(), pos[0] = caret.position()));
+			if(kernel::offsetInLine(ip) == 0 || ip == *boost::const_begin(region)) {
+				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(kernel::DocumentCharacterIterator(caret.document(), pos[0] = ip));
 				pos[1] = (++i).base().tell();
 				if(kernel::line(pos[1]) != kernel::line(pos[0]) || pos[1] == pos[0] || !encompasses(region, pos[1]))
 					return false;
 				pos[2] = (++i).base().tell();
 				if(kernel::line(pos[2]) != kernel::line(pos[1]) || pos[2] == pos[1] || !encompasses(region, pos[2]))
 					return false;
-			} else if(kernel::offsetInLine(caret) == caret.document().lineLength(kernel::line(caret)) || caret.position() == *boost::const_end(region)) {
-				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
-					kernel::DocumentCharacterIterator(caret.document(), pos[2] = caret.position()));
+			} else if(kernel::offsetInLine(ip) == caret.document().lineLength(kernel::line(ip)) || ip == *boost::const_end(region)) {
+				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(kernel::DocumentCharacterIterator(caret.document(), pos[2] = ip));
 				pos[1] = (--i).base().tell();
 				if(kernel::line(pos[1]) != kernel::line(pos[2]) || pos[1] == pos[2] || !encompasses(region, pos[1]))
 					return false;
@@ -392,8 +405,7 @@ namespace ascension {
 				if(kernel::line(pos[0]) != kernel::line(pos[1]) || pos[0] == pos[1] || !encompasses(region, pos[0]))
 					return false;
 			} else {
-				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(
-					kernel::DocumentCharacterIterator(caret.document(), pos[1] = caret.position()));
+				text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(kernel::DocumentCharacterIterator(caret.document(), pos[1] = ip));
 				pos[2] = (++i).base().tell();
 				if(kernel::line(pos[2]) != kernel::line(pos[1]) || pos[2] == pos[1] || !encompasses(region, pos[2]))
 					return false;
@@ -411,7 +423,7 @@ namespace ascension {
 			} catch(kernel::DocumentAccessViolationException&) {
 				return false;
 			}
-			assert(caret.position() == pos[2]);
+			assert(insertionPosition(caret) == pos[2]);
 			return true;
 		}
 
@@ -430,8 +442,11 @@ namespace ascension {
 				return false;
 
 			kernel::Document& document = caret.document();
-			const kernel::Position old(caret.position());
-			const Index firstLine = (old.line != document.numberOfLines() - 1) ? kernel::line(old) : kernel::line(old) - 1;
+			const auto old(caret.hit());
+			Index firstLine = kernel::line(old.characterIndex());
+			const bool caretWasLastLine = firstLine == document.numberOfLines() - 1;
+			if(caretWasLastLine)
+				--firstLine;
 			String s(document.lineString(firstLine + 1));
 			s += document.lineContent(firstLine).newline().asString();
 			s += document.lineString(firstLine);
@@ -439,7 +454,8 @@ namespace ascension {
 			try {
 				document.replace(kernel::Region(
 					kernel::Position::bol(firstLine), kernel::Position(firstLine + 1, document.lineLength(firstLine + 1))), s);
-				caret.moveTo(kernel::Position((old.line != document.numberOfLines() - 1) ? firstLine + 1 : firstLine, kernel::offsetInLine(old)));
+				const kernel::Position newCaret(!caretWasLastLine ? firstLine + 1 : firstLine, kernel::offsetInLine(old.characterIndex()));
+				caret.moveTo(old.isLeadingEdge() ? TextHit::leading(newCaret) : TextHit::trailing(newCaret));
 			} catch(const kernel::DocumentAccessViolationException&) {
 				return false;
 			}
@@ -466,9 +482,11 @@ namespace ascension {
 			// |   1st-word-end (named pos[1])
 			// 1st-word-start (named pos[0])
 
+			auto& document = caret.document();
+			const auto ip(insertionPosition(caret));
 			text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
-				kernel::DocumentCharacterIterator(caret.document(), caret),
-				text::WordBreakIteratorBase::START_OF_ALPHANUMERICS, detail::identifierSyntax(caret));
+				kernel::DocumentCharacterIterator(document, ip),
+				text::WordBreakIteratorBase::START_OF_ALPHANUMERICS, kernel::detail::identifierSyntax(caret));
 			kernel::Position pos[4];
 
 			// find the backward word (1st-word-*)...
@@ -479,10 +497,10 @@ namespace ascension {
 				return false;
 
 			// ...and then backward one (2nd-word-*)
-			i.base().seek(caret);
+			i.base().seek(ip);
 			i.setComponent(text::WordBreakIteratorBase::START_OF_ALPHANUMERICS);
 			pos[2] = (++i).base().tell();
-			if(pos[2] == caret.position())
+			if(pos[2] == ip)
 				return false;
 			pos[3] = (++i).base().tell();
 			if(pos[2] == pos[3])	// the word is empty
@@ -490,16 +508,16 @@ namespace ascension {
 
 			// replace
 			std::basic_ostringstream<Char> ss;
-			writeDocumentToStream(ss, caret.document(), kernel::Region(pos[2], pos[3]), text::Newline::USE_INTRINSIC_VALUE);
-			writeDocumentToStream(ss, caret.document(), kernel::Region(pos[1], pos[2]), text::Newline::USE_INTRINSIC_VALUE);
-			writeDocumentToStream(ss, caret.document(), kernel::Region(pos[0], pos[1]), text::Newline::USE_INTRINSIC_VALUE);
+			writeDocumentToStream(ss, document, kernel::Region(pos[2], pos[3]), text::Newline::USE_INTRINSIC_VALUE);
+			writeDocumentToStream(ss, document, kernel::Region(pos[1], pos[2]), text::Newline::USE_INTRINSIC_VALUE);
+			writeDocumentToStream(ss, document, kernel::Region(pos[0], pos[1]), text::Newline::USE_INTRINSIC_VALUE);
 			kernel::Position e;
 			try {
-				caret.document().replace(kernel::Region(pos[0], pos[3]), ss.str(), &e);
+				document.replace(kernel::Region(pos[0], pos[3]), ss.str(), &e);
 			} catch(const kernel::DocumentAccessViolationException&) {
 				return false;
 			}
-			return caret.moveTo(e), true;
+			return caret.moveTo(TextHit::leading(e)), true;
 		}
 
 		namespace utils {

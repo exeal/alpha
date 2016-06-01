@@ -52,52 +52,54 @@ namespace ascension {
 		/// @internal
 		struct DefaultTextAreaMouseInputStrategy::SelectionExtender {
 			virtual ~SelectionExtender() BOOST_NOEXCEPT {}
-			virtual void continueSelection(Caret& caret, const kernel::Position& destination) = 0;
+			virtual void continueSelection(Caret& caret, const TextHit& destination) = 0;
 		};
 
 		namespace {
 			class CharacterSelectionExtender : public DefaultTextAreaMouseInputStrategy::SelectionExtender {
 			public:
-				CharacterSelectionExtender(Caret& caret, boost::optional<kernel::Position> initialPosition = boost::none) {
+				CharacterSelectionExtender(Caret& caret, boost::optional<TextHit> initialPosition = boost::none) {
 					if(initialPosition != boost::none)
 						caret.moveTo(boost::get(initialPosition));
 				}
-				void continueSelection(Caret& caret, const kernel::Position& destination) override {
+				void continueSelection(Caret& caret, const TextHit& destination) override {
 					caret.extendSelectionTo(destination);
 				}
 			};
 
 			class WordSelectionExtender : public DefaultTextAreaMouseInputStrategy::SelectionExtender {
 			public:
-				WordSelectionExtender(Caret& caret, boost::optional<kernel::Position> initialPosition = boost::none) : anchorOffsetsInLine_(0, 0) {
+				WordSelectionExtender(Caret& caret, boost::optional<TextHit> initialPosition = boost::none) : anchorOffsetsInLine_(0, 0) {
 					if(initialPosition != boost::none)
 						caret.moveTo(boost::get(initialPosition));
 					selectWord(caret);
+					const auto selection(caret.selectedRegion());
 					anchorLine_ = kernel::line(caret);
-					anchorOffsetsInLine_ = boost::irange(kernel::offsetInLine(caret.beginning()), kernel::offsetInLine(caret.end()));
+					anchorOffsetsInLine_ = boost::irange(kernel::offsetInLine(*boost::const_begin(selection)), kernel::offsetInLine(*boost::const_end(selection)));
 				}
-				void continueSelection(Caret& caret, const kernel::Position& destination) override {
+				void continueSelection(Caret& caret, const TextHit& destination) override {
 					const kernel::Document& document = caret.document();
 					const text::IdentifierSyntax& id = document.contentTypeInformation().getIdentifierSyntax(kernel::contentType(caret));
-					if(kernel::line(destination) < anchorLine_
-							|| (kernel::line(destination) == anchorLine_
-								&& kernel::offsetInLine(destination) < *boost::const_begin(anchorOffsetsInLine_))) {
+					const auto p(destination.characterIndex());
+					if(kernel::line(p) < anchorLine_
+							|| (kernel::line(p) == anchorLine_
+								&& kernel::offsetInLine(p) < *boost::const_begin(anchorOffsetsInLine_))) {
 						text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
-							kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
+							kernel::DocumentCharacterIterator(document, p), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 						--i;
 						caret.select((
 							_anchor = kernel::Position(anchorLine_, *boost::const_end(anchorOffsetsInLine_)),
-							_caret = (kernel::line(i.base().tell()) == kernel::line(destination)) ? i.base().tell() : kernel::Position::bol(kernel::line(destination))));
-					} else if(kernel::line(destination) > anchorLine_
-							|| (kernel::line(destination) == anchorLine_
-								&& kernel::offsetInLine(destination) > *boost::const_end(anchorOffsetsInLine_))) {
+							_caret = TextHit::leading((kernel::line(i.base().tell()) == kernel::line(p)) ? i.base().tell() : kernel::Position::bol(kernel::line(p)))));
+					} else if(kernel::line(p) > anchorLine_
+							|| (kernel::line(p) == anchorLine_
+								&& kernel::offsetInLine(p) > *boost::const_end(anchorOffsetsInLine_))) {
 						text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
-							kernel::DocumentCharacterIterator(document, destination), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
+							kernel::DocumentCharacterIterator(document, p), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 						++i;
 						caret.select((
 							_anchor = kernel::Position(anchorLine_, *boost::const_begin(anchorOffsetsInLine_)),
-							_caret = (kernel::line(i.base().tell()) == kernel::line(destination)) ?
-								i.base().tell() : kernel::Position(destination.line, document.lineLength(kernel::line(destination)))));
+							_caret = TextHit::leading((kernel::line(i.base().tell()) == kernel::line(p)) ?
+								i.base().tell() : kernel::Position(kernel::line(p), document.lineLength(kernel::line(p))))));
 					} else
 						caret.select(SelectedRegion(kernel::Region::makeSingleLine(anchorLine_, anchorOffsetsInLine_)));
 				}
@@ -135,7 +137,7 @@ namespace ascension {
 					Caret& caret, const graphics::Point& cursorPosition, bool highlightSelection,
 					boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>>& dimensions) {
 				// determine the range to draw
-				const auto selectedRegion(kernel::Region::makeEmpty(caret));
+				const auto selectedRegion(kernel::Region::makeEmpty(insertionPosition(caret)));	// ???
 //				const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
 //				const Index firstLine = viewport->firstVisibleLineInLogicalNumber();
 //				const Index firstSubline = viewport->firstVisibleSublineInLogicalLine();
@@ -531,9 +533,9 @@ namespace ascension {
 			const std::shared_ptr<graphics::font::TextViewport> viewport(textArea_->textRenderer().viewport());
 			const graphics::font::TextViewportNotificationLocker lock(viewport.get());
 			const graphics::Point caretPoint(input.location());
-			const kernel::Position destination(viewToModel(viewer, caretPoint).characterIndex());
+			const auto destination(viewToModel(viewer, caretPoint));
 
-			if(!encompasses(document.accessibleRegion(), destination))
+			if(!encompasses(document.accessibleRegion(), insertionPosition(document, destination)))
 				return input.ignore();
 
 			if(dragAndDrop_->state == DragAndDrop::PROCESSING_AS_TARGET) {	// dropped from the other widget
@@ -558,7 +560,7 @@ namespace ascension {
 						if(!failed) {
 							if(content.second)
 								caret.beginRectangleSelection();
-							caret.select((_anchor = destination, _caret = caret));
+							caret.select((_anchor = insertionPosition(document, destination), _caret = caret.hit()));
 							input.setDropAction(widgetapi::DROP_ACTION_COPY);
 						}
 					}
@@ -589,7 +591,7 @@ namespace ascension {
 							}
 							caret.enableAutoShow(true);
 							if(!failed) {
-								caret.select((_anchor = destination, _caret = caret));
+								caret.select((_anchor = insertionPosition(document, destination), _caret = caret.hit()));
 								input.setDropAction(widgetapi::DROP_ACTION_COPY);
 							}
 							document.insertUndoBoundary();
@@ -607,7 +609,7 @@ namespace ascension {
 								failed = true;
 							}
 							if(!failed) {
-								caret.select((_anchor = destination, _caret = caret));
+								caret.select((_anchor = insertionPosition(document, destination), _caret = caret.hit()));
 								if(rectangle)
 									caret.beginRectangleSelection();
 								try {
@@ -646,7 +648,7 @@ namespace ascension {
 		}
 
 		/// Extends the selection to the current cursor position.
-		void DefaultTextAreaMouseInputStrategy::continueSelectionExtension(const kernel::Position& to) {
+		void DefaultTextAreaMouseInputStrategy::continueSelectionExtension(const TextHit& to) {
 			if(selectionExtender_.get() == nullptr)
 				throw IllegalStateException("not extending the selection.");
 			selectionExtender_->continueSelection(textArea_->caret(), to);
@@ -672,7 +674,7 @@ namespace ascension {
 		 */
 		void DefaultTextAreaMouseInputStrategy::handleLeftButtonDoubleClick(widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) {
 			if(selectionExtender_.get() == nullptr) {
-				selectionExtender_.reset(new WordSelectionExtender(textArea_->caret(), viewToModel(textArea_->textViewer(), input.location()).insertionIndex()));
+				selectionExtender_.reset(new WordSelectionExtender(textArea_->caret(), viewToModel(textArea_->textViewer(), input.location())));
 				beginLocationTracking(textArea_->textViewer(), &targetLocker, true, true);
 				return input.consume();
 			}
@@ -720,7 +722,7 @@ namespace ascension {
 					// shift => keep the anchor and move the caret to the cursor position
 					// ctrl  => begin word selection
 					// alt   => begin rectangle selection (only if !ctrl)
-					const auto to(viewToModel(viewer, input.location()).insertionIndex());
+					const auto to(viewToModel(viewer, input.location()));
 					assert(selectionExtender_.get() == nullptr);
 					if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
 						selectionExtender_.reset(
@@ -760,7 +762,7 @@ namespace ascension {
 					&& (dragAndDrop_->state == DragAndDrop::APPROACHING || dragAndDrop_->state == DragAndDrop::PROCESSING_AS_SOURCE)) {
 				// TODO: Should this handle only case APPROACHING_DND?
 				dragAndDrop_ = boost::none;
-				textArea_->caret().moveTo(viewToModel(textArea_->textViewer(), input.location()).characterIndex());
+				textArea_->caret().moveTo(viewToModel(textArea_->textViewer(), input.location()));
 				::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
 			}
 
@@ -935,7 +937,7 @@ namespace ascension {
 					selectionExtender_.reset(new CharacterSelectionExtender(textArea_->caret()));
 					beginLocationTracking(textArea_->textViewer(), &targetLocker, true, true);
 				}
-				continueSelectionExtension(viewToModel(textArea_->textViewer(), input.location()).insertionIndex());
+				continueSelectionExtension(viewToModel(textArea_->textViewer(), input.location()));
 				input.consume();
 			}
 		}

@@ -23,6 +23,7 @@
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
+#include <ascension/viewer/visual-locations.hpp>
 
 namespace ascension {
 	namespace viewer {
@@ -60,7 +61,7 @@ namespace ascension {
 			// invoked by the keyboard
 			if(byKeyboard) {
 				// MSDN says "the application should display the context menu at the location of the current selection."
-				location = modelToView(*this, graphics::font::TextHit<kernel::Position>::leading(textArea().caret()));
+				location = modelToView(*this, textArea().caret().hit());
 				// TODO: Support RTL and vertical window layout.
 				graphics::geometry::y(location) +=
 					widgetapi::createRenderingContext(*this)->fontMetrics(textArea().textRenderer().defaultFont())->cellHeight() + 1;
@@ -143,7 +144,7 @@ namespace ascension {
 			void handleDirectionalKey(TextViewer& viewer, graphics::PhysicalDirection direction, const widgetapi::event::KeyboardModifiers& modifiers) {
 				using namespace ascension::texteditor::commands;
 				using presentation::FlowRelativeDirection;
-				static kernel::Position(*const nextCharacterLocation)(const kernel::Point&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
+				static kernel::Position(*const nextCharacterLocation)(const kernel::locations::PointProxy&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
 
 				const presentation::WritingMode writingMode(viewer.presentation().computeWritingMode());
 				const FlowRelativeDirection abstractDirection = presentation::mapDirection<FlowRelativeDirection>(writingMode, direction);
@@ -153,10 +154,10 @@ namespace ascension {
 					case FlowRelativeDirection::AFTER:
 						if((modifiers & widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)).flip()).none()) {
 							if(!modifiers.test(widgetapi::event::ALT_DOWN))
-								makeCaretMovementCommand(viewer, &kernel::locations::nextVisualLine,
+								makeCaretMovementCommand(viewer, &locations::nextVisualLine,
 									logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
 							else if(modifiers.test(widgetapi::event::SHIFT_DOWN))
-								makeRowSelectionExtensionCommand(viewer, &kernel::locations::nextVisualLine, logicalDirection)();
+								makeRowSelectionExtensionCommand(viewer, &locations::nextVisualLine, logicalDirection)();
 						}
 						break;
 					case FlowRelativeDirection::START:
@@ -192,7 +193,7 @@ namespace ascension {
 			// TODO: "key combination to command" map.
 			using namespace ascension::viewer::widgetapi::event;
 			using namespace ascension::texteditor::commands;
-			static kernel::Position(*const nextCharacterLocation)(const kernel::Point&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
+			static kernel::Position(*const nextCharacterLocation)(const kernel::locations::PointProxy&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
 //			if(hasModifier<UserInput::ALT_DOWN>(input)) {
 //				if(!hasModifier<UserInput::SHIFT_DOWN>(input)
 //						|| (input.keyboardCode() != VK_LEFT && input.keyboardCode() != VK_UP
@@ -263,7 +264,7 @@ namespace ascension {
 				case VK_PRIOR:
 #endif
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
-						makeCaretMovementCommand(*this, &kernel::locations::nextPage, Direction::BACKWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+						makeCaretMovementCommand(*this, &locations::nextPage, Direction::BACKWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
 						if(std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
 							viewport->scrollBlockFlowPage(+1);
@@ -277,7 +278,7 @@ namespace ascension {
 				case VK_NEXT:
 #endif
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
-						makeCaretMovementCommand(*this, &kernel::locations::nextPage, Direction::FORWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+						makeCaretMovementCommand(*this, &locations::nextPage, Direction::FORWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
 						if(std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
 							viewport->scrollBlockFlowPage(-1);
@@ -294,7 +295,7 @@ namespace ascension {
 						if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
 							makeCaretMovementCommand(*this, &kernel::locations::beginningOfDocument, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 						else
-							makeCaretMovementCommand(*this, &kernel::locations::beginningOfVisualLine, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+							makeCaretMovementCommand(*this, &locations::beginningOfVisualLine, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					}
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -308,7 +309,7 @@ namespace ascension {
 						if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
 							makeCaretMovementCommand(*this, &kernel::locations::endOfDocument, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 						else
-							makeCaretMovementCommand(*this, &kernel::locations::endOfVisualLine, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+							makeCaretMovementCommand(*this, &locations::endOfVisualLine, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					}
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)

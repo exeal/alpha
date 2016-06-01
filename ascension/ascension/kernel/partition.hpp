@@ -33,6 +33,8 @@ namespace ascension {
 			/// Type of Undetermined (not calculated) content.
 			UNDETERMINED_CONTENT_TYPE = 2;
 
+		ContentType contentType(const std::pair<const Document&, Position>& p);
+
 		/// Returns @c true if the given content type value @a v is for special use.
 		inline bool isSpecialContentType(ContentType v) BOOST_NOEXCEPT {
 			return v < 100;
@@ -144,7 +146,7 @@ namespace ascension {
 		 * @param at The position
 		 * @throw BadPositionException @a position is outside of the document
 		 * @throw IllegalStateException The partitioner is not connected to any document
-		 * @return the content type
+		 * @return The content type
 		 */
 		inline ContentType DocumentPartitioner::contentType(const Position& at) const {
 			DocumentPartition p;
@@ -160,7 +162,7 @@ namespace ascension {
 		/// Returns the document to which the partitioner connects or @c null.
 		inline const Document* DocumentPartitioner::document() const BOOST_NOEXCEPT {
 			return document_;
-		}		
+		}
 	}
 } // namespace ascension.kernel
 

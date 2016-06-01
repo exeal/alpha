@@ -45,6 +45,7 @@ namespace ascension {
 			};
 		} // namespace detail
 
+		class AbstractPoint;
 		class Point;
 		class Document;
 
@@ -206,7 +207,7 @@ namespace ascension {
 		};
 
 		// the documentation is at document.cpp
-		class Document : public detail::PointCollection<Point>,
+		class Document : public detail::PointCollection<AbstractPoint>,
 			public texteditor::detail::SessionElement, private boost::noncopyable {
 		public:
 			/// The property key for the title of the document.
@@ -351,12 +352,11 @@ namespace ascension {
 			void fireDocumentChanged(const DocumentChange& c, bool updateAllPoints = true) BOOST_NOEXCEPT;
 			void initialize();
 			void partitioningChanged(const Region& changedRegion) BOOST_NOEXCEPT;
-			void updatePoints(const DocumentChange& change) BOOST_NOEXCEPT;
 			// detail.SessionElement
 			void setSession(texteditor::Session& session) override BOOST_NOEXCEPT {session_ = &session;}
-			// detail.PointCollection<Point>
-			void addNewPoint(Point& point) override {points_.insert(&point);}
-			void removePoint(Point& point) override {points_.erase(&point);}
+			// detail.PointCollection<AbstractPoint>
+			void addNewPoint(AbstractPoint& point) override {points_.insert(&point);}
+			void removePoint(AbstractPoint& point) override {points_.erase(&point);}
 
 		private:
 			class UndoManager;
@@ -378,7 +378,7 @@ namespace ascension {
 			LineList lines_;
 			Index length_;
 			std::size_t revisionNumber_, lastUnmodifiedRevisionNumber_;
-			std::set<Point*> points_;
+			std::set<AbstractPoint*> points_;
 			std::unique_ptr<UndoManager> undoManager_;
 			std::map<const DocumentPropertyKey*, std::unique_ptr<String>> properties_;
 			bool onceUndoBufferCleared_, recordingChanges_, changing_, rollbacking_;
@@ -652,6 +652,16 @@ namespace ascension {
 		inline void Document::setContentTypeInformation(std::unique_ptr<ContentTypeInformationProvider> newProvider) BOOST_NOEXCEPT {
 			contentTypeInformationProvider_.reset((newProvider.get() != nullptr) ? newProvider.release() : new DefaultContentTypeInformationProvider);
 		}
+
+		/**
+		 * Returns the content type of the partition contains the specified position.
+		 * @param p The position in the document
+		 * @throw ... Any exception thrown by @c DocumentPartitioner#contentType method
+		 * @return The content type
+		 */
+		inline ContentType contentType(const std::pair<const Document&, Position>& p) {
+			return std::get<0>(p).partitioner().contentType(std::get<1>(p));
+		}
 		
 		/**
 		 * Notifies the partitioning change to the listeners.
@@ -678,6 +688,13 @@ namespace ascension {
 			else if(at > *boost::const_end(document_->region()))
 				throw BadPositionException(at);
 			return doGetPartition(at, partition);
+		}
+
+		namespace detail {
+			/// @internal Returns the @c text#IdentifierSyntax object corresponds to the given point.
+			inline const text::IdentifierSyntax& identifierSyntax(const std::pair<const Document&, Position>& p) {
+				return std::get<0>(p).contentTypeInformation().getIdentifierSyntax(contentType(p));
+			}
 		}
 	}
 } // namespace ascension.kernel

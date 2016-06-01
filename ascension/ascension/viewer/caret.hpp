@@ -18,7 +18,6 @@
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>	// widgetapi.MimeData, widgetapi.MimeDataFormats
 
 namespace ascension {
-
 	namespace graphics {
 		namespace font {
 			class UseCalculatedLayoutTag;
@@ -63,10 +62,10 @@ namespace ascension {
 			};
 
 		public:
-			explicit Caret(kernel::Document& document, const kernel::Position& position = kernel::Position::zero());
-			explicit Caret(const kernel::Point& other);
+			explicit Caret(kernel::Document& document, const TextHit& position = TextHit::leading(kernel::Position::zero()));
+			explicit Caret(const graphics::font::TextHit<kernel::Point>& other);
 			explicit Caret(const VisualPoint& other);
-			explicit Caret(TextArea& textArea, const kernel::Position& position = kernel::Position::zero());
+			explicit Caret(TextArea& textArea, const TextHit& position = TextHit::leading(kernel::Position::zero()));
 			~Caret();
 
 			/// @name Installation
@@ -118,7 +117,7 @@ namespace ascension {
 			void beginRectangleSelection();
 			void clearSelection();
 			void endRectangleSelection();
-			void extendSelectionTo(const kernel::Position& to);
+			void extendSelectionTo(const TextHit& to);
 			void extendSelectionTo(const VisualDestinationProxy& to);
 			void paste(bool useKillRing);
 			void replaceSelection(const StringPiece& text, bool rectangleInsertion = false);
@@ -162,22 +161,22 @@ namespace ascension {
 			void adjustInputMethodCompositionWindow();
 			bool canPastePlatformData() const;
 			void checkMatchBrackets();
+			void documentChanged(const kernel::DocumentChange& change) override;
 			void fireCaretMoved(const SelectedRegion& regionBeforeMotion);
 			void internalExtendSelection(void (*algorithm)(void));
 			void prechangeDocument();
-			void update(const kernel::DocumentChange& change);
 			void updateVisualAttributes();
 			// VisualPoint
-			void aboutToMove(kernel::Position& to) override;
-			void moved(const kernel::Position& from) override BOOST_NOEXCEPT;
+			void aboutToMove(TextHit& to) override;
+			void moved(const TextHit& from) override BOOST_NOEXCEPT;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			void onChar(CodePoint c, bool& consumed);
 			void onImeComposition(WPARAM wp, LPARAM lp, bool& consumed);
 			LRESULT onImeRequest(WPARAM command, LPARAM lp, bool& consumed);
 #endif
-			// kernel.Point.MotionSignal
-			void pointMoved(const kernel::Point& self, const kernel::Position& oldPosition);
+			// VisualPoint.MotionSignal
+			void pointMoved(const VisualPoint& self, const TextHit& oldHit);
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
@@ -371,7 +370,7 @@ namespace ascension {
 
 		/// Returns the selected region.
 		inline SelectedRegion Caret::selectedRegion() const BOOST_NOEXCEPT {
-			return SelectedRegion(_anchor = *anchor_, _caret = position());
+			return SelectedRegion(_anchor = insertionPosition(anchor()), _caret = hit());
 		}
 
 		/**
@@ -405,8 +404,17 @@ namespace ascension {
 			selectedString(caret, ss, newline);
 			return ss.str();
 		}
-
 	} // namespace viewer
+
+	namespace kernel {
+		/**
+		 * @overload
+		 * @note There is no @c offsetInLine for @c viewer#Caret.
+		 */
+		BOOST_CONSTEXPR inline Index line(const viewer::Caret& caret) BOOST_NOEXCEPT {
+			return line(caret.hit().characterIndex());
+		}
+	}
 } // namespace ascension
 
 #endif // !ASCENSION_POINT_HPP

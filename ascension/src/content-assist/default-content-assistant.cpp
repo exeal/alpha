@@ -59,7 +59,7 @@ namespace ascension {
 				if(!completionSession_->incremental)
 					close();
 				// incremental mode: close if the caret gone out of the replacement region
-				else if(!encompasses(completionSession_->replacementRegion, caret.position()))
+				else if(!encompasses(completionSession_->replacementRegion, viewer::insertionPosition(caret)))
 					close();
 			}
 		}
@@ -76,7 +76,9 @@ namespace ascension {
 						try {
 							document.insertUndoBoundary();
 							kernel::erase(document,
-								kernel::Region(kernel::locations::nextCharacter(caret, Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT), caret));
+								kernel::Region(
+									kernel::locations::nextCharacter(caret, Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT),
+									viewer::insertionPosition(caret)));
 							document.insertUndoBoundary();
 							complete();
 						} catch(...) {
@@ -84,7 +86,8 @@ namespace ascension {
 					}
 				} else {
 					// activate automatically
-					if(const std::shared_ptr<const ContentAssistProcessor> cap = contentAssistProcessor(contentType(textViewer_->textArea().caret()))) {
+					if(const std::shared_ptr<const ContentAssistProcessor> cap
+							= contentAssistProcessor(contentType(textViewer_->textArea().caret()))) {
 						if(cap->isCompletionProposalAutoActivationCharacter(c)) {
 							if(autoActivationDelay_ == boost::chrono::milliseconds::zero())
 								showPossibleCompletions();
@@ -226,7 +229,7 @@ namespace ascension {
 			if(textViewer_ == nullptr || completionSession_.get() != nullptr || textViewer_->document().isReadOnly())
 				return textViewer_->beep();
 			const viewer::Caret& caret = textViewer_->textArea().caret();
-			if(const std::shared_ptr<const ContentAssistProcessor> cap = contentAssistProcessor(contentType(caret))) {
+			if(const std::shared_ptr<const ContentAssistProcessor> cap = contentAssistProcessor(kernel::contentType(caret))) {
 				std::set<std::shared_ptr<const CompletionProposal>> proposals;
 				completionSession_.reset(new CompletionSession);
 				(completionSession_->processor = cap)->computeCompletionProposals(caret,
