@@ -7,8 +7,10 @@
  * @date 2011-2015
  */
 
+#include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/identifier-syntax.hpp>
 #include <ascension/kernel/document.hpp>
+#include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
@@ -16,6 +18,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 #	include <boost/math/special_functions/trunc.hpp>
@@ -28,7 +31,7 @@ namespace ascension {
 
 			class VisualDestinationProxyMaker {
 			public:
-				static viewer::VisualDestinationProxy make(const kernel::Position& p, bool crossVisualLines) {
+				static viewer::VisualDestinationProxy make(const TextHit& p, bool crossVisualLines) {
 					return viewer::VisualDestinationProxy(p, crossVisualLines);
 				}
 			};
@@ -56,7 +59,7 @@ namespace ascension {
 				TextArea& textArea = p.textArea();
 				graphics::font::TextRenderer& renderer = textArea.textRenderer();
 				const std::shared_ptr<graphics::font::TextViewport> viewport(renderer.viewport());
-				const kernel::Position np(p.normalized());
+				const kernel::Position np(insertionPosition(p));
 				const graphics::font::TextLayout& layout = renderer.layouts().at(
 					kernel::line(np), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);	// this call may change the layouts
 				const float visibleLines = viewport->numberOfVisibleLines();
@@ -94,12 +97,12 @@ namespace ascension {
 				// TODO: Replace font.lineIndent with TextRenderer.lineStartEdge.
 #	if 1
 				const Index pointIpd = static_cast<Index>(
-					(graphics::font::lineIndent(layout, viewport->contentMeasure()) + layout.hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(np))).ipd()));
+					(graphics::font::lineIndent(layout, viewport->contentMeasure()) + layout.hitToPoint(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np))).ipd()));
 				to.ipd() = std::min(pointIpd, viewport->scrollPositions().ipd());
 				to.ipd() = std::max(pointIpd - static_cast<Index>(graphics::font::pageSize<presentation::ReadingDirection>(*viewport)) + 1, to.ipd());
 #	else
 				const Index pointIpd = static_cast<Index>(
-					(graphics::font::lineIndent(layout, viewport->contentMeasure()) + layout.hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(np))).ipd())
+					(graphics::font::lineIndent(layout, viewport->contentMeasure()) + layout.hitToPoint(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np))).ipd())
 					/ widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->averageCharacterWidth());
 				to.ipd() = std::min(pointIpd, viewport->scrollPositions().ipd());
 				to.ipd() = std::max(pointIpd - static_cast<Index>(viewport->numberOfVisibleCharactersInLine()) + 1, to.ipd());
@@ -117,89 +120,110 @@ namespace ascension {
 		 * @class ascension::viewer::VisualPoint
 		 * Extension of @c kernel#Point class for viewer and layout.
 		 *
+		 * <h3>Three States of @c VisualPoint</h3>
+		 *
 		 * A @c VisualPoint has the following three states:
 		 * <dl>
-		 *   <dt>State 1 : Constructed but not installed by @c TextViewer</dt>
+		 *   <dt>State 1 : Constructed but not installed by @c TextArea</dt>
 		 *   <dd>
 		 *     - The @c VisualPoint has been just constructed with the document, but not be installed by a
-		 *       @c TextViewer.
+		 *       @c TextArea.
 		 *     - The all features only as @c kernel#Point are available. The other methods throw
 		 *       @c VisualPoint#NotInstalledException exception.
 		 *     - @c VisualPoint#isInstalled() returns @c false.
-		 *     - @c VisualPoint#isTextViewerDisposed() throws @c VisualPoint#NotInstalledException exception.
+		 *     - @c VisualPoint#isTextAreaDisposed() throws @c VisualPoint#NotInstalledException exception.
 		 *     - @c VisualPoint#isFullyAvailable() returns @c false.
 		 *     - Constructed by the constructor which takes a document and a position.
 		 *   </dd>
-		 *   <dt>State 2 : Installed by @c TextViewer</dt>
+		 *   <dt>State 2 : Installed by @c TextArea</dt>
 		 *   <dd>
-		 *     - The @c VisualPoint has been installed by the @c TextViewer.
+		 *     - The @c VisualPoint has been installed by the @c TextArea.
 		 *     - The all features are available.
 		 *     - @c VisualPoint#isInstalled() returns @c true.
-		 *     - @c VisualPoint#isTextViewerDisposed() returns @c false.
+		 *     - @c VisualPoint#isTextAreaDisposed() returns @c false.
 		 *     - @c VisualPoint#isFullyAvailable() returns @c true.
 		 *     - Constructed by the constructor which takes a text viewer and a position.
 		 *     - You can revert the @c VisualPoint to the state 1 by calling @c VisualPoint#uninstall method.
 		 *   </dd>
-		 *   <dt>State 3 : Installed @c TextViewer was disposed</dt>
+		 *   <dt>State 3 : Installed @c TextArea was disposed</dt>
 		 *   <dd>
-		 *     - The @c TextViewer which installed the @c VisualPoint has already disposed.
+		 *     - The @c TextArea which installed the @c VisualPoint has already disposed.
 		 *     - The all features only as @c kernel#Point are available. The other methods throw
 		 *       @c VisualPoint#TextViewerDisposedException exception.
 		 *     - @c VisualPoint#isInstalled() returns @c true.
-		 *     - @c VisualPoint#isTextViewerDisposed() returns @c true.
+		 *     - @c VisualPoint#isTextAreaDisposed() returns @c true.
 		 *     - @c VisualPoint#isFullyAvailable() returns @c false.
 		 *     - You can revert the @c VisualPoint to the state 1 by calling @c VisualPoint#uninstall method.
 		 *   </dd>
 		 * </dl>
 		 *
+		 * <h3>@c TextHit, rather than @c kernel#Position</h3>
+		 *
+		 * Unlike @c kernel#Point, a @c VisualPoint uses @c TextHit rather than @c kernel#Position.
+		 *
+		 * - @c VisualPoint hides @c kernel#Point#position method.
+		 *
 		 * @see kernel#Point, TextViewer
 		 */
 
-		/**
-		 * Creates a @c VisualPoint object but does not install on @c TextViewer.
-		 * @param document The document
-		 * @param position The initial position of the point
-		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
-		 * @post @c #isInstalled() returns @c false.
-		 * @post @c #isTextViewerDisposed() throws @c #NotInstalledException exception.
-		 * @post @c #isFullyAvailable() returns @c false.
-		 */
-		VisualPoint::VisualPoint(kernel::Document& document,
-				const kernel::Position& position /* = kernel::Position::zero() */) : Point(document, position), crossingLines_(false) {
+		kernel::Position insertionPosition(const kernel::Document& document, const TextHit& hit) {
+			if(hit.isLeadingEdge())
+				return hit.characterIndex();
+			text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(kernel::DocumentCharacterIterator(document, hit.characterIndex()));
+			return (++i).base().tell();
 		}
 
 		/**
-		 * Creates a @c VisualPoint object and installs on the specified @c TextViewer.
+		 * Creates a @c VisualPoint object but does not install on @c TextArea.
+		 * @param document The document
+		 * @param position The initial position of the point. @c kernel#Point is initialized by @c position.insertionIndex()
+		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
+		 * @post @c #isInstalled() returns @c false.
+		 * @post @c #isTextAreaDisposed() throws @c #NotInstalledException exception.
+		 * @post @c #isFullyAvailable() returns @c false.
+		 */
+		VisualPoint::VisualPoint(kernel::Document& document,
+				const TextHit& position /* = TextHit::leading(kernel::Position::zero()) */)
+				: AbstractPoint(document), hit_(position), crossingLines_(false) {
+		}
+
+		/**
+		 * Creates a @c VisualPoint object and installs on the specified @c TextArea.
 		 * @param textArea The text area
 		 * @param position The initial position of the point
 		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 * @post @c #isInstalled() returns @c true.
-		 * @post @c #isTextViewerDisposed() returns @c false.
+		 * @post @c #isTextAreaDisposed() returns @c false.
 		 * @post @c #isFullyAvailable() returns @c true.
 		 */
-		VisualPoint::VisualPoint(TextArea& textArea, const kernel::Position& position /* = kernel::Position::zero() */)
-				: Point(textArea.textViewer().document(), position), crossingLines_(false) {
+		VisualPoint::VisualPoint(TextArea& textArea,
+				const TextHit& position /* = TextHit::leading(kernel::Position::zero()) */)
+				: AbstractPoint(textArea.textViewer().document()), hit_(position), crossingLines_(false) {
 			install(textArea);
 		}
 
 		/**
-		 * Creates a @c VisualPoint object but does not install on @c TextViewer.
+		 * Creates a @c VisualPoint object but does not install on @c TextArea.
 		 * @param other The point used to initialize kernel part of the new object
 		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 * @post @c #isInstalled() returns @c false.
-		 * @post @c #isTextViewerDisposed() throws @c #NotInstalledException exception.
+		 * @post @c #isTextAreaDisposed() throws @c #NotInstalledException exception.
 		 * @post @c #isFullyAvailable() returns @c false.
 		 */
-		VisualPoint::VisualPoint(const kernel::Point& other) : Point(other), crossingLines_(false) {
+		VisualPoint::VisualPoint(const graphics::font::TextHit<kernel::Point>& other) :
+				AbstractPoint(const_cast<kernel::Document&>(other.characterIndex().document())),
+				hit_(other.isLeadingEdge() ?
+					TextHit::leading(other.characterIndex().position()) : TextHit::trailing(other.characterIndex().position())),
+				crossingLines_(false) {
 		}
 
 		/**
 		 * Copy-constructor.
 		 * @param other The source object. If this has been installed, the new point is also installed
 		 * @throw kernel#DocumentDisposedException The copy-constructor of @c kernel#Point threw this exception
-		 * @throw TextViewerDisposedException @c other.isTextViewerDisposed() returned @c true
+		 * @throw TextAreaDisposedException @c other.isTextAreaDisposed() returned @c true
 		 */
-		VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), crossingLines_(false) {
+		VisualPoint::VisualPoint(const VisualPoint& other) : AbstractPoint(other), hit_(other.hit_), crossingLines_(false) {
 			if(other.isInstalled()) {
 				if(other.isTextAreaDisposed())
 					throw TextAreaDisposedException();
@@ -215,20 +239,49 @@ namespace ascension {
 			uninstall();
 		}
 
+		/**
+		 * See @c kernel#Point#aboutToMove. @c VisualPoint#aboutToMove does nothing.
+		 * @param to The destination position
+		 * @throw DocumentDisposedException The document to which the point belongs is already disposed
+		 * @see #moved, #moveTo, kernel#Point#aboutToMove
+		 */
+		void VisualPoint::aboutToMove(TextHit& to) {
+		}
+
 		/// @internal Resets @c #lineNumberCaches_ data member.
-		void VisualPoint::buildVisualLineCache() {
+		void VisualPoint::buildVisualLineCaches() {
 			assert(isFullyAvailable());
 			if(lineNumberCaches_ == boost::none) {
-				const kernel::Position p(normalized());	// may throw kernel.DocumentDisposedException
+				const auto p(hit().characterIndex());	// may throw kernel.DocumentDisposedException
 				const graphics::font::TextRenderer& renderer = textArea().textRenderer();
 				Index line = renderer.layouts().mapLogicalLineToVisualLine(kernel::line(p)), subline;
-				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(kernel::line(p)))
-					subline = layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(p)));
-				else
+				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(kernel::line(p))) {
+					const auto offset = kernel::offsetInLine(p);
+					subline = layout->lineAt(hit().isLeadingEdge() ? graphics::font::makeLeadingTextHit(offset) : graphics::font::makeTrailingTextHit(offset));
+				} else
 					subline = 0;
 				line += subline;
 				lineNumberCaches_ = graphics::font::VisualLine(line, subline);
 			}
+		}
+
+		/// @see AbstractPoint#contentReset
+		void VisualPoint::contentReset() {
+			assert(!isDocumentDisposed());
+			assert(adaptsToDocument());
+			moveTo(TextHit::leading(kernel::Position::zero()));
+		}
+
+		/// @see AbstractPoint#documentChanged
+		void VisualPoint::documentChanged(const kernel::DocumentChange& change) {
+			assert(!isDocumentDisposed());
+			assert(adaptsToDocument());
+//			normalize();
+			const auto ip(insertionPosition(*this));
+			const auto newPosition(kernel::positions::updatePosition(ip, change, gravity()));
+			const TextHit newHit((hit().isLeadingEdge() || includes(change.erasedRegion(), ip)) ? TextHit::leading(newPosition) : TextHit::trailing(newPosition));
+			if(newHit != hit())
+				moveTo(newHit);	// TODO: this may throw...
 		}
 
 		/**
@@ -253,20 +306,19 @@ namespace ascension {
 			}
 		}
 
-		/// @see Point#moved
-		void VisualPoint::moved(const kernel::Position& from) {
+		/**
+		 * See @c kernel#Point#moved.
+		 * @see #aboutToMove, #moveTo
+		 */
+		void VisualPoint::moved(const TextHit& from) {
 			assert(!isDocumentDisposed());
 			const bool fullyAvailable = isFullyAvailable();
 			if(fullyAvailable) {
-				if(kernel::line(from) == kernel::line(*this) && lineNumberCaches_ != boost::none) {
-					const graphics::font::TextLayout* const layout = textArea().textRenderer().layouts().at(kernel::line(*this));
-					lineNumberCaches_->line -= lineNumberCaches_->subline;
-					lineNumberCaches_->subline = (layout != nullptr) ? layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(*this))) : 0;
-					lineNumberCaches_->line += lineNumberCaches_->subline;
-				} else
+				if(kernel::line(from.characterIndex()) == kernel::line(hit().characterIndex()) && lineNumberCaches_ != boost::none)
+					updateLineNumberCaches();
+				else
 					lineNumberCaches_ = boost::none;
 			}
-			Point::moved(from);
 			if(fullyAvailable && !crossingLines_)
 				positionInVisualLine_ = boost::none;
 		}
@@ -329,19 +381,58 @@ namespace ascension {
 			}
 		}
 #endif
+		namespace {
+			inline bool isOutsideOfDocumentRegion(const kernel::Document& document, const TextHit& hit) BOOST_NOEXCEPT {
+				return kernel::positions::isOutsideOfDocumentRegion(document, insertionPosition(document, hit));
+			}
+			inline TextHit shrinkToDocumentRegion(const kernel::Document& document, const TextHit& hit) BOOST_NOEXCEPT {
+				const auto newPosition(kernel::positions::shrinkToDocumentRegion(document, hit.characterIndex()));
+				if(hit.isLeadingEdge() || kernel::offsetInLine(newPosition) < document.lineLength(kernel::line(newPosition)))
+					return TextHit::leading(newPosition);
+				else
+					return TextHit::trailing(newPosition);
+			}
+		}
+
+		/**
+		 * Moves to the specified position. See @c kernel#Point#moveTo.
+		 * @param to The destination position
+		 * @param trailing If a @c VisualPoint is the end of the visual line, @c modelToView free functions return the
+		 *                 beginning of the next visual line. Set @c true to return the end of the visual line
+		 * @return This @c VisualPoint
+		 * @throw kernel#BadPositionException @a to is outside of the document
+		 * @throw ... Any exceptions @c #aboutToMove implementation of sub-classe throws
+		 * @see kernel#Point#moveTo
+		 */
+		VisualPoint& VisualPoint::moveTo(const TextHit& to) {
+			if(isDocumentDisposed())
+				throw kernel::DocumentDisposedException();
+			else if(isOutsideOfDocumentRegion(document(), to))
+				throw kernel::BadPositionException();
+			TextHit destination(to);
+			aboutToMove(destination);
+			destination = shrinkToDocumentRegion(document(), destination);
+			const TextHit from(hit());
+			hit_ = destination;
+			moved(from);
+			if(destination != from)
+				motionSignal_(*this, from);
+			return *this;
+		}
+
 		/// @internal @c Point#moveTo for @c VisualDestinationProxy.
 		void VisualPoint::moveTo(const VisualDestinationProxy& to) {
 			document();	// may throw kernel.DocumentDisposedException
 			throwIfNotFullyAvailable();
 			if(!to.crossesVisualLines()) {
-				moveTo(to.position());
+				moveTo(to);
 				return;
 			}
 			if(positionInVisualLine_ == boost::none)
 				rememberPositionInVisualLine();
 			crossingLines_ = true;
 			try {
-				moveTo(to.position());
+				moveTo(to);
 			} catch(...) {
 				crossingLines_ = false;
 				throw;
@@ -374,11 +465,14 @@ namespace ascension {
 			throwIfNotFullyAvailable();
 			if(!isDocumentDisposed()) {
 				graphics::font::TextRenderer& renderer = textArea().textRenderer();
+				const auto p(hit().characterIndex());
 				const graphics::font::TextLayout& layout =
-					renderer.layouts().at(kernel::line(*this), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);
+					renderer.layouts().at(kernel::line(p), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);
+				const auto offset = kernel::offsetInLine(p);
+				const auto h(hit().isLeadingEdge() ? graphics::font::makeTextHitAfterOffset(offset) : graphics::font::makeTextHitBeforeOffset(offset));
 				positionInVisualLine_ =
 					graphics::font::lineStartEdge(layout, renderer.viewport()->contentMeasure())
-					+ layout.hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(*this))).ipd();
+					+ layout.hitToPoint(h).ipd();
 			}
 		}
 
@@ -400,15 +494,35 @@ namespace ascension {
 			}
 		}
 
+		/// @internal
+		void VisualPoint::updateLineNumberCaches() {
+			if(lineNumberCaches_ != boost::none) {
+				const graphics::font::TextLayout* const layout = textArea().textRenderer().layouts().at(kernel::line(hit().characterIndex()));
+				graphics::font::VisualLine newLineNumber;
+				assert(boost::get(lineNumberCaches_).line >= boost::get(lineNumberCaches_).subline);
+				newLineNumber.line = boost::get(lineNumberCaches_).line - boost::get(lineNumberCaches_).subline;
+				if(layout != nullptr) {
+					const auto p(hit().characterIndex());
+					const auto offset = kernel::offsetInLine(p);
+					auto h(hit().isLeadingEdge() ? graphics::font::makeLeadingTextHit(offset) : graphics::font::makeTrailingTextHit(offset));
+					h = std::min(h, graphics::font::makeLeadingTextHit(document().lineLength(kernel::line(p))));
+					newLineNumber.subline = layout->lineAt(h);
+				} else
+					newLineNumber.subline = 0;
+				newLineNumber.line += newLineNumber.subline;
+				lineNumberCaches_ = newLineNumber;
+			}
+		}
+
 		/// @see VisualLinesListener#visualLinesDeleted
 		void VisualPoint::visualLinesDeleted(const boost::integer_range<Index>& lines, Index, bool) BOOST_NOEXCEPT {
-			if(!adaptsToDocument() && includes(lines, kernel::line(*this)))
+			if(!adaptsToDocument() && includes(lines, kernel::line(hit().characterIndex())))
 				lineNumberCaches_ = boost::none;
 		}
 
 		/// @see VisualLinesListener#visualLinesInserted
 		void VisualPoint::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
-			if(!adaptsToDocument() && includes(lines, kernel::line(*this)))
+			if(!adaptsToDocument() && includes(lines, kernel::line(hit().characterIndex())))
 				lineNumberCaches_ = boost::none;
 		}
 
@@ -416,18 +530,12 @@ namespace ascension {
 		void VisualPoint::visualLinesModified(const boost::integer_range<Index>& lines, SignedIndex sublineDifference, bool, bool) BOOST_NOEXCEPT {
 			if(isFullyAvailable() && lineNumberCaches_ != boost::none) {
 				// adjust visualLine_ and visualSubine_ according to the visual lines modification
-				if(*boost::const_end(lines) <= kernel::line(*this))
+				const Index line = kernel::line(hit().characterIndex());
+				if(*boost::const_end(lines) <= line)
 					lineNumberCaches_->line += sublineDifference;
-				else if(*boost::const_begin(lines) == kernel::line(*this)) {
-					if(const graphics::font::TextLayout* const layout = textArea().textRenderer().layouts().at(kernel::line(*this))) {
-						lineNumberCaches_->line -= lineNumberCaches_->subline;
-						lineNumberCaches_->subline = layout->lineAt(std::min(
-							graphics::font::TextHit<>::leading(kernel::offsetInLine(*this)),
-							graphics::font::TextHit<>::leading(document().lineLength(kernel::line(*this)))));
-						lineNumberCaches_->line += lineNumberCaches_->subline;
-					} else
-						lineNumberCaches_ = boost::none;
-				} else if(*boost::const_begin(lines) < kernel::line(*this))
+				else if(*boost::const_begin(lines) == line)
+					updateLineNumberCaches();
+				else if(*boost::const_begin(lines) < line)
 					lineNumberCaches_ = boost::none;
 			}
 		}
@@ -441,374 +549,8 @@ namespace ascension {
 		VisualPoint::TextAreaDisposedException::TextAreaDisposedException() :
 				IllegalStateException("The TextArea which had installed the VisualPoint has been disposed.") {
 		}
-	}
 
-	namespace kernel {
 		namespace locations {
-			// kernel.locations free functions ////////////////////////////////////////////////////////////////////////
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			/**
-			 * Returns the position returned by N pages.
-			 * @param p The base position
-			 * @param pages The number of pages to return
-			 * @return The destination
-			 */
-			viewer::VisualDestinationProxy backwardPage(const VisualPoint& p, Index pages /* = 1 */) {
-				Index lines = 0;
-				const std::shared_ptr<const graphics::font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
-				// TODO: calculate exact number of visual lines.
-				lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
-			
-				return backwardVisualLine(p, lines);
-			}
-
-			/**
-			 * Returns the position returned by N visual lines.
-			 * @param p The base position
-			 * @param lines The number of the visual lines to return
-			 * @return The destination
-			 */
-			viewer::VisualDestinationProxy backwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
-				Position np(p.normalized());
-				const graphics::font::TextRenderer& renderer = p.textViewer().textRenderer();
-				Index subline = renderer.layouts().at(kernel::line(np)).lineAt(kernel::offsetInLine(np));
-				if(kernel::line(np) == 0 && subline == 0)
-					return detail::VisualDestinationProxyMaker::make(np, true);
-				graphics::font::VisualLine visualLine(kernel::line(np), subline);
-				renderer.layouts().offsetVisualLine(visualLine, -static_cast<SignedIndex>(lines));
-				const graphics::font::TextLayout& layout = renderer.layouts().at(visualLine.line);
-				if(!p.positionInVisualLine_)
-					const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
-				const graphics::Scalar ipd = *p.positionInVisualLine_ - graphics::font::lineStartEdge(layout, renderer.viewport()->contentMeasure());
-				const graphics::Scalar bpd = layout.baseline(visualLine.subline);
-				np.offsetInLine = layout.offset(
-					isHorizontal(layout.writingMode().blockFlowDirection) ?
-						geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
-				if(layout.lineAt(kernel::offsetInLine(np)) != visualLine.subline)
-					np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
-				return detail::VisualDestinationProxyMaker::make(np, true);
-			}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
-			/**
-			 * Returns the beginning of the visual line. If the layout of the line where @a p is placed is not
-			 * calculated, this function calls @c beginningOfLine(p).
-			 * @param p The base position
-			 * @return The destination
-			 * @see beginningOfLine
-			 */
-			Position beginningOfVisualLine(const viewer::VisualPoint& p) {
-				const Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np)))
-					return Position(np.line, layout->lineOffset(layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np)))));
-				return beginningOfLine(p);
-			}
-
-			/**
-			 * Returns the beginning of the line or the first printable character in the line by context.
-			 * @param p The base position
-			 * @return The destination
-			 */
-			Position contextualBeginningOfLine(const viewer::VisualPoint& p) {
-				return isFirstPrintableCharacterOfLine(p) ? beginningOfLine(p) : firstPrintableCharacterOfLine(p);
-			}
-
-			/**
-			 * Moves to the beginning of the visual line or the first printable character in the visual line by
-			 * context.
-			 * @param p The base position
-			 * @return The destination
-			 */
-			Position contextualBeginningOfVisualLine(const viewer::VisualPoint& p) {
-				return isFirstPrintableCharacterOfLine(p) ?
-					beginningOfVisualLine(p) : firstPrintableCharacterOfVisualLine(p);
-			}
-
-			/**
-			 * Moves to the end of the line or the last printable character in the line by context.
-			 * @param p The base position
-			 * @return The destination
-			 */
-			Position contextualEndOfLine(const viewer::VisualPoint& p) {
-				return isLastPrintableCharacterOfLine(p) ? endOfLine(p) : lastPrintableCharacterOfLine(p);
-			}
-
-			/**
-			 * Moves to the end of the visual line or the last printable character in the visual line by
-			 * context.
-			 * @param p The base position
-			 * @return The destination
-			 */
-			Position contextualEndOfVisualLine(const viewer::VisualPoint& p) {
-				return isLastPrintableCharacterOfLine(p) ?
-					endOfVisualLine(p) : lastPrintableCharacterOfVisualLine(p);
-			}
-
-			/**
-			 * Returns the end of the visual line. If the layout of the line where @a p is placed is not calculated,
-			 * this function calls @c endOfLine(p).
-			 * @param p The base position
-			 * @return The destination
-			 * @see endOfLine
-			 */
-			Position locations::endOfVisualLine(const viewer::VisualPoint& p) {
-				Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np))) {
-					const Index subline = layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np)));
-					np.offsetInLine = (subline < layout->numberOfLines() - 1) ?
-						layout->lineOffset(subline + 1) : p.document().lineLength(kernel::line(np));
-					if(layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np))) != subline)
-						np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
-					return np;
-				}
-				return endOfLine(p);
-			}
-
-			/**
-			 * Returns the first printable character in the line.
-			 * @param p The base position
-			 * @return The destination
-			 * @see firstPrintableCharacterOfLine
-			 */
-			Position locations::firstPrintableCharacterOfLine(const viewer::VisualPoint& p) {
-				Position np(p.normalized());
-				const Char* const s = p.document().lineString(kernel::line(np)).data();
-				np.offsetInLine = detail::identifierSyntax(p).eatWhiteSpaces(s, s + p.document().lineLength(kernel::line(np)), true) - s;
-				return np;
-			}
-
-			/**
-			 * Returns the first printable character in the visual line. If the layout of the line where @a p is placed
-			 * is not calculated, this function calls @c firstPrintableCharacterOfLine(p).
-			 * @param p The base position
-			 * @return The destination
-			 * @see firstPrintableCharacterOfLine
-			 */
-			Position firstPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
-				Position np(p.normalized());
-				const String& s = p.document().lineString(kernel::line(np));
-				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np))) {
-					const Index subline = layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np)));
-					np.offsetInLine = detail::identifierSyntax(p).eatWhiteSpaces(
-						s.begin() + layout->lineOffset(subline),
-						s.begin() + ((subline < layout->numberOfLines() - 1) ?
-							layout->lineOffset(subline + 1) : s.length()), true) - s.begin();
-					return np;
-				}
-				return firstPrintableCharacterOfLine(p);
-			}
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			/**
-			 * Returns the position advanced by N pages.
-			 * @param p The base position
-			 * @param pages The number of pages to advance
-			 * @return The destination
-			 */
-			viewer::VisualDestinationProxy forwardPage(const viewer::VisualPoint& p, Index pages /* = 1 */) {
-				Index lines = 0;
-				const std::shared_ptr<const graphics::font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
-				// TODO: calculate exact number of visual lines.
-				lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
-
-				return forwardVisualLine(p, lines);
-			}
-
-			/**
-			 * Returns the position advanced by N visual lines.
-			 * @param p The base position
-			 * @param lines The number of the visual lines to advance
-			 * @return The destination
-			 */
-			viewer::VisualDestinationProxy forwardVisualLine(const viewer::VisualPoint& p, Index lines /* = 1 */) {
-				Position np(p.normalized());
-				const graphics::font::TextRenderer& renderer = p.textViewer().textRenderer();
-				const graphics::font::TextLayout* layout = &renderer.layouts().at(kernel::line(np));
-				Index subline = layout->lineAt(kernel::offsetInLine(np));
-				if(kernel::line(np) == p.document().numberOfLines() - 1 && subline == layout->numberOfLines() - 1)
-					return detail::VisualDestinationProxyMaker::make(np, true);
-				graphics::font::VisualLine visualLine(kernel::line(np), subline);
-				renderer.layouts().offsetVisualLine(visualLine, static_cast<SignedIndex>(lines));
-				layout = &renderer.layouts().at(visualLine.line);
-				if(!p.positionInVisualLine_)
-					const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
-				const graphics::Scalar ipd = *p.positionInVisualLine_ - graphics::font::lineStartEdge(*layout, renderer.viewport()->contentMeasure());
-				const graphics::Scalar bpd = layout->baseline(visualLine.subline);
-				np.offsetInLine = layout->offset(
-					isHorizontal(layout->writingMode().blockFlowDirection) ?
-						geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
-				if(layout->lineAt(kernel::offsetInLine(np)) != visualLine.subline)
-					np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
-
-				return detail::VisualDestinationProxyMaker::make(np, true);
-			}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
-			/**
-			 * Returns @c true if the point is the beginning of the visual line. If the layout of the line where @a p is placed
-			 * is not calculated, this function calls @c isBeginningOfLine(p).
-			 * @param p The base position
-			 * @see isBeginningOfLine
-			 */
-			bool isBeginningOfVisualLine(const viewer::VisualPoint& p) {
-				if(isBeginningOfLine(p))	// this considers narrowing
-					return true;
-				const Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np)))
-					return kernel::offsetInLine(np) == layout->lineOffset(layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np))));
-				return isBeginningOfLine(p);
-			}
-
-			/**
-			 * Returns @c true if the point is end of the visual line. If the layout of the line where @a p is placed
-			 * is not calculated, this function calls @c isEndOfLine(p).
-			 * @param p The base position
-			 * @see isEndOfLine
-			 */
-			bool isEndOfVisualLine(const viewer::VisualPoint& p) {
-				if(isEndOfLine(p))	// this considers narrowing
-					return true;
-				const Position np(p.normalized());
-				if(const graphics::font::TextLayout* const layout = p.textArea().textRenderer().layouts().at(kernel::line(np))) {
-					const Index subline = layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np)));
-					return kernel::offsetInLine(np) == layout->lineOffset(subline) + layout->lineLength(subline);
-				}
-				return isEndOfLine(p);
-			}
-
-			/// Returns @c true if the given position is the first printable character in the line.
-			bool isFirstPrintableCharacterOfLine(const viewer::VisualPoint& p) {
-				const Position np(p.normalized()), bob(*boost::const_begin(p.document().accessibleRegion()));
-				const Index offset = (kernel::line(bob) == kernel::line(np)) ? kernel::offsetInLine(bob) : 0;
-				const String& line = p.document().lineString(kernel::line(np));
-				return line.data() + kernel::offsetInLine(np) - offset
-					== detail::identifierSyntax(p).eatWhiteSpaces(line.data() + offset, line.data() + line.length(), true);
-			}
-
-			/// Returns @c true if the given position is the first printable character in the visual line.
-			bool isFirstPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
-				// TODO: not implemented.
-				return false;
-			}
-
-			/// Returns @c true if the given position is the last printable character in the line.
-			bool isLastPrintableCharacterOfLine(const viewer::VisualPoint& p) {
-				const Position np(p.normalized()), eob(*boost::const_end(p.document().accessibleRegion()));
-				const String& line = p.document().lineString(kernel::line(np));
-				const Index lineLength = (kernel::line(eob) == kernel::line(np)) ? kernel::offsetInLine(eob) : line.length();
-				return line.data() + lineLength - kernel::offsetInLine(np)
-					== detail::identifierSyntax(p).eatWhiteSpaces(line.data() + kernel::offsetInLine(np), line.data() + lineLength, true);
-			}
-
-			/// Returns @c true if the given position is the last printable character in the visual line.
-			bool isLastPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
-				// TODO: not implemented.
-				return false;
-			}
-
-			/**
-			 * Returns the last printable character in the line.
-			 * @param p The base position
-			 * @return The destination
-			 */
-			Position lastPrintableCharacterOfLine(const viewer::VisualPoint& p) {
-				Position np(p.normalized());
-				const String& s(p.document().lineString(kernel::line(np)));
-				const text::IdentifierSyntax& syntax = detail::identifierSyntax(p);
-				for(Index spaceLength = 0; spaceLength < s.length(); ++spaceLength) {
-					if(syntax.isWhiteSpace(s[s.length() - spaceLength - 1], true))
-						return np.offsetInLine = s.length() - spaceLength, np;
-				}
-				return np.offsetInLine = s.length(), np;
-			}
-
-			/**
-			 * Moves to the last printable character in the visual line.
-			 * @param p The base position
-			 * @return The destination
-			 */
-			Position lastPrintableCharacterOfVisualLine(const viewer::VisualPoint& p) {
-				// TODO: not implemented.
-				return p.normalized();
-			}
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			namespace {
-				inline ReadingDirection defaultUIReadingDirection(const viewer::VisualPoint& p) {
-					return p.textViewer().textRenderer().defaultUIWritingMode().inlineFlowDirection;
-				}
-			}
-
-			/**
-			 * Returns the beginning of the word where advanced to the left by N words.
-			 * @param p The base position
-			 * @param words The number of words to adavance
-			 * @return The destination, or @c boost#none if the writing mode is vertical
-			 */
-			boost::optional<Position> leftWord(const viewer::VisualPoint& p, Index words /* = 1 */) {
-				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWord(p, words) : forwardWord(p, words);
-			}
-
-			/**
-			 * Returns the end of the word where advanced to the left by N words.
-			 * @param p The base position
-			 * @param words The number of words to adavance
-			 * @return The destination, or @c boost#none if the writing mode is vertical
-			 */
-			boost::optional<Position> leftWordEnd(const viewer::VisualPoint& p, Index words /* = 1 */) {
-				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
-			}
-
-			/**
-			 * Returns the beginning of the next bookmarked line.
-			 * @param p The base point
-			 * @param direction The direction
-			 * @return The beginning of the forward/backward bookmarked line, or @c boost#none if there is no
-			 *         bookmark in the document or @a direction is inline-progression
-			 * @see #nextBookmark
-			 */
-			boost::optional<Position> nextBookmarkInPhysicalDirection(
-					const viewer::VisualPoint& p, graphics::PhysicalDirection direction, Index marks /* = 1 */) {
-				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
-					case BEFORE:
-						return nextBookmark(p, Direction::BACKWARD, marks);
-					case AFTER:
-						return nextBookmark(p, Direction::FORWARD, marks);
-					case START:
-					case END:
-						return boost::none;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-			}
-
-			/**
-			 * Returns the position advanced to the left by N characters.
-			 * @param p The base position
-			 * @param direction The physical direction
-			 * @param unit Defines what a character is
-			 * @param characters The number of characters to adavance
-			 * @return The destination
-			 * @see #nextCharacter
-			 */
-			viewer::VisualDestinationProxy nextCharacterInPhysicalDirection(
-					const VisualPoint& p, PhysicalDirection direction, CharacterUnit unit, Index characters /* = 1 */) {
-				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
-					case BEFORE:
-						return nextVisualLine(p, Direction::BACKWARD, characters);
-					case AFTER:
-						return nextVisualLine(p, Direction::FORWARD, characters);
-					case START:
-						return detail::VisualDestinationProxyMaker::make(nextCharacter(p, Direction::BACKWARD, unit, characters), false);
-					case END:
-						return detail::VisualDestinationProxyMaker::make(nextCharacter(p, Direction::FORWARD, unit, characters), false);
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-			}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
 			/**
 			 * Returns the position advanced/returned by N pages.
 			 * @param p The base position
@@ -816,7 +558,7 @@ namespace ascension {
 			 * @param pages The number of pages to advance/return
 			 * @return The destination
 			 */
-			viewer::VisualDestinationProxy nextPage(const viewer::VisualPoint& p, Direction direction, Index pages /* = 1 */) {
+			VisualDestinationProxy nextPage(const VisualPoint& p, Direction direction, Index pages /* = 1 */) {
 				Index lines = 0;
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(p.textArea().textRenderer().viewport());
 				// TODO: calculate exact number of visual lines.
@@ -832,101 +574,42 @@ namespace ascension {
 			 * @return The destination
 			 * @see #nextLine
 			 */
-			viewer::VisualDestinationProxy nextVisualLine(const viewer::VisualPoint& p, Direction direction, Index lines /* = 1 */) {
+			VisualDestinationProxy nextVisualLine(const VisualPoint& p, Direction direction, Index lines /* = 1 */) {
 				// ISSUE: LineLayoutVector.offsetVisualLine(VisualLine&, SignedIndex) does not use calculated layouts.
-				Position np(p.normalized());
+				const auto hit(p.hit());
+				auto line(kernel::line(hit.characterIndex()));
+				auto inlineHit(hit.isLeadingEdge() ?
+					graphics::font::makeLeadingTextHit(kernel::offsetInLine(hit.characterIndex()))
+					: graphics::font::makeTrailingTextHit(kernel::offsetInLine(hit.characterIndex())));
 				const graphics::font::TextRenderer& renderer = p.textArea().textRenderer();
-				const graphics::font::TextLayout* layout = renderer.layouts().at(kernel::line(np));
-				Index subline = (layout != nullptr) ? layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np))) : 0;
+				const graphics::font::TextLayout* layout = renderer.layouts().at(line);
+				Index subline = (layout != nullptr) ? layout->lineAt(inlineHit) : 0;
 				if(direction == Direction::FORWARD) {
-					if(kernel::line(np) == p.document().numberOfLines() - 1 && (layout == nullptr || subline == layout->numberOfLines() - 1))
-						return viewer::detail::VisualDestinationProxyMaker::make(np, true);
+					if(line == p.document().numberOfLines() - 1 && (layout == nullptr || subline == layout->numberOfLines() - 1))
+						return detail::VisualDestinationProxyMaker::make(hit, true);
 				} else {
-					if(kernel::line(np) == 0 && subline == 0)
-						return viewer::detail::VisualDestinationProxyMaker::make(np, true);
+					if(line == 0 && subline == 0)
+						return viewer::detail::VisualDestinationProxyMaker::make(hit, true);
 				}
-				graphics::font::VisualLine visualLine(kernel::line(np), subline);
+				graphics::font::VisualLine visualLine(line, subline);
 				renderer.layouts().offsetVisualLine(visualLine,
 					(direction == Direction::FORWARD) ? static_cast<SignedIndex>(lines) : -static_cast<SignedIndex>(lines));
-				if(!p.positionInVisualLine_)
+				if(p.positionInVisualLine_ == boost::none)
 					const_cast<viewer::VisualPoint&>(p).rememberPositionInVisualLine();
-				np.line = visualLine.line;
+				line = visualLine.line;
 				if(nullptr != (layout = renderer.layouts().at(visualLine.line))) {
-					np.offsetInLine = layout->hitTestCharacter(
+					inlineHit = layout->hitTestCharacter(
 						presentation::FlowRelativeTwoAxes<graphics::Scalar>(
 							presentation::_ipd = *p.positionInVisualLine_ - graphics::font::lineStartEdge(*layout, renderer.viewport()->contentMeasure()),
-							presentation::_bpd = graphics::font::TextLayout::LineMetricsIterator(*layout, visualLine.subline).baselineOffset())).insertionIndex();
-					if(layout->lineAt(graphics::font::TextHit<>::leading(kernel::offsetInLine(np))) != visualLine.subline)
-						np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
+							presentation::_bpd = graphics::font::TextLayout::LineMetricsIterator(*layout, visualLine.subline).baselineOffset()));
+//					if(layout->lineAt(inlineHit) != visualLine.subline)
+//						np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 				}
-				return viewer::detail::VisualDestinationProxyMaker::make(np, true);
-			}
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			/**
-			 * Returns the beginning of the word where advanced to the left/right/top/bottom by N words.
-			 * @param p The base position
-			 * @param words The number of words to adavance
-			 * @return The destination, or @c boost#none if @a direction is block-progression
-			 * @see #nextWord, #nextWordEndInPhysicalDirection
-			 */
-			boost::optional<Position> nextWordInPhysicalDirection(
-					const viewer::VisualPoint& p, PhysicalDirection direction, Index words /* = 1 */) {
-				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
-					case BEFORE:
-					case AFTER:
-						return boost::none;
-					case START:
-						return nextWord(p, Direction::BACKWARD, words);
-					case END:
-						return nextWord(p, Direction::FORWARD, words);
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
+				const kernel::Position temp(line, inlineHit.characterIndex());
+				return viewer::detail::VisualDestinationProxyMaker::make(
+					inlineHit.isLeadingEdge() ? viewer::TextHit::leading(temp) : viewer::TextHit::trailing(temp), true);
 			}
-
-			/**
-			 * Returns the end of the word where advanced to the left/right/top/bottom by N words.
-			 * @param p The base position
-			 * @param words The number of words to adavance
-			 * @return The destination, or @c boost#none if @a direction is block-progression
-			 * @see #nextWordEnd, #nextWordInPhysicalDirection
-			 */
-			boost::optional<Position> nextWordEndInPhysicalDirection(
-					const viewer::VisualPoint& p, PhysicalDirection direction, Index words /* = 1 */) {
-				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
-					case BEFORE:
-					case AFTER:
-						return boost::none;
-					case START:
-						return nextWordEnd(p, Direction::BACKWARD, words);
-					case END:
-						return nextWordEnd(p, Direction::FORWARD, words);
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-			}
-
-			/**
-			 * Returns the beginning of the word where advanced to the right by N words.
-			 * @param p The base position
-			 * @param words The number of words to adavance
-			 * @return The destination
-			 */
-			boost::optional<Position> rightWord(const viewer::VisualPoint& p, Index words /* = 1 */) {
-				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWord(p, words) : backwardWord(p, words);
-			}
-
-			/**
-			 * Returns the end of the word where advanced to the right by N words.
-			 * @param p The base position
-			 * @param words The number of words to adavance
-			 * @return The destination
-			 */
-			boost::optional<Position> rightWordEnd(const viewer::VisualPoint& p, Index words /* = 1 */) {
-				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
-			}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
 		}
 	}
 }

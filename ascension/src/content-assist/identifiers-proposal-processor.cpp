@@ -14,6 +14,7 @@
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/kernel/locations.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
@@ -81,13 +82,14 @@ namespace ascension {
 			// find the preceding identifier
 			static const Index MAXIMUM_IDENTIFIER_LENGTH = 100;
 			{
+				const auto ip(viewer::insertionPosition(caret));
 				Index startOffsetInLine;
 				if(!incremental || kernel::locations::isBeginningOfLine(caret))
-					replacementRegion = kernel::Region::makeEmpty(caret.position());
-				else if(viewer::utils::getNearestIdentifier(caret.document(), caret, &startOffsetInLine, nullptr))
-					replacementRegion = kernel::Region::makeSingleLine(kernel::line(caret), boost::irange(startOffsetInLine, kernel::offsetInLine(caret)));
+					replacementRegion = kernel::Region::makeEmpty(ip);
+				else if(viewer::utils::getNearestIdentifier(caret.document(), ip, &startOffsetInLine, nullptr))
+					replacementRegion = kernel::Region::makeSingleLine(kernel::line(ip), boost::irange(startOffsetInLine, kernel::offsetInLine(ip)));
 				else
-					replacementRegion = kernel::Region::makeEmpty(caret.position());
+					replacementRegion = kernel::Region::makeEmpty(ip);
 			}
 
 			// collect identifiers in the document

@@ -431,9 +431,10 @@ namespace ascension {
 				context.restore();
 
 			// paint the caret(s)
-			if(const graphics::font::TextLayout* const layout = textRenderer().layouts().at(kernel::line(caret())))
+			const auto ip(insertionPosition(caret()));
+			if(const graphics::font::TextLayout* const layout = textRenderer().layouts().at(kernel::line(ip)))
 				static_cast<detail::CaretPainterBase&>(*caretPainter_).paintIfShows(
-					context, *layout, modelToView(textViewer(), graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(caret().position()))));
+					context, *layout, modelToView(textViewer(), graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(ip))));
 		}
 
 		/**

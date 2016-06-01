@@ -92,7 +92,7 @@ namespace ascension {
 			virtual void handleX2Button(Action action, widgetapi::event::MouseButtonInput& input);
 		private:
 			bool endAutoScroll();
-			void continueSelectionExtension(const kernel::Position& to);
+			void continueSelectionExtension(const TextHit& to);
 			void handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker);
 			void handleLeftButtonReleased(widgetapi::event::MouseButtonInput& input);
 			bool isStateNeutral() const BOOST_NOEXCEPT;

@@ -22,7 +22,7 @@ namespace ascension {
 			 * of the character. Biases are either <em>leading</em> (the left edge, for a left-to-right character) or
 			 * <em>trailing</em> (the right edge, for a left-to-right character). Instances of @c TextHit are used to
 			 * specify caret and insertion positions within text.
-			 * @tparam Position A type represents a character position. Typically either @c Index or kernel#Position
+			 * @tparam Position A type represents a character position. Typically either @c Index or @c kernel#Position
 			 * @see TextLayout, TextViewport
 			 * @note This class is designed based on @c java.awt.font.TextHitInfo class in Java.
 			 */
@@ -112,6 +112,18 @@ namespace ascension {
 				 */
 				TextHit offsetHit(SignedIndex delta) const;
 				/**
+				 * Creates a @c TextHit whose character index is offset by the given function object. This @c TextHit
+				 * remains unchanged.
+				 * @tparam Function The type of @a f
+				 * @param f The function object takes a value returned by @c #characterIndex() and returns a value
+				 *          which can be passed to the constructors
+				 * @return A @c TextHit whose @c #characterIndex is offset by @a f
+				 */
+				template<typename Function>
+				TextHit offsetHit(Function f) const {
+					return TextHit(f(characterIndex()), isLeadingEdge());
+				}
+				/**
 				 * Creates a @c TextHit on the other side of the insertion point. This @c TextHit remains unchanged.
 				 * @return A @c TextHit on the other side of the insertion point
 				 * @see #offsetHit
@@ -153,6 +165,34 @@ namespace ascension {
 			template<> inline TextHit<Index> TextHit<Index>::otherHit() const BOOST_NOEXCEPT {
 				return isLeadingEdge() ? trailing(characterIndex() - 1) : leading(characterIndex() + 1);
 			}
+
+			/// @defgroup texthit_other_factories Free Functions to Make @c TextHit&lt;&gt; Objects
+			/// @{
+
+			/// Returns a @c TextHit&lt;Position&gt; by using @c TextHit#afterOffset method.
+			template<typename Position>
+			inline TextHit<typename std::remove_cv<Position>::type> makeTextHitAfterOffset(const Position& offset) BOOST_NOEXCEPT {
+				return TextHit<typename std::remove_cv<Position>::type>::afterOffset(offset);
+			}
+
+			/// Returns a @c TextHit&lt;Position&gt; by using @c TextHit#beforeOffset method.
+			template<typename Position>
+			inline TextHit<typename std::remove_cv<Position>::type> makeTextHitBeforeOffset(const Position& offset) BOOST_NOEXCEPT {
+				return TextHit<typename std::remove_cv<Position>::type>::beforeOffset(offset);
+			}
+
+			/// Returns a @c TextHit&lt;Position&gt; by using @c TextHit#leading method.
+			template<typename Position>
+			inline TextHit<typename std::remove_cv<Position>::type> makeLeadingTextHit(const Position& characterIndex) BOOST_NOEXCEPT {
+				return TextHit<typename std::remove_cv<Position>::type>::leading(characterIndex);
+			}
+
+			/// Returns a @c TextHit&lt;Position&gt; by using @c TextHit#trailing method.
+			template<typename Position>
+			inline TextHit<typename std::remove_cv<Position>::type> makeTrailingTextHit(const Position& characterIndex) BOOST_NOEXCEPT {
+				return TextHit<typename std::remove_cv<Position>::type>::trailing(characterIndex);
+			}
+			/// @}
 		}
 	}
 }

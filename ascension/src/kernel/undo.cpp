@@ -365,7 +365,7 @@ namespace ascension {
 
 		/// Destructor.
 		Document::~Document() {
-			BOOST_FOREACH(Point* p, points_)
+			BOOST_FOREACH(AbstractPoint* p, points_)
 				p->documentDisposed();
 			accessibleRegion_.reset();
 			bookmarker_.reset();	// Bookmarker.~Bookmarker() calls Document...

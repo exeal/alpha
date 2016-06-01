@@ -224,7 +224,9 @@
     <ClCompile Include="..\..\ascension\src\graphics\paint-cairo.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\paint-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\abstract-point.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\document-character-iterator.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\locations.cpp" />
     <ClCompile Include="..\..\ascension\src\log.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\hyperlink\composite-hyperlink-detector.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\hyperlink\uri-hyperlink-detector.cpp" />
@@ -277,6 +279,7 @@
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\virtual-box.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\visual-locations.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\visual-point.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\cursor-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\cursor-windows.cpp" />
@@ -464,7 +467,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\physical-directions-dimensions.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\abstract-point.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\locations.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\region.hpp" />
     <ClInclude Include="..\..\ascension\ascension\log.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\absolute-length.hpp" />
@@ -538,6 +543,8 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-utility.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\virtual-box.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\visual-destination-proxy.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\visual-locations.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\cursor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\drag-and-drop.hpp" />

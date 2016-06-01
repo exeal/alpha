@@ -65,6 +65,11 @@ namespace ascension {
 	namespace kernel {
 		// kernel free functions //////////////////////////////////////////////////////////////////////////////////////
 
+		/// Returns the content type of the document partition contains the point.
+		ContentType contentType(const std::pair<const Document&, const Position&>& p) {
+			return std::get<0>(p).partitioner().contentType(std::get<1>(p));
+		}
+
 		/**
 		 * Writes the content of the document to the specified output stream.
 		 * <p>This method does not write Unicode byte order mark.</p>
@@ -164,15 +169,13 @@ namespace ascension {
 				}
 			}
 			if(!boost::empty(change.insertedRegion())) {	// insertion
-				if(position < *boost::const_begin(change.insertedRegion()))	// behind the current position
-					return newPosition;
-				else if(position == *boost::const_begin(change.insertedRegion()) && gravity == Direction::BACKWARD) // the current position + backward gravity
-					return newPosition;
-				else if(line(position) > line(*boost::const_begin(change.insertedRegion())))	// in front of the current line
+				if(newPosition == *boost::const_begin(change.insertedRegion())) {
+					if(gravity == Direction::FORWARD)
+						newPosition = *boost::const_end(change.insertedRegion());
+				} else if(newPosition > *boost::const_begin(change.insertedRegion())) {
+					if(line(*boost::const_begin(change.insertedRegion())) == line(newPosition))
+						newPosition.offsetInLine += offsetInLine(*boost::const_end(change.insertedRegion())) - offsetInLine(*boost::const_begin(change.insertedRegion()));
 					newPosition.line += boost::size(change.insertedRegion().lines()) - 1;
-				else {	// in the current line
-					newPosition.line += boost::size(change.insertedRegion().lines()) - 1;
-					newPosition.offsetInLine += offsetInLine(*boost::const_end(change.insertedRegion())) - offsetInLine(*boost::const_begin(change.insertedRegion()));
 				}
 			}
 			return newPosition;
@@ -566,7 +569,7 @@ namespace ascension {
 		 * @see #region, DocumentAccessViolationException
 		 */
 		Region Document::accessibleRegion() const BOOST_NOEXCEPT {
-			return (accessibleRegion_.get() != nullptr) ? Region(std::get<0>(*accessibleRegion_), *std::get<1>(*accessibleRegion_)) : region();
+			return (accessibleRegion_.get() != nullptr) ? Region(std::get<0>(*accessibleRegion_), std::get<1>(*accessibleRegion_)->position()) : region();
 		}
 
 		/// Returns the @c AccessibleRegionChangedSignal signal connector.
@@ -644,8 +647,12 @@ namespace ascension {
 		void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) BOOST_NOEXCEPT {
 			if(partitioner_.get() != nullptr)
 				partitioner_->documentChanged(c);
-			if(updateAllPoints)
-				updatePoints(c);
+			if(updateAllPoints) {
+				BOOST_FOREACH(AbstractPoint* p, points_) {
+					if(p->adaptsToDocument())
+						p->documentChanged(c);
+				}
+			}
 			BOOST_FOREACH(DocumentListener* listener, prenotifiedListeners_)
 				listener->documentChanged(*this, c);
 			BOOST_FOREACH(DocumentListener* listener, listeners_)
@@ -830,8 +837,10 @@ namespace ascension {
 				lines_.insert(std::begin(lines_), new Line(0));
 			else {
 				widen();
-				BOOST_FOREACH(Point* p, points_)
-					p->moveTo(Position::zero());
+				BOOST_FOREACH(AbstractPoint* p, points_) {
+					if(p->adaptsToDocument())
+						p->contentReset();
+				}
 				bookmarker_->clear();
 		
 				fireDocumentAboutToBeChanged();
@@ -931,17 +940,6 @@ namespace ascension {
 			locker_ = nullptr;
 		}
 #endif
-		/**
-		 * Informs the document change to the adapting points.
-		 * @param change The document change
-		 */
-		inline void Document::updatePoints(const DocumentChange& change) BOOST_NOEXCEPT {
-			BOOST_FOREACH(Point* p, points_) {
-				if(p->adaptsToDocument())
-					p->update(change);
-			}
-		}
-
 		/**
 		 * Revokes the narrowing.
 		 * @see #isNarrowed, #narrow, #AccessibleRegionChangedSignal

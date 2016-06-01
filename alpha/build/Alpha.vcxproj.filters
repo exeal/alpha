@@ -569,6 +569,15 @@
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-events.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\abstract-point.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\locations.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\visual-locations.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1311,6 +1320,18 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\keyboard-modifier.hpp">
       <Filter>ascension\Header Files\viewer\widgetapi\event</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\abstract-point.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\locations.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\visual-locations.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\visual-destination-proxy.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

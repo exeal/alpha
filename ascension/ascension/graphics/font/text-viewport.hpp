@@ -19,7 +19,7 @@
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
-#include <ascension/kernel/point.hpp>	// kernel.locations
+#include <ascension/kernel/locations.hpp>
 #include <ascension/presentation/flow-relative-directions-dimensions.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/optional.hpp>

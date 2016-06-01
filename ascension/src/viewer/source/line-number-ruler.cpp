@@ -55,7 +55,7 @@ namespace ascension {
 					kernel::Position caret;
 					caret.line = (kernel::line(to) >= boost::get(lineSelectionAnchorLine_)) ? kernel::line(to) + 1 : kernel::line(to);
 					caret.offsetInLine = (kernel::line(caret) > nlines - 1) ? document.lineLength(--caret.line) : 0;
-					viewer()->textArea().caret().select((_anchor = anchor, _caret = caret));
+					viewer()->textArea().caret().select((_anchor = anchor, _caret = TextHit::leading(caret)));
 				}
 			}
 

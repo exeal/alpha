@@ -467,7 +467,7 @@ namespace ascension {
 								throw ReplacementInterruptedException<std::bad_alloc>(numberOfReplacements);
 							}
 							i.seek(e);
-							i.setRegion(kernel::Region(*boost::const_begin(scope), endOfScope));
+							i.setRegion(kernel::Region(*boost::const_begin(scope), endOfScope.position()));
 							documentRevision = document.revisionNumber();
 						}
 						++numberOfReplacements;
@@ -486,8 +486,8 @@ namespace ascension {
 #endif // !ASCENSION_NO_MIGEMO
 			) {
 				const kernel::Point endOfScope(document, *boost::const_end(scope));
-				kernel::Position lastEOS(endOfScope);
-				kernel::DocumentCharacterIterator e(document, endOfScope);
+				kernel::Position lastEOS(endOfScope.position());
+				kernel::DocumentCharacterIterator e(document, endOfScope.position());
 				kernel::DocumentCharacterIterator b(e);
 				std::unique_ptr<regex::Matcher<kernel::DocumentCharacterIterator>> matcher(
 					regexPattern_->matcher(beginningOfDocument(document), endOfDocument(document)));
@@ -544,7 +544,7 @@ namespace ascension {
 								next = *boost::const_begin(matchedRegion);
 							if(!replacement.empty()) {
 								matcher->endInplaceReplacement(beginningOfDocument(document), endOfDocument(document),
-									kernel::DocumentCharacterIterator(document, *boost::const_begin(scope)), kernel::DocumentCharacterIterator(document, endOfScope),
+									kernel::DocumentCharacterIterator(document, *boost::const_begin(scope)), kernel::DocumentCharacterIterator(document, endOfScope.position()),
 									kernel::DocumentCharacterIterator(document, next));
 								documentRevision = document.revisionNumber();
 							}
@@ -556,9 +556,9 @@ namespace ascension {
 						if(*boost::const_end(matchedRegion) == e.tell())	// reached the end of the scope
 							break;
 						else if(endOfScope.position() != lastEOS) {
-							e.setRegion(kernel::Region(*boost::const_begin(scope), endOfScope));
-							e.seek(endOfScope);
-							lastEOS = endOfScope;
+							e.setRegion(kernel::Region(*boost::const_begin(scope), endOfScope.position()));
+							e.seek(endOfScope.position());
+							lastEOS = endOfScope.position();
 						}
 						if(next < *boost::const_end(matchedRegion))
 							next = *boost::const_end(matchedRegion);

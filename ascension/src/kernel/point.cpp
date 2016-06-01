@@ -68,11 +68,9 @@ namespace ascension {
 		 * @param position The initial position of the point
 		 * @throw BadPositionException @a position is outside of the document
 		 */
-		Point::Point(Document& document, const Position& position /* = kernel::Position::zero() */) :
-				document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD) {
+		Point::Point(Document& document, const Position& position /* = kernel::Position::zero() */) : AbstractPoint(document), position_(position) {
 			if(!encompasses(document.region(), position))
 				throw BadPositionException(position);
-			static_cast<detail::PointCollection<Point>&>(document).addNewPoint(*this);
 		}
 
 		/**
@@ -80,58 +78,50 @@ namespace ascension {
 		 * @param other The source object
 		 * @throw DocumentDisposedException The document to which @a other belongs had been disposed
 		 */
-		Point::Point(const Point& other) : document_(other.document_), position_(other.position_),
-				adapting_(other.adapting_), gravity_(other.gravity_) {
-			if(document_ == nullptr)
-				throw DocumentDisposedException();
-			static_cast<detail::PointCollection<Point>*>(document_)->addNewPoint(*this);
-		}
-
-		/// Destructor.
-		Point::~Point() BOOST_NOEXCEPT {
-			destructionSignal_(this);
-			if(document_ != nullptr)
-				static_cast<detail::PointCollection<Point>*>(document_)->removePoint(*this);
+		Point::Point(const Point& other) : AbstractPoint(other), position_(other.position_) {
 		}
 
 		/**
 		 * This overridable method is called by @c #moveTo to check and adjust the desitination position.
 		 * If you override this, consider the followings:
 		 *
-		 * - To change the destination, modify the value of @a parameter.
+		 * - To change the destination, modify the value of @a to.
 		 * - Call @c #aboutToMove method of the super class with the same parameter.
 		 * - Throw any exceptions to interrupt the movement.
 		 *
-		 * Note that @c #moveToNowhere method does not call this method.
-		 *
 		 * @c Point#aboutToMove does nothing.
-		 * @param to The destination position. implementation can modify this value
-		 * @throw DocumentDisposedException the document to which the point belongs is already disposed
-		 * @see #moved, #moveTo, #moveToNowhere
+		 * @param to The destination position. Implementation can modify this value
+		 * @throw DocumentDisposedException The document to which the point belongs is already disposed
+		 * @see #moved, #moveTo, viewer#VisualPoint#aboutToMove
 		 */
 		void Point::aboutToMove(Position& to) {
 		}
 
-		/// Returns the @c DestructionSignal signal connector.
-		SignalConnector<Point::DestructionSignal> Point::destructionSignal() BOOST_NOEXCEPT {
-			return makeSignalConnector(destructionSignal_);
+		/// @see AbstractPoint#contentReset
+		void Point::contentReset() {
+			assert(!isDocumentDisposed());
+			assert(adaptsToDocument());
+			moveTo(Position::zero());
 		}
 
-		/// Returns the @c MotionSignal signal connector.
-		SignalConnector<Point::MotionSignal> Point::motionSignal() BOOST_NOEXCEPT {
-			return makeSignalConnector(motionSignal_);
+		/// @see AbstractPoint#documentChanged
+		void Point::documentChanged(const DocumentChange& change) {
+			assert(!isDocumentDisposed());
+			assert(adaptsToDocument());
+//			normalize();
+			const Position newPosition(positions::updatePosition(position(), change, gravity()));
+			if(newPosition != position())
+				moveTo(newPosition);	// TODO: this may throw...
 		}
 
 		/**
-		 * This overridable method is called by @c #moveTo to notify the movement was finished.
+		 * This overridable method is called by @c #moveTo to notify the motion was finished.
 		 * If you override this, call @c #moved method of the super class with the same parameter. And don't throw any
-		 . exceptions. Note that this method is not called if @c #aboutToMove threw an exception.
-		 *
-		 * @c Point's implementation does nothing.
+		 * exceptions. Note that this method is not called if @c #aboutToMove threw an exception.
 		 * @param from The position before the point moved. This value may equal to the current position
-		 * @see #aboutToMove, moveTo
+		 * @see #aboutToMove, #moveTo, viewer#VisualPoint#moved
 		 */
-		void Point::moved(const Position& from) BOOST_NOEXCEPT {
+		void Point::moved(const Position& from) {
 		}
 
 		/**
@@ -141,13 +131,13 @@ namespace ascension {
 		 * documentations of the classes.
 		 * @param to The destination position
 		 * @throw BadPositionException @a to is outside of the document
-		 * @throw ... Any exceptions @c #aboutToMove implementation of sub-classe throws
 		 * @return This point
+		 * @see viewer#VisualPoint#moveTo
 		 */
 		Point& Point::moveTo(const Position& to) {
 			if(isDocumentDisposed())
 				throw DocumentDisposedException();
-			else if(to > *boost::const_end(document().region()))
+			else if(positions::isOutsideOfDocumentRegion(document(), to))
 				throw BadPositionException(to);
 			Position destination(to);
 			aboutToMove(destination);
@@ -165,399 +155,8 @@ namespace ascension {
 			return positions::shrinkToDocumentRegion(document(), position());
 		}
 
-		/**
-		 * Sets the gravity.
-		 * @param gravity The new gravity value
-		 * @return This object
-		 */
-		Point& Point::setGravity(Direction gravity) BOOST_NOEXCEPT {
-			if(isDocumentDisposed())
-				throw DocumentDisposedException();
-			gravity_ = gravity;
-			return *this;
-		}
-
-		/**
-		 * Called when the document was changed.
-		 * @param change The content of the document change
-		 */
-		void Point::update(const DocumentChange& change) {
-			if(document_ == nullptr || !adaptsToDocument())
-				return;
-//			normalize();
-			const Position newPosition(positions::updatePosition(position(), change, gravity()));
-			if(newPosition != position())
-				moveTo(newPosition);	// TODO: this may throw...
-		}
-
 
 		// free functions /////////////////////////////////////////////////////////////////////////////////////////////
-
-		/// Returns the content type of the document partition contains the point.
-		ContentType contentType(const Point& p) {
-			return p.document().partitioner().contentType(p);
-		}
-
-		/**
-		 * @namespace ascension::kernel::locations
-		 *
-		 * Provides several functions related to locations in document.
-		 *
-		 * Functions this namespace defines are categorized into the following three:
-		 *
-		 * - Functions take a position and return other position (ex. @c nextCharacter). These functions take a
-		 *   @c Position, @c Point or @c VisualPoint as the base position.
-		 * - Functions check if the given position is specific location (ex. isBeginningOfLine). These functions take a
-		 *   @c Point or @c VisualPoint as the first parameter.
-		 * - @c characterAt.
-		 *
-		 * Some of the above functions return @c BlockProgressionDestinationProxy objects and these can be passed to
-		 * @c VisualPoint#moveTo and @c Caret#extendSelectionTo methods.
-		 *
-		 * All functions are unaffected by accessible region of the document.
-		 */
-		namespace locations {
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			/**
-			 * Returns the beginning of the previous bookmarked line.
-			 * @param p The base point
-			 * @return The beginning of the backward bookmarked line or @c boost#none if there is no bookmark in the
-			 *         document
-			 */
-			boost::optional<Position> backwardBookmark(const Point& p, Index marks /* = 1 */) {
-				const boost::optional<Index> temp(p.document().bookmarker().next(line(p.normalized()), Direction::BACKWARD, true, marks));
-				return (temp != boost::none) ? boost::make_optional(Position::bol(boost::get(temp))) : boost::none;
-			}
-
-			/**
-			 * Returns the position returned by N characters.
-			 * @param p The base point
-			 * @param unit Defines what a character is
-			 * @param characters The number of the characters to return
-			 * @return The position of the previous character
-			 */
-			Position backwardCharacter(const Point& p, locations::CharacterUnit unit, Index characters /* = 1 */) {
-				return nextCharacter(p.document(), p.position(), Direction::BACKWARD, unit, characters);
-			}
-
-			/**
-			 * Returns the position returned by N lines. If the destination position is outside of the accessible
-			 * region, returns the first line whose offset is accessible, rather than the beginning of the accessible
-			 * region.
-			 * @param p The base point
-			 * @param lines The number of the lines to return
-			 * @return The position of the previous line
-			 */
-			Position backwardLine(const Point& p, Index lines /* = 1 */) {
-				Position temp(p.normalized());
-				const Position bob(p.document().accessibleRegion().first);
-				Index destination = (line(temp) > line(bob) + lines) ? temp.line - lines : line(bob);
-				if(destination == line(bob) && offsetInLine(temp) < offsetInLine(bob))
-					++destination;
-				return temp.line = destination, temp;
-			}
-
-			/**
-			 * Returns the beginning of the backward N words.
-			 * @param p The base point
-			 * @param words The number of words to traverse
-			 * @return The destination
-			 */
-			Position backwardWord(const Point& p, Index words /* = 1 */) {
-				WordBreakIterator<DocumentCharacterIterator> i(
-					DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
-					AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax(p));
-				return (i -= words).base().tell();
-			}
-
-			/**
-			 * Returns the the end of the backward N words.
-			 * @param p The base point
-			 * @param words The number of words to traverse
-			 * @return The destination
-			 */
-			Position backwardWordEnd(const Point& p, Index words /* = 1 */) {
-				WordBreakIterator<DocumentCharacterIterator> i(
-					DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
-					AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax(p));
-				return (i -= words).base().tell();
-			}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
-			/**
-			 * Returns the beginning of the document.
-			 * @param p The base point
-			 * @return The destination
-			 */
-			Position beginningOfDocument(const Point& p) {
-				return *boost::const_begin(p.document().accessibleRegion());
-			}
-
-			/**
-			 * Returns the beginning of the current line.
-			 * @param p The base point
-			 * @return The destination
-			 */
-			Position beginningOfLine(const Point& p) {
-				return std::max(Position::bol(p.normalized()), *boost::const_begin(p.document().accessibleRegion()));
-			}
-
-			/**
-			 * Returns the code point of the current character.
-			 * @param p The base point
-			 * @param useLineFeed Set @c true to return LF (U+000A) when the current position is the end of the line.
-			 *                    Otherwise LS (U+2008)
-			 * @return The code point of the character, or @c INVALID_CODE_POINT if @a p is the end of the document
-			 */
-			CodePoint characterAt(const Point& p, bool useLineFeed /* = false */) {
-				const String& lineString = p.document().lineString(line(p));
-				if(offsetInLine(p) == lineString.length())
-					return (line(p) == p.document().numberOfLines() - 1) ? text::INVALID_CODE_POINT : (useLineFeed ? text::LINE_FEED : text::LINE_SEPARATOR);
-				return text::utf::decodeFirst(std::begin(lineString) + offsetInLine(p), std::end(lineString));
-			}
-
-			/**
-			 * Returns the end of the document.
-			 * @param p The base point
-			 * @return The destination
-			 */
-			Position endOfDocument(const Point& p) {
-				return *boost::const_end(p.document().accessibleRegion());
-			}
-
-			/**
-			 * Returns the end of the current line.
-			 * @param p The base point
-			 * @return The destination
-			 */
-			Position endOfLine(const Point& p) {
-				const Position temp(p.normalized());
-				return std::min(Position(line(temp), p.document().lineLength(line(temp))), *boost::const_end(p.document().accessibleRegion()));
-			}
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			/**
-			 * Returns the beginning of the next bookmarked line.
-			 * @param p The base point
-			 * @return The beginning of the forward bookmarked line or @c boost#none if there is no bookmark in the
-			 *         document
-			 */
-			boost::optional<Position> forwardBookmark(const Point& p, Index marks /* = 1 */) {
-				const boost::optional<Index> temp(p.document().bookmarker().next(line(p.normalized()), Direction::FORWARD, true, marks));
-				return (temp != boost::none) ? boost::make_optional(Position::bol(boost::get(temp))) : boost::none;
-			}
-
-			/**
-			 * Returns the position advanced by N characters.
-			 * @param p The base point
-			 * @param unit Defines what a character is
-			 * @param characters The number of the characters to advance
-			 * @return The position of the next character
-			 */
-			Position forwardCharacter(const Point& p, CharacterUnit unit, Index characters /* = 1 */) {
-				return nextCharacter(p.document(), p.position(), Direction::FORWARD, unit, characters);
-			}
-
-			/**
-			 * Returns the position advanced by N lines. If the destination position is outside of the inaccessible
-			 * region, returns the last line whose offset is accessible, rather than the end of the accessible region.
-			 * @param p The base point
-			 * @param lines The number of the lines to advance
-			 * @return The position of the next line
-			 */
-			Position forwardLine(const Point& p, Index lines /* = 1 */) {
-				Position temp(p.normalized());
-				const Position eob(p.document().accessibleRegion().second);
-				Index destination = (line(temp) + lines < line(eob)) ? line(temp) + lines : line(eob);
-				if(destination == line(eob) && offsetInLine(temp) > offsetInLine(eob))
-					--destination;
-				return temp.line = destination, temp;
-			}
-
-			/**
-			 * Returns the beginning of the forward N words.
-			 * @param p The base point
-			 * @param words The number of words to traverse
-			 * @return The destination
-			 */
-			Position forwardWord(const Point& p, Index words /* = 1 */) {
-				text::WordBreakIterator<DocumentCharacterIterator> i(
-					DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
-					text::AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax(p));
-				return (i += words).base().tell();
-			}
-
-			/**
-			 * Returns the end of the forward N words.
-			 * @param p The base point
-			 * @param words The number of words to traverse
-			 * @return The destination
-			 */
-			Position forwardWordEnd(const Point& p, Index words /* = 1 */) {
-				text::WordBreakIterator<DocumentCharacterIterator> i(
-					DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
-					text::AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax(p));
-				return (i += words).base().tell();
-			}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
-			/// Returns @c true if the given point @a p is the beginning of the document.
-			bool isBeginningOfDocument(const Point& p) {
-				return p.position() == *boost::const_begin(p.document().accessibleRegion());
-			}
-
-			/// Returns @c true if the given point @a p is the beginning of the line.
-			bool isBeginningOfLine(const Point& p) {
-				return offsetInLine(p) == 0
-					|| (p.document().isNarrowed() && p.position() == *boost::const_begin(p.document().accessibleRegion()));
-			}
-
-			/// Returns @c true if the given point @a p is the end of the document.
-			bool isEndOfDocument(const Point& p) {
-				return p.position() == *boost::const_end(p.document().accessibleRegion());
-			}
-
-			/// Returns @c true if the given point @a p is the end of the line.
-			bool isEndOfLine(const Point& p) {
-				return offsetInLine(p) == p.document().lineLength(line(p))
-					|| p.position() == *boost::const_end(p.document().accessibleRegion());
-			}
-
-			/**
-			 * Returns the beginning of the next bookmarked line.
-			 * @param p The base point
-			 * @param direction The direction
-			 * @return The beginning of the forward/backward bookmarked line, or @c boost#none if there is no bookmark
-			 *         in the document
-			 * @see #nextBookmarkInPhysicalDirection
-			 */
-			boost::optional<Position> nextBookmark(const Point& p, Direction direction, Index marks /* = 1 */) {
-				const boost::optional<Index> temp(p.document().bookmarker().next(line(p.normalized()), direction, true, marks));
-				return (temp != boost::none) ? boost::make_optional(Position::bol(boost::get(temp))) : boost::none;
-			}
-
-			/**
-			 * Returns the position offset from the given point with the given character unit.
-			 * This function considers the accessible region of the document.
-			 * @param document The document
-			 * @param position The base position
-			 * @param direction The direction to offset
-			 * @param characterUnit The character unit
-			 * @param offset The amount to offset
-			 * @return The result position. This must be inside of the accessible region of the document
-			 * @throw BadPositionException @a position is outside of the document
-			 * @throw UnknownValueException @a characterUnit is invalid
-			 * @see #nextCharacterInPhysicalDirection
-			 */
-			Position nextCharacter(const Document& document, const Position& position,
-					Direction direction, locations::CharacterUnit characterUnit, Index offset /* = 1 */) {
-				if(offset == 0)
-					return position;
-				else if(characterUnit == UTF16_CODE_UNIT) {
-					if(direction == Direction::FORWARD) {
-						const Position e(*boost::const_end(document.accessibleRegion()));
-						if(position >= e)
-							return e;
-						for(Position p(position); ; offset -= document.lineLength(p.line++) + 1, p.offsetInLine = 0) {
-							if(line(p) == line(e))
-								return std::min(Position(line(p), offsetInLine(p) + offset), e);
-							else if(offsetInLine(p) + offset <= document.lineLength(line(p)))
-								return p.offsetInLine += offset, p;
-						}
-					} else {
-						const Position e(*boost::const_begin(document.accessibleRegion()));
-						if(position <= e)
-							return e;
-						for(Position p(position); ; offset -= document.lineLength(line(p)) + 1, p.offsetInLine = document.lineLength(--p.line)) {
-							if(line(p) == line(e))
-								return (offsetInLine(p) <= offsetInLine(e) + offset) ? e : (p.offsetInLine -= offset, p);
-							else if(offsetInLine(p) >= offset)
-								return p.offsetInLine -= offset, p;
-						}
-					}
-				} else if(characterUnit == UTF32_CODE_UNIT) {
-					// TODO: there is more efficient implementation.
-					DocumentCharacterIterator i(document, position);
-					if(direction == Direction::FORWARD)
-						while(offset-- > 0) ++i;	// TODO: Use std.advance instead.
-					else
-						while(offset-- > 0) --i;	// TODO: Use std.advance instead.
-					return i.tell();
-				} else if(characterUnit == locations::GRAPHEME_CLUSTER) {
-					text::GraphemeBreakIterator<DocumentCharacterIterator> i(
-						DocumentCharacterIterator(document, document.accessibleRegion(), position));
-					i.next((direction == Direction::FORWARD) ? offset : -static_cast<SignedIndex>(offset));
-					return i.base().tell();
-				} else if(characterUnit == locations::GLYPH_CLUSTER) {
-					// TODO: not implemented.
-				}
-				throw UnknownValueException("characterUnit");
-			}
-
-			/**
-			 * Returns the position advanced/returned by N lines. If the destination position is outside of the
-			 * inaccessible region, returns the last/first line whose offset is accessible, rather than the
-			 * end/beginning of the accessible region.
-			 * @param p The base point
-			 * @param direction The direction
-			 * @param lines The number of the lines to advance/return
-			 * @return The position of the next/previous line
-			 * @see #nextVisualLine
-			 */
-			Position nextLine(const Point& p, Direction direction, Index lines /* = 1 */) {
-				Position result(p.normalized());
-				if(direction == Direction::FORWARD) {
-					const Position eob(*boost::const_end(p.document().accessibleRegion()));
-					result.line = (line(result) + lines < line(eob)) ? line(result) + lines : line(eob);
-					if(line(result) == line(eob) && offsetInLine(result) > offsetInLine(eob))
-						--result.line;
-				} else {
-					const Position bob(*boost::const_begin(p.document().accessibleRegion()));
-					result.line = (line(result) > line(bob) + lines) ? line(result) - lines : line(bob);
-					if(line(result) == line(bob) && offsetInLine(result) < offsetInLine(bob))
-						++result.line;
-				}
-				return result;
-			}
-
-			/**
-			 * Returns the beginning of the forward/backward N words.
-			 * @param p The base point
-			 * @param direction The direction
-			 * @param words The number of words to traverse
-			 * @return The destination
-			 * @see #nextWordEnd, #nextWordInPhysicalDirection
-			 */
-			Position nextWord(const Point& p, Direction direction, Index words /* = 1 */) {
-				text::WordBreakIterator<DocumentCharacterIterator> i(
-					DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
-					text::WordBreakIteratorBase::START_OF_SEGMENT, detail::identifierSyntax(p));
-				if(direction == Direction::FORWARD)
-					i += words;
-				else
-					i -= words;
-				return i.base().tell();
-			}
-
-			/**
-			 * Returns the end of the forward/backward N words.
-			 * @param p The base point
-			 * @param words The number of words to traverse
-			 * @return The destination
-			 * @see #nextWord, #nextWordEndInPhysicalDirection
-			 */
-			Position nextWordEnd(const Point& p, Direction direction, Index words /* = 1 */) {
-				text::WordBreakIterator<DocumentCharacterIterator> i(
-					DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
-					text::WordBreakIteratorBase::END_OF_SEGMENT, detail::identifierSyntax(p));
-				if(direction == Direction::FORWARD)
-					i += words;
-				else
-					i -= words;
-				return i.base().tell();
-			}
-		}
 #if 0
 		/**
 		 * Moves to the specified offset.

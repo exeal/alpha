@@ -10,6 +10,7 @@
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/kernel/document.hpp>
+#include <ascension/kernel/locations.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/caret-painter.hpp>
@@ -97,12 +98,14 @@ namespace ascension {
 		 *         map these values into physical coordinates
 		 */
 		std::pair<presentation::FlowRelativeFourSides<graphics::Scalar>, presentation::FlowRelativeTwoAxes<graphics::Scalar>>
-				CaretPainter::computeCharacterLogicalBounds(const kernel::Point& caret, const graphics::font::TextLayout& layout) {
-			const auto p(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret)));
+			CaretPainter::computeCharacterLogicalBounds(
+				const std::pair<const kernel::Document&, kernel::Position>& caret, const graphics::font::TextLayout& layout) {
+			const auto p(graphics::font::TextHit<>::leading(kernel::offsetInLine(std::get<1>(caret))));
 			const Index subline = layout.lineAt(p);
 			const auto extent(layout.extent(boost::irange(subline, subline + 1)));
 			const auto leading(layout.hitToPoint(p));
-			const auto trailing(kernel::locations::isEndOfLine(caret) ? leading : layout.hitToPoint(graphics::font::TextHit<>::trailing(kernel::offsetInLine(caret))));
+			const auto trailing(kernel::locations::isEndOfLine(caret) ?
+				leading : layout.hitToPoint(graphics::font::TextHit<>::trailing(kernel::offsetInLine(std::get<1>(caret)))));
 
 			return std::make_pair(
 				presentation::FlowRelativeFourSides<graphics::Scalar>(
@@ -130,7 +133,7 @@ namespace ascension {
 					this->resetTimer();
 					this->pend();
 
-					const Index lineBeforeMotion = kernel::line(regionBeforeMotion.caret());
+					const Index lineBeforeMotion = kernel::line(insertionPosition(caret.document(), regionBeforeMotion.caret()));
 					if(lineBeforeMotion != kernel::line(caret) && includes(caret.document().region().lines(), lineBeforeMotion)) {
 						textArea.redrawLine(lineBeforeMotion);
 						widgetapi::redrawScheduledRegion(textArea.textViewer());

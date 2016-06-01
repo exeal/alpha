@@ -193,7 +193,7 @@ namespace ascension {
 			unfreeze();	// TODO: replace with AutoFreeze.
 			if(/*resultPosition != kernel::Position() &&*/ widgetapi::hasFocus(*this)) {
 				utils::closeCompletionProposalsPopup(*this);
-				textArea().caret().moveTo(resultPosition);	// TODO: Why does a TextViewer operate the caret here?
+				textArea().caret().moveTo(TextHit::leading(resultPosition));	// TODO: Why does a TextViewer operate the caret here?
 			}
 		}
 
