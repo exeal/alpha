@@ -425,14 +425,14 @@ namespace ascension {
 			document();	// may throw kernel.DocumentDisposedException
 			throwIfNotFullyAvailable();
 			if(!to.crossesVisualLines()) {
-				moveTo(to);
+				moveTo(static_cast<const TextHit&>(to));
 				return;
 			}
 			if(positionInVisualLine_ == boost::none)
 				rememberPositionInVisualLine();
 			crossingLines_ = true;
 			try {
-				moveTo(to);
+				moveTo(static_cast<const TextHit&>(to));
 			} catch(...) {
 				crossingLines_ = false;
 				throw;
