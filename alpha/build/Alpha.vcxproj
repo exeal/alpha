@@ -93,7 +93,7 @@
       <Culture>0x0411</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;libboost_python3-vc100-mt-s-1_60.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;atkmm-vc100-1_6.lib;cairo.lib;cairomm-vc100-1_0.lib;gdk-3.0.lib;gdkmm-vc100-3_0.lib;giomm-vc100-2_4.lib;glib-2.0.lib;glibmm-vc100-2_4.lib;gobject-2.0.lib;gtk-3.0.lib;gtkmm-vc100-3_0.lib;intl.lib;boost_python3-vc100-mt-1_61.lib;pango-1.0.lib;pangomm-vc100-1_4.lib;sigc-vc100-2_0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)Alpha.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ManifestFile>$(IntDir)$(TargetFileName).intermediate.manifest</ManifestFile>
@@ -156,7 +156,7 @@
       <Culture>0x0411</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;atkmm-vc100-d-1_6.lib;cairo.lib;cairomm-vc100-d-1_0.lib;gdk-3.0.lib;gdkmm-vc100-d-3_0.lib;giomm-vc100-d-2_4.lib;glib-2.0.lib;glibmm-vc100-d-2_4.lib;gobject-2.0.lib;gtk-3.0.lib;gtkmm-vc100-d-3_0.lib;intl.lib;boost_python3-vc100-mt-gd-1_60.lib;pango-1.0.lib;pangomm-vc100-d-1_4.lib;sigc-vc100-d-2_0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;atkmm-vc100-d-1_6.lib;cairo.lib;cairomm-vc100-d-1_0.lib;gdk-3.0.lib;gdkmm-vc100-d-3_0.lib;giomm-vc100-d-2_4.lib;glib-2.0.lib;glibmm-vc100-d-2_4.lib;gobject-2.0.lib;gtk-3.0.lib;gtkmm-vc100-d-3_0.lib;intl.lib;boost_python3-vc100-mt-gd-1_61.lib;pango-1.0.lib;pangomm-vc100-d-1_4.lib;sigc-vc100-d-2_0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)Alpha.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ManifestFile>$(IntDir)$(TargetFileName).intermediate.manifest</ManifestFile>
