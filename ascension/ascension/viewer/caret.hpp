@@ -165,6 +165,8 @@ namespace ascension {
 			void fireCaretMoved(const SelectedRegion& regionBeforeMotion);
 			void internalExtendSelection(void (*algorithm)(void));
 			void prechangeDocument();
+			void select(const kernel::Position& a, const TextHit& c);
+			SelectedRegion selection() const BOOST_NOEXCEPT;
 			void updateVisualAttributes();
 			// VisualPoint
 			void aboutToMove(TextHit& to) override;
@@ -365,12 +367,12 @@ namespace ascension {
 		 */
 		template<typename Arguments>
 		inline void Caret::select(const Arguments& arguments) {
-			select(SelectedRegion(_anchor = arguments[_anchor], _caret = arguments[_caret]));
+			select(arguments[_anchor], arguments[_caret]);	// kernel.Document is only declared in this header file
 		}
 
 		/// Returns the selected region.
 		inline SelectedRegion Caret::selectedRegion() const BOOST_NOEXCEPT {
-			return SelectedRegion(_anchor = insertionPosition(anchor()), _caret = hit());
+			return selection();	// kernel.Document is only declared in this header file
 		}
 
 		/**

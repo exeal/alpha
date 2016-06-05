@@ -568,7 +568,9 @@ namespace ascension {
 		/// @see VisualPoint#moved
 		void Caret::moved(const TextHit& from) {
 			context_.regionBeforeMoved = SelectedRegion(
-				_anchor = anchor_->isInternalUpdating() ? anchor_->positionBeforeInternalUpdate() : insertionPosition(*anchor_), _caret = from);
+				_document = document(),
+				_anchor = anchor_->isInternalUpdating() ? anchor_->positionBeforeInternalUpdate() : insertionPosition(*anchor_),
+				_caret = from);
 			if(context_.leaveAnchorNext)
 				context_.leaveAnchorNext = false;
 			else {
@@ -590,7 +592,7 @@ namespace ascension {
 			const auto insertionPositionBeforeMotion(insertionPosition(document(), hitBeforeMotion));
 			if((insertionPositionBeforeMotion == insertionPosition(document(), hit())) != isSelectionEmpty(*this))
 				checkMatchBrackets();
-			fireCaretMoved(SelectedRegion(_anchor = insertionPositionBeforeMotion, _caret = hit()));
+			fireCaretMoved(SelectedRegion(_document = document(), _anchor = insertionPositionBeforeMotion, _caret = hit()));
 		}
 
 		/// @internal Should be called before change the document.
@@ -733,6 +735,16 @@ namespace ascension {
 				fireCaretMoved(oldRegion);
 			}
 			checkMatchBrackets();
+		}
+
+		/// @internal
+		void Caret::select(const kernel::Position& a, const TextHit& c) {
+			select(SelectedRegion(_document = document(), _anchor = a, _caret = c));
+		}
+
+		/// @internal
+		SelectedRegion Caret::selection() const BOOST_NOEXCEPT {
+			return SelectedRegion(_document = document(), _anchor = insertionPosition(anchor()), _caret = hit());
 		}
 
 		/// Returns the @c SelectionShapeChangedSignal signal connector.

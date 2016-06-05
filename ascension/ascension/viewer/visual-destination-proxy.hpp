@@ -10,17 +10,13 @@
 
 #ifndef ASCENSION_VISUAL_DESTINATION_PROXY_HPP
 #define ASCENSION_VISUAL_DESTINATION_PROXY_HPP
-#include <ascension/graphics/font/text-hit.hpp>
-#include <ascension/kernel/position.hpp>
+#include <ascension/viewer/text-hit.hpp>
 
 namespace ascension {
 	namespace viewer {
 		namespace detail {
 			class VisualDestinationProxyMaker;
 		}
-
-		/// Used by procedures which move @c VisualPoint.
-		typedef graphics::font::TextHit<kernel::Position> TextHit;
 
 		/// See the documentation of @c kernel#locations namespace.
 		class VisualDestinationProxy : public TextHit {

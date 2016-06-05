@@ -95,11 +95,11 @@ namespace ascension {
 			 * @return The destination
 			 * @see beginningOfLine
 			 */
-			kernel::Position beginningOfVisualLine(const PointProxy& p) {
+			TextHit beginningOfVisualLine(const PointProxy& p) {
 				const auto np(normalPosition(p));
 				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(np)))
-					return kernel::Position(kernel::line(np), layout->lineOffset(layout->lineAt(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np)))));
-				return kernel::locations::beginningOfLine(kernelProxy(p));
+					return TextHit::leading(kernel::Position(kernel::line(np), layout->lineOffset(layout->lineAt(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np))))));
+				return TextHit::leading(kernel::locations::beginningOfLine(kernelProxy(p)));
 			}
 
 			/**
@@ -107,8 +107,8 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			kernel::Position contextualBeginningOfLine(const PointProxy& p) {
-				return isFirstPrintableCharacterOfLine(p) ? kernel::locations::beginningOfLine(kernelProxy(p)) : firstPrintableCharacterOfLine(p);
+			TextHit contextualBeginningOfLine(const PointProxy& p) {
+				return isFirstPrintableCharacterOfLine(p) ? TextHit::leading(kernel::locations::beginningOfLine(kernelProxy(p))) : firstPrintableCharacterOfLine(p);
 			}
 
 			/**
@@ -117,9 +117,8 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			kernel::Position contextualBeginningOfVisualLine(const PointProxy& p) {
-				return isFirstPrintableCharacterOfLine(p) ?
-					beginningOfVisualLine(p) : firstPrintableCharacterOfVisualLine(p);
+			TextHit contextualBeginningOfVisualLine(const PointProxy& p) {
+				return isFirstPrintableCharacterOfLine(p) ? beginningOfVisualLine(p) : firstPrintableCharacterOfVisualLine(p);
 			}
 
 			/**
@@ -127,8 +126,8 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			kernel::Position contextualEndOfLine(const PointProxy& p) {
-				return isLastPrintableCharacterOfLine(p) ? kernel::locations::endOfLine(kernelProxy(p)) : lastPrintableCharacterOfLine(p);
+			TextHit contextualEndOfLine(const PointProxy& p) {
+				return isLastPrintableCharacterOfLine(p) ? otherHit(document(p), TextHit::leading(kernel::locations::endOfLine(kernelProxy(p)))) : lastPrintableCharacterOfLine(p);
 			}
 
 			/**
@@ -137,7 +136,7 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			kernel::Position contextualEndOfVisualLine(const PointProxy& p) {
+			TextHit contextualEndOfVisualLine(const PointProxy& p) {
 				return isLastPrintableCharacterOfLine(p) ? endOfVisualLine(p) : lastPrintableCharacterOfVisualLine(p);
 			}
 
@@ -148,17 +147,15 @@ namespace ascension {
 			 * @return The destination
 			 * @see endOfLine
 			 */
-			kernel::Position endOfVisualLine(const PointProxy& p) {
+			TextHit endOfVisualLine(const PointProxy& p) {
 				kernel::Position np(normalPosition(p));
 				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(np))) {
 					const Index subline = layout->lineAt(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np)));
 					np.offsetInLine = (subline < layout->numberOfLines() - 1) ?
 						layout->lineOffset(subline + 1) : document(p).lineLength(kernel::line(np));
-					if(layout->lineAt(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np))) != subline)
-						np = kernel::locations::nextCharacter(std::make_pair(std::ref(document(p)), np), Direction::BACKWARD, kernel::locations::GRAPHEME_CLUSTER);
-					return np;
+					return otherHit(document(p), TextHit::leading(np));
 				}
-				return kernel::locations::endOfLine(kernelProxy(p));
+				return otherHit(document(p), TextHit::leading(kernel::locations::endOfLine(kernelProxy(p))));
 			}
 
 			/**
@@ -167,11 +164,11 @@ namespace ascension {
 			 * @return The destination
 			 * @see firstPrintableCharacterOfLine
 			 */
-			kernel::Position firstPrintableCharacterOfLine(const PointProxy& p) {
+			TextHit firstPrintableCharacterOfLine(const PointProxy& p) {
 				kernel::Position np(normalPosition(p));
 				const Char* const s = document(p).lineString(kernel::line(np)).data();
 				np.offsetInLine = kernel::detail::identifierSyntax(kernelProxy(p)).eatWhiteSpaces(s, s + document(p).lineLength(kernel::line(np)), true) - s;
-				return np;
+				return TextHit::leading(np);
 			}
 
 			/**
@@ -181,7 +178,7 @@ namespace ascension {
 			 * @return The destination
 			 * @see firstPrintableCharacterOfLine
 			 */
-			kernel::Position firstPrintableCharacterOfVisualLine(const PointProxy& p) {
+			TextHit firstPrintableCharacterOfVisualLine(const PointProxy& p) {
 				kernel::Position np(normalPosition(p));
 				const String& s = document(p).lineString(kernel::line(np));
 				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(np))) {
@@ -190,7 +187,7 @@ namespace ascension {
 						s.begin() + layout->lineOffset(subline),
 						s.begin() + ((subline < layout->numberOfLines() - 1) ?
 							layout->lineOffset(subline + 1) : s.length()), true) - s.begin();
-					return np;
+					return TextHit::leading(np);
 				}
 				return firstPrintableCharacterOfLine(p);
 			}
@@ -308,15 +305,15 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			kernel::Position lastPrintableCharacterOfLine(const PointProxy& p) {
+			TextHit lastPrintableCharacterOfLine(const PointProxy& p) {
 				kernel::Position np(normalPosition(p));
 				const String& s(document(p).lineString(kernel::line(np)));
 				const text::IdentifierSyntax& syntax = kernel::detail::identifierSyntax(kernelProxy(p));
 				for(Index spaceLength = 0; spaceLength < s.length(); ++spaceLength) {
 					if(syntax.isWhiteSpace(s[s.length() - spaceLength - 1], true))
-						return np.offsetInLine = s.length() - spaceLength, np;
+						return np.offsetInLine = s.length() - spaceLength, otherHit(document(p), TextHit::leading(np));
 				}
-				return np.offsetInLine = s.length(), np;
+				return np.offsetInLine = s.length(), otherHit(document(p), TextHit::leading(np));
 			}
 
 			/**
@@ -324,9 +321,9 @@ namespace ascension {
 			 * @param p The base position
 			 * @return The destination
 			 */
-			kernel::Position lastPrintableCharacterOfVisualLine(const PointProxy& p) {
+			TextHit lastPrintableCharacterOfVisualLine(const PointProxy& p) {
 				// TODO: not implemented.
-				return normalPosition(p);
+				return TextHit::leading(normalPosition(p));
 			}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -342,7 +339,7 @@ namespace ascension {
 			 * @param words The number of words to adavance
 			 * @return The destination, or @c boost#none if the writing mode is vertical
 			 */
-			boost::optional<kernel::Position> leftWord(const PointProxy& p, Index words /* = 1 */) {
+			boost::optional<TextHit> leftWord(const PointProxy& p, Index words /* = 1 */) {
 				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWord(p, words) : forwardWord(p, words);
 			}
 
@@ -352,7 +349,7 @@ namespace ascension {
 			 * @param words The number of words to adavance
 			 * @return The destination, or @c boost#none if the writing mode is vertical
 			 */
-			boost::optional<kernel::Position> leftWordEnd(const PointProxy& p, Index words /* = 1 */) {
+			boost::optional<TextHit> leftWordEnd(const PointProxy& p, Index words /* = 1 */) {
 				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
 			}
 
@@ -364,7 +361,7 @@ namespace ascension {
 			 *         bookmark in the document or @a direction is inline-progression
 			 * @see #nextBookmark
 			 */
-			boost::optional<kernel::Position> nextBookmarkInPhysicalDirection(
+			boost::optional<TextHit> nextBookmarkInPhysicalDirection(
 					const PointProxy& p, graphics::PhysicalDirection direction, Index marks /* = 1 */) {
 				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
 					case BEFORE:
@@ -413,7 +410,7 @@ namespace ascension {
 			 * @return The destination, or @c boost#none if @a direction is block-progression
 			 * @see #nextWord, #nextWordEndInPhysicalDirection
 			 */
-			boost::optional<kernel::Position> nextWordInPhysicalDirection(
+			boost::optional<TextHit> nextWordInPhysicalDirection(
 					const PointProxy& p, PhysicalDirection direction, Index words /* = 1 */) {
 				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
 					case BEFORE:
@@ -435,7 +432,7 @@ namespace ascension {
 			 * @return The destination, or @c boost#none if @a direction is block-progression
 			 * @see #nextWordEnd, #nextWordInPhysicalDirection
 			 */
-			boost::optional<kernel::Position> nextWordEndInPhysicalDirection(
+			boost::optional<TextHit> nextWordEndInPhysicalDirection(
 					const PointProxy& p, PhysicalDirection direction, Index words /* = 1 */) {
 				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
 					case BEFORE:
@@ -456,7 +453,7 @@ namespace ascension {
 			 * @param words The number of words to adavance
 			 * @return The destination
 			 */
-			boost::optional<kernel::Position> rightWord(const PointProxy& p, Index words /* = 1 */) {
+			boost::optional<TextHit> rightWord(const PointProxy& p, Index words /* = 1 */) {
 				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWord(p, words) : backwardWord(p, words);
 			}
 
@@ -466,7 +463,7 @@ namespace ascension {
 			 * @param words The number of words to adavance
 			 * @return The destination
 			 */
-			boost::optional<kernel::Position> rightWordEnd(const PointProxy& p, Index words /* = 1 */) {
+			boost::optional<TextHit> rightWordEnd(const PointProxy& p, Index words /* = 1 */) {
 				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
 			}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08

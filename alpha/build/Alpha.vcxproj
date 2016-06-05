@@ -538,6 +538,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\standard-line-rendering-options.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area-mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-hit.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-component.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-model-conversion.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-utility.hpp" />

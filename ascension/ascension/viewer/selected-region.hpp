@@ -8,7 +8,7 @@
 #ifndef ASCENSION_SELECTED_REGION_HPP
 #define ASCENSION_SELECTED_REGION_HPP
 #include <ascension/kernel/region.hpp>
-#include <ascension/graphics/font/text-hit.hpp>
+#include <ascension/viewer/text-hit.hpp>
 #include <boost/parameter.hpp>
 
 namespace ascension {
@@ -16,6 +16,7 @@ namespace ascension {
 #ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 		BOOST_PARAMETER_NAME(anchor)
 		BOOST_PARAMETER_NAME(caret)
+		BOOST_PARAMETER_NAME(document)
 #endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 		/// Base type of @c SelectedRegion class.
@@ -24,24 +25,23 @@ namespace ascension {
 			/// Constructor takes a named parameters.
 			template<typename Arguments>
 			explicit SelectedRegionBase(const Arguments& arguments) :
-				kernel::Region(arguments[_anchor], arguments[_caret].characterIndex()),
-				normal_(arguments[_anchor] <= arguments[_caret].characterIndex()),
-				caretIsTrailing_(!arguments[_caret].isLeadingEdge()) {}
+				kernel::Region(arguments[_anchor], insertionPosition(arguments[_document], arguments[_caret])), anchor_(&arguments[_anchor]), caret_(arguments[_caret]) {}
 			/// Constructor takes a @c kernel#Region.
-			explicit SelectedRegionBase(const kernel::Region& region) BOOST_NOEXCEPT : Region(region), normal_(true), caretIsTrailing_(false) {}
+			explicit SelectedRegionBase(const kernel::Region& region) BOOST_NOEXCEPT : Region(region), caret_(TextHit::leading(*boost::const_end(*this))) {
+				anchor_ = &*boost::const_begin(*this);
+			}
 			/// Returns const-reference to the position marked as the anchor.
-			kernel::Position anchor() const BOOST_NOEXCEPT {
-				return normal_ ? *boost::const_begin(*this) : *boost::const_end(*this);
+			const kernel::Position& anchor() const BOOST_NOEXCEPT {
+				return *anchor_;
 			}
 			/// Returns const-reference to the position marked as the caret.
-			graphics::font::TextHit<kernel::Position> caret() const BOOST_NOEXCEPT {
-				const auto p(normal_ ? *boost::const_end(*this) : *boost::const_begin(*this));
-				return caretIsTrailing_ ? graphics::font::makeLeadingTextHit(p) : graphics::font::makeTrailingTextHit(p);
+			const TextHit& caret() const BOOST_NOEXCEPT {
+				return caret_;
 			}
 
 		private:
-			bool normal_;
-			bool caretIsTrailing_;	// true if the caret is marked as trailing
+			const kernel::Position* anchor_;
+			TextHit caret_;
 		};
 
 		/**
@@ -54,6 +54,7 @@ namespace ascension {
 			BOOST_PARAMETER_CONSTRUCTOR(
 				SelectedRegion, (SelectedRegionBase), tag,
 				(required
+					(document, (const kernel::Document&))
 					(anchor, (const kernel::Position&))
 					(caret, (const graphics::font::TextHit<kernel::Position>&))))
 			/**
