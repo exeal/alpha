@@ -173,6 +173,14 @@ namespace ascension {
 			return (++i).base().tell();
 		}
 
+		TextHit otherHit(const kernel::Document& document, const TextHit& hit) {
+			text::GraphemeBreakIterator<kernel::DocumentCharacterIterator> i(kernel::DocumentCharacterIterator(document, hit.characterIndex()));
+			if(hit.isLeadingEdge())
+				return TextHit::trailing((--i).base().tell());
+			else
+				return TextHit::leading((++i).base().tell());
+		}
+
 		/**
 		 * Creates a @c VisualPoint object but does not install on @c TextArea.
 		 * @param document The document
@@ -386,11 +394,13 @@ namespace ascension {
 				return kernel::positions::isOutsideOfDocumentRegion(document, insertionPosition(document, hit));
 			}
 			inline TextHit shrinkToDocumentRegion(const kernel::Document& document, const TextHit& hit) BOOST_NOEXCEPT {
-				const auto newPosition(kernel::positions::shrinkToDocumentRegion(document, hit.characterIndex()));
-				if(hit.isLeadingEdge() || kernel::offsetInLine(newPosition) < document.lineLength(kernel::line(newPosition)))
-					return TextHit::leading(newPosition);
+				if(kernel::line(hit.characterIndex()) >= document.numberOfLines())
+					return TextHit::leading(kernel::locations::endOfDocument(std::make_pair(std::ref(document), hit.characterIndex())));
+				const Index line = kernel::line(hit.characterIndex());
+				if(kernel::offsetInLine(hit.characterIndex()) < document.lineLength(line))
+					return hit;
 				else
-					return TextHit::trailing(newPosition);
+					return TextHit::leading(kernel::locations::endOfLine(std::make_pair(std::ref(document), hit.characterIndex())));
 			}
 		}
 

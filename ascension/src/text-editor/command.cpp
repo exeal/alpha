@@ -295,6 +295,15 @@ namespace ascension {
 					throw NullPointerException("procedure");
 			}
 
+			namespace {
+				inline viewer::TextHit makeNormalHit(const kernel::Position& p) BOOST_NOEXCEPT {
+					return viewer::TextHit::leading(p);
+				}
+				inline viewer::TextHit makeNormalHit(const viewer::TextHit& h) BOOST_NOEXCEPT {
+					return h;
+				}
+			}
+
 			// explicit instantiations
 			template class CaretMovementToDefinedPositionCommand<kernel::Position(const kernel::locations::PointProxy&)>;	// (beginning|end)Of(Document|Line)
 			template class CaretMovementToDefinedPositionCommand<kernel::Position(const viewer::locations::PointProxy&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
@@ -306,7 +315,7 @@ namespace ascension {
 			template<typename ProcedureSignature>
 			bool CaretMovementToDefinedPositionCommand<ProcedureSignature>::perform() {
 				endIncrementalSearch(target().document());
-				const auto h(viewer::TextHit::leading((*procedure_)(target().textArea().caret())));
+				const auto h(makeNormalHit((*procedure_)(target().textArea().caret())));
 				if(!extends_)
 					target().textArea().caret().moveTo(h);
 				else
@@ -850,18 +859,19 @@ namespace ascension {
 				viewer::AutoFreeze af(&viewer);
 
 				if(direction_ != boost::none) {
-					kernel::Position p;
+					viewer::TextHit h(caret.hit());	// initial value is no matter...
 					if(*direction_ == Direction::FORWARD)
-						p = viewer::locations::endOfVisualLine(caret);
-					else if(kernel::line(caret) != kernel::line(*boost::const_begin(document.region())))
-						p.offsetInLine = document.lineLength(p.line = kernel::line(caret) - 1);
-					else
-						p = *boost::const_begin(document.region());
-					if(!encompasses(document.accessibleRegion(), p))
+						h = viewer::locations::endOfVisualLine(caret);
+					else if(kernel::line(caret) != kernel::line(*boost::const_begin(document.region()))) {
+						const Index line = kernel::line(caret) - 1;
+						h = viewer::TextHit::leading(kernel::Position(line, document.lineLength(line)));
+					} else
+						h = viewer::TextHit::leading(*boost::const_begin(document.region()));
+					if(!encompasses(document.accessibleRegion(), h.characterIndex()))
 						return false;
 					const bool autoShow = caret.isAutoShowEnabled();
 					caret.enableAutoShow(false);
-					caret.moveTo(viewer::TextHit::leading(p));
+					caret.moveTo(h);
 					caret.enableAutoShow(autoShow);
 				}
 
@@ -1097,7 +1107,7 @@ namespace ascension {
 
 			// explicit instantiations
 			template class RowSelectionExtensionToDefinedPositionCommand<kernel::Position(const kernel::locations::PointProxy&)>;	// (beginning|end)Of(Document|Line)
-			template class RowSelectionExtensionToDefinedPositionCommand<kernel::Position(const viewer::locations::PointProxy&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
+			template class RowSelectionExtensionToDefinedPositionCommand<viewer::TextHit(const viewer::locations::PointProxy&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
 
 			/**
 			 * Moves the caret or extends the selection.

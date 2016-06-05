@@ -1333,6 +1333,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-destination-proxy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-hit.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

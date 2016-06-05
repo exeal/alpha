@@ -30,11 +30,9 @@ namespace ascension {
 		class TextArea;
 		class VisualPoint;
 
-		kernel::Position insertionPosition(const kernel::Document& document, const TextHit& hit);
 		kernel::Position insertionPosition(const VisualPoint& p);
 		graphics::Point modelToView(const graphics::font::TextViewport& viewport, const VisualPoint& p/*, bool fullSearchBpd*/);
 		graphics::Point modelToView(const TextViewer& textViewer, const VisualPoint& p/*, bool fullSearchBpd*/);
-		TextHit otherHit(const kernel::Document& document, const TextHit& hit);
 		TextHit otherHit(const VisualPoint& p);
 
 		namespace locations {
@@ -243,6 +241,11 @@ namespace ascension {
 		/// @overload
 		inline kernel::Position insertionPosition(const VisualPoint& p) {
 			return insertionPosition(p.document(), p.hit());
+		}
+
+		/// @overload
+		inline TextHit otherHit(const VisualPoint& p) {
+			return otherHit(p.document(), p.hit());
 		}
 	} // namespace viewer
 
