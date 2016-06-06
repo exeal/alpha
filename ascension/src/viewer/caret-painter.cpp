@@ -98,14 +98,13 @@ namespace ascension {
 		 *         map these values into physical coordinates
 		 */
 		std::pair<presentation::FlowRelativeFourSides<graphics::Scalar>, presentation::FlowRelativeTwoAxes<graphics::Scalar>>
-			CaretPainter::computeCharacterLogicalBounds(
-				const std::pair<const kernel::Document&, kernel::Position>& caret, const graphics::font::TextLayout& layout) {
-			const auto p(graphics::font::TextHit<>::leading(kernel::offsetInLine(std::get<1>(caret))));
-			const Index subline = layout.lineAt(p);
+			CaretPainter::computeCharacterLogicalBounds(const Caret& caret, const graphics::font::TextLayout& layout) {
+			const Index offset = kernel::offsetInLine(caret.hit().characterIndex());
+			const auto h(caret.hit().isLeadingEdge() ? graphics::font::makeLeadingTextHit(offset) : graphics::font::makeTrailingTextHit(offset));
+			const Index subline = layout.lineAt(h);
 			const auto extent(layout.extent(boost::irange(subline, subline + 1)));
-			const auto leading(layout.hitToPoint(p));
-			const auto trailing(kernel::locations::isEndOfLine(caret) ?
-				leading : layout.hitToPoint(graphics::font::TextHit<>::trailing(kernel::offsetInLine(std::get<1>(caret)))));
+			const auto leading(layout.hitToPoint(h));
+			const auto trailing(kernel::locations::isEndOfLine(caret) ? leading : layout.hitToPoint(graphics::font::makeTrailingTextHit(offset)));
 
 			return std::make_pair(
 				presentation::FlowRelativeFourSides<graphics::Scalar>(

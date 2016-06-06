@@ -560,6 +560,10 @@ namespace ascension {
 				IllegalStateException("The TextArea which had installed the VisualPoint has been disposed.") {
 		}
 
+		graphics::Point modelToView(const TextViewer& textViewer, const VisualPoint& p/*, bool fullSearchBpd*/) {
+			return modelToView(textViewer, p.hit());
+		}
+
 		namespace locations {
 			/**
 			 * Returns the position advanced/returned by N pages.
