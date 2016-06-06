@@ -40,8 +40,7 @@ namespace ascension {
 			BOOST_CONSTEXPR const Caret& caret() const BOOST_NOEXCEPT;
 			static std::pair<
 				presentation::FlowRelativeFourSides<graphics::Scalar>, presentation::FlowRelativeTwoAxes<graphics::Scalar>
-			> computeCharacterLogicalBounds(
-				const std::pair<const kernel::Document&, kernel::Position>& caret, const graphics::font::TextLayout& layout);
+			> computeCharacterLogicalBounds(const Caret& caret, const graphics::font::TextLayout& layout);
 			virtual void installed() BOOST_NOEXCEPT;
 			virtual void paint(graphics::PaintContext& context,
 				const graphics::font::TextLayout& layout, const graphics::Point& alignmentPoint) = 0;
