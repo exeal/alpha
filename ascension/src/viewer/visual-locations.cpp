@@ -23,22 +23,27 @@ namespace ascension {
 	namespace viewer {
 		namespace locations {
 			namespace {
-				inline const kernel::Document& document(const PointProxy& p) BOOST_NOEXCEPT {
-					return std::get<0>(p).caret().document();
-				}
-
-				inline const kernel::Position& position(const PointProxy& p) BOOST_NOEXCEPT {
-					return std::get<1>(p);
-				}
-
-				inline kernel::Position normalPosition(const PointProxy& p) BOOST_NOEXCEPT {
-					return kernel::positions::shrinkToAccessibleRegion(document(p), position(p));
-				}
-
 				inline const TextArea& textArea(const PointProxy& p) BOOST_NOEXCEPT {
 					return std::get<0>(p);
 				}
-
+				inline const kernel::Document& document(const PointProxy& p) BOOST_NOEXCEPT {
+					return textArea(p).caret().document();
+				}
+				inline const TextHit& hit(const PointProxy& p) BOOST_NOEXCEPT {
+					return std::get<1>(p);
+				}
+				inline kernel::Position position(const PointProxy& p) BOOST_NOEXCEPT {
+					return insertionPosition(document(p), hit(p));
+				}
+				inline kernel::Position normalPosition(const PointProxy& p) BOOST_NOEXCEPT {
+					return kernel::positions::shrinkToAccessibleRegion(document(p), position(p));
+				}
+				inline TextHit normalHit(const PointProxy& p) BOOST_NOEXCEPT {
+					const auto np(kernel::positions::shrinkToAccessibleRegion(document(p), hit(p).characterIndex()));
+					if(np != hit(p).characterIndex() || kernel::locations::isEndOfLine(std::make_pair(std::ref(document(p)), np)))
+						return TextHit::leading(np);
+					return hit(p);
+				}
 				inline std::pair<const kernel::Document&, kernel::Position> kernelProxy(const PointProxy& p) {
 					return std::make_pair(std::ref(document(p)), position(p));
 				}
@@ -96,9 +101,12 @@ namespace ascension {
 			 * @see beginningOfLine
 			 */
 			TextHit beginningOfVisualLine(const PointProxy& p) {
-				const auto np(normalPosition(p));
-				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(np)))
-					return TextHit::leading(kernel::Position(kernel::line(np), layout->lineOffset(layout->lineAt(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np))))));
+				const auto h(normalHit(p));
+				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(h.characterIndex()))) {
+					const auto inlineOffset = kernel::offsetInLine(h.characterIndex());
+					const auto inlineHit(h.isLeadingEdge() ? graphics::font::makeLeadingTextHit(inlineOffset) : graphics::font::makeLeadingTextHit(inlineOffset));
+					return TextHit::leading(kernel::Position(kernel::line(h.characterIndex()), layout->lineOffset(layout->lineAt(inlineHit))));
+				}
 				return TextHit::leading(kernel::locations::beginningOfLine(kernelProxy(p)));
 			}
 
@@ -148,12 +156,14 @@ namespace ascension {
 			 * @see endOfLine
 			 */
 			TextHit endOfVisualLine(const PointProxy& p) {
-				kernel::Position np(normalPosition(p));
-				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(np))) {
-					const Index subline = layout->lineAt(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np)));
-					np.offsetInLine = (subline < layout->numberOfLines() - 1) ?
-						layout->lineOffset(subline + 1) : document(p).lineLength(kernel::line(np));
-					return otherHit(document(p), TextHit::leading(np));
+				auto h(normalHit(p));
+				const auto line = kernel::line(h.characterIndex());
+				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(line)) {
+					const auto inlineOffset = kernel::offsetInLine(h.characterIndex());
+					const auto inlineHit(h.isLeadingEdge() ? graphics::font::makeLeadingTextHit(inlineOffset) : graphics::font::makeLeadingTextHit(inlineOffset));
+					const Index subline = layout->lineAt(inlineHit);
+					if(subline < layout->numberOfLines() - 1)
+						return otherHit(document(p), TextHit::leading(kernel::Position(line, layout->lineOffset(subline + 1))));
 				}
 				return otherHit(document(p), TextHit::leading(kernel::locations::endOfLine(kernelProxy(p))));
 			}

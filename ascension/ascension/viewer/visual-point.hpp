@@ -64,7 +64,7 @@ namespace ascension {
 			VisualPoint(const VisualPoint& other);
 			virtual ~VisualPoint() BOOST_NOEXCEPT;
 			operator std::pair<const kernel::Document&, kernel::Position>() const;
-			operator std::pair<const TextArea&, kernel::Position>() const;
+			operator std::pair<const TextArea&, TextHit>() const;
 
 			/// @name Installation
 			/// @{
@@ -154,8 +154,8 @@ namespace ascension {
 		}
 
 		/// Conversion operator into @c viewer#locations#PointProxy.
-		inline VisualPoint::operator std::pair<const TextArea&, kernel::Position>() const {
-			return std::make_pair(std::ref(textArea()), insertionPosition(*this));
+		inline VisualPoint::operator std::pair<const TextArea&, TextHit>() const {
+			return std::make_pair(std::ref(textArea()), hit());
 		}
 
 		/**

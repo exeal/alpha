@@ -30,7 +30,7 @@ namespace ascension {
 		 * @see kernel#locations
 		 */
 		namespace locations {
-			typedef std::pair<const TextArea&, kernel::Position> PointProxy;
+			typedef std::pair<const TextArea&, TextHit> PointProxy;
 
 			bool isEndOfVisualLine(const PointProxy& p);
 			bool isFirstPrintableCharacterOfLine(const PointProxy& p);
