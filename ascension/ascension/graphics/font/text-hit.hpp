@@ -192,6 +192,34 @@ namespace ascension {
 			inline TextHit<typename std::remove_cv<Position>::type> makeTrailingTextHit(const Position& characterIndex) BOOST_NOEXCEPT {
 				return TextHit<typename std::remove_cv<Position>::type>::trailing(characterIndex);
 			}
+
+			/**
+			 * Transforms the given @c TextHit object with the specified functor.
+			 * @tparam Position The template parameter type of @a source
+			 * @tparam Transformer The type of @a transformer
+			 * @param source The object to transform
+			 * @param transformer The functor takes a @c Position parameter and returns the new character index
+			 * @return The transformed @c TextHit object
+			 */
+			template<typename Position, typename Transformer>
+			inline auto transformTextHit(const TextHit<Position>& source, Transformer transformer) -> TextHit<decltype(transformer(source.characterIndex()))> {
+				typedef TextHit<decltype(transformer(source.characterIndex()))> Transformed;
+				return source.isLeadingEdge() ? Transformed::leading(transformer(source.characterIndex())) : Transformed::trailing(transformer(source.characterIndex()));
+			}
+
+			/**
+			 * Transforms the given @c TextHit&lt;From&gt; object to @c TextHit&lt;To&gt; by using @c static_cast.
+			 * @tparam To The template parameter type of the return value
+			 * @tparam From The template parameter type of @a source
+			 * @param source The object to transform
+			 * @return  The transformed @c TextHit object
+			 */
+			template<typename To, typename From>
+			inline TextHit<To> castTextHit(const TextHit<From>& source) {
+				return transformTextHit(source, [](const From& from) {
+					return static_cast<To>(from);
+				});
+			}
 			/// @}
 		}
 	}

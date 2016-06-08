@@ -263,10 +263,9 @@ namespace ascension {
 				const auto p(hit().characterIndex());	// may throw kernel.DocumentDisposedException
 				const graphics::font::TextRenderer& renderer = textArea().textRenderer();
 				Index line = renderer.layouts().mapLogicalLineToVisualLine(kernel::line(p)), subline;
-				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(kernel::line(p))) {
-					const auto offset = kernel::offsetInLine(p);
-					subline = layout->lineAt(hit().isLeadingEdge() ? graphics::font::makeLeadingTextHit(offset) : graphics::font::makeTrailingTextHit(offset));
-				} else
+				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(kernel::line(p)))
+					subline = layout->lineAt(inlineHit(hit()));
+				else
 					subline = 0;
 				line += subline;
 				lineNumberCaches_ = graphics::font::VisualLine(line, subline);
@@ -513,8 +512,7 @@ namespace ascension {
 				newLineNumber.line = boost::get(lineNumberCaches_).line - boost::get(lineNumberCaches_).subline;
 				if(layout != nullptr) {
 					const auto p(hit().characterIndex());
-					const auto offset = kernel::offsetInLine(p);
-					auto h(hit().isLeadingEdge() ? graphics::font::makeLeadingTextHit(offset) : graphics::font::makeTrailingTextHit(offset));
+					auto h(inlineHit(hit()));
 					h = std::min(h, graphics::font::makeLeadingTextHit(document().lineLength(kernel::line(p))));
 					newLineNumber.subline = layout->lineAt(h);
 				} else

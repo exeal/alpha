@@ -47,6 +47,11 @@ namespace ascension {
 				inline std::pair<const kernel::Document&, kernel::Position> kernelProxy(const PointProxy& p) {
 					return std::make_pair(std::ref(document(p)), position(p));
 				}
+				inline graphics::font::TextHit<> inlineHit(const TextHit& hit) BOOST_NOEXCEPT {
+					return graphics::font::transformTextHit(hit, [](const kernel::Position& p) {
+						return kernel::offsetInLine(p);
+					});
+				}
 			}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -102,11 +107,8 @@ namespace ascension {
 			 */
 			TextHit beginningOfVisualLine(const PointProxy& p) {
 				const auto h(normalHit(p));
-				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(h.characterIndex()))) {
-					const auto inlineOffset = kernel::offsetInLine(h.characterIndex());
-					const auto inlineHit(h.isLeadingEdge() ? graphics::font::makeLeadingTextHit(inlineOffset) : graphics::font::makeLeadingTextHit(inlineOffset));
-					return TextHit::leading(kernel::Position(kernel::line(h.characterIndex()), layout->lineOffset(layout->lineAt(inlineHit))));
-				}
+				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(h.characterIndex())))
+					return TextHit::leading(kernel::Position(kernel::line(h.characterIndex()), layout->lineOffset(layout->lineAt(inlineHit(h)))));
 				return TextHit::leading(kernel::locations::beginningOfLine(kernelProxy(p)));
 			}
 
@@ -159,9 +161,7 @@ namespace ascension {
 				auto h(normalHit(p));
 				const auto line = kernel::line(h.characterIndex());
 				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(line)) {
-					const auto inlineOffset = kernel::offsetInLine(h.characterIndex());
-					const auto inlineHit(h.isLeadingEdge() ? graphics::font::makeLeadingTextHit(inlineOffset) : graphics::font::makeLeadingTextHit(inlineOffset));
-					const Index subline = layout->lineAt(inlineHit);
+					const Index subline = layout->lineAt(inlineHit(h));
 					if(subline < layout->numberOfLines() - 1)
 						return otherHit(document(p), TextHit::leading(kernel::Position(line, layout->lineOffset(subline + 1))));
 				}

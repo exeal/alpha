@@ -27,8 +27,20 @@ namespace ascension {
 		 */
 		typedef graphics::font::TextHit<kernel::Position> TextHit;
 
+		graphics::font::TextHit<> inlineHit(const TextHit& hit);
 		kernel::Position insertionPosition(const kernel::Document& document, const TextHit& hit);
 		TextHit otherHit(const kernel::Document& document, const TextHit& hit);
+
+		/**
+		 * Transforms the given @c TextHit into @c graphics#font#TextHit&lt;&gt; by using @c kernel#offsetInLine.
+		 * @param hit The @c TextHit object to transform
+		 * @return The transformed @c graphics#font#TextHit&lt;&gt; object
+		 */
+		inline graphics::font::TextHit<> inlineHit(const TextHit& hit) BOOST_NOEXCEPT {
+			return graphics::font::transformTextHit(hit, [](const kernel::Position& p) {
+				return kernel::offsetInLine(p);
+			});
+		}
 	}
 }
 
