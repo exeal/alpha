@@ -503,10 +503,11 @@ namespace ascension {
 				const CodePoint c = text::utf::decodeLast(std::begin(lineString), std::begin(lineString) + kernel::offsetInLine(eos));
 				std::array<Char, 7> buffer;
 #if(_MSC_VER < 1400)
-				std::swprintf(buffer.data(), L"%lX", c);
+				if(std::swprintf(buffer.data(), L"%lX", c) < 0)
 #else
-				std::swprintf(buffer.data(), buffer.size(), L"%lX", c);
+				if(std::swprintf(buffer.data(), buffer.size(), L"%lX", c) < 0)
 #endif // _MSC_VER < 1400
+					return false;
 				viewer::AutoFreeze af(&viewer);
 				caret.select((viewer::_anchor = kernel::Position(kernel::line(eos), kernel::offsetInLine(eos) - ((c > 0xffff) ? 2 : 1)), viewer::_caret = peos.hit()));
 				try {
