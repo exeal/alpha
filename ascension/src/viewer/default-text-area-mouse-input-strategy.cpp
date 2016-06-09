@@ -87,19 +87,19 @@ namespace ascension {
 						text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
 							kernel::DocumentCharacterIterator(document, p), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 						--i;
-						caret.select((
+						caret.select(
 							_anchor = kernel::Position(anchorLine_, *boost::const_end(anchorOffsetsInLine_)),
-							_caret = TextHit::leading((kernel::line(i.base().tell()) == kernel::line(p)) ? i.base().tell() : kernel::Position::bol(kernel::line(p)))));
+							_caret = TextHit::leading((kernel::line(i.base().tell()) == kernel::line(p)) ? i.base().tell() : kernel::Position::bol(kernel::line(p))));
 					} else if(kernel::line(p) > anchorLine_
 							|| (kernel::line(p) == anchorLine_
 								&& kernel::offsetInLine(p) > *boost::const_end(anchorOffsetsInLine_))) {
 						text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
 							kernel::DocumentCharacterIterator(document, p), text::WordBreakIteratorBase::BOUNDARY_OF_SEGMENT, id);
 						++i;
-						caret.select((
+						caret.select(
 							_anchor = kernel::Position(anchorLine_, *boost::const_begin(anchorOffsetsInLine_)),
 							_caret = TextHit::leading((kernel::line(i.base().tell()) == kernel::line(p)) ?
-								i.base().tell() : kernel::Position(kernel::line(p), document.lineLength(kernel::line(p))))));
+								i.base().tell() : kernel::Position(kernel::line(p), document.lineLength(kernel::line(p)))));
 					} else
 						caret.select(SelectedRegion(kernel::Region::makeSingleLine(anchorLine_, anchorOffsetsInLine_)));
 				}
@@ -560,7 +560,7 @@ namespace ascension {
 						if(!failed) {
 							if(content.second)
 								caret.beginRectangleSelection();
-							caret.select((_anchor = insertionPosition(document, destination), _caret = caret.hit()));
+							caret.select(_anchor = insertionPosition(document, destination), _caret = caret.hit());
 							input.setDropAction(widgetapi::DROP_ACTION_COPY);
 						}
 					}
@@ -591,7 +591,7 @@ namespace ascension {
 							}
 							caret.enableAutoShow(true);
 							if(!failed) {
-								caret.select((_anchor = insertionPosition(document, destination), _caret = caret.hit()));
+								caret.select(_anchor = insertionPosition(document, destination), _caret = caret.hit());
 								input.setDropAction(widgetapi::DROP_ACTION_COPY);
 							}
 							document.insertUndoBoundary();
@@ -609,7 +609,7 @@ namespace ascension {
 								failed = true;
 							}
 							if(!failed) {
-								caret.select((_anchor = insertionPosition(document, destination), _caret = caret.hit()));
+								caret.select(_anchor = insertionPosition(document, destination), _caret = caret.hit());
 								if(rectangle)
 									caret.beginRectangleSelection();
 								try {

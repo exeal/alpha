@@ -509,7 +509,7 @@ namespace ascension {
 #endif // _MSC_VER < 1400
 					return false;
 				viewer::AutoFreeze af(&viewer);
-				caret.select((viewer::_anchor = kernel::Position(kernel::line(eos), kernel::offsetInLine(eos) - ((c > 0xffff) ? 2 : 1)), viewer::_caret = peos.hit()));
+				caret.select(viewer::_anchor = kernel::Position(kernel::line(eos), kernel::offsetInLine(eos) - ((c > 0xffff) ? 2 : 1)), viewer::_caret = peos.hit());
 				try {
 					caret.replaceSelection(buffer.data(), false);
 				} catch(const kernel::DocumentInput::ChangeRejectedException&) {
@@ -562,7 +562,7 @@ namespace ascension {
 						if(i >= 2 && lineString[i - 1] == L'+' && (lineString[i - 2] == L'U' || lineString[i - 2] == L'u'))
 							i -= 2;
 						viewer::AutoFreeze af(&viewer);
-						caret.select((viewer::_anchor = kernel::Position(kernel::line(eos), i), viewer::_caret = peos.hit()));
+						caret.select(viewer::_anchor = kernel::Position(kernel::line(eos), i), viewer::_caret = peos.hit());
 						try {
 							caret.replaceSelection(s, false);
 						} catch(const kernel::DocumentInput::ChangeRejectedException&) {
@@ -805,15 +805,13 @@ namespace ascension {
 					else {
 						const auto ip(viewer::insertionPosition(caret));
 						if(another > ip)
-							caret.select((
-								viewer::_anchor = ip,
-								viewer::_caret = viewer::TextHit::trailing(another)));
+							caret.select(viewer::_anchor = ip, viewer::_caret = viewer::TextHit::trailing(another));
 						else {
 							const auto& h = caret.hit();
 							const auto anchor(h.isLeadingEdge() ? viewer::TextHit::trailing(h.characterIndex()) : viewer::TextHit::leading(h.characterIndex()));
-							caret.select((
+							caret.select(
 								viewer::_anchor = viewer::insertionPosition(target().document(), anchor),
-								viewer::_caret = viewer::TextHit::leading(another)));
+								viewer::_caret = viewer::TextHit::leading(another));
 						}
 					}
 					return true;
@@ -1049,9 +1047,9 @@ namespace ascension {
 					throw;
 				}
 				if(numberOfLastReplacements_ != 0)
-					viewer.textArea().caret().select((
+					viewer.textArea().caret().select(
 						viewer::_anchor = anchorBeforeReplacement.position(),
-						viewer::_caret = viewer::TextHit::leading(caretBeforeReplacement.position())));
+						viewer::_caret = viewer::TextHit::leading(caretBeforeReplacement.position()));
 				return true;
 			}
 
