@@ -19,10 +19,10 @@ namespace ascension {
 			// constructors
 			explicit Point(Document& document, const Position& position = kernel::Position::zero());
 			Point(const Point& other);
+			virtual ~Point() BOOST_NOEXCEPT;
 			operator std::pair<const Document&, Position>() const;
 
-			/// @name Core Attributes
-			Position normalized() const;
+			/// @name Core Attribute
 			const Position& position() const BOOST_NOEXCEPT;
 			/// @}
 
@@ -37,7 +37,6 @@ namespace ascension {
 			Point& operator=(const Position& other) BOOST_NOEXCEPT;
 			virtual void aboutToMove(Position& to);
 			virtual void moved(const Position& from) BOOST_NOEXCEPT;
-			void normalize() const;
 		private:
 			// AbstractPoint
 			void contentReset() override;
@@ -85,14 +84,6 @@ namespace ascension {
 		/// Returns the @c MotionSignal signal connector.
 		inline SignalConnector<Point::MotionSignal> Point::motionSignal() BOOST_NOEXCEPT {
 			return makeSignalConnector(motionSignal_);
-		}
-
-		/**
-		 * Normalizes the position of the point.
-		 * This method does <strong>not</strong> inform to the listeners about any movement.
-		 */
-		inline void Point::normalize() const {
-			const_cast<Point*>(this)->position_ = normalized();
 		}
 
 		/**
