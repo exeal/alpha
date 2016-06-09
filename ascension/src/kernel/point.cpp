@@ -81,6 +81,10 @@ namespace ascension {
 		Point::Point(const Point& other) : AbstractPoint(other), position_(other.position_) {
 		}
 
+		/// Destructor does nothing.
+		Point::~Point() BOOST_NOEXCEPT {
+		}
+
 		/**
 		 * This overridable method is called by @c #moveTo to check and adjust the desitination position.
 		 * If you override this, consider the followings:
@@ -148,11 +152,6 @@ namespace ascension {
 			if(destination != from)
 				motionSignal_(*this, from);
 			return *this;
-		}
-
-		/// Returns the normalized position of the point.
-		Position Point::normalized() const {
-			return positions::shrinkToDocumentRegion(document(), position());
 		}
 
 
