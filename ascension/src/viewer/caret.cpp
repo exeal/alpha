@@ -737,8 +737,15 @@ namespace ascension {
 			checkMatchBrackets();
 		}
 
+		/**
+		 * @fn ascension::viewer::Caret::select
+		 * Selects the specified region.
+		 * @param anchor The named parameter describes the anchor of the new selection
+		 * @param caret The named parameter describes the caret of the new selection
+		 */
+
 		/// @internal
-		void Caret::select(const kernel::Position& a, const TextHit& c) {
+		void Caret::_select(const kernel::Position& a, const TextHit& c) {
 			select(SelectedRegion(_document = document(), _anchor = a, _caret = c));
 		}
 

@@ -122,7 +122,15 @@ namespace ascension {
 			void paste(bool useKillRing);
 			void replaceSelection(const StringPiece& text, bool rectangleInsertion = false);
 			void select(const SelectedRegion& region);
-			template<typename Arguments> void select(const Arguments& arguments);
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+			BOOST_PARAMETER_MEMBER_FUNCTION(
+				(void), select, tag,
+				(required
+					(anchor, (const kernel::Position&))
+					(caret, (const TextHit&)))) {_select(anchor, caret);}
+#else
+			void select(const kernel::Position& anchor, const TextHit& caret);
+#endif
 			/// @}
 
 			/// @name Text Manipulation
@@ -158,6 +166,7 @@ namespace ascension {
 			/// @}
 
 		private:
+			void _select(const kernel::Position& a, const TextHit& c);
 			void adjustInputMethodCompositionWindow();
 			bool canPastePlatformData() const;
 			void checkMatchBrackets();
@@ -165,7 +174,6 @@ namespace ascension {
 			void fireCaretMoved(const SelectedRegion& regionBeforeMotion);
 			void internalExtendSelection(void (*algorithm)(void));
 			void prechangeDocument();
-			void select(const kernel::Position& a, const TextHit& c);
 			SelectedRegion selection() const BOOST_NOEXCEPT;
 			void updateVisualAttributes();
 			// VisualPoint
@@ -359,16 +367,6 @@ namespace ascension {
 		 * @throw std#bad_alloc Internal memory allocation failed
 		 * @throw ... Any exceptions @c kernel#Document#replace throws
 		 */
-
-		/**
-		 * Selects the specified region.
-		 * @tparam Arguments The type of @a arguments
-		 * @param arguments This value is passed to the constructor of @c SelectedRegion class
-		 */
-		template<typename Arguments>
-		inline void Caret::select(const Arguments& arguments) {
-			select(arguments[_anchor], arguments[_caret]);	// kernel.Document is only declared in this header file
-		}
 
 		/// Returns the selected region.
 		inline SelectedRegion Caret::selectedRegion() const BOOST_NOEXCEPT {
