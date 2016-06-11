@@ -167,9 +167,7 @@ namespace ascension {
 			/**
 			 * Canonical combining classes. These are based on Unicode standard 5.0.0 "4.3
 			 * Combining Classes".
-#ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 			 * @see Normalizer
-#endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 			 */
 			class CanonicalCombiningClass {
 			public:

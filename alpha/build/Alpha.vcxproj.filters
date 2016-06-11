@@ -616,19 +616,7 @@
     <ClInclude Include="..\..\ascension\ascension\platforms.hpp">
       <Filter>ascension\Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\win32\dc.hpp">
-      <Filter>ascension\Header Files\win32</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\win32\file.hpp">
-      <Filter>ascension\Header Files\win32</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\win32\gdi-object.hpp">
-      <Filter>ascension\Header Files\win32</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\win32\module.hpp">
-      <Filter>ascension\Header Files\win32</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\win32\timer.hpp">
       <Filter>ascension\Header Files\win32</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\win32\windows.hpp">
@@ -665,9 +653,6 @@
       <Filter>ascension\Header Files\win32\com</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\win32\com\enum-impl.hpp">
-      <Filter>ascension\Header Files\win32\com</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\win32\com\exception.hpp">
       <Filter>ascension\Header Files\win32\com</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\win32\com\ole-type-wrapper.hpp">

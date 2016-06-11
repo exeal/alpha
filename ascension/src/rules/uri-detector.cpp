@@ -510,7 +510,7 @@ namespace ascension {
 
 		/**
 		 * Sets the valid schemes.
-		 * @param scheme The set of the schemes to set
+		 * @param schemes The set of the schemes to set
 		 * @param caseSensitive Set @c true to use case-sensitive comparison for scheme name matching.
 		 *                      However, RFC 3986 Section 3.1 says that schemes are case-insensitive
 		 * @return The detector
@@ -534,7 +534,7 @@ namespace ascension {
 
 		/**
 		 * Sets the valid schemes.
-		 * @param scheme The string contains the schemes separated by @a separator
+		 * @param schemes The string contains the schemes separated by @a separator
 		 * @param caseSensitive Set @c true to use case-sensitive comparison for scheme name matching
 		 * @param separator The character delimits scheme names in @a schemes. this can be a surrogate
 		 * @return The detector

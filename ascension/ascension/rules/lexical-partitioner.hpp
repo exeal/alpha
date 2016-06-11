@@ -70,8 +70,10 @@ namespace ascension {
 		};
 
 		/**
+		 * Sets the new transition rules.
 		 * @tparam SinglePassReadableRange The type of @a rules
 		 * @param rules The new rules to set
+		 * @throw IllegalStateException This partitioner had already been connected to a document
 		 */
 		template<typename SinglePassReadableRange>
 		inline void LexicalPartitioner::setRules(const SinglePassReadableRange& rules) {

@@ -243,9 +243,9 @@ namespace ascension {
 			 * Returns the beginning of the next bookmarked line.
 			 * @param p The base point
 			 * @param direction The direction
+			 * @param marks The number of motions
 			 * @return The beginning of the forward/backward bookmarked line, or @c boost#none if there is no bookmark
 			 *         in the document
-			 * @see #nextBookmarkInPhysicalDirection
 			 */
 			boost::optional<Position> nextBookmark(const PointProxy& p, Direction direction, Index marks /* = 1 */) {
 				const auto temp(document(p).bookmarker().next(line(shrinkToAccessibleRegion(p)), direction, true, marks));
@@ -255,15 +255,13 @@ namespace ascension {
 			/**
 			 * Returns the position offset from the given point with the given character unit.
 			 * This function considers the accessible region of the document.
-			 * @param document The document
-			 * @param position The base position
+			 * @param p The base point
 			 * @param direction The direction to offset
 			 * @param characterUnit The character unit
 			 * @param offset The amount to offset
 			 * @return The result position. This must be inside of the accessible region of the document
 			 * @throw BadPositionException @a position is outside of the document
 			 * @throw UnknownValueException @a characterUnit is invalid
-			 * @see #nextCharacterInPhysicalDirection
 			 */
 			Position nextCharacter(const PointProxy& p, Direction direction, locations::CharacterUnit characterUnit, Index offset /* = 1 */) {
 				if(offset == 0)
@@ -317,7 +315,7 @@ namespace ascension {
 			 * @param direction The direction
 			 * @param lines The number of the lines to advance/return
 			 * @return The position of the next/previous line
-			 * @see #nextVisualLine
+			 * @see viewer#locations#nextVisualLine
 			 */
 			Position nextLine(const PointProxy& p, Direction direction, Index lines /* = 1 */) {
 				Position result(shrinkToAccessibleRegion(p));
@@ -341,7 +339,7 @@ namespace ascension {
 			 * @param direction The direction
 			 * @param words The number of words to traverse
 			 * @return The destination
-			 * @see #nextWordEnd, #nextWordInPhysicalDirection
+			 * @see viewer#locations#nextWordEnd, viewer#locations#nextWordInPhysicalDirection
 			 */
 			Position nextWord(const PointProxy& p, Direction direction, Index words /* = 1 */) {
 				text::WordBreakIterator<DocumentCharacterIterator> i(
@@ -357,9 +355,10 @@ namespace ascension {
 			/**
 			 * Returns the end of the forward/backward N words.
 			 * @param p The base point
+			 * @param direction The direction
 			 * @param words The number of words to traverse
 			 * @return The destination
-			 * @see #nextWord, #nextWordEndInPhysicalDirection
+			 * @see viewer#locations#nextWord, viewer#locations#nextWordEndInPhysicalDirection
 			 */
 			Position nextWordEnd(const PointProxy& p, Direction direction, Index words /* = 1 */) {
 				text::WordBreakIterator<DocumentCharacterIterator> i(

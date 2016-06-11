@@ -29,7 +29,7 @@ namespace ascension {
 		/**
 		 * Breaks the line at the caret position and moves the caret to the end of the inserted string.
 		 * @param caret The caret
-		 * @param inheritIndent Set @c true to inherit the indent of the line @c{at.line}
+		 * @param inheritIndent Set @c true to inherit the indent of the line @c at.line
 		 * @param newlines The number of newlines to insert
 		 * @throw DocumentDisposedException The document @a caret connecting to has been disposed
 		 * @throw ... Any exceptions @c Document#insert throws
@@ -235,7 +235,7 @@ namespace ascension {
 		 *         of the end of line + 1. Otherwise if there is not selected range on the line, @c boost#none
 		 * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
 		 * @throw kernel#BadPositionException @a line is outside of the document
-		 * @see #selectedRangeOnVisualLine, VirtualBox#characterRangeInVisualLine
+		 * @see selectedRangeOnVisualLine, VirtualBox#characterRangeInVisualLine
 		 */
 		boost::optional<boost::integer_range<Index>> viewer::selectedRangeOnLine(const Caret& caret, Index line) {
 			const kernel::Position bos(*boost::const_begin(caret.selectedRegion()));
@@ -282,7 +282,7 @@ namespace ascension {
 		 * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
 		 * @throw TextViewerDisposedException The text viewer @a caret connecting to has been disposed
 		 * @throw kernel#BadPositionException @a line or @a subline is outside of the document
-		 * @see #selectedRangeOnLine, VirtualBox#characterRangeInVisualLine
+		 * @see selectedRangeOnLine, VirtualBox#characterRangeInVisualLine
 		 */
 		boost::optional<boost::integer_range<Index>> selectedRangeOnVisualLine(const Caret& caret, const graphics::font::VisualLine& line) {
 			return selectedRangeOnVisualLine(caret, line, false);
@@ -298,7 +298,7 @@ namespace ascension {
 		 * @throw TextViewerDisposedException The text viewer @a caret connecting to has been disposed
 		 * @throw kernel#BadPositionException @a line or @a subline is outside of the document
 		 * @note This function may change the layout.
-		 * @see #selectedRangeOnLine, VirtualBox#characterRangeInVisualLine
+		 * @see selectedRangeOnLine, VirtualBox#characterRangeInVisualLine
 		 */
 		boost::optional<boost::integer_range<Index>> selectedRangeOnVisualLine(Caret& caret,
 				const graphics::font::VisualLine& line, const graphics::font::UseCalculatedLayoutTag&) {

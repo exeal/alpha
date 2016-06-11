@@ -82,8 +82,8 @@ namespace ascension {
 		 * @typedef ascension::viewer::TextArea::GeometryChangedSignal
 		 * The signal which gets emitted when the allocation- or content-rectangle of the @c TextArea was changed.
 		 * @param textArea The @c TextArea
-		 * @see #allocationRectangle, #allocationRectangleChangedSignal, #contentRectangle,
-		 *      #contentRectangleChangedSignal
+		 * @see allocationRectangle, allocationRectangleChangedSignal, contentRectangle,
+		 *      contentRectangleChangedSignal
 		 */
 
 		/// Default constructor.
@@ -99,7 +99,7 @@ namespace ascension {
 
 		/**
 		 * Returns the 'allocation-rectangle' of the text area, in viewer-coordinates.
-		 * @see #contentRectangle, #allocationRectangleChangedSignal
+		 * @see contentRectangle, allocationRectangleChangedSignal
 		 */
 		graphics::Rectangle TextArea::allocationRectangle() const BOOST_NOEXCEPT {
 			if(viewer_ == nullptr || locator_ == nullptr)
@@ -111,7 +111,7 @@ namespace ascension {
 
 		/**
 		 * Returns the @c GeometryChangedSignal signal connector for the 'allocation-rectangle'.
-		 * @see #allocationRectangle
+		 * @see allocationRectangle
 		 */
 		SignalConnector<TextArea::GeometryChangedSignal> TextArea::allocationRectangleChangedSignal() BOOST_NOEXCEPT {
 			return makeSignalConnector(allocationRectangleChangedSignal_);
@@ -170,7 +170,7 @@ namespace ascension {
 
 		/**
 		 * Returns the 'content-rectangle' of the text area, in viewer-coordinates.
-		 * @see #allocationRectangle, #contentRectangleChangedSignal
+		 * @see allocationRectangle, contentRectangleChangedSignal
 		 */
 		graphics::Rectangle TextArea::contentRectangle() const BOOST_NOEXCEPT {
 			// TODO: Consider 'padding-start' setting.
@@ -179,7 +179,7 @@ namespace ascension {
 
 		/**
 		 * Returns the @c GeometryChangedSignal signal connector for the 'content-rectangle'.
-		 * @see #contentRectangle
+		 * @see contentRectangle
 		 */
 		SignalConnector<TextArea::GeometryChangedSignal> TextArea::contentRectangleChangedSignal() BOOST_NOEXCEPT {
 			return makeSignalConnector(contentRectangleChangedSignal_);
@@ -278,7 +278,7 @@ namespace ascension {
 
 		/**
 		 * Hides the caret.
-		 * @see #hidesCaret, #showCaret
+		 * @see hidesCaret, showCaret
 		 */
 		void TextArea::hideCaret() BOOST_NOEXCEPT {
 			if(caretPainter_.get() != nullptr)
@@ -578,7 +578,7 @@ namespace ascension {
 
 		/**
 		 * Shows (and begins blinking) the hidden caret.
-		 * @see #hideCaret, #hidesCaret
+		 * @see hideCaret, hidesCaret
 		 */
 		void TextArea::showCaret() BOOST_NOEXCEPT {
 			if(caretPainter_.get() != nullptr)

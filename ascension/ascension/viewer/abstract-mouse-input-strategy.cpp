@@ -94,7 +94,7 @@ namespace ascension {
 			return std::shared_ptr<widgetapi::DropTarget>();
 		}
 		
-		/// Calls @c #endTrackingLocation method.
+		/// Calls @c #endLocationTracking method.
 		void AbstractMouseInputStrategy::interruptMouseReaction(bool) {
 			endLocationTracking();
 		}
@@ -109,7 +109,7 @@ namespace ascension {
 			return input.ignore();
 		}
 
-		/// Calls @c #endTrackingLocation method.
+		/// Calls @c #endLocationTracking method.
 		void AbstractMouseInputStrategy::mouseInputTargetUnlocked() {
 			endLocationTracking();
 		}

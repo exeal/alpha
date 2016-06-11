@@ -271,7 +271,7 @@ namespace ascension {
 		/**
 		 * Returns the style of the specified text line.
 		 * @param line The line number
-		 * @param[out] result The computed text line style
+		 * @return The computed text line style
 		 * @throw BadPositionException @a line is outside of the document
 		 * @throw NullPointerException Internal @c Length#value call may throw this exception
 		 */
@@ -592,7 +592,7 @@ namespace ascension {
 		
 		/**
 		 * Sets the hyperlink detector.
-		 * @param newDirector The director. Set @c null to unregister
+		 * @param newDetector The director. Set @c null to unregister
 		 */
 		void Presentation::setHyperlinkDetector(std::shared_ptr<hyperlink::HyperlinkDetector> newDetector) BOOST_NOEXCEPT {
 			hyperlinkDetector_ = newDetector;

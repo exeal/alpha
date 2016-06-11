@@ -1,6 +1,6 @@
 /**
  * @file normalize.hpp
- * @exeal author
+ * @author exeal
  * @date 2015-10-23 Separated from algorithm.hpp.
  */
 

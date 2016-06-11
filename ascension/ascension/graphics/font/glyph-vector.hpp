@@ -45,7 +45,7 @@ namespace ascension {
 				 * @param index The index in this vector
 				 * @return The glyphcode
 				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
-				 * @see #glyphCodes
+				 * @see glyphCodes
 				 */
 				virtual GlyphCode glyphCode(std::size_t index) const = 0;
 //				virtual void glyphCodes(const boost::integer_range<std::size_t>& range, std::vector<GlyphCode>& out) const = 0;
@@ -65,7 +65,7 @@ namespace ascension {
 				 * @param index The index in this vector
 				 * @return The character index
 				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
-				 * @see #glyphCharacterIndices
+				 * @see glyphCharacterIndices
 				 */
 				virtual Index glyphCharacterIndex(std::size_t index) const = 0;
 //				virtual void glyphCharacterIndices(const boost::integer_range<std::size_t>& range, std::vector<Index>& out) const = 0;
@@ -80,7 +80,7 @@ namespace ascension {
 				 *         @a index equals @c #numberOfGlyphs(), this method returns the position of the end of the
 				 *         last glyph
 				 * @throw IndexOutOfBoundsException @a index &gt; @c #numberOfGlyphs()
-				 * @see #setGlyphPosition
+				 * @see setGlyphPosition
 				 */
 				virtual Point glyphPosition(std::size_t index) const = 0;
 				/**
@@ -95,7 +95,7 @@ namespace ascension {
 				 * @param index The glyph index in this vector
 				 * @param position The position relative to the origin of this vector in user units
 				 * @throw IndexOutOfBoundsException @a index &gt; @c #numberOfGlyphs()
-				 * @see #glyphPosition
+				 * @see glyphPosition
 				 */
 				virtual void setGlyphPosition(std::size_t index, const Point& position) = 0;
 				/// @}
@@ -107,7 +107,7 @@ namespace ascension {
 				 * @param index The glyph index in this vector
 				 * @return The logical bounds of the glyph
 				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
-				 * @see #glyphPixelBounds, #glyphVisualBounds, #logicalBounds
+				 * @see glyphPixelBounds, glyphVisualBounds, logicalBounds
 				 */
 				virtual Rectangle glyphLogicalBounds(std::size_t index) const = 0;
 //				virtual Rectangle glyphPixelBounds(std::size_t index, const FontRenderContext& frc, const Point& at) const = 0;
@@ -116,18 +116,18 @@ namespace ascension {
 				 * @param index The glyph index in this vector
 				 * @return The visual bounds of the glyph
 				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
-				 * @see #glyphLogicalBounds, #glyphPixelBounds, #visualBounds
+				 * @see glyphLogicalBounds, glyphPixelBounds, visualBounds
 				 */
 				virtual Rectangle glyphVisualBounds(std::size_t index) const = 0;
 				/**
 				 * Returns the logical bounds of this vector in user units.
-				 * @see #glyphLogicalBounds, #pixelBounds, #visualBounds
+				 * @see glyphLogicalBounds, pixelBounds, visualBounds
 				 */
 				virtual Rectangle logicalBounds() const = 0;
 //				virtual Rectangle pixelBounds(const FontRenderContext& frc, const Point& at) const = 0;
 				/**
 				 * Returns the visual bounds of this vector in user units.
-				 * @see #glyphVisualBounds, #logicalBounds, #pixelBounds
+				 * @see glyphVisualBounds, logicalBounds, pixelBounds
 				 */
 				virtual Rectangle visualBounds() const = 0;
 				/// @}
@@ -161,7 +161,7 @@ namespace ascension {
 				 * Fills the glyphs at the specified position.
 				 * @param context The graphics context
 				 * @param origin The position in user units where the glyphs should be rendered
-				 * @see #strokeGlyphs
+				 * @see strokeGlyphs
 				 */
 				virtual void fillGlyphs(PaintContext& context, const Point& origin/*,
 					boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const = 0;
@@ -169,7 +169,7 @@ namespace ascension {
 				 * Strokes the glyphs at the specified position.
 				 * @param context The graphics context
 				 * @param origin The position in user units where the glyphs should be rendered
-				 * @see #fillGlyphs
+				 * @see fillGlyphs
 				 */
 				virtual void strokeGlyphs(PaintContext& context, const Point& origin/*,
 					boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const = 0;

@@ -1,13 +1,12 @@
 /**
- * @file rules.hpp
+ * @file token-rules.hpp
  * @author exeal
  * @date 2004-2006 was Lexer.h
  * @date 2006-2014
  */
 
-#ifndef ASCENSION_RULES_HPP
-#define ASCENSION_RULES_HPP
-
+#ifndef ASCENSION_TOKEN_RULES_HPP
+#define ASCENSION_TOKEN_RULES_HPP
 #include <ascension/config.hpp>	// ASCENSION_NO_REGEX
 #include <ascension/corelib/regex.hpp>
 #include <ascension/corelib/string-piece.hpp>
@@ -138,4 +137,4 @@ namespace ascension {
 	}
 } // namespace ascension.rules
 
-#endif // !ASCENSION_RULES_HPP
+#endif // !ASCENSION_TOKEN_RULES_HPP

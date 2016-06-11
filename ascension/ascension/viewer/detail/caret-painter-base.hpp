@@ -26,6 +26,7 @@ namespace ascension {
 		class TextArea;
 
 		namespace detail {
+			/// Base class of @c CaretPainter.
 			class CaretPainterBase {
 			public:
 				/// Destructor.

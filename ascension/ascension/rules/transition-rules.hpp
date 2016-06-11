@@ -1,5 +1,5 @@
 /**
- * @file rules.hpp
+ * @file transition-rules.hpp
  * @author exeal
  * @date 2004-2006 was Lexer.h
  * @date 2006-2014 was rules.hpp
@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_TRANSITION_RULES_HPP
 #define ASCENSION_TRANSITION_RULES_HPP
-
 #include <ascension/config.hpp>	// ASCENSION_NO_REGEX
 #include <ascension/corelib/regex.hpp>
 #include <ascension/kernel/partition.hpp>

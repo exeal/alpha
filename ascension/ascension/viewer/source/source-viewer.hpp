@@ -62,7 +62,7 @@ namespace ascension {
 
 			/**
 			 * Returns the ruler.
-			 * @see #setRuler
+			 * @see setRuler
 			 */
 			inline std::unique_ptr<Ruler>& SourceViewer::ruler() BOOST_NOEXCEPT {
 				return ruler_;
@@ -70,7 +70,7 @@ namespace ascension {
 
 			/**
 			 * Returns the ruler.
-			 * @see #setRuler
+			 * @see setRuler
 			 */
 			inline const std::unique_ptr<Ruler>& SourceViewer::ruler() const BOOST_NOEXCEPT {
 				return ruler_;

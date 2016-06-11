@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_DEFAULT_COMPLETION_PROPOSAL_HPP
 #define ASCENSION_DEFAULT_COMPLETION_PROPOSAL_HPP
-
 #include <ascension/content-assist/content-assist.hpp>
 
 namespace ascension {
@@ -16,12 +15,10 @@ namespace ascension {
 		/// Default implementation of @c CompletionalProposal.
 		class DefaultCompletionProposal : public CompletionProposal {
 		public:
-			explicit DefaultCompletionProposal(
-				const String& replacementString, const String& description = String(),
-				CompletionProposal::Icon&& icon = Icon(), bool autoInsertable = true);
+			explicit DefaultCompletionProposal(const String& replacementString,
+				const String& description = String(), Icon&& icon = Icon(), bool autoInsertable = true);
 			DefaultCompletionProposal(const String& replacementString,
-				const String& displayString, const String& description = String(),
-				CompletionProposal::Icon&& icon = Icon(), bool autoInsertable = true);
+				const String& displayString, const String& description = String(), Icon&& icon = Icon(), bool autoInsertable = true);
 		public:
 			String description() const BOOST_NOEXCEPT;
 			String displayString() const BOOST_NOEXCEPT;

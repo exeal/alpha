@@ -99,13 +99,13 @@ namespace ascension {
 			 * @see mapFromGlobal
 			 */
 			template<typename Point>
-			Point mapToGlobal(Proxy<const Widget>, const Point& position,
+			Point mapToGlobal(Proxy<const Widget> widget, const Point& position,
 				typename graphics::geometry::detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr);
 			/**
-			 * Translates the point in the widget coordinates into global screen coordinates.
+			 * Translates the rectangle in the widget coordinates into global screen coordinates.
 			 * @tparam Box The type of @a rectangle
 			 * @param widget The widget
-			 * @param position The position to map
+			 * @param rectangle The rectangle to map
 			 * @see mapFromGlobal
 			 */
 			template<typename Box>
@@ -162,25 +162,25 @@ namespace ascension {
 			/**
 			 * Hides the widget.
 			 * @param widget
-			 * @see #close, #isVisible, #show
+			 * @see close, isVisible, show
 			 */
 			void hide(Proxy<Widget> widget);
 			/**
 			 * Returns true if the widget is visible.
 			 * @param widget
-			 * @see #close, #hide, #show
+			 * @see close, hide, show
 			 */
 			bool isVisible(Proxy<const Widget> widget);
 			/**
 			 * Lowers the widget to the bottom of the parent widget's stack.
 			 * @param widget The widget to lower
-			 * @see #raise
+			 * @see raise
 			 */
 			void lower(Proxy<Widget> widget);
 			/**
 			 * Raises the window to the top of the parent window's stack.
 			 * @param window The window to raise
-			 * @see #lower
+			 * @see lower
 			 */
 			void raise(Proxy<Window> window);
 			/**
@@ -188,7 +188,7 @@ namespace ascension {
 			 * @param widget The widget
 			 * @return The level of opacity from 1.0 (completely opaque) to 0.0 (completely
 			 *         transparent)
-			 * @return #setWindowOpacity
+			 * @see setWindowOpacity
 			 */
 			double windowOpacity(Proxy<const Widget> widget);
 			/**
@@ -196,14 +196,14 @@ namespace ascension {
 			 * @param widget The widget
 			 * @param opacity The level of opacity from 1.0 (completely opaque) to 0.0 (completely
 			 *         transparent)
-			 * @return #windowOpacity
+			 * @see windowOpacity
 			 */
 			void setWindowOpacity(Proxy<Widget> widget, double opacity);
 			void setAlwaysOnTop(Proxy<Widget> widget, bool set);
 			/**
 			 * Shows the widget.
 			 * @param widget
-			 * @see #close, #hide, #isVisible
+			 * @see close, hide, isVisible
 			 */
 			void show(Proxy<Widget> widget);
 			/// @}
@@ -270,32 +270,32 @@ namespace ascension {
 			 * Returns @c true if the window is maximized.
 			 * @param window The window
 			 * @return true if @a window is maximized
-			 * @see #isMinimized, #showMaximized
+			 * @see isMinimized, showMaximized
 			 */
 			bool isMaximized(Proxy<const Window> window);
 			/**
 			 * Returns @c true if the window is minimized.
 			 * @param window The window
 			 * @return true if @a window is minimized
-			 * @see #isMaximized, #showMinimized
+			 * @see isMaximized, showMinimized
 			 */
 			bool isMinimized(Proxy<const Window> window);
 			/**
 			 * Shows the window maximized.
 			 * @param window The window
-			 * @see #isMaximized, #showMinimized, #showNormal
+			 * @see isMaximized, showMinimized, showNormal
 			 */
 			void showMaximized(Proxy<Window> window);
 			/**
 			 * Shows the window minimized.
 			 * @param window The window
-			 * @see #isMinimized, #showMaximized, #showNormal
+			 * @see isMinimized, showMaximized, showNormal
 			 */
 			void showMinimized(Proxy<Window> window);
 			/**
 			 * Restores the maximized or minimized window.
 			 * @param window The window
-			 * @see #isMaximized, #isMinimized, #showMaximized, #showMinimized
+			 * @see isMaximized, isMinimized, showMaximized, showMinimized
 			 */
 			void showNormal(Proxy<Window> window);
 			/// @}
@@ -306,28 +306,28 @@ namespace ascension {
 			 * Returns the parent of the widget.
 			 * @param widget The widget
 			 * @return The parent widget or @c boost#none
-			 * @see #setParent
+			 * @see setParent
 			 */
 			Widget::pointer parentWidget(Proxy<const Widget> widget);
 			/**
 			 * Returns the parent of the widget.
 			 * @param widget The widget
 			 * @return The parent window or @c boost#none
-			 * @see #setParent
+			 * @see setParent
 			 */
 			Window::pointer parentWindow(Proxy<const Widget> widget);
 			/**
 			 * Sets the parent of the widget.
 			 * @param widget The widget
 			 * @param newParent The new parent widget or @c null
-			 * @see #parent
+			 * @see parent
 			 */
 			void setParentWidget(Proxy<Widget> widget, Proxy<Widget> newParent);
 			/**
 			 * Sets the parent of the widget.
 			 * @param widget The widget
 			 * @param newParent The new parent window or @c null
-			 * @see #parent
+			 * @see parent
 			 */
 			void setParentWindow(Proxy<Widget> widget, Proxy<Window> newParent);
 			/***/
@@ -342,14 +342,14 @@ namespace ascension {
 			 * Enables or disables drop events for the widget.
 			 * @param widget The widget
 			 * @param accept Set @c true to enable drop events
-			 * @see #acceptsDrops
+			 * @see acceptsDrops
 			 */
 			void acceptDrops(Proxy<Widget> widget, bool accept = true);
 			/**
 			 * Returns @c true if drop events are enabled for the widget.
 			 * @param widget The widget
 			 * @return true if drop events are enabled for @a widget
-			 * @see #acceptDrops
+			 * @see acceptDrops
 			 */
 			bool acceptsDrops(Proxy<const Widget> widget);
 			/// @}

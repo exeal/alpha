@@ -101,7 +101,7 @@ namespace ascension {
 			/**
 			 * Constructor.
 			 * @param requested The requested position in the document
-			 * @param message The message @c #what returns
+			 * @param message The message @c what() returns
 			 */
 			BadPositionException(const Position& requested, const std::string& message)
 				: std::invalid_argument(message), requestedPosition_(requested) {}

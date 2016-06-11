@@ -4,9 +4,9 @@
  * - ISO 8859-7:2003
  * - IBM737
  * - IBM9061
- * - <del>IBM9067</del>
+ * - IBM9067 (not implemented)
  * - windows-1253
- * - <del>MacGreek</del>
+ * - MacGreek (not implemented)
  * @author exeal
  * @date 2007-2010, 2014
  */

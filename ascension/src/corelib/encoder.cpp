@@ -69,9 +69,9 @@ namespace ascension {
 		 * When an encoder encounters unmappable byte/character, its behavior depends on the substitution policy.
 		 * Available policies are enumerated by @c #SubstitutionPolicy. You can get the current substitution policy by
 		 * @c #substitutionPolicy, and can set by @c #setSubstitutionPolicy. Default policy is
-		 * @c #SubstitutionPolicy#DONT_SUBSTITUTE.
+		 * @c SubstitutionPolicy#DONT_SUBSTITUTE.
 		 *
-		 * If you use @c #SubstitutionPolicy#DONT_SUBSTITUTE, the encoder returns @c UNMAPPABLE_CHARACTER when
+		 * If you use @c SubstitutionPolicy#DONT_SUBSTITUTE, the encoder returns @c UNMAPPABLE_CHARACTER when
 		 * encountered an unmappable byte/character. In this case, @a fromNext parameter of the conversion method will
 		 * address the unmappable byte/character.
 		 *
@@ -112,7 +112,7 @@ namespace ascension {
 		 * You can create and add your own @c Encoder class.
 		 */
 
-		/// Character separates the string returns @c #aliases.
+		/// Character separates the string returns @c aliases.
 		const char Encoder::ALIASES_SEPARATOR = '|';
 
 		/// Protected default constructor.
@@ -208,9 +208,9 @@ namespace ascension {
 
 		/**
 		 * Returns the encoder which has the given enumeration identifier.
-		 * @param id The identifier obtained by @c #availableNames method
+		 * @param id The identifier obtained by @c availableNames method
 		 * @return The encoder or @c null if not registered
-		 * @see #availableNames
+		 * @see availableNames
 		 */
 		std::unique_ptr<Encoder> Encoder::forID(std::size_t id) BOOST_NOEXCEPT {
 			return (id < registry().size()) ? registry()[id]->create() : std::unique_ptr<Encoder>();
@@ -434,13 +434,12 @@ namespace ascension {
 
 		/**
 		 * Detects the encoding of the string buffer.
-		 * @param detectorID The identifier of the encoding detector to use
 		 * @param first The beginning of the sequence
 		 * @param last The end of the sequence
 		 * @param[out] convertibleBytes The number of bytes (from @a first) absolutely detected. The value can't exceed
 		 *                              the result of (@a last - @a first). Can be @c null if not needed
 		 * @return The MIBenum and the name of the detected encoding
-		 * @throw NullPointerException @a first or @last is @c null
+		 * @throw NullPointerException @a first or @a last is @c null
 		 * @throw std#invalid_argument @c first is greater than @a last
 		 */
 		std::pair<MIBenum, std::string> EncodingDetector::detect(const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const {
@@ -640,6 +639,7 @@ namespace ascension {
 			 * @param maximumNativeBytes The value returned by @c #maximumNativeBytes
 			 * @param maximumUCSLength The value returned by @c #maximumUCSLength
 			 * @param aliases The encoding aliases returned by @c #aliases
+			 * @param substitutionCharacter The substitution character
 			 */
 			EncoderFactoryBase::EncoderFactoryBase(const std::string& name, MIBenum mib,
 					const std::string& displayName /* = "" */,

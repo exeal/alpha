@@ -213,11 +213,12 @@ namespace ascension {
 
 			/**
 			 * Converts the point in the viewport into the logical line number and visual subline offset.
+			 * @param viewport The viewport
 			 * @param p The point in the viewport in user coordinates
 			 * @param[out] snapped @c true if there was not a line at @a p. Optional
 			 * @return The visual line numbers
 			 * @note This function may change the layout.
-			 * @see #location, TextLayout#hitTestCharacter, TextLayout#locateLine
+			 * @see scrollPositions, TextLayout#hitTestCharacter, TextLayout#locateLine
 			 */
 			VisualLine locateLine(const TextViewport& viewport, const Point& p, bool* snapped /* = nullptr */) BOOST_NOEXCEPT {
 				// calculate block-progression-dimension
@@ -274,8 +275,8 @@ namespace ascension {
 			 * @param position The document position
 			 * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the viewport. If
 			 *                      this happened, the block-progression-dimension of the returned point is
-			 *                      @c std#numeric_limits&lt;Scalar&gt;::max() (for the before-edge) or
-			 *                      @c std#numeric_limits&lt;Scalar&gt;::lowest() (for the after-edge). If this is
+			 *                      @c std#numeric_limits&lt;Scalar&gt;#max() (for the before-edge) or
+			 *                      @c std#numeric_limits&lt;Scalar&gt;#lowest() (for the after-edge). If this is
 			 *                      @c true, the calculation is performed completely and returns an exact location will
 			 *                      (may be very slow)
 			 * @return The point in viewport-coordinates in user units. The block-progression-dimension addresses the
@@ -501,6 +502,7 @@ namespace ascension {
 
 			/**
 			 * Returns the document position nearest from the specified point.
+			 * @param viewport The viewport
 			 * @param point The point in viewport-coordinates. This can be outside of the viewport
 			 * @param snapPolicy Which character boundary the returned position snapped to
 			 * @return The document position
@@ -517,6 +519,7 @@ namespace ascension {
 			 * Returns the document position nearest from the specified point. This method returns
 			 * @c boost#none immediately when @a pointInView hovered outside of the text layout (e.g. far left
 			 * or right of the line, beyond the last line, ...)
+			 * @param viewport The viewport
 			 * @param point The point in viewport-coordinates. This can be outside of the viewport
 			 * @param snapPolicy Which character boundary the returned position snapped to
 			 * @return The document position, or @c boost#none if @a pointInView is outside of the layout

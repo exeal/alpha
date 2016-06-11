@@ -77,8 +77,8 @@ namespace ascension {
 
 			/**
 			 * Folds case of the specified character sequence. This method performs "full case folding."
-			 * @tparam SinglePassReadableRange
-			 * @param text The character sequence
+			 * @tparam SinglePassReadableRange The type of @a characterSequence
+			 * @param characterSequence The character sequence
 			 * @param excludeTurkishI Set @c true to perform "Turkish I mapping"
 			 * @return The folded string
 			 */

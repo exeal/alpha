@@ -1059,7 +1059,7 @@ private:
 			 *
 			 * @note This class is not intended to be subclassed.
 			 *
-			 * @c TextFileDocumentInput uses @c TextFileStreamBuffer class to read/write the text file. @c #open opens
+			 * @c TextFileDocumentInput uses @c TextFileStreamBuffer class to read/write the text file. @c #bind opens
 			 * a text file and binds the document to the file. @c #write writes the content of the document into the
 			 * specified file.
 			 *
@@ -1081,7 +1081,7 @@ private:
 			 *
 			 * <h3>Locking the opened file</h3>
 			 *
-			 * You can lock the opened file to guard from other processes' changing. @c LockMode parameter of @c #open
+			 * You can lock the opened file to guard from other processes' changing. @c LockMode parameter of @c #bind
 			 * method specifies the mode of locking.
 			 *
 			 * <h3>When the other process modified the opened file</h3>
@@ -1425,7 +1425,7 @@ private:
 			 * Writes the content of the document into the bound file.
 			 * @param format The character encoding and the newlines
 			 * @param options The other options
-			 * @throw
+			 * @throw ...
 			 */
 			void TextFileDocumentInput::write(const WritingFormat& format, const WritingOption* options /* = nullptr */) {
 				if(!document().isModified())

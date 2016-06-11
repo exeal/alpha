@@ -88,7 +88,7 @@ namespace ascension {
 		 * Sets the directory of C/Migemo dictionary.
 		 * This method does not check if the specified path is exist.
 		 * @param pathName The path name of the directory
-		 * @param std#length_error @a @pathName is too long
+		 * @throw std#length_error @a pathName is too long
 		 */
 		void Session::setMigemoDictionaryPathName(const boost::filesystem::path& pathName) {
 #if 0
@@ -106,7 +106,7 @@ namespace ascension {
 		 * Sets the directory of C/Migemo library.
 		 * This method does not check if the specified path is exist.
 		 * @param pathName The path name of the directory
-		 * @param std#length_error @a @pathName is too long
+		 * @throw std#length_error @a pathName is too long
 		 */
 		void Session::setMigemoLibraryPathName(const boost::filesystem::path& pathName) {
 #if 0

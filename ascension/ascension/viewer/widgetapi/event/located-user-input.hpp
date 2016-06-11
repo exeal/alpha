@@ -27,18 +27,6 @@ namespace ascension {
 					 */
 					typedef std::uint32_t MouseButton;
 
-					/// @var NO_BUTTON Indicates no mouse buttons.
-
-					/// @var BUTTON1_DOWN The Mouse Button1 (usually left button) is down.
-
-					/// @var BUTTON2_DOWN The Mouse Button2 (usually middle button) is down.
-
-					/// @var BUTTON3_DOWN The Mouse Button3 (usually right button) is down.
-
-					/// @var BUTTON4_DOWN The Mouse Button4 (usually X1 button) is down.
-
-					/// @var BUTTON5_DOWN The Mouse Button5 (usually X2 button) is down.
-
 					static const MouseButton
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 						NO_BUTTON = 0,
@@ -64,6 +52,24 @@ namespace ascension {
 						BUTTON5_DOWN = MK_XBUTTON2
 #endif
 					;
+
+					/// @var #NO_BUTTON
+					/// Indicates no mouse buttons.
+
+					/// @var #BUTTON1_DOWN
+					/// The Mouse Button1 (usually left button) is down.
+
+					/// @var #BUTTON2_DOWN
+					/// The Mouse Button2 (usually middle button) is down.
+
+					/// @var #BUTTON3_DOWN
+					/// The Mouse Button3 (usually right button) is down.
+
+					/// @var #BUTTON4_DOWN
+					/// The Mouse Button4 (usually X1 button) is down.
+
+					/// @var #BUTTON5_DOWN
+					/// The Mouse Button5 (usually X2 button) is down.
 
 				public:
 					/**

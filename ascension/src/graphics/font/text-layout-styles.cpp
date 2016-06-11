@@ -55,7 +55,7 @@ namespace ascension {
 			 * @param textRunStyles The computed text runs styles
 			 * @param defaultRunStyle
 			 * @param lengthContext
-			 * @param percentageResolver
+			 * @param parentContentArea
 			 * @param fontCollection The font collection
 			 * @param fontRenderContext Information about a graphics device which is needed to measure the text correctly
 			 */

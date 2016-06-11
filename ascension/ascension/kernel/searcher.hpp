@@ -101,7 +101,7 @@ namespace ascension {
 			virtual Action queryReplacementAction(const kernel::Region& matchedRegion, bool canUndo) = 0;
 			/**
 			 * The replacement exited or explicitly aborted.
-			 * @param numberOfMatched
+			 * @param numberOfMatches
 			 * @param numberOfReplacements
 			 */
 			virtual void replacementEnded(std::size_t numberOfMatches, std::size_t numberOfReplacements) = 0;
@@ -270,6 +270,7 @@ namespace ascension {
 			/**
 			 * The search pattern was changed.
 			 * @param result The result on new pattern. See @c #WrappingStatus.
+			 * @param wrappingStatus
 			 */
 			virtual void incrementalSearchPatternChanged(Result result, int wrappingStatus) = 0;
 			/**

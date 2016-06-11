@@ -481,12 +481,9 @@ namespace ascension {
 		 * A document manages also its operation history, encoding, and newlines and writes to or reads the content
 		 * from files or streams.
 		 *
-		 * @c #insert inserts a text string into any position. @c #erase deletes any text region. Other classes also
-		 * provide text manipulation for the document.
-		 *
-		 * @c #insert and @c #erase methods throw @c DocumentCantChangeException when the change was rejected. This
-		 * occurs if the the document was not marked modified and the document input's @c DocumentInput#isChangeable
-		 * returned @c false.
+		 * @c #replace methods throw @c DocumentCantChangeException when the change was rejected. This occurs if the
+		 * the document was not marked modified and the document input's @c DocumentInput#isChangeable returned
+		 * @c false.
 		 *
 		 * <h3>Revision and Modification Signature</h3>
 		 *
@@ -875,7 +872,7 @@ namespace ascension {
 		/**
 		 * Marks the document modified.
 		 * For details about modification signature, see the documentation of @c Document class.
-		 * @see #isModified, #markUnmodified, #dModificationSignChangedSignal
+		 * @see #isModified, #markUnmodified, #ModificationSignChangedSignal
 		 */
 		void Document::setModified() BOOST_NOEXCEPT {
 			const bool modified = isModified();
@@ -942,7 +939,7 @@ namespace ascension {
 #endif
 		/**
 		 * Revokes the narrowing.
-		 * @see #isNarrowed, #narrow, #AccessibleRegionChangedSignal
+		 * @see #isNarrowed, #narrowToRegion, #AccessibleRegionChangedSignal
 		 */
 		void Document::widen() BOOST_NOEXCEPT {
 			if(accessibleRegion_.get() != nullptr) {

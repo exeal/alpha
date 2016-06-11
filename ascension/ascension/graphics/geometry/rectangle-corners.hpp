@@ -1,6 +1,6 @@
 /**
  * @file rectangle-corners.hpp
- * @exeal author
+ * @author exeal
  * @date 2015-10-23 Separated from algorithm.hpp.
  */
 
@@ -19,7 +19,7 @@ namespace ascension {
 
 			/**
 			 * Returns the bottom-left corner of @a rectangle.
-			 * @see #bottom, #left
+			 * @see geometry#bottom, geometry#left
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::point_type<Geometry>::type bottomLeft(const Geometry& rectangle) {
@@ -28,7 +28,7 @@ namespace ascension {
 
 			/**
 			 * Returns the bottom-right corner of @a rectangle.
-			 * @see #bottom, #right
+			 * @see geometry#bottom, geometry#right
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::point_type<Geometry>::type bottomRight(const Geometry& rectangle) {
@@ -37,7 +37,7 @@ namespace ascension {
 
 			/**
 			 * Returns the top-left corner of @a rectangle.
-			 * @see #top, #left
+			 * @see geometry#top, geometry#left
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::point_type<Geometry>::type topLeft(const Geometry& rectangle) {
@@ -46,7 +46,7 @@ namespace ascension {
 
 			/**
 			 * Returns the top-right corner of @a rectangle.
-			 * @see #top, #right
+			 * @see geometry#top, geometry#right
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::point_type<Geometry>::type topRight(const Geometry& rectangle) {

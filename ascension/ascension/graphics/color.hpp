@@ -1,13 +1,12 @@
 /**
- * @file color.hpp
+ * @file graphics/color.hpp
  * Defines basic data types in @c ascension#graphics namespace.
  * @author exeal
  * @date 2010-11-06 created
  */
 
-#ifndef ASCENSION_COLOR_HPP
-#define ASCENSION_COLOR_HPP
-
+#ifndef ASCENSION_GRAPHICS_COLOR_HPP
+#define ASCENSION_GRAPHICS_COLOR_HPP
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
@@ -192,4 +191,4 @@ namespace std {
 	};
 }
 
-#endif // !ASCENSION_COLOR_HPP
+#endif // !ASCENSION_GRAPHICS_COLOR_HPP

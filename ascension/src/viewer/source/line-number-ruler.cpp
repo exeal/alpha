@@ -189,7 +189,7 @@ namespace ascension {
 
 			/**
 			 * Sets the start value of the line numbers. This is the number used to display the zero line number.
-			 * @param The start value of the line numbers
+			 * @param startValue The start value of the line numbers
 			 */
 			void LineNumberRuler::setStartValue(Index startValue) {
 				startValue_ = startValue;

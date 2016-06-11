@@ -1,5 +1,5 @@
 /**
- * @file point.hpp
+ * @file geometry/point.hpp
  * Defines 2D point types for geometry.
  * @author exeal
  * @date 2010-11-06 Created (as geometry.hpp)

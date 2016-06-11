@@ -451,7 +451,7 @@ namespace ascension {
 
 			/**
 			 * Resizes the container to contain @a count elements.
-			 * @param count The new size of the container
+			 * @param size The new size of the container
 			 */
 			void resize(size_type size);
 

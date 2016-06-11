@@ -120,11 +120,11 @@ namespace ascension {
 		 * @class ascension::viewer::VisualPoint
 		 * Extension of @c kernel#Point class for viewer and layout.
 		 *
-		 * <h3>Three States of @c VisualPoint</h3>
+		 * <h3>Three States of @c VisualPoint </h3>
 		 *
 		 * A @c VisualPoint has the following three states:
 		 * <dl>
-		 *   <dt>State 1 : Constructed but not installed by @c TextArea</dt>
+		 *   <dt>State 1 : Constructed but not installed by @c TextArea </dt>
 		 *   <dd>
 		 *     - The @c VisualPoint has been just constructed with the document, but not be installed by a
 		 *       @c TextArea.
@@ -135,7 +135,7 @@ namespace ascension {
 		 *     - @c VisualPoint#isFullyAvailable() returns @c false.
 		 *     - Constructed by the constructor which takes a document and a position.
 		 *   </dd>
-		 *   <dt>State 2 : Installed by @c TextArea</dt>
+		 *   <dt>State 2 : Installed by @c TextArea </dt>
 		 *   <dd>
 		 *     - The @c VisualPoint has been installed by the @c TextArea.
 		 *     - The all features are available.
@@ -157,7 +157,7 @@ namespace ascension {
 		 *   </dd>
 		 * </dl>
 		 *
-		 * <h3>@c TextHit, rather than @c kernel#Position</h3>
+		 * <h3>@c TextHit, rather than @c kernel#Position </h3>
 		 *
 		 * Unlike @c kernel#Point, a @c VisualPoint uses @c TextHit rather than @c kernel#Position.
 		 *
@@ -187,7 +187,7 @@ namespace ascension {
 		 * @param position The initial position of the point. @c kernel#Point is initialized by @c position.insertionIndex()
 		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 * @post @c #isInstalled() returns @c false.
-		 * @post @c #isTextAreaDisposed() throws @c #NotInstalledException exception.
+		 * @post @c #isTextAreaDisposed() throws @c NotInstalledException exception.
 		 * @post @c #isFullyAvailable() returns @c false.
 		 */
 		VisualPoint::VisualPoint(kernel::Document& document,
@@ -215,7 +215,7 @@ namespace ascension {
 		 * @param other The point used to initialize kernel part of the new object
 		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 * @post @c #isInstalled() returns @c false.
-		 * @post @c #isTextAreaDisposed() throws @c #NotInstalledException exception.
+		 * @post @c #isTextAreaDisposed() throws @c NotInstalledException exception.
 		 * @post @c #isFullyAvailable() returns @c false.
 		 */
 		VisualPoint::VisualPoint(const graphics::font::TextHit<kernel::Point>& other) :
@@ -256,7 +256,7 @@ namespace ascension {
 		void VisualPoint::aboutToMove(TextHit& to) {
 		}
 
-		/// @internal Resets @c #lineNumberCaches_ data member.
+		/// @internal Resets @c lineNumberCaches_ data member.
 		void VisualPoint::buildVisualLineCaches() {
 			assert(isFullyAvailable());
 			if(lineNumberCaches_ == boost::none) {
@@ -406,8 +406,6 @@ namespace ascension {
 		/**
 		 * Moves to the specified position. See @c kernel#Point#moveTo.
 		 * @param to The destination position
-		 * @param trailing If a @c VisualPoint is the end of the visual line, @c modelToView free functions return the
-		 *                 beginning of the next visual line. Set @c true to return the end of the visual line
 		 * @return This @c VisualPoint
 		 * @throw kernel#BadPositionException @a to is outside of the document
 		 * @throw ... Any exceptions @c #aboutToMove implementation of sub-classe throws
@@ -582,9 +580,10 @@ namespace ascension {
 			/**
 			 * Returns the position advanced/returned by N visual lines.
 			 * @param p The base position
+			 * @param direction The direction
 			 * @param lines The number of the visual lines to advance/return
 			 * @return The destination
-			 * @see #nextLine
+			 * @see kernel#locations#nextLine
 			 */
 			VisualDestinationProxy nextVisualLine(const VisualPoint& p, Direction direction, Index lines /* = 1 */) {
 				// ISSUE: LineLayoutVector.offsetVisualLine(VisualLine&, SignedIndex) does not use calculated layouts.

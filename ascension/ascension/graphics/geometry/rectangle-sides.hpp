@@ -1,6 +1,6 @@
 /**
  * @file rectangle-sides.hpp
- * @exeal author
+ * @author exeal
  * @date 2015-10-23 Separated from algorithm.hpp.
  */
 
@@ -18,7 +18,7 @@ namespace ascension {
 
 			/**
 			 * Returns the y-coordinate of the bottom edge of @a rectangle.
-			 * @see #bottomLeft, #bottomRight, #top
+			 * @see geometry#bottomLeft, geometry#bottomRight, geometry#top
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::coordinate_type<Geometry>::type bottom(const Geometry& rectangle) {
@@ -29,7 +29,7 @@ namespace ascension {
 
 			/**
 			 * Returns the x-coordinate of the left edge of @a rectangle.
-			 * @see #bottomLeft, #right, #topLeft
+			 * @see geometry#bottomLeft, geometry#right, geometry#topLeft
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::coordinate_type<Geometry>::type left(const Geometry& rectangle) {
@@ -40,7 +40,7 @@ namespace ascension {
 
 			/**
 			 * Returns the x-coordinate of the right edge of @a rectangle.
-			 * @see #bottomRight, #left, #topRight
+			 * @see geometry#bottomRight, geometry#left, geometry#topRight
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::coordinate_type<Geometry>::type right(const Geometry& rectangle) {
@@ -51,7 +51,7 @@ namespace ascension {
 
 			/**
 			 * Returns the y-coordinate of the top edge of @a rectangle.
-			 * @see #bottom, #topLeft, #topRight
+			 * @see geometry#bottom, geometry#topLeft, geometry#topRight
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::coordinate_type<Geometry>::type top(const Geometry& rectangle) {

@@ -37,7 +37,7 @@ namespace ascension {
 			/// Returns the text viewer which is the target of this command.
 			viewer::TextViewer& target() const BOOST_NOEXCEPT {return *viewer_;}
 		private:
-			/// Called by @c #operator(). For semantics, see @c #operator().
+			/// Called by @c operator(). For semantics, see @c operator().
 			virtual bool perform() = 0;
 		private:
 			viewer::TextViewer* viewer_;

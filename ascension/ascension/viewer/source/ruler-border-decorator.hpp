@@ -14,7 +14,7 @@
 namespace ascension {
 	namespace viewer {
 		namespace source {
-			/// Decorator class of @Ruler interface which displays a border-end.
+			/// Decorator class of @c Ruler interface which displays a border-end.
 			class RulerBorderDecorator : public RulerDecorator {
 			public:
 				RulerBorderDecorator(std::unique_ptr<AbstractRuler> decoratee,

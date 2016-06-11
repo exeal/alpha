@@ -533,8 +533,8 @@ namespace ascension {
 		inline std::weak_ptr<DocumentInput> Document::input() const BOOST_NOEXCEPT {return input_;}
 
 		/**
-		 * Returns @c true if the document is changing (this means the document is in @c #insert or
-		 * @c #insert call).
+		 * Returns @c true if the document is changing (this means the document is in @c #replace or
+		 * @c #replace call).
 		 */
 		inline bool Document::isChanging() const BOOST_NOEXCEPT {return changing_;}
 		
@@ -548,7 +548,7 @@ namespace ascension {
 		
 		/**
 		 * Returns @c true if the document is narrowed.
-		 * @see #narrow, #widen
+		 * @see #narrowToRegion, #widen
 		 */
 		inline bool Document::isNarrowed() const BOOST_NOEXCEPT {
 			return accessibleRegion_.get() != nullptr;
@@ -567,7 +567,7 @@ namespace ascension {
 		inline bool Document::isRecordingChanges() const BOOST_NOEXCEPT {return recordingChanges_;}
 
 		/**
-		 * Returns the @c #Line value of the specified line.
+		 * Returns the @c Document#Line value of the specified line.
 		 * @param line The line
 		 * @return The content of @a line
 		 * @throw BadPostionException @a line is outside of the document
