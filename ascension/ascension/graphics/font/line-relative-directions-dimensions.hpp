@@ -59,10 +59,10 @@ namespace ascension {
 				return opposites[index];
 			}
 
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_NAME(u)
 			BOOST_PARAMETER_NAME(v)
-#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 			/// Base type of @c LineRelativePoint class template.
 			template<typename T>
@@ -123,12 +123,12 @@ namespace ascension {
 				}
 			};
 
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_NAME(over)
 			BOOST_PARAMETER_NAME(under)
 			BOOST_PARAMETER_NAME(lineLeft)
 			BOOST_PARAMETER_NAME(lineRight)
-#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 			/// Base type of @c LineRelativeFourSides class template.
 			template<typename T>

@@ -147,7 +147,7 @@ namespace ascension {
 				}
 			}
 
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 #	include "../../generated/uprops-decomposition-mapping-table"
 #endif
 
