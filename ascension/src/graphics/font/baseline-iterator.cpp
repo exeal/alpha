@@ -33,6 +33,7 @@ namespace ascension {
 			/**
 			 * Constructor. Iterator will address the first visible visual line in the given viewport.
 			 * @param viewport The text viewport
+			 * @param trackOutOfViewport
 			 */
 			BaselineIterator::BaselineIterator(const TextViewport& viewport, bool trackOutOfViewport)
 					: viewport_(&viewport), tracksOutOfViewport_(trackOutOfViewport) {
@@ -43,6 +44,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewport The text viewport
 			 * @param line The visual line this iterator addresses
+			 * @param trackOutOfViewport
 			 */
 			BaselineIterator::BaselineIterator(const TextViewport& viewport, const VisualLine& line, bool trackOutOfViewport)
 					: viewport_(&viewport), tracksOutOfViewport_(trackOutOfViewport) {

@@ -483,8 +483,8 @@ namespace ascension {
 		 * @return @c false if the redo was not completely performed
 		 * @throw ReadOnlyDocumentException The document is read only
 		 * @throw IDocumentInput#ChangeRejectedException The change was rejected
-		 * @std#invalid_argument @a n &gt; #numberOfRedoableChanges()
-		 * @see #undo
+		 * @throw std#invalid_argument @a n &gt; #numberOfRedoableChanges()
+		 * @see undo
 		 */
 		bool Document::redo(std::size_t n /* = 1 */) {
 			if(n == 0)
@@ -736,8 +736,8 @@ namespace ascension {
 		 * @return @c false if the undo was not completely performed
 		 * @throw ReadOnlyDocumentException The document is read only
 		 * @throw IDocumentInput#ChangeRejectedException The change was rejected
-		 * @std#invalid_argument @a n &gt; #numberOfUndoableChanges()
-		 * @see #redo
+		 * @throw std#invalid_argument @a n &gt; #numberOfUndoableChanges()
+		 * @see redo
 		 */
 		bool Document::undo(std::size_t n /* = 1 */) {
 			if(n == 0)

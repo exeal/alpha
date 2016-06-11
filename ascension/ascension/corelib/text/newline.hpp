@@ -76,7 +76,7 @@ namespace ascension {
 		/**
 		 * Returns the number of lines in the specified character sequence.
 		 * This method is exception-neutral (does not throw if @a ForwardIterator does not).
-		 * @tpatam ForwardIterator The type of @a first and @a last
+		 * @tparam ForwardIterator The type of @a first and @a last
 		 * @param first The beginning of the character sequence
 		 * @param last The end of the character sequence
 		 * @return The number of lines. Zero if and only if the input sequence is empty

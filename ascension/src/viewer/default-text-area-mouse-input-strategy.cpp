@@ -110,7 +110,7 @@ namespace ascension {
 		}
 
 		/**
-		 * @class ascension#viewer#DefaultTextAreaMouseInputStrategy
+		 * @class ascension::viewer::DefaultTextAreaMouseInputStrategy
 		 * Standard implementation of @c MouseOperationStrategy interface.
 		 *
 		 * This class implements the standard behavior for the user's mouse input.

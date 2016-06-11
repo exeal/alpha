@@ -703,7 +703,7 @@ namespace ascension {
 				 * Transcodes the given UTF-5 sequence into a Unicode character.
 				 * @param first the beginning of the sequence
 				 * @param last the end of the sequence
-				 * @param[out] the code point of the decoded character
+				 * @param[out] cp code point of the decoded character
 				 * @return the end of the eaten subsequence
 				 */
 				inline const Byte* decodeUtf5Character(const Byte* first, const Byte* last, CodePoint& cp) BOOST_NOEXCEPT {
@@ -728,7 +728,6 @@ namespace ascension {
 				 * @param from the beginning of the sequence
 				 * @param fromEnd the end of the sequence
 				 * @param[out] to beginning of the destination buffer
-				 * @param[out] toEnd the end of the destination buffer
 				 * @return the end of the eaten subsequence
 				 */
 				inline Byte* encodeUtf5Character(const Char* from, const Char* fromEnd, Byte* to) {

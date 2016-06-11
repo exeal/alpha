@@ -395,8 +395,7 @@ namespace ascension {
 			}
 
 			/**
-			 * Paints the specified output device with text layout. The line rendering options provided by
-			 * @c #setLineRenderingOptions method is considered.
+			 * Paints the specified output device with text layout.
 			 * @param context The graphics context
 			 * @param options The optional @c LineRenderingOptions
 			 */
@@ -514,8 +513,7 @@ namespace ascension {
 			}
 
 			/**
-			 * Paints the specified output device with text layout of the specified line. The line rendering
-			 * options provided by @c #setLineRenderingOptions method is considered.
+			 * Paints the specified output device with text layout of the specified line.
 			 * @param line The line number
 			 * @param context The graphics context
 			 * @param alignmentPoint The alignment point of the text layout of the line to draw

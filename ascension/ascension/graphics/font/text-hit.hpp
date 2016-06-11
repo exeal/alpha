@@ -1,5 +1,5 @@
 /**
- * @file text-hit.hpp
+ * @file font/text-hit.hpp
  * Defines @c ascension#graphics#font#TextHit class.
  * @author exeal
  * @date 2012-11-04 created
@@ -7,8 +7,8 @@
  * @date 2012-2013
  */
 
-#ifndef ASCENSION_TEXT_HIT_HPP
-#define ASCENSION_TEXT_HIT_HPP
+#ifndef ASCENSION_GRAPHICS_FONT_TEXT_HIT_HPP
+#define ASCENSION_GRAPHICS_FONT_TEXT_HIT_HPP
 #include <ascension/corelib/basic-types.hpp>	// Index, SignedIndex, BOOST_NOEXCEPT
 #include <boost/operators.hpp>
 #include <numeric>		// std.numeric_limits
@@ -225,4 +225,4 @@ namespace ascension {
 	}
 }
 
-#endif // !ASCENSION_TEXT_HIT_HPP
+#endif // !ASCENSION_GRAPHICS_FONT_TEXT_HIT_HPP

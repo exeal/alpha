@@ -1,5 +1,5 @@
 /**
- * @file hash-table.cpp
+ * @file hash-table.hpp
  * @author exeal
  * @date 2004-2006 (was Lexer.cpp)
  * @date 2006-2014 was rules.cpp
@@ -10,7 +10,6 @@
 
 #ifndef ASCENSION_HASH_TABLE_HPP
 #define ASCENSION_HASH_TABLE_HPP
-
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/ustring.hpp>	// umemcmp
 #include <boost/core/noncopyable.hpp>

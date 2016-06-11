@@ -36,7 +36,7 @@ namespace ascension {
 			static_cast<detail::PointCollection<AbstractPoint>*>(document_)->addNewPoint(*this);
 		}
 
-		/// Destructor. @c #DestructionSignal is invoked.
+		/// Destructor. @c AbstractPoint#DestructionSignal is invoked.
 		AbstractPoint::~AbstractPoint() BOOST_NOEXCEPT {
 			destructionSignal_(this);
 			if(document_ != nullptr)

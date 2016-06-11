@@ -58,9 +58,9 @@ namespace ascension {
 			 */
 			Region(const Position& p1, const Position& p2) BOOST_NOEXCEPT : Super(Iterator(std::min(p1, p2)), Iterator(std::max(p1, p2))) {}
 			/**
-			 * Creates a region with the specified two positions.
+			 * Creates a region with the specified range.
 			 * @tparam SinglePassReadableRange The type of @a range
-			 * @param positions An array, tuple, ... whose size is 2
+			 * @param range Any range
 			 */
 			template<typename SinglePassReadableRange>
 			static Region fromRange(const SinglePassReadableRange& range) {
@@ -137,7 +137,6 @@ namespace ascension {
 			/**
 			 * Constructor.
 			 * @param requested The requested region in the document
-			 * @param message The exception message
 			 */
 			explicit BadRegionException(const Region& requested) : std::invalid_argument(
 				static_cast<std::ostringstream&>(std::ostringstream() << "the region " << requested

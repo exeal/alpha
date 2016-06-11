@@ -108,10 +108,11 @@ namespace ascension {
 			}
 
 			/**
-			 * Clears the layout caches of the specified lines. This method calls @c #layoutModified.
+			 * Clears the layout caches of the specified lines.
 			 * @param lines The range of lines. @a lines.end() is exclusive and will not be cleared
 			 * @param repair Set @c true to recreate layouts for the lines. If @c true, this method calls
-			 *               @c #layoutModified. Otherwise calls @c #layoutDeleted
+			 *               @c VisualLinesListener#visualLinesModified. Otherwise calls
+			 *               @c VisualLinesListener#visualLinesDeleted
 			 */
 			void LineLayoutVector::clearCaches(const boost::integer_range<Index>& lines, bool repair) {
 				const auto orderedLines(lines | adaptors::ordered());

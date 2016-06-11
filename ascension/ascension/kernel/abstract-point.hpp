@@ -85,7 +85,7 @@ namespace ascension {
 			return *this;
 		}
 
-		/// Returns the @c #DestructionSignal signal connector.
+		/// Returns the @c AbstractPoint#DestructionSignal signal connector.
 		inline SignalConnector<AbstractPoint::DestructionSignal> AbstractPoint::destructionSignal() BOOST_NOEXCEPT {
 			return makeSignalConnector(destructionSignal_);
 		}

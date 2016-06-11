@@ -50,7 +50,6 @@ namespace ascension {
 		/**
 		 * Constructor compiles the pattern.
 		 * @param pattern The search pattern
-		 * @param direction The direction to search
 		 * @param caseSensitive Set @c true to perform case-sensitive search
 		 * @param collator The collator or @c null if not needed. This parameter is not exist if the symbol
 		 *                 ASCENSION_NO_UNICODE_COLLATION is defined

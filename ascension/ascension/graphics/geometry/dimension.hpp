@@ -211,7 +211,7 @@ namespace boost {
 namespace ascension {
 	namespace graphics {
 		namespace geometry {
-			/// @def geometry_dimension_specific_algorithms @c Dimension Specific Algorithms
+			/// @defgroup geometry_dimension_specific_algorithms BasicDimension Specific Algorithms
 			/// @{
 			template<typename Geometry1, typename Geometry2>
 			inline bool equals(const Geometry1& dimension1, const Geometry2& dimension2,

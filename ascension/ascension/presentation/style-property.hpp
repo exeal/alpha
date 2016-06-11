@@ -309,8 +309,8 @@ namespace ascension {
 			/**
 			 * Implements "Cascading" describe by CSS Cascading and Inheritance Level 3.
 			 * @tparam Property @c StyleProperty class template
-			 * @param declaredValue The "Declared Value" to process
-			 * @param[out] cascadedValue The "Cascaded Value"
+			 * @param declaredValues The "Declared Value" to process
+			 * @return The "Cascaded Value"
 			 */
 			template<typename SinglePassReadableRange>
 			inline typename boost::range_iterator<SinglePassReadableRange>::type cascade(const SinglePassReadableRange& declaredValues) {
@@ -392,7 +392,7 @@ namespace ascension {
 			 * @tparam ParentComputedValue The type of @a parentComputedValue
 			 * @param cascadedValue The "Cascaded Value" to process or any defaulting ketyword
 			 * @param parentComputedValue Either of the followings give the "Computed Value" of the parent element: (a)
-			 *                            A literal value of type @c ComputedValue&lt;Property&gt;::type. (b) A
+			 *                            A literal value of type @c ComputedValue&lt;Property&gt;#type. (b) A
 			 *                            function takes no parameter and returns the. (c) An object of type
 			 *                            @c HandleAsRoot if the element is the root
 			 * @param[out] specifiedValue The calculated "Specified Value"

@@ -406,6 +406,7 @@ namespace ascension {
 			/**
 			 * Converts the "Computed Value" of @c FontSize into "Used Value".
 			 * @param computedValue The "Computed Value"
+			 * @param context The @c Length#Context
 			 * @param computedParentFontSize The "Computed Value" of the parent element
 			 * @param mediumFontSize The pixel size for 'medium' value. If this is @c boost#none, @c GlobalFontSettings
 			 *                       is used

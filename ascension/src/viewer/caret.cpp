@@ -55,20 +55,10 @@ namespace ascension {
 		 * When the caret moves, the text viewer will scroll automatically to show the caret. See the
 		 * description of @c #enableAutoShow and @c #isAutoShowEnabled.
 		 *
-		 * @c Caret hides @c Point#excludeFromRestriction and can't enter the inaccessible region of the
-		 * document. @c #isExcludedFromRestriction always returns @c true.
-		 *
 		 * @c Caret throws @c ReadOnlyDocumentException when tried to change the read-only document.
 		 *
 		 * このクラスの編集用のメソッドは @c EditPoint 、@c VisualPoint の編集用メソッドと異なり、
 		 * 積極的に連続編集とビューの凍結を使用する
-		 *
-		 * 行選択および単語選択は、選択の作成および拡張時にアンカーとキャレットを行境界や単語境界に束縛する機能で、
-		 * @c #extendSelectionTo メソッドで実際にこれらの点が移動する位置を制限する。
-		 * また、この場合 @c #extendSelectionTo を呼び出すとアンカーが自動的に移動する。
-		 * @c #beginLineSelection 、@c #beginWordSelection でこれらのモードに入ることができ、
-		 * @c #restoreSelectionMode で通常状態に戻ることができる。
-		 * また、これらのモードで @c #moveTo か @c #select を使っても通常状態に戻る
 		 *
 		 * 対括弧の検索はプログラムを編集しているときに役立つ機能で、キャレット位置に括弧があれば対応する括弧を検索する。
 		 * 括弧のペアを強調表示するのは、現時点ではビューの責任である
@@ -94,7 +84,7 @@ namespace ascension {
 		 * @typedef ascension::viewer::Caret::InputModeChangedSignal
 		 * The signal which gets emitted when any input mode of the caret had been changed.
 		 * @param caret The caret
-		 * @see #inputModeChangedSignal, #isOvertypeMode, #overtypeModeChangedSignal, #setOvertypeMode
+		 * @see #inputModeChangedSignal, #isOvertypeMode, #setOvertypeMode
 		 */
 
 		/**
@@ -635,9 +625,8 @@ namespace ascension {
 		 * If the selection is empty, inserts the text at current position.
 		 * @param text The text to insert
 		 * @param rectangleInsertion Set @c true to insert text as rectangle
-		 * @throw NullPointerException @a first and/or @last is @c null
-		 * @throw std#invalid_argument @a first &gt; @a last
-		 * @throw ... Any exceptions @c Document#insert and @c Document#erase throw
+		 * @throw NullPointerException @a text is @c null
+		 * @throw ... Any exceptions @c Document#replace throws
 		 */
 		void Caret::replaceSelection(const StringPiece& text, bool rectangleInsertion /* = false */) {
 			kernel::Position e;

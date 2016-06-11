@@ -260,7 +260,7 @@ namespace ascension {
 			virtual std::string name() const BOOST_NOEXCEPT = 0;
 			/**
 			 * Returns an native character which indicates that the given Unicode character can't
-			 * map. If @c #policy returns @c REPLACE_UNMAPPABLE_CHARACTER, the encoder should use
+			 * map. If @c Encoder#substitutionPolicy returns @c REPLACE_UNMAPPABLE_CHARACTER, the encoder should use
 			 * this character. Default implementation returns 0x1A.
 			 */
 			virtual Byte substitutionCharacter() const BOOST_NOEXCEPT {return 0x1a;}

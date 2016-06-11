@@ -8,7 +8,7 @@
  * - IBM9048
  * - IBM12712
  * - windows-1255
- * - <del>MacHebrew</del>
+ * - MacHebrew (not implemented)
  * @author exeal
  * @date 2007-2010, 2014
  */

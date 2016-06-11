@@ -27,8 +27,8 @@ namespace ascension {
 		 *
 		 * <h3>Code point-based interface</h3>
 		 *
-		 * The operations perform using code point (not code unit). @c #current returns a code point (not
-		 * code unit value) of the character the iterator adresses, and @c #next skips a legal low
+		 * The operations perform using code point (not code unit). @c CharacterIterator#current returns a code point (not
+		 * code unit value) of the character the iterator adresses, and @c next skips a legal low
 		 * surrogate code unit.
 		 *
 		 * Following example prints all code points of the text.
@@ -40,7 +40,7 @@ namespace ascension {
 		 * }
 		 * @endcode
 		 *
-		 * Relational operations (@c #equals and @c #less) must be applied to the same types.
+		 * Relational operations (@c equals and @c less) must be applied to the same types.
 		 *
 		 * @code
 		 * StringCharacterIterator i1 = ...;

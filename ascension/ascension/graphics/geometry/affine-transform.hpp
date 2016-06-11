@@ -36,6 +36,7 @@ namespace ascension {
 			 * @{
 			 */
 
+			/// Represents 2D affine transform.
 			typedef boost::geometry::strategy::transform::ublas_transformer<double, 2, 2> AffineTransform;
 
 			/**
@@ -57,10 +58,21 @@ namespace ascension {
 			/// @}
 
 			/**
-			 * @defgroup affine_transform_instances
+			 * @defgroup affine_transform_instances Factories For @c AffineTransform
 			 * @{
 			 */
-			/// 
+
+			/**
+			 * Creates a new @c AffineTransform instance with the given coordinates.
+			 * @param sx The X coordinate scaling element
+			 * @param sy The Y coordinate scaling element
+			 * @param shx The X coordinate shearing element
+			 * @param shy The Y coordinate shearing element
+			 * @param tx The X coordinate translation element
+			 * @param ty The Y coordinate translation element
+			 * @return A @c AffineTransform instance
+			 */
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_FUNCTION(
 					(AffineTransform), makeAffineTransform, tag,
 					(required (sx, *) (sy, *) (shx, *) (shy, *) (tx, *) (ty, *))) {
@@ -69,6 +81,10 @@ namespace ascension {
 					shy, sy, ty,	// m10 m11 m12
 					0, 0, 1);		// m20 m21 m22
 			}
+#else
+			template<typename T>
+			AffineTransform makeAffineTransform(T sx, T sy, T shx, T shy, T tx, T ty);
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 			/**
 			 * @defgroup affine_transform_factories_for_known_transforms Factories For Known Transformations
@@ -116,7 +132,7 @@ namespace ascension {
 			 * @return An @c AffineTransform object that is a rotation transform, created with the specified angle of rotation
 			 */
 			template<typename DegreeOrRadian>
-			inline AffineTransform makeRotationTransform(double theta) {
+			inline AffineTransform makeRotationTransform(double thetaInRadians) {
 				return AffineTransform(boost::geometry::strategy::transform::rotate_transformer<DegreeOrRadian, double, 2, 2>(thetaInRadians));
 			}
 #if 0
@@ -158,11 +174,16 @@ namespace ascension {
 			 * @param sy The factor by which coordinates are scaled along the Y axis direction
 			 * @return An @c AffineTransform object that scales coordinates by the specified factors
 			 */
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_FUNCTION(
 					(AffineTransform), makeScalingTransform, tag,
 					(required (sx, *) (sy, *))) {
 				return AffineTransform(boost::geometry::strategy::transform::scale_transformer<double, 2, 2>(sx, sy));
 			}
+#else
+			template<typename T>
+			AffineTransform makeScalingTransform(T sx, T sy);
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 			/**
 			 * @fn ascension::graphics::geometry::makeShearingTransform
@@ -173,11 +194,16 @@ namespace ascension {
 			 *            factor of their X coordinate
 			 * @return An @c AffineTransform object that shears coordinates by the specified multipliers
 			 */
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_FUNCTION(
 					(AffineTransform), makeShearingTransform, tag,
 					(required (shx, *) (shy, *))) {
 				return makeAffineTransform(_sx = 1.0, _shx = shx, _shy = shy, _sy = 1.0, _tx = 0.0, _ty = 0.0);
 			}
+#else
+			template<typename T>
+			AffineTransform makeShearingTransform(T shx, T shy);
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 			/**
 			 * @fn ascension::graphics::geometry::makeTranslationTransform
@@ -186,11 +212,16 @@ namespace ascension {
 			 * @param ty The distance by which coordinates are translated in the Y axis direction
 			 * @return An @c AffineTransform object that represents a translation transformation, created with the specified vector
 			 */
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_FUNCTION(
 					(AffineTransform), makeTranslationTransform, tag,
 					(required (tx, *) (ty, *))) {
 				return makeAffineTransform(_sx = 1.0, _sy = 1.0, _shx = 0.0, _shy = 0.0, _tx = tx, _ty = ty);
 			}
+#else
+			template<typename T>
+			AffineTransform makeTranslationTransform(T tx, T ty);
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			/// @}
 			/// @}
 

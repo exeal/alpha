@@ -28,7 +28,7 @@ namespace ascension {
 			 * @note The "Computed Value" of almost all style properties which have @c Length as "Specified Value" are
 			 *       also @c Length types, because a @c Presentation instance is shared by multiple @c TextViewer s.
 			 *       The computation into physical units is delayed until generation of concrete layouts.
-			 * @note Resolution of viewport-related units uses @c #Context#viewport data member which refers to the
+			 * @note Resolution of viewport-related units uses @c Context#viewport data member which refers to the
 			 *       the size of @c TextViewport (equals to 'allocation-rectangle' of the @c TextArea).
 			 * @see CSS Values and Units Module Level 3, 5. Distance Units: the ‘<length>’ type
 			 *      (http://www.w3.org/TR/css3-values/#lengths)
@@ -243,11 +243,11 @@ namespace ascension {
 
 			/**
 			 * [Copied from SVG 1.1 documentation] Preserves the same underlying stored value, but resets the stored
-			 * unit identifier to the given @a unitType. Object attributes @c #unitType(), @c #valueInSpecifiedUnits()
-			 * and @c #valueAsString() might be modified as a result of this method. For example, if the original value
+			 * unit identifier to the given @a unitType. Object attributes @c #unitType(), @c valueInSpecifiedUnits()
+			 * and @c valueAsString() might be modified as a result of this method. For example, if the original value
 			 * were "0.5cm" and the method was invoked to convert to millimeters, then the unitType would be changed to
-			 * @c #MILIMIETERS, @c #valueInSpecifiedUnits() would be changed to the numeric value 5 and
-			 * @c #valueAsString() would be changed to "5mm".
+			 * @c MILIMIETERS, @c valueInSpecifiedUnits() would be changed to the numeric value 5 and
+			 * @c valueAsString() would be changed to "5mm".
 			 * @param unitType The unit type to switch to
 			 * @param context The context used to map between absolute and relative values
 			 * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other @c #Unit
@@ -285,7 +285,7 @@ namespace ascension {
 
 			/**
 			 * [Copied from SVG 1.1 documentation] Sets the value as a floating point value, in the units expressed by
-			 * @c #unitType(). Setting this attribute will cause @c #value() and @c #valueAsString() to be updated
+			 * @c #unitType(). Setting this attribute will cause @c value() and @c valueAsString() to be updated
 			 * automatically to reflect this setting.
 			 * @param value The new value
 			 * @see #valueInSpecifiedUnits

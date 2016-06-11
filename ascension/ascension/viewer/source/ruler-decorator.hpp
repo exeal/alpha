@@ -14,7 +14,7 @@
 namespace ascension {
 	namespace viewer {
 		namespace source {
-			/// Base class of @Ruler interface decorator.
+			/// Base class of @c Ruler interface decorator.
 			class RulerDecorator : public AbstractRuler, public TextViewerComponent::Locator {
 			protected:
 				/**

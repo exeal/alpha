@@ -176,7 +176,7 @@ namespace ascension {
 			 * Returns the layout of the specified line.
 			 * @param line The line
 			 * @return The layout or @c null if the layout is not cached
-			 * @see #oprator[], #at(Index, const UseCalculatedLayoutTag&)
+			 * @see oprator[], at(Index, const UseCalculatedLayoutTag&)
 			 */
 			inline const TextLayout* LineLayoutVector::at(Index line) const BOOST_NOEXCEPT {
 				if(pendingCacheClearance_ && includes(*pendingCacheClearance_, line))

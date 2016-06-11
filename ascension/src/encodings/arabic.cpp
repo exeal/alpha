@@ -9,7 +9,7 @@
  * - IBM9238
  * - IBM16804
  * - windows-1256
- * - <del>MacArabic</del>
+ * - MacArabic (not implemented)
  * @author exeal
  * @date 2007-2009, 2014
  */

@@ -38,8 +38,8 @@ namespace ascension {
 
 			/// Returns the bit depth (number of bit planes) of the device.
 			virtual std::uint8_t depth() const = 0;
-			/// Returns the number of colors available for the rendering device or
-			/// @c std#numeric_limits&lt;std#uint32_t&gt;#max().
+			/// Returns the number of colors available for the rendering device or the result of
+			/// @c std#numeric_limits&lt;std#uint32_t&gt;#max call.
 			virtual std::uint32_t numberOfColors() const = 0;
 
 			/// Returns the width of the rendering device in device units.

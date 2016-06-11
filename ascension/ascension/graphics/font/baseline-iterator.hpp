@@ -25,7 +25,7 @@ namespace ascension {
 
 			/**
 			 * A @c BaselineIterator iterates the baselines of the visual lines in the specified @c TextViewport.
-			 * @c #operator* returns distance from the before-edge of the @c TextViewport to the baseline of the
+			 * @c operator* returns distance from the before-edge of the @c TextViewport to the baseline of the
 			 * current visual line.
 			 * @note Once reached the end, this iterator can't move anymore.
 			 */

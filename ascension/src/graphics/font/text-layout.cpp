@@ -260,7 +260,7 @@ namespace ascension {
 			 * @param line The line number
 			 * @return The line bounds in user units
 			 * @throw IndexOutOfBoundsException @a line &gt;= @c #numberOfLines()
-			 * @see #basline, #lineStartEdge, #measure
+			 * @see #baseline, #lineStartEdge, #measure
 			 */
 			presentation::FlowRelativeFourSides<Scalar> TextLayout::bounds(Index line) const {
 				Scalar over = std::numeric_limits<Scalar>::min(), under = std::numeric_limits<Scalar>::min();

@@ -1,5 +1,5 @@
 /**
- * @file text-hit.hpp
+ * @file viewer/text-hit.hpp
  * Defines @c viewer#TextHit type and related free functions.
  * @author exeal
  * @see graphics/font/text-hit.hpp

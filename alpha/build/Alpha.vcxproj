@@ -586,11 +586,7 @@
     <ClInclude Include="..\src\ui.hpp" />
     <ClInclude Include="..\..\ascension\ascension\config.hpp" />
     <ClInclude Include="..\..\ascension\ascension\platforms.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\win32\dc.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\win32\file.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\win32\gdi-object.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\module.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\win32\timer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\ui\common-controls.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\ui\dialog.hpp" />
@@ -603,7 +599,6 @@
     <ClInclude Include="..\..\ascension\ascension\win32\com\com.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\com\dispatch-impl.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\com\enum-impl.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\win32\com\exception.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\com\ole-type-wrapper.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\com\text-data-object.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\com\unknown-impl.hpp" />

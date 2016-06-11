@@ -244,16 +244,6 @@ namespace ascension {
 			return p;
 		}
 
-		/**
-		 * @fn void ascension::rules::LexicalPartitioner::setRules(InputIterator first, InputIterator last)
-		 * @brief Sets the new transition rules.
-		 * @tparam InputIterator Input iterator provides transition rules. The deference operator should return a value
-		 *                       implicitly convertible to a pointer to @c TransitionRule. This method calls
-		 *                       @c TransitionRule#clone to copy the values
-		 * @param first, last The transition rules
-		 * @throw IllegalStateException This partitioner had already been connected to a document
-		 */
-		
 		// returns the transition state (corresponding content type) at the given position.
 		inline kernel::ContentType LexicalPartitioner::transitionStateAt(const kernel::Position& at) const BOOST_NOEXCEPT {
 			if(at == kernel::Position::zero())

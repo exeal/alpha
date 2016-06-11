@@ -122,11 +122,10 @@ namespace ascension {
 				std::shared_ptr<const Gdiplus::Font> native() const;
 #endif
 				/**
-				 * Creates a @c GlyphVector by mapping characters to glyphs one-to-one based on the
-				 * Unicode cmap in this font. This method does no other processing besides the
-				 * mapping of glyphs to characters. This means that this method is not useful for
-				 * some scripts, such as Arabic, Hebrew, Thai, and Indic, that require reordering,
-				 * shaping, or ligature substitution.
+				 * Creates a @c GlyphVector by mapping characters to glyphs one-to-one based on the Unicode cmap in
+				 * this font. This method does no other processing besides the mapping of glyphs to characters. This
+				 * means that this method is not useful for some scripts, such as Arabic, Hebrew, Thai, and Indic, that
+				 * require reordering, shaping, or ligature substitution.
 				 * @param frc The font render context
 				 * @param text The text string
 				 * @return A new @c GlyphVector created with the specified string and the specified
@@ -135,13 +134,12 @@ namespace ascension {
 				std::unique_ptr<const GlyphVector> createGlyphVector(
 					const FontRenderContext& frc, const StringPiece& text) const;
 				/**
-				 * Creates a @c GlyphVector by mapping characters to glyphs one-to-one based on the
-				 * Unicode cmap in this font. This method does no other processing besides the
-				 * mapping of glyphs to characters. This means that this method is not useful for
-				 * some scripts, such as Arabic, Hebrew, Thai, and Indic, that require reordering,
-				 * shaping, or ligature substitution.
+				 * Creates a @c GlyphVector by mapping characters to glyphs one-to-one based on the Unicode cmap in
+				 * this font. This method does no other processing besides the mapping of glyphs to characters. This
+				 * means that this method is not useful for some scripts, such as Arabic, Hebrew, Thai, and Indic, that
+				 * require reordering, shaping, or ligature substitution.
 				 * @param frc The font render context
-				 * @param text The text string
+				 * @param glyphCodes The vector of glyph codes
 				 * @return A new @c GlyphVector created with the specified string and the specified
 				 *         @c FontRenderContext
 				 */
@@ -160,14 +158,13 @@ namespace ascension {
 					CodePoint variationSelector, GlyphCode defaultGlyph) const;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				/**
-				 * Returns a new @c GlyphVector object, performing full layout of the text if
-				 * possible. Full layout is required for complex text, such as Arabic or Hindi.
-				 * Support for different scripts depends on the font and implementation.
+				 * Returns a new @c GlyphVector object, performing full layout of the text if possible. Full layout is
+				 * required for complex text, such as Arabic or Hindi. Support for different scripts depends on the
+				 * font and implementation.
 				 * @param frc The font render context
 				 * @param text The text to layout
-				 * @param flags Control flags
-				 * @return A new @c GlyphVector representing the text, with glyphs chosen and
-				 *         positioned so as to best represent the text
+				 * @return A new @c GlyphVector representing the text, with glyphs chosen and positioned so as to best
+				 *         represent the text
 				 */
 				std::unique_ptr<const GlyphVector> layoutGlyphVector(
 					const FontRenderContext& frc, const StringPiece& text) const;

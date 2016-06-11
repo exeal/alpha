@@ -1,5 +1,5 @@
 /**
- * @file color.hpp
+ * @file styles/color.hpp
  * @author exeal
  * @see ascension/graphics/color.hpp
  * @date 2003-2006 was LineLayout.h

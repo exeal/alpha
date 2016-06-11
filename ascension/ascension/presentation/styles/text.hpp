@@ -453,8 +453,8 @@ namespace ascension {
 			 * specified via the ‘each-line’ and/or ‘hanging’ keywords, only lines that are the first formatted line of
 			 * an element are affected. For example, the first line of an anonymous block box is only affected if it is
 			 * the first child of its parent element.
-			 * @tparam LengthType The type of @c #length data member. Usually @c Length or @c Scalar
-			 * @tparam BooleanType The type of @c #hanging and @c #eachLine data members
+			 * @tparam LengthType The type of @c BasicTextIndent#length data member. Usually @c Length or @c Scalar
+			 * @tparam BooleanType The type of @c BasicTextIndent#hanging and @c BasicTextIndent#eachLine data members
 			 * @see CSS Text Level 3, 9.1. First Line Indentation: the ‘text-indent’ property
 			 *      (http://www.w3.org/TR/css3-text/#text-indent-property)
 			 * @see XSL 1.1, 7.16.11 "text-indent" (http://www.w3.org/TR/xsl/#text-indent)

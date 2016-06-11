@@ -908,6 +908,7 @@ namespace ascension {
 			/**
 			 * Constructor.
 			 * @param viewer The target text viewer
+			 * @param useKillRing
 			 */
 			PasteCommand::PasteCommand(viewer::TextViewer& viewer, bool useKillRing) BOOST_NOEXCEPT : Command(viewer), usesKillRing_(useKillRing) {
 			}
@@ -995,6 +996,7 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 * @param onlySelection
+			 * @param replacement The replacement string
 			 * @param callback
 			 */
 			ReplaceAllCommand::ReplaceAllCommand(viewer::TextViewer& viewer, bool onlySelection,

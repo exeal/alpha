@@ -204,7 +204,7 @@ namespace ascension {
 
 		/**
 		 * Sets the delay between a character input and the session activation.
-		 * @param milliseconds The delay amount. If set to zero, the proposals will popup immediately
+		 * @param newValue The delay amount. If set to zero, the proposals will popup immediately
 		 */
 		void DefaultContentAssistant::setAutoActivationDelay(boost::chrono::milliseconds newValue) {
 			autoActivationDelay_ = newValue;

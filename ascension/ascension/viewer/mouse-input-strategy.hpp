@@ -57,7 +57,7 @@ namespace ascension {
 				/**
 				 * Locks the target of mouse input. After the call, all mouse input are sent to this
 				 * @c MouseInputStrategy object.
-				 * @param The target which want to lock
+				 * @param strategy The target which want to lock
 				 * @return @c true if the lock succeeded. @c false if failed
 				 * @throw std#bad_weak_ptr @a strategy is @c null
 				 * @see #unlockMouseInputTarget
@@ -65,7 +65,7 @@ namespace ascension {
 				virtual bool lockMouseInputTarget(std::weak_ptr<MouseInputStrategy> strategy) = 0;
 				/**
 				 * Unlocks the target of mouse input.
-				 * @param The target to unlock
+				 * @param strategy The target to unlock
 				 * @see #lockMouseInputTarget, MouseInputStrategy#interruptMouseReaction
 				 */
 				virtual void unlockMouseInputTarget(MouseInputStrategy& strategy) BOOST_NOEXCEPT = 0;

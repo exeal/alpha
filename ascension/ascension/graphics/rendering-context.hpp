@@ -210,7 +210,7 @@ namespace ascension {
 			 * @param font The font to get metrics. If this is @c null, this method returns the font metrics for the
 			 *             current font
 			 * @return The font metrics with values in the user units
-			 * @see #font
+			 * @see font
 			 */
 			std::unique_ptr<const font::FontMetrics<Scalar>> fontMetrics(
 				std::shared_ptr<const font::Font> font = nullptr) const;
@@ -227,14 +227,14 @@ namespace ascension {
 			/**
 			 * Pushes a copy of the current drawing state onto the drawing state stack.
 			 * @return This object
-			 * @see #restore
+			 * @see restore
 			 */
 			RenderingContext2D& save();
 			/**
 			 * Pops the top entry in the drawing state stack, and resets the drawing state it describes.
 			 * If there is no saved state, this method does nothing.
 			 * @return This object
-			 * @see #save
+			 * @see save
 			 */
 			RenderingContext2D& restore();
 			/// @}
@@ -244,7 +244,7 @@ namespace ascension {
 			/**
 			 * Returns the current width of lines, in logical coordinate space units. Initial value is @c 1.0.
 			 * @return The current line width
-			 * @see #setLineWidth
+			 * @see setLineWidth
 			 */
 			Scalar lineWidth() const;
 			/**
@@ -252,14 +252,14 @@ namespace ascension {
 			 * @param lineWidth The width of lines, in logical coordinate space units. Values that are not finite
 			 *                  values greater than zero are ignored
 			 * @return This object
-			 * @see #lineWidth
+			 * @see lineWidth
 			 */
 			RenderingContext2D& setLineWidth(Scalar lineWidth);
 			/**
 			 * Returns the type of endings that the renderer will place on the end of lines. Initial value is
 			 * @c LineCap#BUTT.
 			 * @return The current line cap style
-			 * @see #setLineCap
+			 * @see setLineCap
 			 */
 			LineCap lineCap() const;
 			/**
@@ -267,14 +267,14 @@ namespace ascension {
 			 * @param lineCap The line cap style
 			 * @return This object
 			 * @throw UnknownValueException @a lineCap is unknown
-			 * @see #lineCap
+			 * @see lineCap
 			 */
 			RenderingContext2D& setLineCap(LineCap lineCap);
 			/**
 			 * Returns the type of corners that the renderer will place where two lines meet. Initial value is
 			 * @c LineJoin#MITER.
 			 * @return The current line join style
-			 * @see #setLineJoin
+			 * @see setLineJoin
 			 */
 			LineJoin lineJoin() const;
 			/**
@@ -282,41 +282,41 @@ namespace ascension {
 			 * @param lineJoin The line join style
 			 * @return This object
 			 * @throw UnknownValueException @a lineJoin is unknown
-			 * @see #lineJoin
+			 * @see lineJoin
 			 */
 			RenderingContext2D& setLineJoin(LineJoin lineJoin);
 			/**
 			 * Returns the miter limit ratio to decide how to render joins. Initial value is @c 10.0.
 			 * @return The current miter limit ratio
-			 * @see #setMiterLimit
+			 * @see setMiterLimit
 			 */
 			double miterLimit() const;
 			/**
 			 * Sets the miter limit ratio.
 			 * @param miterLimit The miter limit ratio. Values that are not finite values greater than zero are ignored
 			 * @return This object
-			 * @see #miterLimit
+			 * @see miterLimit
 			 */
 			RenderingContext2D& setMiterLimit(double miterLimit);
 			/**
 			 * @return The current dash list
-			 * @see #setLineDash
+			 * @see setLineDash
 			 */
 			const std::vector<Scalar>& lineDash() const;
 			/**
 			 * @param lineDash
 			 * @return This object
-			 * @see #lineDash
+			 * @see lineDash
 			 */
 			RenderingContext2D& setLineDash(const std::vector<Scalar>& lineDash);
 			/**
-			 * @see #setLineDashOffset
+			 * @see setLineDashOffset
 			 */
 			Scalar lineDashOffset() const;
 			/**
 			 * @param lineDashOffset
 			 * @return This object
-			 * @see #lineDashOffset
+			 * @see lineDashOffset
 			 */
 			RenderingContext2D& setLineDashOffset(Scalar lineDashOffset);
 			/// @}
@@ -326,19 +326,19 @@ namespace ascension {
 			/**
 			 * Returns a @c Font object of the current font of the context. The initial value is platform-dependent.
 			 * @return The current font settings
-			 * @see #setFont
+			 * @see setFont
 			 */
 			std::shared_ptr<const font::Font> font() const;
 			/**
 			 * Sets the font settings by the @c Font object.
 			 * @return This object
-			 * @see #font
+			 * @see font
 			 */
 			RenderingContext2D& setFont(std::shared_ptr<const font::Font> font);
 			/**
 			 * Returns the current text alignment settings. Default value is @c TEXT_ANCHOR_START.
 			 * @return The current text alignment settings
-			 * @see #setTextAlignment, #textBaseline
+			 * @see setTextAlignment, textBaseline
 			 */
 			TextAlignment textAlignment() const;
 			/**
@@ -346,22 +346,22 @@ namespace ascension {
 			 * @param textAlignment The new text alignment settings
 			 * @return This object
 			 * @throw UnknownValueException
-			 * @see #setTextBaseline, #textAlignment
+			 * @see setTextBaseline, textAlignment
 			 */
 			RenderingContext2D& setTextAlignment(TextAlignment textAlignment);
 			/**
 			 * Returns the current baseline alignment settings. Default value is
 			 * @c ALIGNMENT_BASELINE_ALPHABETIC.
 			 * @return The current baseline alignment settings
-			 * @see #setTextBaseline, #textAlignment
+			 * @see setTextBaseline, textAlignment
 			 */
 			font::AlignmentBaseline textBaseline() const;
 			/**
 			 * Sets the baseline alignment settings.
-			 * @param textAlignment The new baseline alignment settings
+			 * @param baseline The new baseline alignment settings
 			 * @return This object
 			 * @throw UnknownValueException
-			 * @see #setTextAlignment, #textBaseline
+			 * @see setTextAlignment, textBaseline
 			 */
 			RenderingContext2D& setTextBaseline(font::AlignmentBaseline baseline);
 			/// @}
@@ -372,14 +372,14 @@ namespace ascension {
 			 * Creates a new subpath with the specified point.
 			 * @param to The point as first (and only) of the new subpath
 			 * @return This object
-			 * @see #lineTo
+			 * @see lineTo
 			 */
 			RenderingContext2D& moveTo(const Point& to);
 			/**
 			 * Marks the current subpath as closed, and starts a new subpath with a point the same as the start and end
 			 * of the newly closed subpath.
 			 * @return This object
-			 * @see #beginPath
+			 * @see beginPath
 			 */
 			RenderingContext2D& closePath();
 			/**
@@ -387,7 +387,7 @@ namespace ascension {
 			 * the path has no subpaths, ensures there is a subpath for that point.
 			 * @param to The point to add to the current subpath
 			 * @return This object
-			 * @see #moveTo
+			 * @see moveTo
 			 */
 			RenderingContext2D& lineTo(const Point& to);
 			/**
@@ -396,7 +396,7 @@ namespace ascension {
 			 * @param cp The control point
 			 * @param to The point to add to the current subpath
 			 * @return This object
-			 * @see #bezierCurveTo
+			 * @see bezierCurveTo
 			 */
 			RenderingContext2D& quadraticCurveTo(const Point& cp, const Point& to);
 			/**
@@ -406,7 +406,7 @@ namespace ascension {
 			 * @param cp2 The second control point
 			 * @param to The point to add to the current subpath
 			 * @return This object
-			 * @see #bezierCurveTo
+			 * @see bezierCurveTo
 			 */
 			RenderingContext2D& bezierCurveTo(const Point& cp1, const Point& cp2, const Point& to);
 			/**
@@ -417,7 +417,7 @@ namespace ascension {
 			 * @param radius Radius of the circle gives the arc
 			 * @return This object
 			 * @throw std#invalid_argument @a radius is negative
-			 * @see #arc
+			 * @see arc
 			 */
 			RenderingContext2D& arcTo(const Point& p1, const Point& p2, Scalar radius);
 			/**
@@ -428,11 +428,11 @@ namespace ascension {
 			 * @param radius Radius of the circle gives the arc
 			 * @param startAngle Defines the start point 
 			 * @param endAngle Defines the end point
-			 * @param counterClosewise If @c false, the arc is the path along the circumstance of the circle from the
+			 * @param counterClockwise If @c false, the arc is the path along the circumstance of the circle from the
 			 *                         start point to the end point, closewise
 			 * @return This object
 			 * @throw std#invalid_argument @a radius is negative
-			 * @see #arcTo
+			 * @see arcTo
 			 */
 			RenderingContext2D& arc(const Point& p, Scalar radius,
 				double startAngle, double endAngle, bool counterClockwise = false);
@@ -451,7 +451,7 @@ namespace ascension {
 			 * @param sx The scale factor in the horizontal direction. The factor is multiplies
 			 * @param sy The scale factor in the vertical direction. The factor is multiplies
 			 * @return This object
-			 * @see #rotate, #translate, #transform, #setTransform
+			 * @see rotate, translate, transform, setTransform
 			 */
 #ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_MEMBER_FUNCTION(
@@ -469,7 +469,7 @@ namespace ascension {
 			 * @tparam DegreeOrRadian @c boost#geometry#degree or @c boost#geometry#radian
 			 * @param angle A clockwise rotation angle measured in units specified by @a DegreeOrRadian
 			 * @return This object
-			 * @see #scale, #translate, #transform, #setTransform
+			 * @see scale, translate, transform, setTransform
 			 */
 			template<typename DegreeOrRadian>
 			RenderingContext2D& rotate(double angle) {
@@ -481,17 +481,17 @@ namespace ascension {
 			 *              in the horizontal direction and @c geometry#dy(delta) represents the translation distance
 			 *              in the vertical direction. These are in logical coordinate space units
 			 * @return This object
-			 * @see #scale, #rotate, #transform, #setTransform
+			 * @see scale, rotate, transform, setTransform
 			 */
 			RenderingContext2D& translate(const Dimension& delta) {
 				return translate(geometry::dx(delta), geometry::dy(delta));
 			}
 			/**
 			 * Adds the translation transformation described by @a dx and @a dy to the transformation matrix.
-			 * @param dx The translation distance in the horizontal direction in logical coordinate space units
-			 * @param dy The translation distance in the vertical direction in logical coordinate space units
+			 * @param tx The translation distance in the horizontal direction in logical coordinate space units
+			 * @param ty The translation distance in the vertical direction in logical coordinate space units
 			 * @return This object
-			 * @see #scale, #rotate, #transform, #setTransform
+			 * @see scale, rotate, transform, setTransform
 			 */
 #ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_MEMBER_FUNCTION(
@@ -509,14 +509,14 @@ namespace ascension {
 			 * matrix with the matrix described by @a matrix.
 			 * @param matrix The matrix to multiply with
 			 * @return This object
-			 * @see #scale, #rotate, #translate, #setTransform
+			 * @see scale, rotate, translate, setTransform
 			 */
 			RenderingContext2D& transform(const AffineTransform& matrix);
 			/**
-			 * Resets the current transformation to the identity matrix and calls @c #transform(matrix).
+			 * Resets the current transformation to the identity matrix and calls @c #transform(const AffineTransform&amp;).
 			 * @param matrix The new transformation matrix
 			 * @return This object
-			 * @see #scale, #rotate, #translate, #transform
+			 * @see scale, rotate, translate, transform
 			 */
 			RenderingContext2D& setTransform(const AffineTransform& matrix);
 			/// @}
@@ -526,27 +526,27 @@ namespace ascension {
 			/**
 			 * Returns the color or style to use inside shapes. Initial value is opaque black.
 			 * @return The current fill style
-			 * @see #setFillStyle, #strokeStyle
+			 * @see setFillStyle, strokeStyle
 			 */
 			std::shared_ptr<const Paint> fillStyle() const;
 			/**
 			 * Sets the style used for filling shapes.
 			 * @param fillStyle The new fill style to set
 			 * @return This object
-			 * @see #fillStyle, #setStrokeStyle
+			 * @see fillStyle, setStrokeStyle
 			 */
 			RenderingContext2D& setFillStyle(std::shared_ptr<const Paint> fillStyle);
 			/**
 			 * Returns the color or style to use for the lines around the shapes. Initial value is opaque black.
 			 * @return The current stokre style
-			 * @see #setStrokeStyle, #fillStyle
+			 * @see setStrokeStyle, fillStyle
 			 */
 			std::shared_ptr<const Paint> strokeStyle() const;
 			/**
 			 * Sets the style used for stroking shapes.
 			 * @param strokeStyle The new fill style to set
 			 * @return This object
-			 * @see #strokeStyle, #setFillStyle
+			 * @see strokeStyle, setFillStyle
 			 */
 			RenderingContext2D& setStrokeStyle(std::shared_ptr<const Paint> strokeStyle);
 //			std::unique_ptr<Gradient> createLinearGradient();
@@ -560,21 +560,21 @@ namespace ascension {
 			 * Clears all pixels on the canvas in the specified rectangle to transparent black.
 			 * @param rectangle The rectangle
 			 * @return This object
-			 * @see #fillRectangle, #strokeRectangle
+			 * @see fillRectangle, strokeRectangle
 			 */
 			RenderingContext2D& clearRectangle(const Rectangle& rectangle);
 			/**
 			 * Paints the specified rectangle onto the canvas, using the current fill style.
 			 * @param rectangle The rectangle
 			 * @return This object
-			 * @see #clarRectangle, #strokeRectangle
+			 * @see clarRectangle, strokeRectangle
 			 */
 			RenderingContext2D& fillRectangle(const Rectangle& rectangle);
 			/**
 			 * Paints the box that outlines the specified rectangle onto the canvas, using the current stroke style.
 			 * @param rectangle The rectangle
 			 * @return This object
-			 * @see #clearRectangle, #fillRectangle
+			 * @see clearRectangle, fillRectangle
 			 */
 			RenderingContext2D& strokeRectangle(const Rectangle& rectangle);
 			/// @}
@@ -591,7 +591,7 @@ namespace ascension {
 			 *                       mode)
 			 * @return This object
 			 * @throw std#invalid_argument @a maximumMeasure is present but less than or equal to zero
-			 * @see #strokeText, #measureText
+			 * @see strokeText, measureText
 			 */
 			RenderingContext2D& fillText(const StringPiece& text,
 				const Point& origin, boost::optional<Scalar> maximumMeasure = boost::none);
@@ -605,14 +605,14 @@ namespace ascension {
 			 *                       mode)
 			 * @return This object
 			 * @throw std#invalid_argument @a maximumMeasure is present but less than or equal to zero
-			 * @see #fillText, #measureText
+			 * @see fillText, measureText
 			 */
 			RenderingContext2D& strokeText(const StringPiece& text,
 				const Point& origin, boost::optional<Scalar> maximumMeasure = boost::none);
 			/**
 			 * Returns a size (measure and extent) of the specified text in the current font.
 			 * @param text The text string
-			 * @see #strokeText, #fillText
+			 * @see strokeText, fillText
 			 */
 			Dimension measureText(const StringPiece& text) const;
 			/// @}
@@ -622,19 +622,19 @@ namespace ascension {
 			/**
 			 * Resets the current default path.
 			 * @return This object
-			 * @see #closePath
+			 * @see closePath
 			 */
 			RenderingContext2D& beginPath();
 			/**
 			 * Fills the subpaths of the current default path with the current fill style.
 			 * @return This object
-			 * @see #fillRectangle, #fillText, #stroke
+			 * @see fillRectangle, fillText, stroke
 			 */
 			RenderingContext2D& fill();
 			/**
 			 * Strokes the subpaths of the current default path with the current stroke style.
 			 * @return This object
-			 * @see #fill, #strokeRectangle, #strokeText
+			 * @see fill, strokeRectangle, strokeText
 			 */
 			RenderingContext2D& stroke();
 #if 1
@@ -644,7 +644,7 @@ namespace ascension {
 #else
 			/**
 			 * Draws a focus ring around the current default path, following the platform conventions for focus rings.
-			 * @see #drawCustomFocusRing
+			 * @see drawCustomFocusRing
 			 */
 			void drawSystemFocusRing(/*const NativeRectangle& bounds*/);
 			/**
@@ -736,7 +736,7 @@ namespace ascension {
 			 * Returns an @c ImageData object containing the image data for the specified rectangle of the canvas.
 			 * @param rectangle The bounds of the image in canvas coordinate space units
 			 * @return An image data. Pixels outside the canvas are returned as transparent black
-			 * @see #putImageData
+			 * @see putImageData
 			 */
 			std::unique_ptr<ImageData> getImageData(const Rectangle& rectangle) const;
 			/**
@@ -747,7 +747,7 @@ namespace ascension {
 			 * @param image The image data
 			 * @param destination The destination position onto where the image is painted in logical coordinate space
 			 *                    units
-			 * @see #getImageData
+			 * @see getImageData
 			 */
 			RenderingContext2D& putImageData(const ImageData& image, const Point& destination);
 			/**
@@ -759,7 +759,7 @@ namespace ascension {
 			 * @param destination The destination position onto where the image is painted in the logical coordinate
 			 *                    space units
 			 * @param dirtyRectangle The bounds to paint in image in device pixels
-			 * @see #getImageData
+			 * @see getImageData
 			 */
 			RenderingContext2D& putImageData(const ImageData& image,
 				const Point& destination, const Rectangle& dirtyRectangle);
@@ -771,7 +771,7 @@ namespace ascension {
 			 * Returns the current alpha value applied to rendering operations. Initial value is @c 1.0.
 			 * @return The current alpha value in the range from 0.0 (fully transparent) to 1.0 (no additional
 			 *         transparency)
-			 * @see #globalCompositeOperation, #setGlobalAlpha
+			 * @see globalCompositeOperation, setGlobalAlpha
 			 */
 			double globalAlpha() const;
 			/**
@@ -779,20 +779,20 @@ namespace ascension {
 			 * @param globalAlpha The alpha value in the range from 0.0 (fully transparent) to 1.0
 			 *                   (no additional transparency)
 			 * @throw std#invalid_argument @a globalAlpha is out of range from 0.0 to 1.0
-			 * @see #globalAlpha, #setGlobalCompositeOperation
+			 * @see globalAlpha, setGlobalCompositeOperation
 			 */
 			RenderingContext2D& setGlobalAlpha(double globalAlpha);
 			/**
 			 * Returns the current composition operation. Initial value is @c SOURCE_OVER.
 			 * @return The current composition operation
-			 * @see #globalAlpha, #setGlobalCompositeOperation
+			 * @see globalAlpha, setGlobalCompositeOperation
 			 */
 			CompositeOperation globalCompositeOperation() const;
 			/**
 			 * Sets the current composition operation.
 			 * @param compositeOperation The new composition operation
 			 * @throw UnknownValueException @a compositeOperation is unknown
-			 * @see #globalCompositeOperation, #setGlobalAlpha
+			 * @see globalCompositeOperation, setGlobalAlpha
 			 */
 			RenderingContext2D& setGlobalCompositeOperation(CompositeOperation compositeOperation);
 			/// @}
@@ -802,41 +802,41 @@ namespace ascension {
 			/**
 			 * Returns the current shadow color. Initial value is fully-transparent black.
 			 * @return The current shadow color
-			 * @see #setShadowColor
+			 * @see setShadowColor
 			 */
 			Color shadowColor() const;
 			/**
 			 * Sets the shadow color.
 			 * @param shadowColor The new shadow color to set
 			 * @return This object
-			 * @see #shadowColor
+			 * @see shadowColor
 			 */
 			RenderingContext2D& setShadowColor(const Color& shadowColor);
 			/**
 			 * Returns the current shadow offset. Initial value is <code>(0, 0)</code>.
 			 * @return The current shadow offset
-			 * @see #setShadowOffset
+			 * @see setShadowOffset
 			 */
 			Dimension shadowOffset() const;
 			/**
 			 * Sets the shadow offset.
 			 * @return The new shadow offset to set
-			 * @see #shadowOffset
+			 * @see shadowOffset
 			 */
 			RenderingContext2D& setShadowOffset(const Dimension& shadowOffset);
 			/**
 			 * Returns the current level of blur applied to shadows. Initial value is @c 0.
 			 * @return The current level of blur applied to shadows
-			 * @see #setShadowBlur
+			 * @see setShadowBlur
 			 */
 			Scalar shadowBlur() const;
 			/**
 			 * Sets the shadow color.
 			 * @param shadowColor The new shadow color to set
 			 * @return This object
-			 * @see #shadowBlur
+			 * @see shadowBlur
 			 */
-			RenderingContext2D& setShadowBlur(Scalar shadowBlur);
+			RenderingContext2D& setShadowBlur(Scalar shadowColor);
 			/// @}
 
 		private:

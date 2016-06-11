@@ -21,7 +21,7 @@ namespace ascension {
 		/**
 		 * Constructor.
 		 * @param maximumNumberOfKills Initial maximum number of kills. This setting can be change by
-		 *                             @c #setMaximumNumberOfKills later
+		 *                             @c setMaximumNumberOfKills later
 		 */
 		KillRing::KillRing(std::size_t maximumNumberOfKills /* = ASCENSION_DEFAULT_MAXIMUM_KILLS */) BOOST_NOEXCEPT
 				: yankPointer_(std::end(contents_)), maximumNumberOfKills_(maximumNumberOfKills) {

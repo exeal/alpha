@@ -37,7 +37,7 @@ namespace ascension {
 		 * }
 		 * @endcode
 		 *
-		 * @c Normalizer is boundary safe. @c #hasNext and @c #hasPreviouscheck itself is at the boundary. If you
+		 * @c Normalizer is boundary safe. @c #hasNext and @c #hasPrevious check itself is at the boundary. If you
 		 * increment or decrement the iterator over that boundary, @c std#out_of_range exception will be thrown.
 		 *
 		 * The @c operator* returns the code point of normalized character, not the character unit value.
@@ -262,9 +262,10 @@ namespace ascension {
 			}
 
 			/**
-			 * Compares the two strings for canonical equivalence. The both strings must be FCD.
+			 * @internal Compares the two strings for canonical equivalence. The both strings must be FCD.
 			 * @param s1 The first string
 			 * @param s2 The second string
+			 * @param caseSensitivity For caseless match
 			 * @return The result
 			 */
 			int internalCompare(const String& s1, const String& s2, CaseSensitivity caseSensitivity) {

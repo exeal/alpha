@@ -1,11 +1,11 @@
 /**
- * @file point.hpp
+ * @file kernel/point.hpp
  * @author exeal
  * @date 2003-2015
  */
 
-#ifndef ASCENSION_POINT_HPP
-#define ASCENSION_POINT_HPP
+#ifndef ASCENSION_KERNEL_POINT_HPP
+#define ASCENSION_KERNEL_POINT_HPP
 #include <ascension/kernel/abstract-point.hpp>
 #include <ascension/kernel/partition.hpp>
 #include <ascension/kernel/position.hpp>
@@ -96,4 +96,4 @@ namespace ascension {
 	} // namespace kernel
 } // namespace ascension
 
-#endif // !ASCENSION_POINT_HPP
+#endif // !ASCENSION_KERNEL_POINT_HPP
