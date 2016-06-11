@@ -24,11 +24,11 @@
 
 namespace ascension {
 	namespace presentation {
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 		BOOST_PARAMETER_NAME(writingMode)
 		BOOST_PARAMETER_NAME(from)
 		BOOST_PARAMETER_NAME(to)
-#endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif	// !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 		static_assert(
 			static_cast<int>(graphics::font::LineRelativeDirection::OVER) == 0
@@ -299,7 +299,7 @@ namespace ascension {
 			}
 		}
 
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 		BOOST_PARAMETER_FUNCTION(
 			(void), mapDimensions, tag,
 			(required
@@ -322,7 +322,7 @@ namespace ascension {
 		 */
 		template<typename From, typename To>
 		void mapDimensions(const WritingMode& writingMode, const From& from, To& to);
-#endif
+#endif	// !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 		/// @defgroup abstract_physical_bounds Abstract and Physical Bounds Mappings
 		/// @brief Free functions map between abstract and physical bounds.

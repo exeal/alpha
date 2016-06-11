@@ -22,7 +22,7 @@ namespace ascension {
 			 * @param ty The y coordinate of the translation, or 0
 			 * @return The returned value of @c boost#geometry#transform
 			 */
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_FUNCTION(
 				(bool), translate, tag,
 				(required
@@ -41,7 +41,7 @@ namespace ascension {
 #else
 			template<typename From, typename To, typename Tx, typename Ty>
 			bool translate(const From& from, To& to, Tx tx, Ty ty);
-#endif
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 			/**
 			 * Calls @c boost#geometry#transform with @c boost#geometry#strategy#transform#translate_transformer.

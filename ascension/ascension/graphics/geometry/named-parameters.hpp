@@ -13,7 +13,7 @@
 namespace ascension {
 	namespace graphics {
 		namespace geometry {
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			// Point
 			BOOST_PARAMETER_NAME(x)
 			BOOST_PARAMETER_NAME(y)
@@ -39,7 +39,7 @@ namespace ascension {
 			// other
 			BOOST_PARAMETER_NAME(from)
 			BOOST_PARAMETER_NAME(to)
-#endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif	// !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 		}
 	}
 }

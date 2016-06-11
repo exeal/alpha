@@ -453,7 +453,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #rotate, #translate, #transform, #setTransform
 			 */
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_MEMBER_FUNCTION(
 				(RenderingContext2D&), scale, geometry::tag,
 				(required
@@ -463,7 +463,7 @@ namespace ascension {
 			}
 #else
 			RenderingContext2D& scale(double sx, double sy);
-#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			/**
 			 * Adds the rotation transformation described by @a angle to the transformation matrix.
 			 * @tparam DegreeOrRadian @c boost#geometry#degree or @c boost#geometry#radian
@@ -493,7 +493,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #scale, #rotate, #transform, #setTransform
 			 */
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_MEMBER_FUNCTION(
 				(RenderingContext2D&), translate, geometry::tag,
 				(required
@@ -503,7 +503,7 @@ namespace ascension {
 			}
 #else
 			RenderingContext2D& translate(double tx, double ty);
-#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			/**
 			 * Replaces the current transformation matrix with the result of multiplying the current transformation
 			 * matrix with the matrix described by @a matrix.

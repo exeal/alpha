@@ -20,7 +20,7 @@ namespace ascension {
 			 * @param arguments The named parameters
 			 * @return The returned value of @c boost#geometry#transform
 			 */
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_FUNCTION(
 				(bool), scale, tag,
 				(required
@@ -39,7 +39,7 @@ namespace ascension {
 #else
 			template<typename From, typename To, typename Sx, typename Sy>
 			inline bool scale(const From& from, To& to, Sx sx = 1, Sy sy = 1);
-#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 			/**
 			 * Calls @c boost#geometry#transform with @c boost#geometry#strategy#transform#scale_transformer.

@@ -72,10 +72,10 @@ namespace ascension {
 			return opposites[index];
 		}
 
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 		BOOST_PARAMETER_NAME(bpd)
 		BOOST_PARAMETER_NAME(ipd)
-#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 		/// Base type of @c FlowRelativeTwoAxes class template.
 		template<typename T>
@@ -151,12 +151,12 @@ namespace ascension {
 			return FlowRelativeTwoAxes<Coordinate>(_bpd = arguments[_bpd], _ipd = arguments[_ipd]);
 		}
 
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 		BOOST_PARAMETER_NAME(blockStart)
 		BOOST_PARAMETER_NAME(blockEnd)
 		BOOST_PARAMETER_NAME(inlineStart)
 		BOOST_PARAMETER_NAME(inlineEnd)
-#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 		/// Base type of @c FlowRelativeFourSides class template.
 		template<typename T>

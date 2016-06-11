@@ -13,11 +13,11 @@
 
 namespace ascension {
 	namespace viewer {
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 		BOOST_PARAMETER_NAME(anchor)
 		BOOST_PARAMETER_NAME(caret)
 		BOOST_PARAMETER_NAME(document)
-#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 		/// Base type of @c SelectedRegion class.
 		class SelectedRegionBase : public kernel::Region {

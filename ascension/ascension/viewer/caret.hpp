@@ -122,7 +122,7 @@ namespace ascension {
 			void paste(bool useKillRing);
 			void replaceSelection(const StringPiece& text, bool rectangleInsertion = false);
 			void select(const SelectedRegion& region);
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_MEMBER_FUNCTION(
 				(void), select, tag,
 				(required
@@ -130,7 +130,7 @@ namespace ascension {
 					(caret, (const TextHit&)))) {_select(anchor, caret);}
 #else
 			void select(const kernel::Position& anchor, const TextHit& caret);
-#endif
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			/// @}
 
 			/// @name Text Manipulation

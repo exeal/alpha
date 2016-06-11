@@ -55,10 +55,10 @@ namespace ascension {
 			return opposites[index];
 		}
 
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 		BOOST_PARAMETER_NAME(x)
 		BOOST_PARAMETER_NAME(y)
-#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 		/// Base type of @c PhysicalTwoAxes class template.
 		template<typename T>
@@ -135,12 +135,12 @@ namespace ascension {
 			return PhysicalTwoAxes<Coordinate>(_x = arguments[_x], _y = arguments[_y]);
 		}
 
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 		BOOST_PARAMETER_NAME(top)
 		BOOST_PARAMETER_NAME(right)
 		BOOST_PARAMETER_NAME(bottom)
 		BOOST_PARAMETER_NAME(left)
-#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 		/// Base type of @c PhysicalFourSides class template.
 		template<typename T>
