@@ -347,14 +347,14 @@ namespace ascension {
 				if(kernel::locations::isBeginningOfLine(caret))	// an empty line
 					caret.moveTo(caret.hit());
 				else	// eol
-					caret.select((_anchor = (--i).base().tell(), _caret = caret.hit()));
+					caret.select(_anchor = (--i).base().tell(), _caret = caret.hit());
 			} else if(kernel::locations::isBeginningOfLine(caret))	// bol
-				caret.select((_anchor = caret.hit().characterIndex(), _caret = TextHit::leading((++i).base().tell())));
+				caret.select(_anchor = caret.hit().characterIndex(), _caret = TextHit::leading((++i).base().tell()));
 			else {
 				const auto ip(viewer::insertionPosition(caret));
 				const kernel::Position p((++i).base().tell());
 				i.base().seek(kernel::Position(kernel::line(ip), kernel::offsetInLine(ip) + 1));
-				caret.select((_anchor = (--i).base().tell(), _caret = TextHit::leading(p)));
+				caret.select(_anchor = (--i).base().tell(), _caret = TextHit::leading(p));
 			}
 		}
 
