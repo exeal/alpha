@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_IDENTIFIERS_PROPOSAL_PROCESSOR_HPP
 #define ASCENSION_IDENTIFIERS_PROPOSAL_PROCESSOR_HPP
-
 #include <ascension/content-assist/content-assist.hpp>
 
 namespace ascension {

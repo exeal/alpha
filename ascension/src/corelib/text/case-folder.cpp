@@ -85,7 +85,7 @@ namespace ascension {
 		 * @retval 0 The both sequences are same
 		 * @retval &gt;0 The first character sequence is greater than the second
 		 */
-		int CaseFolder::compare(const String& s1, const String& s2, bool excludeTurkishI /* = false */) {
+		int CaseFolder::compare(const StringPiece& s1, const StringPiece& s2, bool excludeTurkishI /* = false */) {
 			return compare(StringCharacterIterator(s1), StringCharacterIterator(s2), excludeTurkishI);
 		}
 	}

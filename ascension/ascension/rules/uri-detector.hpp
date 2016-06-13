@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_URI_DETECTOR_HPP
 #define ASCENSION_URI_DETECTOR_HPP
-
 #include <ascension/corelib/string-piece.hpp>
 #include <boost/core/noncopyable.hpp>
 #include <set>
@@ -38,7 +37,7 @@ namespace ascension {
 			/// @name Attribute
 			/// @{
 			URIDetector& setValidSchemes(const std::set<String>& schemes, bool caseSensitive = false);
-			URIDetector& setValidSchemes(const String& schemes, Char separator, bool caseSensitive = false);
+			URIDetector& setValidSchemes(const StringPiece& schemes, Char separator, bool caseSensitive = false);
 			/// @}
 
 			/// @name Default Instances

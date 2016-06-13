@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_LEXICAL_TOKEN_SCANNER_HPP
 #define ASCENSION_LEXICAL_TOKEN_SCANNER_HPP
-
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/partition.hpp>
 #include <ascension/rules/token-scanner.hpp>

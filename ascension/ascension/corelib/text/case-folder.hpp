@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_CASE_FOLDER_HPP
 #define ASCENSION_CASE_FOLDER_HPP
-
 #include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// utf.CharacterDecodeIterator, utf.checkedEncode
 #include <boost/range/begin.hpp>
@@ -44,11 +43,12 @@ namespace ascension {
 			 * @retval &gt;0 The first character sequence is greater than the second
 			 */
 			template<typename CharacterIterator1, typename CharacterIterator2>
-			static int compare(const CharacterIterator1& s1, const CharacterIterator2& s2, bool excludeTurkishI = false) {
+			static int compare(const CharacterIterator1& s1, const CharacterIterator2& s2, bool excludeTurkishI = false,
+					typename std::enable_if<!std::is_same<CharacterIterator1, String>::value && !std::is_same<CharacterIterator2, String>::value>::type* = nullptr) {
 				return compare(detail::CharacterIterator(s1), detail::CharacterIterator(s2), excludeTurkishI);
 			}
 
-			static int compare(const String& s1, const String& s2, bool excludeTurkishI = false);
+			static int compare(const StringPiece& s1, const StringPiece& s2, bool excludeTurkishI = false);
 
 			/**
 			 * Folds the case of the specified character. This method performs "simple case
