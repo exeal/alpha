@@ -284,7 +284,6 @@ namespace ascension {
 		/// @{
 		void breakLine(Caret& at, bool inheritIndent, std::size_t newlines /* = 1 */);
 		void eraseSelection(Caret& caret);
-		void insertRectangle(Caret& caret, const Char* first, const Char* last);
 		void insertRectangle(Caret& caret, const String& text);
 		void indentBySpaces(Caret& caret, bool rectangle, long level = 1);
 		void indentByTabs(Caret& caret, bool rectangle, long level = 1);
