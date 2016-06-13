@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_TOKEN_HPP
 #define ASCENSION_TOKEN_HPP
-
 #include <ascension/corelib/memory.hpp>
 #include <ascension/kernel/position.hpp>
 
@@ -24,10 +23,18 @@ namespace ascension {
 
 			/// Default constructor initializes nothing.
 			Token() BOOST_NOEXCEPT {}
-			/// Creates a token with initial values.
+			/**
+			 * Creates a token with initial values.
+			 * @param identifier The initial value of @c identifier data member
+			 * @param position The initial value of @c position data member
+			 */
 			Token(Identifier identifier, kernel::Position position) BOOST_NOEXCEPT
 				: identifier(identifier), position(position) {}
-			/// Creates a token with initial values.
+			/**
+			 * Creates a token with initial values.
+			 * @param position The initial value of @c position data member
+			 * @param identifier The initial value of @c identifier data member
+			 */
 			Token(kernel::Position position, Identifier identifier) BOOST_NOEXCEPT
 				: identifier(identifier), position(position) {}
 		};
