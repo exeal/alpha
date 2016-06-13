@@ -29,31 +29,31 @@ namespace ascension {
 			const std::locale& cl = std::locale::classic();
 		   
 			// sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
-			inline const Char* handleSubDelims(const Char* first, const Char* last) {
-				static const Char SUB_DELIMS[] = {'!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '=', 0};
-				return (first < last && ustrchr(SUB_DELIMS, *first) != nullptr) ? ++first : nullptr;
+			inline StringPiece::const_iterator handleSubDelims(const StringPiece& s) {
+				static const StringPiece::value_type SUB_DELIMS[] = {'!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '=', 0};
+				return (s.cbegin() < s.cend() && ustrchr(SUB_DELIMS, s.front()) != nullptr) ? s.cbegin() + 1 : nullptr;
 			}
 		
 			// gen-delims = ":" / "/" / "?" / "#" / "[" / "]" / "@"
-			inline const Char* handleGenDelims(const Char* first, const Char* last) {
-				static const Char GEN_DELIMS[] = {':', '/', '?', '#', '[', ']', '@', 0};
-				return (first < last && ustrchr(GEN_DELIMS, *first) != nullptr) ? ++first : nullptr;
+			inline StringPiece::const_iterator handleGenDelims(const StringPiece& s) {
+				static const StringPiece::value_type GEN_DELIMS[] = {':', '/', '?', '#', '[', ']', '@', 0};
+				return (s.cbegin() < s.cend() && ustrchr(GEN_DELIMS, s.front()) != nullptr) ? s.cbegin() + 1: nullptr;
 			}
 		
 			// reserved = gen-delims / sub-delims
-			inline const Char* handleReserved(const Char* first, const Char* last) {
-				return (handleGenDelims(first, last) != nullptr || handleSubDelims(first, last) != nullptr) ? ++first : nullptr;
+			inline StringPiece::const_iterator handleReserved(const StringPiece& s) {
+				return (handleGenDelims(s) != nullptr || handleSubDelims(s) != nullptr) ? s.cbegin() + 1 : nullptr;
 			}
 		
 			// unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
-			inline const Char* handleUnreserved(const Char* first, const Char* last) {
-				static const Char UNRESERVED_LEFTOVERS[] = {'-', '.', '_', '~', 0};
-				return (first < last && (std::isalnum(*first, cl) || ustrchr(UNRESERVED_LEFTOVERS, *first) != nullptr)) ? ++first : nullptr;
+			inline StringPiece::const_iterator handleUnreserved(const StringPiece& s) {
+				static const StringPiece::value_type UNRESERVED_LEFTOVERS[] = {'-', '.', '_', '~', 0};
+				return (s.cbegin() < s.cend() && (std::isalnum(s.front(), cl) || ustrchr(UNRESERVED_LEFTOVERS, s.front()) != nullptr)) ? s.cbegin() + 1 : nullptr;
 			}
 		
 			// pct-encoded = "%" HEXDIG HEXDIG
-			inline const Char* handlePctEncoded(const Char* first, const Char* last) {
-				return (last - first >= 3 && first[0] == '%' && std::isxdigit(first[1], cl) && std::isxdigit(first[2], cl)) ? first += 3 : nullptr;
+			inline StringPiece::const_iterator handlePctEncoded(const StringPiece& s) {
+				return (s.length() >= 3 && s[0] == '%' && std::isxdigit(s[1], cl) && std::isxdigit(s[2], cl)) ? s.cbegin() + 3 : nullptr;
 			}
 		
 			// IPv6address =                            6( h16 ":" ) ls32
@@ -65,37 +65,40 @@ namespace ascension {
 			//             / [ *4( h16 ":" ) h16 ] "::"              ls32
 			//             / [ *5( h16 ":" ) h16 ] "::"              h16
 			//             / [ *6( h16 ":" ) h16 ] "::"
-			const Char* ASCENSION_FASTCALL handleIPv6address(const Char* first, const Char* last) {return nullptr;}
+			StringPiece::const_iterator ASCENSION_FASTCALL handleIPv6address(const StringPiece& s) {return nullptr;}
 		
 			// IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
-			const Char* ASCENSION_FASTCALL handleIPvFuture(const Char* first, const Char* last) {
-				if(last - first >= 4 && *first == 'v' && std::isxdigit(*++first, cl)) {
-					while(std::isxdigit(*first, cl)) {
-						if(++first == last)
-							return nullptr;
-					}
-					if(*first == '.' && ++first < last) {
-						const Char* p = first;
-						while(p < last) {
-							if(nullptr != (p = handleUnreserved(p, last)) || (nullptr != (p = handleSubDelims(p, last))))
-								continue;
-							else if(*p == ':')
-								++p;
-							else
-								break;
+			StringPiece::const_iterator ASCENSION_FASTCALL handleIPvFuture(const StringPiece& s) {
+				if(s.length() >= 4 && s.front() == 'v') {
+					auto p(std::next(s.cbegin()));
+					if(std::isxdigit(*p, cl)) {
+						while(std::isxdigit(*p, cl)) {
+							if(++p == s.cend())
+								return nullptr;
 						}
-						return (p > first) ? p : nullptr;
+						if(*p == '.' && ++p < s.cend()) {
+							auto q(p);
+							while(q < s.cend()) {
+								if(nullptr != (q = handleUnreserved(s.substr(q - s.cbegin()))) || (nullptr != (q = handleSubDelims(s.substr(q - s.cbegin())))))
+									continue;
+								else if(*q == ':')
+									++q;
+								else
+									break;
+							}
+							return (q > p) ? q : nullptr;
+						}
 					}
 				}
 				return nullptr;
 			}
 		
 			// IP-literal = "[" ( IPv6address / IPvFuture  ) "]"
-			inline const Char* handleIPLiteral(const Char* first, const Char* last) {
-				if(first < last && *first == '[') {
-					const Char* p;
-					if(nullptr != (p = handleIPv6address(++first, last)) || nullptr != (p = handleIPvFuture(first, last))) {
-						if(p < last && *p == ']')
+			inline StringPiece::const_iterator handleIPLiteral(const StringPiece& s) {
+				if(s.cbegin() < s.cend() && s.front() == '[') {
+					StringPiece::const_iterator p;
+					if(nullptr != (p = handleIPv6address(s.substr(1))) || nullptr != (p = handleIPvFuture(s.substr(1)))) {
+						if(p < s.cend() && *p == ']')
 							return ++p;
 					}
 				}
@@ -103,10 +106,11 @@ namespace ascension {
 			}
 		
 			// port = *DIGIT
-			inline const Char* handlePort(const Char* first, const Char* last) {	// [nullable]
-				while(first < last && std::isdigit(*first, cl))
-					++first;
-				return first;
+			inline StringPiece::const_iterator handlePort(const StringPiece& s) {	// [nullable]
+				auto p(s.cbegin());
+				while(p < s.cend() && std::isdigit(p, cl))
+					++p;
+				return p;
 			}
 			
 			// dec-octet = DIGIT             ; 0-9
@@ -114,80 +118,86 @@ namespace ascension {
 			//           / "1" 2DIGIT        ; 100-199
 			//           / "2" %x30-34 DIGIT ; 200-249
 			//           / "25" %x30-35      ; 250-255
-			const Char* ASCENSION_FASTCALL handleDecOctet(const Char* first, const Char* last) {
-				if(first < last) {
-					if(*first == '0')
-						return ++first;
-					else if(*first == '1')
-						return (++first < last && std::isdigit(*first, cl) && ++first < last && std::isdigit(*first, cl)) ? ++first : first;
-					else if(*first == '2') {
-						if(++first < last) {
-							if(boost::numeric::in(*first, boost::numeric::interval<Char>('0', '4'))) {
-								if(std::isdigit(*++first, cl))
-									++first;
-							} else if(*first == '5') {
-								if(boost::numeric::in(*first, boost::numeric::interval<Char>('0', '5')))
-									++first;
+			StringPiece::const_iterator ASCENSION_FASTCALL handleDecOctet(const StringPiece& s) {
+				if(s.cbegin() < s.cend()) {
+					if(s.front() == '0')
+						return std::next(s.cbegin());
+					else if(s.front() == '1') {
+						auto p(s.cbegin());
+						return (++p < s.cend() && std::isdigit(*p, cl) && ++p < s.cend() && std::isdigit(*p, cl)) ? ++p : p;
+					} else if(s.front() == '2') {
+						auto p(std::next(s.cbegin()));
+						if(p < s.cend()) {
+							if(boost::numeric::in(*p, boost::numeric::interval<Char>('0', '4'))) {
+								if(std::isdigit(*++p, cl))
+									++p;
+							} else if(*p == '5') {
+								if(boost::numeric::in(*p, boost::numeric::interval<Char>('0', '5')))
+									++p;
 							}
 						}
-						return first;
-					} else if(boost::numeric::in(*first, boost::numeric::interval<Char>('3', '9')))
-						return (++first < last && std::isdigit(*first, cl)) ? ++first : first;
+						return p;
+					} else if(boost::numeric::in(s.front(), boost::numeric::interval<Char>('3', '9'))) {
+						auto p(s.cbegin());
+						return (++p < s.cend() && std::isdigit(*p, cl)) ? ++p : p;
+					}
 				}
 				return nullptr;
 			}
 		
 			// IPv4address = dec-octet "." dec-octet "." dec-octet "." dec-octet
-			inline const Char* handleIPv4address(const Char* first, const Char* last) {
-				return (last - first >= 7
-					&& nullptr != (first = handleDecOctet(first, last))
-					&& first < last && *first == '.'
-					&& nullptr != (first = handleDecOctet(++first, last))
-					&& first < last && *first == '.'
-					&& nullptr != (first = handleDecOctet(++first, last))
-					&& first < last && *first == '.'
-					&& nullptr != (first = handleDecOctet(++first, last))) ? first : nullptr;
+			inline StringPiece::const_iterator handleIPv4address(const StringPiece& s) {
+				auto p(s.cbegin());
+				return (s.length() >= 7
+					&& nullptr != (p = handleDecOctet(s.substr(p - s.cbegin())))
+					&& p < s.cend() && *p == '.'
+					&& nullptr != (p = handleDecOctet(s.substr(++p - s.cbegin())))
+					&& p < s.cend() && *p == '.'
+					&& nullptr != (p = handleDecOctet(s.substr(++p - s.cbegin())))
+					&& p < s.cend() && *p == '.'
+					&& nullptr != (p = handleDecOctet(s.substr(++p - s.cbegin())))) ? p : nullptr;
 			}
 		
 			// h16 = 1*4HEXDIG
-			const Char* ASCENSION_FASTCALL handleH16(const Char* first, const Char* last) {
-				if(first < last && std::isxdigit(*first, cl)) {
-					const Char* const e = std::min(++first + 3, last);
-					while(first < e && std::isxdigit(*first, cl))
-						++first;
-					return first;
+			StringPiece::const_iterator ASCENSION_FASTCALL handleH16(const StringPiece& s) {
+				if(s.cbegin() < s.cend() && std::isxdigit(s.front(), cl)) {
+					auto p(std::next(s.cbegin()));
+					const auto e(std::min(p + 3, s.cend()));
+					while(p < e && std::isxdigit(*p, cl))
+						++p;
+					return p;
 				}
 				return nullptr;
 			}
 		
 			// ls32 = ( h16 ":" h16 ) / IPv4address
-			inline const Char* handleLs32(const Char* first, const Char* last) {
+			inline StringPiece::const_iterator handleLs32(const StringPiece& s) {
 				const Char* p;
-				return ((nullptr != (p = handleH16(first, last)) && p + 2 < last && *++p == ':' && nullptr != (p = handleH16(p, last)))
-					|| (nullptr != (p = handleIPv4address(first, last)))) ? p : nullptr;
+				return ((nullptr != (p = handleH16(s)) && p + 2 < s.cend() && *++p == ':' && nullptr != (p = handleH16(s.substr(p - s.cbegin()))))
+					|| (nullptr != (p = handleIPv4address(s)))) ? p : nullptr;
 			}
 		
 			// scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
-			const Char* ASCENSION_FASTCALL handleScheme(const Char* first, const Char* last) {
-				if(std::isalpha(*first, cl)) {
-					while(++first != last) {
-						if(!std::isalnum(*first, cl) && *first != '+' && *first != '-' && *first != '.')
-							return first;
+			StringPiece::const_iterator ASCENSION_FASTCALL handleScheme(const StringPiece& s) {
+				if(std::isalpha(s.front(), cl)) {
+					for(auto p(std::next(s.cbegin())); p != s.cend(); ++p) {
+						if(!std::isalnum(*p, cl) && *p != '+' && *p != '-' && *p != '.')
+							return p;
 					}
-					return last;
+					return s.cend();
 				}
 				return nullptr;
 			}
 		
 			// iprivate = %xE000-F8FF / %xF0000-FFFFD / %x100000-10FFFD
-			inline const Char* handlePrivate(const Char* first, const Char* last) {
-				if(first < last) {
-					if(boost::numeric::in(*first, boost::numeric::interval<Char>(0xe000u, 0xf8ffu)))
-						return ++first;
-					const CodePoint c = text::utf::decodeFirst(first, last);
+			inline StringPiece::const_iterator handlePrivate(const StringPiece& s) {
+				if(s.cbegin() < s.cend()) {
+					if(boost::numeric::in(s.front(), boost::numeric::interval<Char>(0xe000u, 0xf8ffu)))
+						return std::next(s.cbegin());
+					const CodePoint c = text::utf::decodeFirst(s);
 					if(boost::numeric::in(c, boost::numeric::interval<CodePoint>(0xf0000u, 0xffffdu))
 							|| boost::numeric::in(c, boost::numeric::interval<CodePoint>(0x100000u, 0x10fffdu)))
-						return first += 2;
+						return std::next(s.cbegin(), 2);
 				}
 				return nullptr;
 			}
@@ -198,204 +208,212 @@ namespace ascension {
 			//         / %x70000-7FFFD / %x80000-8FFFD / %x90000-9FFFD
 			//         / %xA0000-AFFFD / %xB0000-BFFFD / %xC0000-CFFFD
 			//         / %xD0000-DFFFD / %xE1000-EFFFD
-			inline const Char* handleUcschar(const Char* first, const Char* last) {
-				if(first < last) {
-					if(boost::numeric::in(*first, boost::numeric::interval<Char>(0x00a0u, 0xd7ffu))
-							|| boost::numeric::in(*first, boost::numeric::interval<Char>(0xf900u, 0xfdcfu))
-							|| boost::numeric::in(*first, boost::numeric::interval<Char>(0xfdf0u, 0xffefu)))
-						return ++first;
-					const CodePoint c = text::utf::decodeFirst(first, last);
+			inline StringPiece::const_iterator handleUcschar(const StringPiece& s) {
+				if(s.cbegin() < s.cend()) {
+					if(boost::numeric::in(s.front(), boost::numeric::interval<Char>(0x00a0u, 0xd7ffu))
+							|| boost::numeric::in(s.front(), boost::numeric::interval<Char>(0xf900u, 0xfdcfu))
+							|| boost::numeric::in(s.front(), boost::numeric::interval<Char>(0xfdf0u, 0xffefu)))
+						return std::next(s.cbegin());
+					const CodePoint c = text::utf::decodeFirst(s);
 					if(c >= 0x10000u && c < 0xf0000u && (c & 0xffffu) >= 0x0000u && (c & 0xffffu) <= 0xfffdu) {
 						if((c & 0xf0000u) != 0xe || (c & 0xffffu) >= 0x1000u)
-							return first += 2;
+							return std::next(s.cbegin(), 2);
 					}
 				}
 				return nullptr;
 			}
 		
 			// iunreserved = ALPHA / DIGIT / "-" / "." / "_" / "~" / ucschar
-			inline const Char* handleIunreserved(const Char* first, const Char* last) {
-				const Char* p;
-				return (nullptr != (p = handleUnreserved(first, last)) || nullptr != (p = handleUcschar(first, last))) ? p : nullptr;
+			inline StringPiece::const_iterator handleIunreserved(const StringPiece& s) {
+				StringPiece::const_iterator p;
+				return (nullptr != (p = handleUnreserved(s)) || nullptr != (p = handleUcschar(s))) ? p : nullptr;
 			}
 		
 			// ipchar = iunreserved / pct-encoded / sub-delims / ":" / "@"
-			inline const Char* handlePchar(const Char* first, const Char* last) {
-				if(first < last) {
-					const Char* p;
-					if(nullptr != (p = handleIunreserved(first, last))
-							|| nullptr != (p = handlePctEncoded(first, last))
-							|| nullptr != (p = handleSubDelims(first, last)))
-						return p;
-					else if(*first == ':' || *first == '@')
-						return ++first;
+			inline StringPiece::const_iterator handlePchar(const StringPiece& s) {
+				if(s.cbegin() < s.cend()) {
+					StringPiece::const_iterator p(s.cbegin()), q;
+					if(nullptr != (q = handleIunreserved(s.substr(p - s.cbegin())))
+							|| nullptr != (q = handlePctEncoded(s.substr(p - s.cbegin())))
+							|| nullptr != (q = handleSubDelims(s.substr(p - s.cbegin()))))
+						return q;
+					else if(*p == ':' || *p == '@')
+						return ++p;
 				}
 				return nullptr;
 			}
 		
 			// isegment = *ipchar
-			inline const Char* handleSegment(const Char* first, const Char* last) {	// [nullable]
-				for(const Char* eop ; first < last; first = eop) {
-					if(nullptr == (eop = handlePchar(first, last)))
+			inline StringPiece::const_iterator handleSegment(const StringPiece& s) {	// [nullable]
+				auto p(s.cbegin());
+				for(StringPiece::const_iterator eop ; p < s.cend(); p = eop) {
+					if(nullptr == (eop = handlePchar(s.substr(p - s.cbegin()))))
 						break;
 				}
-				return first;
+				return p;
 			}
 		
 			// isegment-nz = 1*ipchar
-			inline const Char* handleSegmentNz(const Char* first, const Char* last) {
-				const Char* const eos = handleSegment(first, last);
-				return (eos > first) ? eos : nullptr;
+			inline StringPiece::const_iterator handleSegmentNz(const StringPiece& s) {
+				const auto eos(handleSegment(s));
+				return (eos > s.cbegin()) ? eos : nullptr;
 			}
 		
 			// isegment-nz-nc = 1*( iunreserved / pct-encoded / sub-delims / "@" ) ; non-zero-length segment without any colon ":"
-			inline const Char* handleSegmentNzNc(const Char* first, const Char* last) {
-				const Char* const f = first;
-				for(const Char* eop; first < last; ) {
-					if(nullptr != (eop = handleUnreserved(first, last))
-							|| nullptr != (eop = handlePctEncoded(first, last))
-							|| nullptr != (eop = handleSubDelims(first, last)))
-						first = eop;
-					else if(*first == '@')
-						++first;
+			inline StringPiece::const_iterator handleSegmentNzNc(const StringPiece& s) {
+				auto p(s.cbegin());
+				for(StringPiece::const_iterator eop; p < s.cend(); ) {
+					if(nullptr != (eop = handleUnreserved(s.substr(p - s.cbegin())))
+							|| nullptr != (eop = handlePctEncoded(s.substr(p - s.cbegin())))
+							|| nullptr != (eop = handleSubDelims(s.substr(p - s.cbegin()))))
+						p = eop;
+					else if(*p == '@')
+						++p;
 					else
 						break;
 				}
-				return (first > f) ? first : nullptr;
+				return (p > s.cbegin()) ? p : nullptr;
 			}
 		
 			// ipath-empty = 0<ipchar>
-			const Char* ASCENSION_FASTCALL handlePathEmpty(const Char* first, const Char*) {return first;}	// [nullable]
+			StringPiece::const_iterator ASCENSION_FASTCALL handlePathEmpty(const StringPiece& s) {	// [nullable]
+				return s.cbegin();
+			}
 		
 			// ipath-abempty = *( "/" isegment )
-			const Char* ASCENSION_FASTCALL handlePathAbempty(const Char* first, const Char* last) {	// [nullable]
-				while(first < last && *first == '/')
-					first = handleSegment(first + 1, last);
-				return first;
+			StringPiece::const_iterator ASCENSION_FASTCALL handlePathAbempty(const StringPiece& s) {	// [nullable]
+				auto p(s.cbegin());
+				while(p < s.cend() && *p == '/')
+					p = handleSegment(s.substr(p + 1 - s.cbegin()));
+				return p;
 			}
 		   
 			// ipath-rootless = isegment-nz *( "/" isegment )
-			inline const Char* handlePathRootless(const Char* first, const Char* last) {
-				const Char* const eos = handleSegmentNz(first, last);
-				return (eos != nullptr) ? handlePathAbempty(eos, last) : nullptr;
+			inline StringPiece::const_iterator handlePathRootless(const StringPiece& s) {
+				const auto eos(handleSegmentNz(s));
+				return (eos != nullptr) ? handlePathAbempty(s.substr(eos - s.cbegin())) : nullptr;
 			}
 		
 			// ipath-noscheme = isegment-nz-nc *( "/" isegment )
-			inline const Char* handlePathNoscheme(const Char* first, const Char* last) {
-				const Char* const eos = handleSegmentNzNc(first, last);
-				return (eos != nullptr) ? handlePathAbempty(eos, last) : nullptr;
+			inline StringPiece::const_iterator handlePathNoscheme(const StringPiece& s) {
+				const auto eos(handleSegmentNzNc(s));
+				return (eos != nullptr) ? handlePathAbempty(s.substr(eos - s.cbegin())) : nullptr;
 			}
 		
 			// ipath-absolute = "/" [ isegment-nz *( "/" isegment ) ]
-			inline const Char* handlePathAbsolute(const Char* first, const Char* last) {
-				return (first < last && *first == '/') ? handlePathRootless(++first, last) : nullptr;
+			inline StringPiece::const_iterator handlePathAbsolute(const StringPiece& s) {
+				return (s.cbegin() < s.cend() && s.front() == '/') ? handlePathRootless(s.substr(1)) : nullptr;
 			}
 		
 			// ireg-name = *( iunreserved / pct-encoded / sub-delims )
-			inline const Char* handleRegName(const Char* first, const Char* last) {	// [nullable]
-				for(const Char* p; first < last; first = p) {
-					if(nullptr == (p = handleIunreserved(first, last))
-							&& nullptr == (p = handlePctEncoded(first, last))
-							&& nullptr == (p = handleSubDelims(first, last)))
+			inline StringPiece::const_iterator handleRegName(const StringPiece& s) {	// [nullable]
+				auto p(s.cbegin());
+				for(StringPiece::const_iterator q; p < s.cend(); p = q) {
+					const auto ss(s.substr(p - s.cbegin()));
+					if(nullptr == (q = handleIunreserved(ss))
+							&& nullptr == (q = handlePctEncoded(ss))
+							&& nullptr == (q = handleSubDelims(ss)))
 						break;
 				}
-				return first;
+				return p;
 			}
 		
 			// ihost = IP-literal / IPv4address / ireg-name
-			inline const Char* handleHost(const Char* first, const Char* last) {	// [nullable]
-				const Char* p;
-				return (nullptr != (p = handleIPLiteral(first, last)) || nullptr != (p = handleIPv4address(first, last))) ? p : handleRegName(first, last);
+			inline StringPiece::const_iterator handleHost(const StringPiece& s) {	// [nullable]
+				StringPiece::const_iterator p;
+				return (nullptr != (p = handleIPLiteral(s)) || nullptr != (p = handleIPv4address(s))) ? p : handleRegName(s);
 			}
 		
 			// iuserinfo = *( iunreserved / pct-encoded / sub-delims / ":" )
-			const Char* ASCENSION_FASTCALL handleUserinfo(const Char* first, const Char* last) {	// [nullable]
-				for(const Char* eop; first < last; ) {
-					if(nullptr != (eop = handleUnreserved(first, last))
-							|| nullptr != (eop = handlePctEncoded(first, last))
-							|| nullptr != (eop = handleSubDelims(first, last)))
-						first = eop;
-					else if(*first == ':')
-						++first;
+			StringPiece::const_iterator ASCENSION_FASTCALL handleUserinfo(const StringPiece& s) {	// [nullable]
+				auto p(s.cbegin());
+				for(const Char* eop; p < s.cend(); ) {
+					if(nullptr != (eop = handleUnreserved(s.substr(p - s.cbegin())))
+							|| nullptr != (eop = handlePctEncoded(s.substr(p - s.cbegin())))
+							|| nullptr != (eop = handleSubDelims(s.substr(p - s.cbegin()))))
+						p = eop;
+					else if(*p == ':')
+						++p;
 					else
 						break;
 				}
-				return first;
+				return p;
 			}
 		
 			// iauthority = [ iuserinfo "@" ] ihost [ ":" port ]
-			const Char* ASCENSION_FASTCALL handleAuthority(const Char* first, const Char* last) {	// [nullable]
-				const Char* const beginning = first;
-				first = handleUserinfo(first, last);
-				assert(first != nullptr);
-				if(first > beginning) {
-					if(first >= last || *++first != '@')
-						first = beginning;
-				} else if(first < last && *++first != '@')
-					--first;
-				if(nullptr != (first = handleHost(first, last))) {
-					if(first != last) {
-						if(*first == ':')
-							++first;
-						first = handlePort(first, last);
-						assert(first != nullptr);
+			StringPiece::const_iterator ASCENSION_FASTCALL handleAuthority(const StringPiece& s) {	// [nullable]
+				auto p(handleUserinfo(s));
+				assert(p != nullptr);
+				if(p > s.cbegin()) {
+					if(p >= s.cend() || *++p != '@')
+						p = s.cbegin();
+				} else if(p < s.cend() && *++p != '@')
+					--p;
+				if(nullptr != (p = handleHost(s.substr(p - s.cbegin())))) {
+					if(p != s.cend()) {
+						if(*p == ':')
+							++p;
+						p = handlePort(s.substr(p - s.cbegin()));
+						assert(p != nullptr);
 					}
 				}
-				return first;
+				return p;
 			}
 		
 			// ihier-part = ("//" iauthority ipath-abempty) / ipath-absolute / ipath-rootless / ipath-empty
-			const Char* ASCENSION_FASTCALL handleHierPart(const Char* first, const Char* last) {
-				static const Char DOUBLE_SLASH[] = {'/', '/', 0};
+			StringPiece::const_iterator ASCENSION_FASTCALL handleHierPart(const StringPiece& s) {
+				static const StringPiece::value_type DOUBLE_SLASH[] = {'/', '/', 0};
 				const Char* eop;
-				(last - first > 2 && umemcmp(first, DOUBLE_SLASH, 2) == 0
-					&& nullptr != (eop = handleAuthority(first + 2, last)) && nullptr != (eop = handlePathAbempty(eop, last)))
-					|| nullptr != (eop = handlePathAbsolute(first, last))
-					|| nullptr != (eop = handlePathRootless(first, last))
-					|| nullptr != (eop = handlePathEmpty(first, last));
+				(s.length() > 2 && umemcmp(s.cbegin(), DOUBLE_SLASH, 2) == 0
+					&& nullptr != (eop = handleAuthority(s.substr(2))) && nullptr != (eop = handlePathAbempty(s.substr(eop - s.cbegin()))))
+					|| nullptr != (eop = handlePathAbsolute(s))
+					|| nullptr != (eop = handlePathRootless(s))
+					|| nullptr != (eop = handlePathEmpty(s));
 				return eop;
 			}
 		
 			// iquery = *( ipchar / iprivate / "/" / "?" )
-			const Char* ASCENSION_FASTCALL handleQuery(const Char* first, const Char* last) {	// [nullable]
-				for(const Char* eop; first < last; ) {
-					if(nullptr != (eop = handlePchar(first, last)) || nullptr != (eop = handlePrivate(first, last)))
-						first = eop;
-					else if(*first == '/' || *first == '?')
-						++first;
+			StringPiece::const_iterator ASCENSION_FASTCALL handleQuery(const StringPiece& s) {	// [nullable]
+				auto p(s.cbegin());
+				for(const Char* eop; p < s.cend(); ) {
+					if(nullptr != (eop = handlePchar(s.substr(p - s.cbegin()))) || nullptr != (eop = handlePrivate(s.substr(p - s.cbegin()))))
+						p = eop;
+					else if(*p == '/' || *p == '?')
+						++p;
 					else
 						break;
 				}
-				return first;
+				return p;
 			}
 		
 			// ifragment = *( ipchar / "/" / "?" )
-			const Char* ASCENSION_FASTCALL handleFragment(const Char* first, const Char* last) {	// [nullable]
-				for(const Char* eop; first < last; ) {
-					if(nullptr != (eop = handlePchar(first, last)))
-						first = eop;
-					else if(*first == '/' || *first == '?')
-						++first;
+			StringPiece::const_iterator ASCENSION_FASTCALL handleFragment(const StringPiece& s) {	// [nullable]
+				auto p(s.cbegin());
+				for(const Char* eop; p < s.cend(); ) {
+					if(nullptr != (eop = handlePchar(s.substr(p - s.cbegin()))))
+						p = eop;
+					else if(*p == '/' || *p == '?')
+						++p;
 					else
 						break;
 				}
-				return first;
+				return p;
 			}
 		
 			// IRI = scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]
-			const Char* ASCENSION_FASTCALL handleIRI(const Char* first, const Char* last) {
-				if(nullptr != (first = handleScheme(first, last))) {
-					if(*first == ':') {
-						if(nullptr != (first = handleHierPart(++first, last))) {
-							if(*first == '?') {
-								first = handleQuery(++first, last);
-								assert(first != nullptr);
+			StringPiece::const_iterator ASCENSION_FASTCALL handleIRI(const StringPiece& s) {
+				if(auto p = handleScheme(s)) {
+					if(*p == ':') {
+						if(nullptr != (p = handleHierPart(s.substr(++p - s.cbegin())))) {
+							if(*p == '?') {
+								p = handleQuery(s.substr(++p - s.cbegin()));
+								assert(p != nullptr);
 							}
-							if(*first == '#') {
-								first = handleFragment(++first, last);
-								assert(first != nullptr);
+							if(*p == '#') {
+								p = handleFragment(s.substr(++p - s.cbegin()));
+								assert(p != nullptr);
 							}
-							return first;
+							return p;
 						}
 					}
 				}
@@ -461,14 +479,14 @@ namespace ascension {
 					endOfScheme = nullptr;
 			} else {
 				endOfScheme = umemchr(text.cbegin() + 1, ':', text.length() - 1);
-				if(handleScheme(text.cbegin(), endOfScheme) != endOfScheme)
+				if(handleScheme(makeStringPiece(text.cbegin(), endOfScheme)) != endOfScheme)
 					endOfScheme = nullptr;
 			}
 			if(endOfScheme == nullptr)
 				return text.cbegin();
-			else if(endOfScheme == end(text) - 1)	// terminated with <ipath-empty>
+			else if(endOfScheme == text.cend() - 1)	// terminated with <ipath-empty>
 				return end(text);
-			if(const Char* const e = handleIRI(text.cbegin(), text.cend()))
+			if(const auto e = handleIRI(text))
 				return e;
 			return text.cbegin();
 		}
@@ -490,10 +508,10 @@ namespace ascension {
 			if(nextColon == nullptr)
 				return false;
 			for(StringPiece::const_iterator p(text.cbegin()); ; ) {
-				if(handleScheme(p, nextColon) == nextColon) {
+				if(handleScheme(makeStringPiece(p, nextColon)) == nextColon) {
 					if(validSchemes_ == nullptr || validSchemes_->matches(makeStringPiece(p, nextColon))) {
-						if(const Char* const e = handleIRI(p, end(text)))
-							return StringPiece(p, e - p);
+						if(const Char* const e = handleIRI(text.substr(p - text.cbegin())))
+							return makeStringPiece(p, e);
 					}
 					p = nextColon;
 				} else
@@ -520,7 +538,7 @@ namespace ascension {
 			// validation
 			BOOST_FOREACH(const String& s, schemes) {
 				const Char* const p = s.data();
-				if(handleScheme(p, p + s.length()) != p + s.length())
+				if(handleScheme(StringPiece(p, s.length())) != p + s.length())
 					throw std::invalid_argument("schemes");
 			}
 		
@@ -538,16 +556,18 @@ namespace ascension {
 		 * @param caseSensitive Set @c true to use case-sensitive comparison for scheme name matching
 		 * @param separator The character delimits scheme names in @a schemes. this can be a surrogate
 		 * @return The detector
+		 * @throw NullPointerException @a schemes is @c null
 		 * @throw std#invalid_argument Invalid name as a scheme was found
 		 */
-		URIDetector& URIDetector::setValidSchemes(const String& schemes, Char separator, bool caseSensitive /* = false */) {
+		URIDetector& URIDetector::setValidSchemes(const StringPiece& schemes, Char separator, bool caseSensitive /* = false */) {
+			if(schemes.cbegin() == nullptr || schemes.cend() == nullptr)
+				throw NullPointerException("schemes");
 			std::set<String> container;
 			for(Index previous = 0, next; previous < schemes.length(); previous = next + 1) {
-				next = schemes.find(separator, previous);
-				if(next == String::npos)
-					next = schemes.length();
+				next = schemes.substr(previous).find(separator);
+				next = (next != StringPiece::npos) ? next + previous : schemes.length();
 				if(next > previous)
-					container.insert(schemes.substr(previous, next - previous));
+					container.insert(schemes.substr(previous, next - previous).to_string());
 			}
 			return setValidSchemes(container, caseSensitive);
 		}

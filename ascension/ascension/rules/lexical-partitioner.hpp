@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_LEXICAL_PARTITIONER_HPP
 #define ASCENSION_LEXICAL_PARTITIONER_HPP
-
 #include <ascension/corelib/detail/gap-vector.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/kernel/partition.hpp>
@@ -60,10 +59,10 @@ namespace ascension {
 				kernel::ContentType contentType, kernel::ContentType& destination) const BOOST_NOEXCEPT;
 			void verify() const;
 			// DocumentPartitioner
-			void documentAboutToBeChanged() BOOST_NOEXCEPT;
-			void documentChanged(const kernel::DocumentChange& change) BOOST_NOEXCEPT;
-			void doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const BOOST_NOEXCEPT;
-			void doInstall() BOOST_NOEXCEPT;
+			void documentAboutToBeChanged() BOOST_NOEXCEPT override;
+			void documentChanged(const kernel::DocumentChange& change) BOOST_NOEXCEPT override;
+			void doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const BOOST_NOEXCEPT override;
+			void doInstall() BOOST_NOEXCEPT override;
 		private:
 			ascension::detail::GapVector<Partition*> partitions_;
 			std::forward_list<std::unique_ptr<const TransitionRule>> rules_;
@@ -87,7 +86,6 @@ namespace ascension {
 			});
 //			std::swap(rules_, newRules);
 		}
-
 	}
 } // namespace ascension.rules
 

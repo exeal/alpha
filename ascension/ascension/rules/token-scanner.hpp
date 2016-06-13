@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_TOKEN_SCANNER_HPP
 #define ASCENSION_TOKEN_SCANNER_HPP
-
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/kernel/position.hpp>
 #include <boost/optional.hpp>

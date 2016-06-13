@@ -7,8 +7,8 @@
 
 #ifndef ASCENSION_IDENTIFIER_SYNTAX_HPP
 #define ASCENSION_IDENTIFIER_SYNTAX_HPP
-
 #include <ascension/config.hpp>						// ASCENSION_NO_UNICODE_NORMALIZATION
+#include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/character.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// text.utf.CharacterDecodeIterator
 #include <set>
@@ -100,11 +100,11 @@ namespace ascension {
 			/// @name Syntax Overrides
 			/// @{
 			void overrideIdentifierStartCharacters(
-				const String& adding, const String& subtracting);
+				const StringPiece& adding, const StringPiece& subtracting);
 			void overrideIdentifierStartCharacters(
 				const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
 			void overrideIdentifierNonStartCharacters(
-				const String& adding, const String& subtracting);
+				const StringPiece& adding, const StringPiece& subtracting);
 			void overrideIdentifierNonStartCharacters(
 				const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
 			/// @}

@@ -6,7 +6,6 @@
 
 #ifndef ASCENSION_UTF_ITERATOR_HPP
 #define ASCENSION_UTF_ITERATOR_HPP
-
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/text/character.hpp>
 #include <ascension/corelib/text/utf.hpp>

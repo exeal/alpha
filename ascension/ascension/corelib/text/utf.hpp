@@ -14,7 +14,6 @@
 
 #ifndef ASCENSION_UTF_HPP
 #define ASCENSION_UTF_HPP
-
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/text/character.hpp>	// CodePoint, surrogates.*
 #include <cassert>								// assert
@@ -259,7 +258,7 @@ namespace ascension {
 			}
 			/// @}
 
-			/// @defgroup utf8_encode_decode UTF-8 Encoding and Decoding
+			/// @defgroup utf_decoding_functions UTF-x Decoding Functions
 			/// @{
 			/**
 			 * Converts the first character in the given UTF-8 code unit sequence to the
@@ -281,55 +280,6 @@ namespace ascension {
 			}
 
 			/**
-			 * Converts the first character in the given UTF-8 code unit sequence to the
-			 * corresponding code point.
-			 * @tparam InputIterator The input iterator represents a UTF-8 code unit sequence
-			 * @param first The beginning of the code unit sequence
-			 * @param last The end of the code unit sequence
-			 * @return The code point
-			 * @throw MalformedInputException&lt;InputIterator&gt; The input was ill-formed
-			 */
-			template<typename InputIterator>
-			inline CodePoint checkedDecodeFirst(InputIterator first, InputIterator last,
-					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 1>::type* = nullptr) {
-				return detail::decodeUTF8(first, last, true);
-			}
-
-			/**
-			 * Writes a character into the specified output iterator as UTF-8 character sequence
-			 * and advances the iterator to end of written bytes.
-			 * @tparam OutputIterator The type for @a out
-			 * @param c The code point of the character
-			 * @param[out] out The output iterator
-			 * @return The number of bytes written to @a out (1..4)
-			 * @throw InvalidCodePointException @a c is invalid
-			 */
-			template<typename OutputIterator>
-			inline std::size_t encode(CodePoint c, OutputIterator& out,
-					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 1>::type* = nullptr) {
-				return detail::encodeUTF8<false>(c, out);
-			}
-
-			/**
-			 * Writes a character into the specified output iterator as UTF-8 character sequence
-			 * and advances the iterator to end of written bytes.
-			 * @tparam OutputIterator The type for @a out
-			 * @param c The code point of the character
-			 * @param[out] out The output iterator
-			 * @return The number of bytes written to @a out (1..4)
-			 * @throw InvalidCodePointException @a c is invalid
-			 * @throw InvalidScalarValueException @a c is invalid
-			 */
-			template<typename OutputIterator>
-			inline std::size_t checkedEncode(CodePoint c, OutputIterator& out,
-					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 1>::type* = nullptr) {
-				return detail::encodeUTF8<true>(c, out);
-			}
-			/// @}
-
-			/// @defgroup utf16_encode_decode UTF-16 Encoding and Decoding
-			/// @{
-			/**
 			 * Converts the first character in the given UTF-16 code unit sequence to the
 			 * corresponding code point.
 			 * @tparam InputIterator The input iterator represents a UTF-16 code unit sequence
@@ -345,6 +295,42 @@ namespace ascension {
 				if(surrogates::isHighSurrogate(high))
 					return (++first != last) ? surrogates::decode(high, *first) : high;
 				return high;
+			}
+
+			/**
+			 * Converts the first character in the given UTF-32 code unit sequence to the
+			 * corresponding code point.
+			 * @tparam InputIterator The input iterator represents a UTF-32 code unit sequence
+			 * @param first The beginning of the code unit sequence
+			 * @param last The end of the code unit sequence
+			 * @return The code point
+			 */
+			template<typename InputIterator>
+			inline CodePoint decodeFirst(InputIterator first, InputIterator last,
+					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 4>::type* = nullptr) {
+				assert(first != last);
+				return static_cast<CodePoint>(*first);
+			}
+
+			/// @overload
+			template<typename BidirectionalReadableRange>
+			inline CodePoint decodeFirst(const BidirectionalReadableRange& range) {
+				return decodeFirst(boost::const_begin(range), boost::const_end(range));
+			}
+
+			/**
+			 * Converts the first character in the given UTF-8 code unit sequence to the
+			 * corresponding code point.
+			 * @tparam InputIterator The input iterator represents a UTF-8 code unit sequence
+			 * @param first The beginning of the code unit sequence
+			 * @param last The end of the code unit sequence
+			 * @return The code point
+			 * @throw MalformedInputException&lt;InputIterator&gt; The input was ill-formed
+			 */
+			template<typename InputIterator>
+			inline CodePoint checkedDecodeFirst(InputIterator first, InputIterator last,
+					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 1>::type* = nullptr) {
+				return detail::decodeUTF8(first, last, true);
 			}
 
 			/**
@@ -375,6 +361,31 @@ namespace ascension {
 			}
 
 			/**
+			 * Converts the first character in the given UTF-32 code unit sequence to the
+			 * corresponding code point.
+			 * @tparam InputIterator The input iterator represents a UTF-32 code unit sequence
+			 * @param first The beginning of the code unit sequence
+			 * @param last The end of the code unit sequence
+			 * @return The code point
+			 * @throw MalformedInputException&lt;InputIterator&gt; The input code unit sequence is
+			 *                                                     ill-formed UTF-32
+			 */
+			template<typename InputIterator>
+			inline CodePoint checkedDecodeFirst(InputIterator first, InputIterator last,
+					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 4>::type* = nullptr) {
+				assert(first != last);
+				if(!isScalarValueException(*first))
+					throw MalformedInputException<InputIterator>(first, 1);
+				return decodeFirst32(first, last);
+			}
+
+			/// @overload
+			template<typename BidirectionalReadableRange>
+			inline CodePoint checkedDecodeFirst(const BidirectionalReadableRange& range) {
+				return checkedDecodeFirst(boost::const_begin(range), boost::const_end(range));
+			}
+
+			/**
 			 * Converts the last character in the given UTF-16 code unit sequence to the
 			 * corresponding code point.
 			 * @tparam BidirectionalIterator The bidirectional iterator represents a UTF-16
@@ -392,6 +403,28 @@ namespace ascension {
 				if(surrogates::isLowSurrogate(low))
 					return (--last != first) ? surrogates::decode(*last, low) : low;
 				return low;
+			}
+
+			/**
+			 * Converts the last character in the given UTF-32 code unit sequence to the
+			 * corresponding code point.
+			 * @tparam BidirectionalIterator The bidirectional iterator represents a UTF-32
+			 *                               code unit sequence
+			 * @param first The beginning of the code unit sequence
+			 * @param last The end of the code unit sequence
+			 * @return The code point
+			 */
+			template<typename BidirectionalIterator>
+			inline CodePoint decodeLast(BidirectionalIterator first, BidirectionalIterator last,
+					typename std::enable_if<CodeUnitSizeOf<BidirectionalIterator>::value == 4>::type* = nullptr) {
+				assert(first != last);
+				return static_cast<CodePoint>(*--last);
+			}
+
+			/// @overload
+			template<typename BidirectionalReadableRange>
+			inline CodePoint decodeLast(const BidirectionalReadableRange& range) {
+				return decodeLast(boost::const_begin(range), boost::const_end(range));
 			}
 
 			/**
@@ -424,90 +457,6 @@ namespace ascension {
 			}
 
 			/**
-			 * Writes a character into the given output iterator as UTF-16 code unit sequence and
-			 * advances the iterator to end of written bytes.
-			 * This function does not check if @a c is valid at all.
-			 * @tparam OutputIterator The output iterator represents a UTF-16 code unit sequence
-			 * @param c The code point to encode
-			 * @param[out] out The output iterator
-			 * @return The number of code unit written into @a out (either 1 or 2)
-			 */
-			template<typename OutputIterator>
-			inline std::size_t encode(CodePoint c, OutputIterator& out,
-					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 2>::type* = nullptr) {
-				return detail::encodeUTF16<false>(c, out);
-			}
-
-			/**
-			 * Writes a character into the given output iterator as UTF-16 code unit sequence and
-			 * advances the iterator to end of written bytes.
-			 * @tparam OutputIterator The output iterator represents a UTF-16 code unit sequence
-			 * @param c The code point to encode
-			 * @param[out] out The output iterator
-			 * @return The number of code unit written into @a out (either 1 or 2)
-			 * @throw InvalidScalarValueException @a c is not valid scalar value can be expressed
-			 *                                    in UTF-16 code unit sequence
-			 */
-			template<typename OutputIterator>
-			inline std::size_t checkedEncode(CodePoint c, OutputIterator& out,
-					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 2>::type* = nullptr) {
-				return detail::encodeUTF16<true>(c, out);
-			}
-			/// @}
-
-			/// @defgroup utf32_encode_decode UTF-32 Encoding and Decoding
-			/// @{
-			/**
-			 * Converts the first character in the given UTF-32 code unit sequence to the
-			 * corresponding code point.
-			 * @tparam InputIterator The input iterator represents a UTF-32 code unit sequence
-			 * @param first The beginning of the code unit sequence
-			 * @param last The end of the code unit sequence
-			 * @return The code point
-			 */
-			template<typename InputIterator>
-			inline CodePoint decodeFirst(InputIterator first, InputIterator last,
-					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 4>::type* = nullptr) {
-				assert(first != last);
-				return static_cast<CodePoint>(*first);
-			}
-
-			/**
-			 * Converts the first character in the given UTF-32 code unit sequence to the
-			 * corresponding code point.
-			 * @tparam InputIterator The input iterator represents a UTF-32 code unit sequence
-			 * @param first The beginning of the code unit sequence
-			 * @param last The end of the code unit sequence
-			 * @return The code point
-			 * @throw MalformedInputException&lt;InputIterator&gt; The input code unit sequence is
-			 *                                                     ill-formed UTF-32
-			 */
-			template<typename InputIterator>
-			inline CodePoint checkedDecodeFirst(InputIterator first, InputIterator last,
-					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 4>::type* = nullptr) {
-				assert(first != last);
-				if(!isScalarValueException(*first))
-					throw MalformedInputException<InputIterator>(first, 1);
-				return decodeFirst32(first, last);
-			}
-
-			/**
-			 * Converts the last character in the given UTF-32 code unit sequence to the
-			 * corresponding code point.
-			 * @tparam BidirectionalIterator The bidirectional iterator represents a UTF-32
-			 *                               code unit sequence
-			 * @param first The beginning of the code unit sequence
-			 * @param last The end of the code unit sequence
-			 * @return The code point
-			 */
-			template<typename BidirectionalIterator>
-			inline CodePoint decodeLast(BidirectionalIterator first, BidirectionalIterator last,
-					typename std::enable_if<CodeUnitSizeOf<BidirectionalIterator>::value == 4>::type* = nullptr) {
-				assert(first != last);
-				return static_cast<CodePoint>(*--last);
-			}
-
-			/**
 			 * Converts the last character in the given UTF-32 code unit sequence to the
 			 * corresponding code point.
 			 * @tparam BidirectionalIterator The bidirectional iterator represents a UTF-32
@@ -529,6 +478,45 @@ namespace ascension {
 				return static_cast<CodePoint>(c);
 			}
 
+			/// @overload
+			template<typename BidirectionalReadableRange>
+			inline CodePoint checkedDecodeLast(const BidirectionalReadableRange& range) {
+				return checkedDecodeLast(boost::const_begin(range), boost::const_end(range));
+			}
+			/// @}
+
+			/// @defgroup utf_encoding_functions UTF-x Encoding Functions
+			/// @{
+			/**
+			 * Writes a character into the specified output iterator as UTF-8 character sequence
+			 * and advances the iterator to end of written bytes.
+			 * @tparam OutputIterator The type for @a out
+			 * @param c The code point of the character
+			 * @param[out] out The output iterator
+			 * @return The number of bytes written to @a out (1..4)
+			 * @throw InvalidCodePointException @a c is invalid
+			 */
+			template<typename OutputIterator>
+			inline std::size_t encode(CodePoint c, OutputIterator& out,
+					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 1>::type* = nullptr) {
+				return detail::encodeUTF8<false>(c, out);
+			}
+
+			/**
+			 * Writes a character into the given output iterator as UTF-16 code unit sequence and
+			 * advances the iterator to end of written bytes.
+			 * This function does not check if @a c is valid at all.
+			 * @tparam OutputIterator The output iterator represents a UTF-16 code unit sequence
+			 * @param c The code point to encode
+			 * @param[out] out The output iterator
+			 * @return The number of code unit written into @a out (either 1 or 2)
+			 */
+			template<typename OutputIterator>
+			inline std::size_t encode(CodePoint c, OutputIterator& out,
+					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 2>::type* = nullptr) {
+				return detail::encodeUTF16<false>(c, out);
+			}
+
 			/**
 			 * Writes a character into the given output iterator as UTF-32 code unit sequence and
 			 * advances the iterator to end of written bytes.
@@ -543,6 +531,38 @@ namespace ascension {
 					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 4>::type* = nullptr) {
 				*out = static_cast<std::uint32_t>(c);
 				return ++out, 1;
+			}
+
+			/**
+			 * Writes a character into the specified output iterator as UTF-8 character sequence
+			 * and advances the iterator to end of written bytes.
+			 * @tparam OutputIterator The type for @a out
+			 * @param c The code point of the character
+			 * @param[out] out The output iterator
+			 * @return The number of bytes written to @a out (1..4)
+			 * @throw InvalidCodePointException @a c is invalid
+			 * @throw InvalidScalarValueException @a c is invalid
+			 */
+			template<typename OutputIterator>
+			inline std::size_t checkedEncode(CodePoint c, OutputIterator& out,
+					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 1>::type* = nullptr) {
+				return detail::encodeUTF8<true>(c, out);
+			}
+
+			/**
+			 * Writes a character into the given output iterator as UTF-16 code unit sequence and
+			 * advances the iterator to end of written bytes.
+			 * @tparam OutputIterator The output iterator represents a UTF-16 code unit sequence
+			 * @param c The code point to encode
+			 * @param[out] out The output iterator
+			 * @return The number of code unit written into @a out (either 1 or 2)
+			 * @throw InvalidScalarValueException @a c is not valid scalar value can be expressed
+			 *                                    in UTF-16 code unit sequence
+			 */
+			template<typename OutputIterator>
+			inline std::size_t checkedEncode(CodePoint c, OutputIterator& out,
+					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 2>::type* = nullptr) {
+				return detail::encodeUTF16<true>(c, out);
 			}
 
 			/**

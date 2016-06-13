@@ -10,14 +10,13 @@
 
 #ifndef ASCENSION_NEWLINE_HPP
 #define ASCENSION_NEWLINE_HPP
-
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/memory.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/character.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/optional.hpp>
-#include <algorithm>	// std.find_first_of
+#include <boost/range/algorithm/find_first_of.hpp>
 
 namespace ascension {
 	namespace text {
@@ -87,7 +86,7 @@ namespace ascension {
 				return 0;
 			Index lines = 1;
 			while(true) {
-				first = std::find_first_of(first, last, std::begin(NEWLINE_CHARACTERS), std::end(NEWLINE_CHARACTERS));
+				first = boost::find_first_of(boost::make_iterator_range(first, last), NEWLINE_CHARACTERS);
 				if(first == last)
 					break;
 				++lines;
@@ -104,11 +103,13 @@ namespace ascension {
 
 		/**
 		 * Returns the number of lines in the specified text.
-		 * @param text The text string
+		 * @tparam SinglePassReadableRange The type of @a range
+		 * @param range The character range
 		 * @return The number of lines
 		 */
-		inline Index calculateNumberOfLines(const StringPiece& text) BOOST_NOEXCEPT {
-			return calculateNumberOfLines(text.cbegin(), text.cend());
+		template<typename SinglePassReadableRange>
+		inline Index calculateNumberOfLines(const SinglePassReadableRange& range) BOOST_NOEXCEPT {
+			return calculateNumberOfLines(boost::const_begin(range), boost::const_end(range));
 		}
 
 		/**
@@ -135,6 +136,17 @@ namespace ascension {
 				default:
 					return boost::none;
 			}
+		}
+
+		/**
+		 * Returns the newline at the beginning of the specified range.
+		 * @tparam SinglePassReadableRange The type of @a range
+		 * @param range The character range
+		 * @return The newline or @c boost#none if the beginning of the buffer is not newline
+		 */
+		template<typename SinglePassReadableRange>
+		inline boost::optional<Newline> eatNewline(const SinglePassReadableRange& range) BOOST_NOEXCEPT {
+			return eatNewline(boost::const_begin(range), boost::const_end(range));
 		}
 	}
 } // namespace ascension.text

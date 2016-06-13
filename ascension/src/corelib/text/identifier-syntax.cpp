@@ -76,7 +76,7 @@ namespace ascension {
 				boost::sort(s);
 				std::vector<CodePoint> v;
 				boost::set_intersection(a, s, back_inserter(v));
-				if(!v.empty())
+				if(!boost::empty(v))
 					throw std::invalid_argument("same character was found the both sets");
 				added = a;
 				subtracted = s;
@@ -206,14 +206,14 @@ namespace ascension {
 		 * @throw InvalidScalarValueException An isolated surrogate is found, or same character was found at both @a adding and
 		 *                                    @a subtracting
 		 */
-		void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, const String& subtracting) {
-			String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(adding));
-			if(isolatedSurrogate != end(adding))
+		void IdentifierSyntax::overrideIdentifierStartCharacters(const StringPiece& adding, const StringPiece& subtracting) {
+			auto isolatedSurrogate(surrogates::searchIsolatedSurrogate(adding));
+			if(isolatedSurrogate != boost::const_end(adding))
 				throw InvalidScalarValueException(*isolatedSurrogate);
-			isolatedSurrogate = surrogates::searchIsolatedSurrogate(begin(subtracting), end(subtracting));
-			if(isolatedSurrogate != end(subtracting))
+			isolatedSurrogate = surrogates::searchIsolatedSurrogate(subtracting);
+			if(isolatedSurrogate != boost::const_end(subtracting))
 				throw InvalidScalarValueException(*isolatedSurrogate);
-			typedef utf::CharacterDecodeIterator<String::const_iterator> I;
+			typedef utf::CharacterDecodeIterator<decltype(isolatedSurrogate)> I;
 			implementOverrides(
 				boost::make_iterator_range(I(std::begin(adding), std::end(adding)), I(std::begin(adding), std::end(adding), std::end(adding))),
 				boost::make_iterator_range(I(std::begin(subtracting), std::end(subtracting)), I(std::begin(subtracting), std::end(subtracting), std::end(subtracting))),
@@ -229,10 +229,10 @@ namespace ascension {
 		 */
 		void IdentifierSyntax::overrideIdentifierStartCharacters(const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting) {
 			std::set<CodePoint>::const_iterator isolatedSurrogate(boost::find_if(adding, surrogates::isSurrogate));
-			if(isolatedSurrogate != boost::end(adding))
+			if(isolatedSurrogate != boost::const_end(adding))
 				throw InvalidScalarValueException(*isolatedSurrogate);
 			isolatedSurrogate = boost::find_if(subtracting, surrogates::isSurrogate);
-			if(isolatedSurrogate != boost::end(subtracting))
+			if(isolatedSurrogate != boost::const_end(subtracting))
 				throw InvalidScalarValueException(*isolatedSurrogate);
 			implementOverrides(adding, subtracting, addedIDStartCharacters_, subtractedIDStartCharacters_);
 		}
@@ -244,14 +244,14 @@ namespace ascension {
 		 * @throw InvalidScalarValueException An isolated surrogate is found, or same character was found at both
 		 *                                    @a adding and @a subtracting
 		 */
-		void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding, const String& subtracting) {
-			String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(adding));
-			if(isolatedSurrogate != end(adding))
+		void IdentifierSyntax::overrideIdentifierNonStartCharacters(const StringPiece& adding, const StringPiece& subtracting) {
+			auto isolatedSurrogate(surrogates::searchIsolatedSurrogate(adding));
+			if(isolatedSurrogate != boost::const_end(adding))
 				throw InvalidScalarValueException(*isolatedSurrogate);
 			isolatedSurrogate = surrogates::searchIsolatedSurrogate(subtracting);
-			if(isolatedSurrogate != end(subtracting))
+			if(isolatedSurrogate != boost::const_end(subtracting))
 				throw InvalidScalarValueException(*isolatedSurrogate);
-			typedef utf::CharacterDecodeIterator<String::const_iterator> I;
+			typedef utf::CharacterDecodeIterator<decltype(isolatedSurrogate)> I;
 			implementOverrides(
 				boost::make_iterator_range(I(std::begin(adding), std::end(adding)), I(std::begin(adding), std::end(adding), std::end(adding))),
 				boost::make_iterator_range(I(std::begin(subtracting), std::end(subtracting)), I(std::begin(subtracting), std::end(subtracting), std::end(subtracting))),
@@ -267,10 +267,10 @@ namespace ascension {
 		 */
 		void IdentifierSyntax::overrideIdentifierNonStartCharacters(const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting) {
 			std::set<CodePoint>::const_iterator isolatedSurrogate(boost::find_if(adding, surrogates::isSurrogate));
-			if(isolatedSurrogate != boost::end(adding))
+			if(isolatedSurrogate != boost::const_end(adding))
 				throw InvalidScalarValueException(*isolatedSurrogate);
 			isolatedSurrogate = boost::find_if(subtracting, surrogates::isSurrogate);
-			if(isolatedSurrogate != boost::end(subtracting))
+			if(isolatedSurrogate != boost::const_end(subtracting))
 				throw InvalidScalarValueException(*isolatedSurrogate);
 			implementOverrides(adding, subtracting, addedIDNonStartCharacters_, subtractedIDNonStartCharacters_);
 		}

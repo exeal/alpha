@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_CHARACTER_HPP
 #define ASCENSION_CHARACTER_HPP
-
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/future/type-traits.hpp>	// std.integral_constant
 #include <boost/mpl/identity.hpp>
