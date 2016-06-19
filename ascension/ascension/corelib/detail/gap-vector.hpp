@@ -198,9 +198,11 @@ namespace ascension {
 			 */
 			template<typename Inputiterator>
 			GapVector(Inputiterator first, Inputiterator last,
-					const allocator_type& allocator = allocator_type()) : allocator_(allocator),
-					first_(nullptr), last_(nullptr), gapFirst_(nullptr), gapLast_(nullptr) {
-				insert(0, first, last);
+					const allocator_type& allocator = allocator_type()) : allocator_(allocator) {
+				const auto n = std::distance(first, last);
+				first_ = gapFirst_ = allocator_.allocate(n, 0);
+				last_ = gapLast_ = std::next(first_, n);
+				insert(cbegin(), first, last);
 			}
 
 			/**
