@@ -95,10 +95,14 @@ namespace ascension {
 			friend class boost::iterators::iterator_core_access;
 			void advance(typename boost::iterators::iterator_difference<Self>::type n) {
 				const auto nextOpportunity(std::next(p_, n));
-				if(nextOpportunity >= target()->gapFirst_ && nextOpportunity < target()->gapLast_)
-					std::advance(p_, n += target()->gap());
-				else
-					p_ = nextOpportunity;
+				if(nextOpportunity > p_) {
+					if(p_ <= target()->gapFirst_ && nextOpportunity > target()->gapFirst_)
+						return std::advance(p_, n += target()->gap());
+				} else if(nextOpportunity < p_) {
+					if(p_ >= target()->gapLast_ && nextOpportunity < target()->gapLast_)
+						return std::advance(p_, n -= target()->gap());
+				}
+				p_ = nextOpportunity;
 			}
 			void decrement() BOOST_NOEXCEPT {
 				if(p_ != target()->gapLast_)
