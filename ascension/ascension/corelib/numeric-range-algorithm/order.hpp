@@ -35,7 +35,7 @@ namespace ascension {
 		 */
 		template<typename NumericRange, typename BinaryPredicate>
 		inline bool isOrdered(const NumericRange& range, BinaryPredicate pred) {
-			return pred(*boost::const_begin(range), *boost::const_end(range));
+			return !pred(*boost::const_end(range), *boost::const_begin(range));
 		}
 
 		/**
@@ -79,7 +79,7 @@ namespace ascension {
 		};
 
 		template<typename NumericRange>
-		inline NumericRange operator|(const NumericRange& range, const OrderForwarder0& forwarder) {
+		inline NumericRange operator|(const NumericRange& range, const OrderForwarder0&) {
 			return order(range);
 		}
 
