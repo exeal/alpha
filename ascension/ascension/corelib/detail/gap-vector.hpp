@@ -185,7 +185,7 @@ namespace ascension {
 					const allocator_type& allocator = allocator_type()) : allocator_(allocator),
 					first_(allocator_.allocate(n, 0)), last_(std::next(first_, n)),
 					gapFirst_(first_), gapLast_(last_) {
-				insert(0, n, value);
+				insert(cbegin(), n, value);
 			}
 
 			/**
@@ -562,7 +562,7 @@ namespace ascension {
 			 * @return An iterator addresses the first element remaining beyond the removed element
 			 */
 			iterator erase(const_iterator position) {
-				return erase(position, position + 1);
+				return erase(position, std::next(position, 1));
 			}
 
 			/**
