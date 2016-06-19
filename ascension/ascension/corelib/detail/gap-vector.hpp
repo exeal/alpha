@@ -58,7 +58,7 @@ namespace ascension {
 				assert(p_ != nullptr);
 				if(p_ == target.gapFirst_)
 					p_ = target.gapLast_;
-				assert(validate());
+				assert(validate(false));
 			}
 			template<typename Pointer2, typename Reference2>
 			GapVectorIterator(const GapVectorIterator<Target, Pointer2, Reference2>& other)
@@ -69,11 +69,11 @@ namespace ascension {
 				return *this;
 			}
 			Pointer after() const BOOST_NOEXCEPT {
-				assert(validate());
+				assert(validate(true));
 				return (p_ == target()->gapFirst_) ? target()->gapLast_ : p_;
 			}
 			Pointer before() const BOOST_NOEXCEPT {
-				assert(validate());
+				assert(validate(true));
 				return (p_ == target()->gapLast_) ? target()->gapFirst_ : p_;
 			}
 			BOOST_CONSTEXPR const Target* target() const BOOST_NOEXCEPT {
@@ -85,8 +85,11 @@ namespace ascension {
 			BOOST_CONSTEXPR typename boost::iterators::iterator_difference<Self>::type offset() const BOOST_NOEXCEPT {
 				return (p_ < target()->gapLast_) ? (p_ - target()->first_) : ((p_ - target()->first_) - target()->gap());
 			}
-			BOOST_CONSTEXPR bool validate() const BOOST_NOEXCEPT {
-				return (p_ >= target()->gapLast_ && p_ <= target()->last_) || (p_ >= target()->first_ && p_ < target()->gapFirst_);
+			BOOST_CONSTEXPR bool validate(bool allowGapFirst) const BOOST_NOEXCEPT {
+				auto gf(target()->gapFirst_);
+				if(allowGapFirst)
+					++gf;
+				return (p_ >= target()->gapLast_ && p_ <= target()->last_) || (p_ >= target()->first_ && p_ < gf);
 			}
 			// boost.iterators.iterator_facade
 			friend class boost::iterators::iterator_core_access;
