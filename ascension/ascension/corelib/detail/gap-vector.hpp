@@ -486,11 +486,12 @@ namespace ascension {
 			 * @param value The element value to insert
 			 */
 			iterator insert(const_iterator position, const_reference value) {
+				const auto offset(std::distance(cbegin(), position));
 				makeGapAt(position.before());
 				*(gapFirst_++) = value;
 				if(gapFirst_ == gapLast_)
 					reallocate(capacity() * 2);
-				return iterator(*this, gapFirst_);
+				return std::next(begin(), offset);
 			}
 
 			/**
@@ -499,11 +500,12 @@ namespace ascension {
 			 * @param value The element value to insert
 			 */
 			iterator insert(const_iterator position, value_type&& value) {
+				const auto offset(std::distance(cbegin(), position));
 				makeGapAt(position.before());
 				*(gapFirst_++) = std::move(value);
 				if(gapFirst_ == gapLast_)
 					reallocate(capacity() * 2);
-				return iterator(*this, gapFirst_);
+				return std::next(begin(), offset);
 			}
 
 			/**
@@ -513,14 +515,14 @@ namespace ascension {
 			 * @param value The element value to insert
 			 */
 			iterator insert(const_iterator position, size_type n, const_reference value) {
+				const auto offset(std::distance(cbegin(), position));
 				makeGapAt(std::next(first_, size()));
 				makeGapAt(position.before());
 				if(static_cast<size_type>(gap()) <= n)
 					reallocate(std::max(capacity() + n + 1, capacity() * 2));
 				std::fill_n(gapFirst_, n, value);
-				const auto oldGapFirst(gapFirst);
-				std::next(gapFirst_, n);
-				return iterator(*this, oldGapFirst);
+				std::advance(gapFirst_, n);
+				return std::next(begin(), offset);
 			}
 
 			/**
