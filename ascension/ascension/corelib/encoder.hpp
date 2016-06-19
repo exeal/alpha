@@ -6,10 +6,11 @@
 
 #ifndef ASCENSION_ENCODER_HPP
 #define ASCENSION_ENCODER_HPP
-
 #include <ascension/config.hpp>	// ASCENSION_NO_*_ENCODINGS
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/string-piece.hpp>
+#include <boost/core/ignore_unused.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <array>
 #include <locale>	// std.locale, std.codecvt
 #include <memory>	// std.unique_ptr
@@ -243,7 +244,10 @@ namespace ascension {
 			 * @param locale The locale used to localize the name
 			 * @see #name
 			 */
-			virtual std::string displayName(const std::locale& locale) const BOOST_NOEXCEPT {return name();}
+			virtual std::string displayName(const std::locale& locale) const BOOST_NOEXCEPT {
+				boost::ignore_unused(locale);
+				return name();
+			}
 			/// Returns the number of bytes represents a UCS character.
 			virtual std::size_t maximumNativeBytes() const BOOST_NOEXCEPT = 0;
 			/// Returns the number of UCS characters represents a native character. Default
