@@ -183,7 +183,7 @@ namespace ascension {
 			 */
 			GapVector(size_type n, const_reference value,
 					const allocator_type& allocator = allocator_type()) : allocator_(allocator),
-					first_(allocator_.allocate(count, 0)), last_(std::next(first_, n)),
+					first_(allocator_.allocate(n, 0)), last_(std::next(first_, n)),
 					gapFirst_(first_), gapLast_(last_) {
 				insert(0, n, value);
 			}
@@ -214,10 +214,10 @@ namespace ascension {
 					gapFirst_(std::next(first_, std::distance(other.first_, other.gapFirst_))),
 					gapLast_(std::next(first_, std::distance(other.first_, other.gapLast_))) {
 				try {
-					uninitializedCopy(other.first_, other.gapFirst_, first_, allocator);
-					uninitializedCopy(other.gapLast_, other.last_, gapFirst_, allocator);
+					uninitializedCopy(other.first_, other.gapFirst_, first_, allocator_);
+					uninitializedCopy(other.gapLast_, other.last_, gapFirst_, allocator_);
 				} catch(...) {
-					allocator.deallocate(first_, capacity());
+					allocator_.deallocate(first_, capacity());
 				}
 			}
 
@@ -513,7 +513,7 @@ namespace ascension {
 			iterator insert(const_iterator position, size_type n, const_reference value) {
 				makeGapAt(std::next(first_, size()));
 				makeGapAt(position.before());
-				if(static_cast<size_type>(gap()) <= count)
+				if(static_cast<size_type>(gap()) <= n)
 					reallocate(std::max(capacity() + n + 1, capacity() * 2));
 				std::fill_n(gapFirst_, n, value);
 				const auto oldGapFirst(gapFirst);
@@ -600,7 +600,7 @@ namespace ascension {
 			 */
 			void swap(GapVector& other) BOOST_NOEXCEPT {
 				using std::swap;
-				swap(allocator_, other.allocator);
+				swap(allocator_, other.allocator_);
 				swap(first_, other.first_);
 				swap(last_, other.last_);
 				swap(gapFirst_, other.gapFirst_);
