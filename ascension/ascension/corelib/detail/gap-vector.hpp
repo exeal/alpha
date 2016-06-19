@@ -304,7 +304,13 @@ namespace ascension {
 			 * @return This gap vector
 			 */
 			GapVector<value_type, allocator_type>& operator=(GapVector&& other) {
-				GapVector<value_type, allocator_type>(std::forward(other)).swap(*this);
+				if(allocator_ == other.allocator_)
+					GapVector<value_type, allocator_type>(std::forward<GapVector<value_type, allocator_type>>(other)).swap(*this);
+				else {
+					GapVector<value_type, allocator_type> temp(other.cbegin(), other.cend());
+					other.clear();
+					*this = std::move(temp);
+				}
 				return *this;
 			}
 #ifndef BOOST_NO_CXX11_HDR_INITIALIZER_LIST
