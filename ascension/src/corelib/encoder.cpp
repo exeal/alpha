@@ -244,6 +244,7 @@ namespace ascension {
 		 */
 		std::unique_ptr<Encoder> Encoder::forWindowsCodePage(unsigned int codePage) BOOST_NOEXCEPT {
 			// TODO: not implemented.
+			boost::ignore_unused(codePage);
 			return std::unique_ptr<Encoder>();
 		}
 #endif // BOOST_OS_WINDOWS

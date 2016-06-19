@@ -8,6 +8,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <boost/core/ignore_unused.hpp>
 #include <memory>	// std.unique_ptr
 
 #if ASCENSION_UAX29_REVISION_NUMBER > 11
@@ -164,10 +165,14 @@ namespace ascension {
 				const int s1 = Script::of(preceding), s2 = Script::of(following);
 				if(s1 == s2 || s1 == Script::COMMON || s2 == Script::COMMON || s1 == Script::INHERITED || s2 == Script::INHERITED)
 					return true;
-//				// 日本語の送り仮名?
-//				// 左側が漢字か片仮名、右側が平仮名であれば単語境界ではない
-//				else if(locales.isJapanese(lc) && s2 == Script::HIRAGANA && (s1 == Script::KATAKANA || s1 == Script::HAN))
-//					return true;
+#if 0
+				// 日本語の送り仮名?
+				// 左側が漢字か片仮名、右側が平仮名であれば単語境界ではない
+				else if(locales.isJapanese(lc) && s2 == Script::HIRAGANA && (s1 == Script::KATAKANA || s1 == Script::HAN))
+					return true;
+#else
+				boost::ignore_unused(lc);
+#endif
 				// <平仮名> + 'ー'
 				else if(s1 == Script::HIRAGANA && following == 0x30fc)
 					return true;
