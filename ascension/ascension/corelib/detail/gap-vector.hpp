@@ -647,8 +647,8 @@ namespace ascension {
 					}
 					std::advance(gapFirst_, -n);
 					gapLast_ = newGapLast;
-				} else if(position > gapFirst_) {
-					const difference_type n = std::distance(gapFirst_, p);
+				} else if(position >= gapLast_) {
+					const difference_type n = std::distance(gapLast_, p);
 					const auto newGapLast(std::next(gapLast_, n));
 					if(n <= gap()) {
 						uninitializedCopy(std::make_move_iterator(gapLast_), std::make_move_iterator(newGapLast), gapFirst_, allocator_);
@@ -657,7 +657,7 @@ namespace ascension {
 						uninitializedCopy(std::make_move_iterator(gapLast_),
 							std::make_move_iterator(std::next(gapLast_, gap())), gapFirst_, allocator_);
 						try {
-							std::copy(std::make_move_iterator(gapLast_ + gap()),
+							std::copy(std::make_move_iterator(std::next(gapLast_, gap())),
 								std::make_move_iterator(newGapLast), std::next(gapFirst_, gap()));
 						} catch(...) {
 							destroy(gapFirst_, gapLast_);
@@ -668,7 +668,6 @@ namespace ascension {
 					std::advance(gapFirst_, +n);
 					gapLast_ = newGapLast;
 				}
-				assert(gapFirst_ == position);
 			}
 			void reallocate(size_type newCapacity) {
 				if(newCapacity > maxSize())
