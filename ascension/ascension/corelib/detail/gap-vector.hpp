@@ -113,7 +113,7 @@ namespace ascension {
 				return other.offset() - offset();
 			}
 			BOOST_CONSTEXPR bool equal(const GapVectorIterator& other) const BOOST_NOEXCEPT {
-				return offset() == other.offset();
+				return target() == other.target() && offset() == other.offset();
 			}
 			void increment() BOOST_NOEXCEPT {
 				assert(p_ != target()->gapFirst_);
