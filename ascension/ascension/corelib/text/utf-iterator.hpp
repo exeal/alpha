@@ -71,7 +71,7 @@ namespace ascension {
 				/// Returns beginning of the range this iterator can address.
 				const BaseIterator& first() const BOOST_NOEXCEPT {return first_;}
 				/// Returns end of the range this iterator can address.
-				const BaseIterator& last() const BOOST_NOEXCEPT {return first_;}
+				const BaseIterator& last() const BOOST_NOEXCEPT {return last_;}
 				/// Sets if this iterator replaces the ill-formed code unit (sub)sequence.
 				CharacterDecodeIterator& replaceMalformedInput(bool replace) BOOST_NOEXCEPT {
 					replacesMalformedInput_ = replace;
