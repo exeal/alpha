@@ -78,6 +78,7 @@ namespace ascension {
 	}
 
 	using algorithm::clamp;
+	using algorithm::clampRange;
 
 	namespace detail {
 		template<typename NumericRange>
@@ -94,12 +95,12 @@ namespace ascension {
 
 		template<typename NumericRange>
 		inline NumericRange operator|(const NumericRange& range, const ClampForwarder1<NumericRange>& forwarder) {
-			return clamp(range, forwarder.bounds);
+			return clampRange(range, forwarder.bounds);
 		}
 
 		template<typename NumericRange, typename BinaryPredicate>
 		inline NumericRange operator|(const NumericRange& range, const ClampForwarder2<NumericRange, BinaryPredicate>& forwarder) {
-			return clamp(range, forwarder.bounds, forwarder.pred);
+			return clampRange(range, forwarder.bounds, forwarder.pred);
 		}
 	}
 
