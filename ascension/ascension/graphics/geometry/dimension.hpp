@@ -21,6 +21,7 @@
 #include <boost/geometry/core/point_order.hpp>
 #include <boost/geometry/core/point_type.hpp>
 #include <boost/geometry/geometries/concepts/check.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/parameter.hpp>
 
@@ -191,7 +192,11 @@ namespace boost {
 			};
 			template<typename Geometry>
 			struct point_type<ascension::graphics::geometry::DimensionTag, Geometry> {
-				typedef void/*boost::geometry::model::d2::point_xy<typename geometry::coordinate_type<Geometry>::type>*/ type;
+#if 1
+				typedef boost::geometry::model::d2::point_xy<typename geometry::coordinate_type<Geometry>::type> type;
+#else
+				typedef void type;
+#endif
 			};
 		}
 

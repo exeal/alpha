@@ -168,13 +168,13 @@ namespace ascension {
 #if 0
 				// 日本語の送り仮名?
 				// 左側が漢字か片仮名、右側が平仮名であれば単語境界ではない
-				else if(locales.isJapanese(lc) && s2 == Script::HIRAGANA && (s1 == Script::KATAKANA || s1 == Script::HAN))
+				if(locales.isJapanese(lc) && s2 == Script::HIRAGANA && (s1 == Script::KATAKANA || s1 == Script::HAN))
 					return true;
 #else
 				boost::ignore_unused(lc);
 #endif
 				// <平仮名> + 'ー'
-				else if(s1 == Script::HIRAGANA && following == 0x30fc)
+				if(s1 == Script::HIRAGANA && following == 0x30fc)
 					return true;
 				return false;
 			}

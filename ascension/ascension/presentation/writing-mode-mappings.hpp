@@ -16,7 +16,7 @@
 #define ASCENSION_WRITING_MODE_MAPPINGS_HPP
 #include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/graphics/font/line-relative-directions-dimensions.hpp>
-#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
+#include <ascension/presentation/flow-relative-four-sides.hpp>
 #include <ascension/presentation/writing-mode.hpp>	// WritingMode, ...
 #include <boost/parameter/name.hpp>
 #include <boost/parameter/preprocessor.hpp>

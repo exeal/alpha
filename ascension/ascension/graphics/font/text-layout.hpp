@@ -17,7 +17,7 @@
 //#include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/geometry/rectangle.hpp>
-#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
+#include <ascension/presentation/flow-relative-four-sides.hpp>
 #include <ascension/presentation/styles/writing-modes.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/multi/geometries/multi_polygon.hpp>
