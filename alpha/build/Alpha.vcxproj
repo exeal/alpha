@@ -474,7 +474,9 @@
     <ClInclude Include="..\..\ascension\ascension\log.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\absolute-length.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\detail\style-sequence.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\presentation\flow-relative-directions-dimensions.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\flow-relative-direction.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\flow-relative-four-sides.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\flow-relative-two-axes.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\hyperlink\hyperlink-detector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\hyperlink\hyperlink.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\partition-presentation-reconstructor.hpp" />

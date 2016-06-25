@@ -13,7 +13,7 @@
 #include <ascension/graphics/font/text-viewport-base.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/kernel/document-observers.hpp>
-#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
+#include <ascension/presentation/flow-relative-two-axes.hpp>
 #include <ascension/viewer/caret-painter.hpp>
 #include <ascension/viewer/detail/weak-reference-for-points.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>

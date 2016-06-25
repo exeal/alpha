@@ -10,7 +10,7 @@
 #ifndef ASCENSION_CARET_PAINTER_HPP
 #define ASCENSION_CARET_PAINTER_HPP
 #include <ascension/corelib/timer.hpp>
-#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
+#include <ascension/presentation/flow-relative-four-sides.hpp>
 #include <ascension/viewer/detail/caret-painter-base.hpp>
 #include <boost/optional.hpp>
 #include <boost/signals2/connection.hpp>

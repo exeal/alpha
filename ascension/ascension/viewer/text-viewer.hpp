@@ -13,7 +13,7 @@
 #include <ascension/graphics/color.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/point.hpp>
-#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
+#include <ascension/presentation/flow-relative-two-axes.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>

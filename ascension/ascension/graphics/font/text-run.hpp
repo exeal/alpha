@@ -11,7 +11,7 @@
 #define ASCENSION_TEXT_RUN_HPP
 #include <ascension/graphics/font/glyph-vector.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
-#include <ascension/presentation/flow-relative-directions-dimensions.hpp>
+#include <ascension/presentation/flow-relative-four-sides.hpp>
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/optional.hpp>
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
