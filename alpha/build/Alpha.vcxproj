@@ -426,7 +426,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-metrics.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\line-layout-vector.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-directions-dimensions.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-direction.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-four-sides.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-point.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\line-rendering-options.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\number-substitution.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\open-type-layout-tag.hpp" />

@@ -1099,9 +1099,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\physical-directions-dimensions.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-directions-dimensions.hpp">
-      <Filter>ascension\Header Files\graphics\font</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\direction.hpp">
       <Filter>ascension\Header Files</Filter>
     </ClInclude>
@@ -1324,8 +1321,17 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\flow-relative-four-sides.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-direction.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-four-sides.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\flow-relative-two-axes.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-point.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

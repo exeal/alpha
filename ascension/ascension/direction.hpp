@@ -4,8 +4,7 @@
  * @date 2012-03-31 created
  * @date 2012-2014 was directions.hpp
  * @date 2015-01-09 Renamed from directions.hpp
- * @see flow-relative-directions-dimensions.hpp, line-relative-directions-dimensions.hpp,
- *      physical-directions-dimensions.hpp, writing-mode.hpp
+ * @see flow-relative-direction.hpp, line-relative-direction.hpp, physical-directions-dimensions.hpp, writing-mode.hpp
  */
 
 #ifndef ASCENSION_DIRECTION_HPP
