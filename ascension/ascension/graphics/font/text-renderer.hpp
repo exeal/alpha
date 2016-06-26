@@ -10,7 +10,6 @@
 #define ASCENSION_TEXT_RENDERER_HPP
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/signals.hpp>
-#include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
@@ -27,6 +26,7 @@ namespace ascension {
 
 	namespace graphics {
 		class PaintContext;
+		template<typename T> class PhysicalFourSides;
 		class RenderingContext2D;
 
 		namespace font {

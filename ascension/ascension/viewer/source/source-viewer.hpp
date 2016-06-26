@@ -8,7 +8,7 @@
 #ifndef ASCENSION_SOURCE_VIEWER_HPP
 #define ASCENSION_SOURCE_VIEWER_HPP
 #include <ascension/graphics/font/text-alignment.hpp>
-#include <ascension/graphics/physical-directions-dimensions.hpp>
+#include <ascension/graphics/physical-direction.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/source/ruler-allocation-width-sink.hpp>
 #include <ascension/viewer/source/ruler-locator.hpp>

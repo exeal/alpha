@@ -27,7 +27,7 @@
 #include <set>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	if !defined(ASCENSION_PIXELFUL_SCROLL_IN_BPD)
-#		include <ascension/graphics/physical-directions-dimensions.hpp>
+#		include <ascension/graphics/physical-two-axes.hpp>
 #	endif
 #	include <glibmm/property.h>
 #	include <gtkmm/container.h>
