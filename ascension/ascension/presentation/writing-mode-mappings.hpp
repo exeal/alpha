@@ -14,7 +14,7 @@
 
 #ifndef ASCENSION_WRITING_MODE_MAPPINGS_HPP
 #define ASCENSION_WRITING_MODE_MAPPINGS_HPP
-#include <ascension/graphics/physical-directions-dimensions.hpp>
+#include <ascension/graphics/physical-four-sides.hpp>
 #include <ascension/graphics/font/line-relative-four-sides.hpp>
 #include <ascension/graphics/font/line-relative-point.hpp>
 #include <ascension/presentation/flow-relative-four-sides.hpp>

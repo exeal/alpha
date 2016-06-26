@@ -11,8 +11,9 @@
 #define ASCENSION_TEXT_VIEWPORT_HPP
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/detail/scope-guard.hpp>
+#include <ascension/corelib/numeric-range.hpp>
 #include <ascension/corelib/signals.hpp>
-#include <ascension/graphics/physical-directions-dimensions.hpp>
+#include <ascension/graphics/physical-two-axes.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
 #include <ascension/graphics/font/text-viewport-base.hpp>
 #include <ascension/graphics/font/visual-line.hpp>

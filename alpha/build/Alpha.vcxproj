@@ -466,7 +466,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\native-conversion.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\object.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\paint.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\graphics\physical-directions-dimensions.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\physical-direction.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\physical-four-sides.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\physical-two-axes.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\abstract-point.hpp" />

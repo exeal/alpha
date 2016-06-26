@@ -14,7 +14,6 @@
 
 #ifndef ASCENSION_ACTUAL_TEXT_STYLES_HPP
 #define ASCENSION_ACTUAL_TEXT_STYLES_HPP
-#include <ascension/graphics/physical-directions-dimensions.hpp>
 #include <ascension/presentation/detail/style-sequence.hpp>
 #include <ascension/presentation/styles/background.hpp>
 #include <ascension/presentation/styles/fonts.hpp>
@@ -29,6 +28,7 @@ namespace ascension {
 
 	namespace graphics {
 		class PaintContext;
+		template<typename T> class PhysicalFourSides;
 
 		namespace font {
 			/**

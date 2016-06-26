@@ -1096,9 +1096,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\decay-or-refer.hpp">
       <Filter>ascension\Header Files\corelib\detail</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\physical-directions-dimensions.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\direction.hpp">
       <Filter>ascension\Header Files</Filter>
     </ClInclude>
@@ -1332,6 +1329,15 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\font\line-relative-point.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\physical-direction.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\physical-four-sides.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\physical-two-axes.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
