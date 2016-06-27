@@ -1,6 +1,6 @@
 /**
  * @file line-relative-point.hpp
- * Defines line-relative directional and dimensional terms.
+ * Defines @c LineRelative class template and related free functions.
  * @date 2012-03-31 created
  * @date 2012-2014 was directions.hpp
  * @date 2015-01-09 Separated from directions.hpp
@@ -10,6 +10,7 @@
 
 #ifndef ASCENSION_LINE_RELATIVE_POINT_HPP
 #define ASCENSION_LINE_RELATIVE_POINT_HPP
+#include <ascension/corelib/detail/named-argument-exists.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <boost/operators.hpp>
 #include <boost/parameter.hpp>
@@ -36,10 +37,10 @@ namespace ascension {
 				/// Constructor takes named parameters as initial values.
 				template<typename Arguments>
 				LineRelativePointBase(const Arguments& arguments) {
-//					u() = arguments[_u | value_type()];
-//					v() = arguments[_v | value_type()];
-					u() = arguments[_u.operator|(value_type())];
-					v() = arguments[_v.operator|(value_type())];
+					if(ascension::detail::NamedArgumentExists<Arguments, tag::u>::value)
+						u() = arguments[_u | value_type()];
+					if(ascension::detail::NamedArgumentExists<Arguments, tag::v>::value)
+						v() = arguments[_v | value_type()];
 				}
 				/// Returns a reference 'u' value.
 				value_type& u() BOOST_NOEXCEPT {return std::get<0>(*this);}
@@ -60,19 +61,17 @@ namespace ascension {
 			template<typename T>
 			class LineRelativePoint : public LineRelativePointBase<T>, private boost::additive<LineRelativePoint<T>> {
 			public:
-				/// Default constructor initializes nothing.
-				LineRelativePoint() {}
 				/// Copy-constructor.
 				LineRelativePoint(const LineRelativePoint<T>& other) : LineRelativePointBase<T>(static_cast<const LineRelativePointBase<T>&>(other)) {}
 				/**
-				 * Constructor which takes named parameters as initial values (default value is zero).
-				 * @param u The initial value of 'u'
-				 * @param v The initial value of 'v'
+				 * Creates a @c LineRelativePoint with the given initial values as named parameters.
+				 * @param u The initial value of 'u' (optional)
+				 * @param v The initial value of 'v' (optional)
 				 */
 #ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 				BOOST_PARAMETER_CONSTRUCTOR(
 					LineRelativePoint, (LineRelativePointBase<T>), tag,
-					(required
+					(optional
 						(u, (value_type))
 						(v, (value_type))))
 #else
