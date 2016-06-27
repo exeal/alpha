@@ -1339,6 +1339,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\physical-two-axes.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\named-argument-exists.hpp">
+      <Filter>ascension\Header Files\corelib\detail</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

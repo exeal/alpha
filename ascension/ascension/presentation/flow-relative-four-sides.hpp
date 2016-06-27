@@ -1,6 +1,6 @@
 /**
  * @file flow-relative-four-sides.hpp
- * Defines flow-relative directional and dimensional terms.
+ * Defines @c FlowRelativeFourSides class template and free functions.
  * @date 2012-03-31 created
  * @date 2012-2014 was directions.hpp
  * @date 2015-01-09 Separated from directions.hpp
@@ -10,6 +10,7 @@
 
 #ifndef ASCENSION_FLOW_RELATIVE_FOUR_SIDES_HPP
 #define ASCENSION_FLOW_RELATIVE_FOUR_SIDES_HPP
+#include <ascension/corelib/detail/named-argument-exists.hpp>
 #include <ascension/corelib/numeric-range.hpp>
 #include <ascension/presentation/flow-relative-direction.hpp>
 #include <ascension/presentation/flow-relative-two-axes.hpp>
@@ -28,6 +29,12 @@ namespace ascension {
 		BOOST_PARAMETER_NAME(blockEnd)
 		BOOST_PARAMETER_NAME(inlineStart)
 		BOOST_PARAMETER_NAME(inlineEnd)
+#	ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
+		BOOST_PARAMETER_NAME(before)
+		BOOST_PARAMETER_NAME(after)
+		BOOST_PARAMETER_NAME(start)
+		BOOST_PARAMETER_NAME(end)
+#	endif // !ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 #endif // !ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 
 		/// Base type of @c FlowRelativeFourSides class template.
@@ -43,14 +50,23 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			FlowRelativeFourSidesBase(const Arguments& arguments) {
-//				blockStart() = arguments[_blockStart | value_type()];
-//				blockEnd() = arguments[_blockEnd | value_type()];
-//				inlineStart() = arguments[_inlineStart | value_type()];
-//				inlineEnd() = arguments[_inlineEnd | value_type()];
-				blockStart() = arguments[_blockStart.operator|(value_type())];
-				blockEnd() = arguments[_blockEnd.operator|(value_type())];
-				inlineStart() = arguments[_inlineStart.operator|(value_type())];
-				inlineEnd() = arguments[_inlineEnd.operator|(value_type())];
+				const bool cssKeyword =
+					ascension::detail::NamedArgumentExists<Arguments, tag::blockStart>::value
+					|| ascension::detail::NamedArgumentExists<Arguments, tag::blockEnd>::value
+					|| ascension::detail::NamedArgumentExists<Arguments, tag::inlineStart>::value
+					|| ascension::detail::NamedArgumentExists<Arguments, tag::inlineEnd>::value;
+				const bool xslKeyword =
+#ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
+					ascension::detail::NamedArgumentExists<Arguments, tag::before>::value
+					|| ascension::detail::NamedArgumentExists<Arguments, tag::after>::value
+					|| ascension::detail::NamedArgumentExists<Arguments, tag::start>::value
+					|| ascension::detail::NamedArgumentExists<Arguments, tag::end>::value;
+#else
+					false;
+#endif
+				const int m = cssKeyword ? 1 : 0;
+				const int n = m + (xslKeyword ? 2 : 0);
+				initialize(arguments, boost::mpl::int_<(n != 0) ? n : 1>());
 			}
 			/// Returns a reference to value of @a direction.
 			reference operator[](FlowRelativeDirection direction) {
@@ -97,6 +113,32 @@ namespace ascension {
 			/// @note This method hides @c std#array#end.
 			const_reference end() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::END>(*this);}
 #endif // !ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
+
+		private:
+			template<typename Arguments>
+			void initialize(const Arguments& arguments, boost::mpl::int_<1>) {
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::blockStart>::value)
+					blockStart() = arguments[_blockStart | value_type()];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::blockEnd>::value)
+					blockEnd() = arguments[_blockEnd | value_type()];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::inlineStart>::value)
+					inlineStart() = arguments[_inlineStart | value_type()];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::inlineEnd>::value)
+					inlineEnd() = arguments[_inlineEnd | value_type()];
+			}
+#ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
+			template<typename Arguments>
+			void initialize(const Arguments& arguments, boost::mpl::int_<2>) {
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::before>::value)
+					before() = arguments[_before | value_type()];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::after>::value)
+					after() = arguments[_after | value_type()];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::start>::value)
+					start() = arguments[_start | value_type()];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::end>::value)
+					end() = arguments[_end | value_type()];
+			}
+#endif // !ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 		};
 
 		/**
@@ -108,20 +150,51 @@ namespace ascension {
 		class FlowRelativeFourSides : public FlowRelativeFourSidesBase<T>,
 			private boost::additive<FlowRelativeFourSides<T>, FlowRelativeTwoAxes<T>> {
 		public:
-			/// Default constructor initializes nothing.
-			FlowRelativeFourSides() {}
 #ifdef BOOST_COMP_MSVC
 			FlowRelativeFourSides(const FlowRelativeFourSides& other) : FlowRelativeFourSidesBase(static_cast<const FlowRelativeFourSidesBase<T>&>(other)) {}
 			FlowRelativeFourSides(FlowRelativeFourSides&& other) : FlowRelativeFourSidesBase(std::forward<FlowRelativeFourSidesBase>(other)) {}
 #endif	// BOOST_COMP_MSVC
-			/// Constructor takes named parameters as initial values.
+#ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
+			/**
+			 * Creates a @c FlowRelativeFourSides instance with the given initial values by named parameters.
+			 * Omitted elements are initialized by the default constructor.
+			 * @param blockStart The initial value of 'block-start' (optional)
+			 * @param blockEnd The initial value of 'block-end' (optional)
+			 * @param inlineStart The initial value of 'inline-start' (optional)
+			 * @param inlineEnd The initial value of 'inlineEnd' (optional)
+			 * @param before The initial value of 'before' (alias of 'block-start') (optional)
+			 * @param after The initial value of 'after' (alias of 'block-end') (optional)
+			 * @param start The initial value of 'start' (alias of 'inline-start') (optional)
+			 * @param end The initial value of 'end' (alias of 'inlineEnd') (optional)
+			 */
 			BOOST_PARAMETER_CONSTRUCTOR(
 				FlowRelativeFourSides, (FlowRelativeFourSidesBase<T>), tag,
-				(required
+				(optional
+					(blockStart, (value_type))
+					(blockEnd, (value_type))
+					(inlineStart, (value_type))
+					(inlineEnd, (value_type))
+					(before, (value_type))
+					(after, (value_type))
+					(start, (value_type))
+					(end, (value_type))))
+#else
+			/**
+			 * Creates a @c FlowRelativeFourSides instance with the given initial values by named parameters.
+			 * Omitted elements are initialized by the default constructor.
+			 * @param blockStart The initial value of 'block-start' (optional)
+			 * @param blockEnd The initial value of 'block-end' (optional)
+			 * @param inlineStart The initial value of 'inline-start' (optional)
+			 * @param inlineEnd The initial value of 'inlineEnd' (optional)
+			 */
+			BOOST_PARAMETER_CONSTRUCTOR(
+				FlowRelativeFourSides, (FlowRelativeFourSidesBase<T>), tag,
+				(optional
 					(blockStart, (value_type))
 					(blockEnd, (value_type))
 					(inlineStart, (value_type))
 					(inlineEnd, (value_type))))
+#endif // !ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 			template<typename U>
 #if !defined(BOOST_COMP_MSVC) || BOOST_COMP_MSVC >= BOOST_VERSION_NUMBER(11, 0, 0)
 			FlowRelativeFourSides(const U& other, typename std::enable_if<std::is_constructible<T, const U&>::value>::type* = nullptr)

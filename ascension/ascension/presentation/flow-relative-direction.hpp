@@ -1,6 +1,6 @@
 /**
  * @file flow-relative-direction.hpp
- * Defines flow-relative directional and dimensional terms.
+ * Defines @c FlowRelativeDirection enumeration.
  * @date 2012-03-31 created
  * @date 2012-2014 was directions.hpp
  * @date 2015-01-09 Separated from directions.hpp

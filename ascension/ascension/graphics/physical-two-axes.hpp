@@ -11,12 +11,12 @@
 #ifndef ASCENSION_PHYSICAL_TWO_AXES_HPP
 #define ASCENSION_PHYSICAL_TWO_AXES_HPP
 #include <ascension/corelib/detail/decay-or-refer.hpp>
+#include <ascension/corelib/detail/named-argument-exists.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <boost/geometry/algorithms/make.hpp>
 #include <boost/operators.hpp>
 #include <boost/parameter.hpp>
 #include <array>
-#include <type_traits>
 
 namespace ascension {
 	namespace graphics {
@@ -38,10 +38,10 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			PhysicalTwoAxesBase(const Arguments& arguments) {
-//				x() = arguments[_x | value_type()];
-//				y() = arguments[_y | value_type()];
-				x() = arguments[_x.operator|(value_type())];
-				y() = arguments[_y.operator|(value_type())];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::x>::value)
+					x() = arguments[_x | value_type()];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::y>::value)
+					y() = arguments[_y | value_type()];
 			}
 			/// Returns a reference 'x' (horizontal position) value.
 			value_type& x() BOOST_NOEXCEPT {return std::get<0>(*this);}
@@ -61,18 +61,21 @@ namespace ascension {
 		template<typename T>
 		class PhysicalTwoAxes : public PhysicalTwoAxesBase<T>, private boost::additive<PhysicalTwoAxes<T>> {
 		public:
-			/// Default constructor initializes nothing.
-			PhysicalTwoAxes() {}
 			/// Copy-constructor.
 			PhysicalTwoAxes(const PhysicalTwoAxes<T>& other) : PhysicalTwoAxesBase<T>(static_cast<const PhysicalTwoAxesBase<T>&>(other)) {}
 			/// Constructor takes a physical point.
 			template<typename Point>
 			PhysicalTwoAxes(const Point& point, typename geometry::detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr) :
 				PhysicalTwoAxesBase<T>((_x = geometry::x(point), _y = geometry::y(point))) {}
-			/// Constructor takes named parameters as initial values (default value is zero).
+			/**
+			 * Creates a @c PhysicalTwoAxes instance with the given initial values by named parameters.
+			 * Omitted elements are initialized by the default constructor.
+			 * @param x The initial value of 'x' (optional)
+			 * @param y The initial value of 'y' (optional)
+			 */
 			BOOST_PARAMETER_CONSTRUCTOR(
 				PhysicalTwoAxes, (PhysicalTwoAxesBase<T>), tag,
-				(required
+				(optional
 					(x, (value_type))
 					(y, (value_type))))
 			/// Compound-add operator calls same operators of @c T for @c #x and @c #y.
@@ -89,16 +92,31 @@ namespace ascension {
 			}
 		};
 
+		namespace detail {
+			template<typename Arguments>
+			struct PhysicalTwoAxesFactoryResult {
+				typedef typename boost::parameter::value_type<Arguments, tag::x, void>::type XType;
+				typedef typename boost::parameter::value_type<Arguments, tag::y, void>::type YType;
+				typedef typename ascension::detail::DecayOrRefer<
+					typename std::conditional<!std::is_same<XType, void>::value, XType,
+						typename std::conditional<!std::is_same<YType, void>::value, YType,
+							void
+						>::type
+					>::type
+				>::Type Type;
+				static_assert(!std::is_same<Type, void>::value, "ascension.graphics.detail.PhysicalTwoAxesFactoryResult.Type");
+			};
+		}
+
 		/**
 		 * Creates a @c PhysicalTwoAxes object, deducing the target type from the types of arguments.
-		 * @tparam ArgumentPack The type of @a arguments
+		 * @tparam Arguments The type of @a arguments
 		 * @param arguments The named arguments same as the constructor of @c PhysicalTwoAxes class
+		 * @return A created @c PhysicalTwoAxes object
 		 */
-		template<typename ArgumentPack>
-		inline auto makePhysicalTwoAxes(const ArgumentPack& arguments)
-				-> PhysicalTwoAxes<typename ascension::detail::DecayOrRefer<decltype(arguments[_x])>::Type> {
-			typedef typename ascension::detail::DecayOrRefer<decltype(arguments[_x])>::Type Coordinate;
-			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_y])>::Type, Coordinate>::value, "");
+		template<typename Arguments>
+		inline PhysicalTwoAxes<typename detail::PhysicalTwoAxesFactoryResult<Arguments>::Type> makePhysicalTwoAxes(const Arguments& arguments) {
+			typedef typename detail::PhysicalTwoAxesFactoryResult<Arguments>::Type Coordinate;
 			return PhysicalTwoAxes<Coordinate>(_x = arguments[_x], _y = arguments[_y]);
 		}
 		/// @}

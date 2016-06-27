@@ -10,6 +10,7 @@
 
 #ifndef ASCENSION_PHYSICAL_FOUR_SIDES_HPP
 #define ASCENSION_PHYSICAL_FOUR_SIDES_HPP
+#include <ascension/corelib/detail/named-argument-exists.hpp>
 #include <ascension/corelib/numeric-range.hpp>
 #include <ascension/graphics/geometry/rectangle-sides.hpp>
 #include <ascension/graphics/physical-direction.hpp>
@@ -33,17 +34,17 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			PhysicalFourSidesBase() {}
-			/// Constructor takes named parameters as initial values (default value is zero).
+			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			PhysicalFourSidesBase(const Arguments& arguments) {
-//				top() = arguments[_top | value_type()];
-//				right() = arguments[_right | value_type()];
-//				bottom() = arguments[_bottom | value_type()];
-//				left() = arguments[_left | value_type()];
-				top() = arguments[_top.operator|(value_type())];
-				right() = arguments[_right.operator|(value_type())];
-				bottom() = arguments[_bottom.operator|(value_type())];
-				left() = arguments[_left.operator|(value_type())];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::top>::value)
+					top() = arguments[_top | value_type()];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::right>::value)
+					right() = arguments[_right | value_type()];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::bottom>::value)
+					bottom() = arguments[_bottom | value_type()];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::left>::value)
+					left() = arguments[_left | value_type()];
 			}
 			/// Returns a reference to value of @a direction.
 			reference operator[](PhysicalDirection direction) {
@@ -81,8 +82,6 @@ namespace ascension {
 		class PhysicalFourSides : public PhysicalFourSidesBase<T>,
 			private boost::additive<PhysicalFourSides<T>, PhysicalTwoAxes<T>> {
 		public:
-			/// Default constructor initializes nothing.
-			PhysicalFourSides() {}
 			/// Constructor takes a physical rectangle.
 			template<typename Rectangle>
 			PhysicalFourSides(const Rectangle& rectangle) {
@@ -91,10 +90,17 @@ namespace ascension {
 				bottom() = geometry::bottom(rectangle);
 				left() = geometry::left(rectangle);
 			}
-			/// Constructor takes named parameters as initial values (default value is zero).
+			/**
+			 * Creates a @c PhysicalFourSides with the given initial values by named parameters.
+			 * Omitted elements are initialized by the default constructor.
+			 * @param top The initial value of 'top' (optional)
+			 * @param right The initial value of 'right' (optional)
+			 * @param bottom The initial value of 'bottom' (optional)
+			 * @param left The initial value of 'left' (optional)
+			 */
 			BOOST_PARAMETER_CONSTRUCTOR(
 				PhysicalFourSides, (PhysicalFourSidesBase<T>), tag,
-				(required
+				(optional
 					(top, (value_type))
 					(right, (value_type))
 					(bottom, (value_type))
