@@ -9,7 +9,6 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/geometry/algorithms/within.hpp>
 #include <ascension/graphics/rendering-context.hpp>
-#include <ascension/presentation/presentation.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
@@ -118,17 +117,20 @@ namespace ascension {
 		 */
 
 		/**
-		 * Constructor.
-		 * @param presentation The presentation object
+		 * Creates a @c TextViewer instance.
+		 * @param document The document
+		 * @throw NullPointerException @a document is @c null
 		 */
-		TextViewer::TextViewer(presentation::Presentation& presentation) :
+		TextViewer::TextViewer(std::shared_ptr<kernel::Document> document) :
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 //				Glib::ObjectBase("ascension.viewer.TextViewer"),
 //				Gtk::Widget(),
 #	endif
 #endif
-				presentation_(presentation) {
+				document_(document) {
+			if(document_.get() == nullptr)
+				throw NullPointerException("document");
 			initialize(nullptr);
 
 			// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
@@ -138,63 +140,17 @@ namespace ascension {
 		 * Copy-constructor. Unlike @c win32#Object class, this does not copy the window handle. For
 		 * more details, see the description of @c TextViewer.
 		 */
-		TextViewer::TextViewer(const TextViewer& other) :
+		TextViewer::TextViewer(const TextViewer& other)
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-//				Glib::ObjectBase("ascension.viewer.TextViewer"),
+//				: Glib::ObjectBase("ascension.viewer.TextViewer"),
 #endif
-				presentation_(other.presentation_) {
+		{
 			initialize(&other);
 			modeState_ = other.modeState_;
 		}
 
 		/// Destructor.
 		TextViewer::~TextViewer() {
-			document().removeListener(*this);
-			document().removeRollbackListener(*this);
-		}
-
-		/// @see Presentation#ComputedTextToplevelStyleChangedSignal
-		void TextViewer::computedTextToplevelStyleChanged(const presentation::Presentation&,
-				const presentation::DeclaredTextToplevelStyle&, const presentation::ComputedTextToplevelStyle&) {
-			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
-		}
-		
-		/// Returns the document.
-		kernel::Document& TextViewer::document() BOOST_NOEXCEPT {
-			return presentation().document();
-		}
-		
-		/// Returns the document.
-		const kernel::Document& TextViewer::document() const BOOST_NOEXCEPT {
-			return presentation().document();
-		}
-
-		/// @see kernel#DocumentListener#documentAboutToBeChanged
-		void TextViewer::documentAboutToBeChanged(const kernel::Document&) {
-			// do nothing
-		}
-
-		/// @see kernel#DocumentListener#documentChanged
-		void TextViewer::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
-			// cancel the active incremental search
-			texteditor::abortIncrementalSearch(document());	// TODO: should TextViewer handle this? (I.S. would...)
-
-//			if(!isFrozen())
-//				rulerPainter_->update();
-		}
-
-		/// @see kernel#DocumentRollbackListener#documentUndoSequenceStarted
-		void TextViewer::documentUndoSequenceStarted(const kernel::Document&) {
-			freeze();	// TODO: replace with AutoFreeze.
-		}
-
-		/// @see kernel#DocumentRollbackListener#documentUndoSequenceStopped
-		void TextViewer::documentUndoSequenceStopped(const kernel::Document&, const kernel::Position& resultPosition) {
-			unfreeze();	// TODO: replace with AutoFreeze.
-			if(/*resultPosition != kernel::Position() &&*/ widgetapi::hasFocus(*this)) {
-				utils::closeCompletionProposalsPopup(*this);
-				textArea().caret().moveTo(TextHit::leading(resultPosition));	// TODO: Why does a TextViewer operate the caret here?
-			}
 		}
 
 		/**
@@ -218,8 +174,7 @@ namespace ascension {
 			}
 			if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
 				closeCompletionProposalsPopup(*this);
-*/			texteditor::abortIncrementalSearch(document());
-			detail::resetInputMethod(*this);
+*/			detail::resetInputMethod(*this);
 //			if(currentWin32WindowMessage().wParam != get()) {
 //				hideCaret();
 //				::DestroyCaret();
@@ -345,24 +300,23 @@ namespace ascension {
 		namespace {
 			template<typename Coordinate>
 			inline widgetapi::NativeScrollPosition reverseScrollPosition(const TextViewer& textViewer, widgetapi::NativeScrollPosition position) {
-				const graphics::font::TextRenderer& textRenderer = textViewer.textArea().textRenderer();
-//				return static_cast<widgetapi::NativeScrollPosition>(textRenderer.layouts().maximumMeasure()
-//					/ widgetapi::createRenderingContext(textViewer)->fontMetrics(textRenderer.defaultFont())->averageCharacterWidth())
+				const auto textRenderer(textViewer.textArea()->textRenderer());
+//				return static_cast<widgetapi::NativeScrollPosition>(textRenderer->layouts().maximumMeasure()
+//					/ widgetapi::createRenderingContext(textViewer)->fontMetrics(textRenderer->defaultFont())->averageCharacterWidth())
 //					- position
-//					- static_cast<widgetapi::NativeScrollPosition>(textRenderer.viewport()->numberOfVisibleCharactersInLine());
-				const presentation::BlockFlowDirection blockFlowDirection = textRenderer.computedBlockFlowDirection();
-				const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer.viewport());
+//					- static_cast<widgetapi::NativeScrollPosition>(textRenderer->viewport()->numberOfVisibleCharactersInLine());
+				const presentation::BlockFlowDirection blockFlowDirection = textRenderer->blockFlowDirection();
+				const auto viewport(textViewer.textArea()->viewport());
 				return *graphics::font::scrollableRange<Coordinate>(*viewport).end() - position - graphics::font::pageSize<Coordinate>(*viewport);
 			}
 			graphics::PhysicalTwoAxes<widgetapi::NativeScrollPosition> physicalScrollPosition(const TextViewer& textViewer) {
-				const graphics::font::TextRenderer& textRenderer = textViewer.textArea().textRenderer();
-				const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer.viewport());
-				const presentation::WritingMode writingMode(textViewer.presentation().computeWritingMode());
+				const auto textRenderer(textViewer.textArea()->textRenderer());
+				const auto viewport(textViewer.textArea()->viewport());
 				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset> scrollPositions(viewport->scrollPositions());
 				widgetapi::NativeScrollPosition x, y;
-				switch(writingMode.blockFlowDirection) {
+				switch(textRenderer->blockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
-						x = (writingMode.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
+						x = (textRenderer->inlineFlowDirection() == presentation::LEFT_TO_RIGHT) ?
 							scrollPositions.ipd() : reverseScrollPosition<presentation::ReadingDirection>(textViewer, static_cast<widgetapi::NativeScrollPosition>(scrollPositions.ipd()));
 						y = scrollPositions.bpd();
 						break;
@@ -462,31 +416,38 @@ namespace ascension {
 		 * @see #textAreaAllocationRectangle, TextArea, TextViewerComponent#Locator
 		 */
 		const TextViewerComponent* TextViewer::hitTest(const graphics::Point& location) const BOOST_NOEXCEPT {
-//			checkInitialization();
-//			if(graphics::geometry::within(location, textArea().contentRectangle()))
-			if(graphics::geometry::within(location, textArea().allocationRectangle()))
-				return &textArea();
+			if(const auto ta = textArea()) {
+#if 0
+				if(graphics::geometry::within(location, ta->contentRectangle()))
+#else
+				if(graphics::geometry::within(location, ta->allocationRectangle()))
+#endif
+					return ta.get();
+			}
 			return nullptr;
 		}
 
 		/// @internal Called by constructors.
 		void TextViewer::initialize(const TextViewer* other) {
 			initializeNativeWidget();
-
-			document().addListener(*this);
-			document().addRollbackListener(*this);
-
-			computedTextToplevelStyleChangedConnection_ = presentation().computedTextToplevelStyleChangedSignal().connect(
-				std::bind(&TextViewer::computedTextToplevelStyleChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 //			updateScrollBars(FlowRelativeTwoAxes<bool>(true, true), FlowRelativeTwoAxes<bool>(true, true));
+		}
+
+		/**
+		 * Initialization process completed.
+		 */
+		void TextViewer::initialized() BOOST_NOEXCEPT {
 		}
 
 		/// @internal
 		void TextViewer::initializeGraphics() {
 			textArea_.reset(new TextArea());
 			static_cast<TextViewerComponent*>(textArea_.get())->install(*this, *this);
+			writingModesChangedConnection_ =
+				textArea()->textRenderer()->writingModesChangedSignal().connect(
+					std::bind(&TextViewer::writingModesChanged, this, std::placeholders::_1));
 
-			auto viewport(textArea().textRenderer().viewport());
+			const auto viewport(textArea()->viewport());
 //			viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
 //				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
 //			});
@@ -504,6 +465,7 @@ namespace ascension {
 			});
 
 			initializeNativeObjects();
+			initialized();
 		}
 #if 0
 		/**
@@ -555,7 +517,7 @@ namespace ascension {
 #endif
 		/// @see TextViewerComponent#Locator#locateComponent
 		graphics::Rectangle TextViewer::locateComponent(const TextViewerComponent& component) const {
-			if(&component != &textArea())
+			if(&component != textArea().get())
 				throw std::invalid_argument("component");
 			return widgetapi::bounds(*this, false);
 		}
@@ -681,21 +643,26 @@ namespace ascension {
 			}
 #endif
 			if(synchronizeUI) {
+				if(const auto ta = textArea()) {
+					if(const auto renderer = ta->textRenderer()) {
+						const auto direction = renderer->inlineFlowDirection();
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				if(get_direction() != Gtk::TEXT_DIR_NONE)
-					set_direction((configuration_.readingDirection == presentation::LEFT_TO_RIGHT) ? Gtk::TEXT_DIR_LTR : Gtk::TEXT_DIR_RTL);
-//				set_placement();
+						if(get_direction() != Gtk::TEXT_DIR_NONE)
+							set_direction((direction == presentation::LEFT_TO_RIGHT) ? Gtk::TEXT_DIR_LTR : Gtk::TEXT_DIR_RTL);
+//						set_placement();
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				LONG style = ::GetWindowLongW(handle().get(), GWL_EXSTYLE);
-				if(configuration_.readingDirection == LEFT_TO_RIGHT) {
-					style &= ~(WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
-					style |= WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR;
-				} else {
-					style &= ~(WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
-					style |= WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR;
-				}
-				::SetWindowLongW(handle().get(), GWL_EXSTYLE, style);
+						LONG style = ::GetWindowLongW(handle().get(), GWL_EXSTYLE);
+						if(direction == LEFT_TO_RIGHT) {
+							style &= ~(WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
+							style |= WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR;
+						} else {
+							style &= ~(WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
+							style |= WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR;
+						}
+						::SetWindowLongW(handle().get(), GWL_EXSTYLE, style);
 #endif
+					}
+				}
 			}
 			widgetapi::scheduleRedraw(*this, false);
 		}
@@ -791,14 +758,15 @@ namespace ascension {
 //			checkInitialization();
 			assert(!isFrozen());
 			const auto needsUpdate = [](bool v) {return v;};
-			if(textArea_.get() == nullptr
+			const auto ta(textArea());
+			if(ta.get() == nullptr
 					|| (std::none_of(std::begin(positions), std::end(positions), needsUpdate) && std::none_of(std::begin(properties), std::end(properties), needsUpdate)))
 				return;
-			const std::shared_ptr<graphics::font::TextViewport> viewport(textArea().textRenderer().viewport());
-			if(viewport.get() == nullptr)
+			const auto renderer(ta->textRenderer());
+			const auto viewport(ta->viewport());
+			if(renderer.get() == nullptr || viewport.get() == nullptr)
 				return;
 
-			const presentation::WritingMode writingMode(presentation().computeWritingMode());
 			assert(!isFrozen());
 
 			// update the scroll bar in inline-progression-dimension
@@ -808,7 +776,7 @@ namespace ascension {
 				boost::optional<NumericRange<widgetapi::NativeScrollPosition>> range;
 				if(positions.ipd())
 					// TODO: Use reverseScrollPosition().
-					position = (writingMode.inlineFlowDirection == presentation::LEFT_TO_RIGHT) ?
+					position = (renderer->inlineFlowDirection() == presentation::LEFT_TO_RIGHT) ?
 						viewport->scrollPositions().ipd() : (*boost::const_end(viewportRange) - viewport->scrollPositions().ipd() - 1);
 				if(properties.ipd()) {
 					const float realSize = graphics::font::pageSize<presentation::ReadingDirection>(*viewport);
@@ -819,7 +787,7 @@ namespace ascension {
 					size = boost::math::trunc(realSize);
 #endif
 				}
-				configureScrollBar(*this, presentation::isHorizontal(writingMode.blockFlowDirection) ? 0 : 1, position, range, size);
+				configureScrollBar(*this, presentation::isHorizontal(renderer->blockFlowDirection()) ? 0 : 1, position, range, size);
 			}
 
 			// update the scroll bar in block-progression-dimension
@@ -829,7 +797,7 @@ namespace ascension {
 				boost::optional<NumericRange<widgetapi::NativeScrollPosition>> range;
 				if(positions.bpd())
 					// TODO: Use reverseScrollPosition().
-					position = (writingMode.blockFlowDirection != presentation::VERTICAL_RL) ?
+					position = (renderer->blockFlowDirection() != presentation::VERTICAL_RL) ?
 						viewport->scrollPositions().bpd() : (*boost::const_end(viewportRange) - viewport->scrollPositions().bpd() - 1);
 				if(properties.bpd()) {
 					const float realSize = graphics::font::pageSize<presentation::BlockFlowDirection>(*viewport);
@@ -840,7 +808,7 @@ namespace ascension {
 					size = boost::math::trunc(realSize);
 #endif
 				}
-				configureScrollBar(*this, presentation::isHorizontal(writingMode.blockFlowDirection) ? 1 : 0, position, range, size);
+				configureScrollBar(*this, presentation::isHorizontal(renderer->blockFlowDirection()) ? 1 : 0, position, range, size);
 			}
 		}
 
@@ -849,7 +817,12 @@ namespace ascension {
 		 * The subclass should call this method when changed the layout of the @c TextArea.
 		 */
 		void TextViewer::updateTextAreaAllocationRectangle() {
-			static_cast<TextViewerComponent&>(textArea()).relocated();
+			static_cast<TextViewerComponent&>(*textArea()).relocated();
+		}
+
+		/// @see graphics#font#TextRenderer#WritingModesChangedSignal
+		void TextViewer::writingModesChanged(const graphics::font::TextRenderer&) {
+			updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
 		}
 
 
@@ -894,8 +867,7 @@ namespace ascension {
 		// TextViewer.Configuration ///////////////////////////////////////////////////////////////////////////////////
 
 		/// Default constructor.
-		TextViewer::Configuration::Configuration() BOOST_NOEXCEPT :
-				readingDirection(presentation::LEFT_TO_RIGHT), usesRichTextClipboardFormat(false) {
+		TextViewer::Configuration::Configuration() BOOST_NOEXCEPT : usesRichTextClipboardFormat(false) {
 #if(_WIN32_WINNT >= 0x0501)
 			BOOL b;
 			if(::SystemParametersInfoW(SPI_GETMOUSEVANISH, 0, &b, 0) != 0)

@@ -14,7 +14,6 @@
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/flow-relative-two-axes.hpp>
-#include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
 #include <ascension/viewer/widgetapi/event/key-input.hpp>
@@ -60,14 +59,13 @@ namespace ascension {
 		class ContentAssistant;
 	}
 
-	namespace presentation {
-		struct ComputedTextToplevelStyle;
-		class DeclaredTextToplevelStyle;
+	namespace graphics {
+		namespace font {
+			class TextRenderer;
+		}
 	}
 
 	namespace viewer {
-		class Caret;
-		class CaretShaper;
 		class TextArea;
 		class TextViewer;
 		class VirtualBox;
@@ -120,7 +118,6 @@ namespace ascension {
 					ASCENSION_WIN32_COM_INTERFACE(IDropTarget), win32::com::NoReferenceCounting
 				>,
 #endif
-				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				protected TextViewerComponent::Locator, protected MouseInputStrategy::TargetLocker,
 				private detail::MouseVanish<TextViewer> {
 		public:
@@ -141,8 +138,8 @@ namespace ascension {
 				boost::optional<graphics::Color> restrictionForeground;
 				/// Background color of the inaccessible area. Standard setting is @c color.background.
 				boost::optional<graphics::Color> restrictionBackground;
-				/// The reading direction of UI.
-				presentation::ReadingDirection readingDirection;
+//				/// The reading direction of UI.
+//				presentation::ReadingDirection readingDirection;
 				/// Set @c true to vanish the cursor when the user types. Default value depends on system setting.
 				bool vanishesCursor;
 				/// Set @c true to use also Rich Text Format for clipboard operations. Default value is @c false.
@@ -151,21 +148,19 @@ namespace ascension {
 				Configuration() BOOST_NOEXCEPT;
 			};
 
-			explicit TextViewer(presentation::Presentation& presentation);
+			explicit TextViewer(std::shared_ptr<kernel::Document> document);
 			TextViewer(const TextViewer& other);
 			virtual ~TextViewer();
 
 			/// @name General Attributes
 			/// @{
 			const Configuration& configuration() const BOOST_NOEXCEPT;
-			kernel::Document& document() BOOST_NOEXCEPT;
-			const kernel::Document& document() const BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR presentation::Presentation& presentation() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
+			std::shared_ptr<kernel::Document> document() BOOST_NOEXCEPT;
+			std::shared_ptr<const kernel::Document> document() const BOOST_NOEXCEPT;
 			unsigned long scrollRate(bool horizontal) const BOOST_NOEXCEPT;
 			void setConfiguration(const Configuration& newConfiguration, bool synchronizeUI);
-			BOOST_CONSTEXPR TextArea& textArea() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR const TextArea& textArea() const BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR std::shared_ptr<TextArea> textArea() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR std::shared_ptr<const TextArea> textArea() const BOOST_NOEXCEPT;
 			/// @}
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
@@ -226,6 +221,7 @@ namespace ascension {
 		protected:
 			virtual void doBeep() BOOST_NOEXCEPT;
 			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::Rectangle& rect);
+			virtual void initialized() BOOST_NOEXCEPT;
 			std::shared_ptr<MouseInputStrategy> mouseInputStrategy(const graphics::Point& p);
 			virtual void unfrozen();
 			void updateTextAreaAllocationRectangle();
@@ -250,19 +246,8 @@ namespace ascension {
 		protected:
 			/// @ name Overridable Signal Slots
 			/// @{
-			virtual void computedTextToplevelStyleChanged(
-				const presentation::Presentation& presentation,
-				const presentation::DeclaredTextToplevelStyle& previouslyDeclared,
-				const presentation::ComputedTextToplevelStyle& previouslyComputed);
+			virtual void writingModesChanged(const graphics::font::TextRenderer& textRenderer);
 			/// @}
-
-		private:
-			// kernel.DocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document) override;
-			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
-			// kernel.DocumentRollbackListener
-			void documentUndoSequenceStarted(const kernel::Document& document) override;
-			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition) override;
 
 		protected:
 			/// @name Overridable Widget Events
@@ -385,11 +370,11 @@ namespace ascension {
 			// data members
 		private:
 			// big stars
+			std::shared_ptr<kernel::Document> document_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			Glib::RefPtr<Gdk::Window> window_;
 #endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			presentation::Presentation& presentation_;
-			std::unique_ptr<TextArea> textArea_;
+			std::shared_ptr<TextArea> textArea_;
 			Configuration configuration_;
 			std::weak_ptr<MouseInputStrategy> lockedMouseInputStrategy_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -401,7 +386,7 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			win32::com::SmartPointer<detail::AbstractAccessibleProxy> accessibleProxy_;
 #endif
-			boost::signals2::scoped_connection computedTextToplevelStyleChangedConnection_,
+			boost::signals2::scoped_connection writingModesChangedConnection_,
 				viewportResizedConnection_, viewportScrolledConnection_, viewportScrollPropertiesChangedConnection_;
 
 			// modes
@@ -447,10 +432,10 @@ namespace ascension {
 			FocusChangedSignal focusChangedSignal_;
 			FrozenStateChangedSignal frozenStateChangedSignal_;
 
-			friend class VisualPoint;
-			friend class VirtualBox;
-			friend class CaretShapeUpdater;
-			friend class Renderer;
+//			friend class VisualPoint;
+//			friend class VirtualBox;
+//			friend class CaretShapeUpdater;
+//			friend class Renderer;
 		};
 
 		// the documentation is text-viewer.cpp
@@ -461,6 +446,26 @@ namespace ascension {
 		private:
 			TextViewer* const textViewer_;
 		};
+
+		/// @addtogroup shortcuts_to_main_objects
+		/// @{
+		/**
+		 * Returns the document.
+		 * @param textViewer The text viewer
+		 * @return The document
+		 */
+		BOOST_CONSTEXPR inline std::shared_ptr<kernel::Document> document(TextViewer& textViewer) BOOST_NOEXCEPT {
+			return textViewer.document();
+		}
+		/**
+		 * Returns the document.
+		 * @param textViewer The text viewer
+		 * @return The document
+		 */
+		BOOST_CONSTEXPR inline std::shared_ptr<const kernel::Document> document(const TextViewer& textViewer) BOOST_NOEXCEPT {
+			return textViewer.document();
+		}
+		/// @}
 
 
 		// inline implementation //////////////////////////////////////////////////////////////////
@@ -487,6 +492,16 @@ namespace ascension {
 		/// Returns the content assistant or @c null if not registered.
 		inline contentassist::ContentAssistant* TextViewer::contentAssistant() const BOOST_NOEXCEPT {
 			return contentAssistant_.get();
+		}
+
+		/// Returns the document.
+		inline std::shared_ptr<kernel::Document> TextViewer::document() BOOST_NOEXCEPT {
+			return document_;
+		}
+
+		/// Returns the document.
+		inline std::shared_ptr<const kernel::Document> TextViewer::document() const BOOST_NOEXCEPT {
+			return document_;
 		}
 		
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
@@ -527,16 +542,6 @@ namespace ascension {
 			return frozenCount_ != 0;
 		}
 		
-		/// Returns the presentation object. 
-		inline BOOST_CONSTEXPR presentation::Presentation& TextViewer::presentation() BOOST_NOEXCEPT {
-			return presentation_;
-		}
-		
-		/// Returns the presentation object. 
-		inline BOOST_CONSTEXPR const presentation::Presentation& TextViewer::presentation() const BOOST_NOEXCEPT {
-			return presentation_;
-		}
-		
 		/**
 		 * Returns the ratio to vertical/horizontal scroll amount of line/column numbers.
 		 * @param horizontal Set @c true for horizontal, @c false for vertical
@@ -547,13 +552,13 @@ namespace ascension {
 		}
 
 		/// Returns the @c TextArea of this text viewer.
-		inline BOOST_CONSTEXPR TextArea& TextViewer::textArea() BOOST_NOEXCEPT {
-			return *textArea_;
+		inline BOOST_CONSTEXPR std::shared_ptr<TextArea> TextViewer::textArea() BOOST_NOEXCEPT {
+			return textArea_;
 		}
 
 		/// Returns the @c TextArea of this text viewer.
-		inline BOOST_CONSTEXPR const TextArea& TextViewer::textArea() const BOOST_NOEXCEPT {
-			return *textArea_;
+		inline BOOST_CONSTEXPR std::shared_ptr<const TextArea> TextViewer::textArea() const BOOST_NOEXCEPT {
+			return textArea_;
 		}
 	}
 } // namespace ascension.viewer

@@ -37,7 +37,7 @@ namespace ascension {
 		class TextArea :
 			public TextViewerComponent, public graphics::font::VisualLinesListener,
 			public kernel::DocumentListener, public detail::WeakReferenceForPoints<TextArea>,
-			private graphics::font::LineRenderingOptions {
+			private graphics::font::LineRenderingOptions, private boost::noncopyable {
 		public:
 			TextArea();
 			~TextArea() BOOST_NOEXCEPT;
@@ -50,8 +50,8 @@ namespace ascension {
 
 			/// @name Caret
 			/// @{
-			BOOST_CONSTEXPR Caret& caret() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR const Caret& caret() const BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR std::shared_ptr<Caret> caret() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR std::shared_ptr<const Caret> caret() const BOOST_NOEXCEPT;
 			void hideCaret() BOOST_NOEXCEPT;
 			void setCaretPainter(std::unique_ptr<CaretPainter> newCaretPainter) BOOST_NOEXCEPT;
 			void showCaret() BOOST_NOEXCEPT;
@@ -67,33 +67,17 @@ namespace ascension {
 			SignalConnector<GeometryChangedSignal> contentRectangleChangedSignal() BOOST_NOEXCEPT;
 			/// @}
 
-			/**
-			 * @name Implementation of @c graphics#font#TextRenderer
-			 * @{
-			 */
-			/// Implementation of @c graphics#font#TextRenderer for @c TextArea.
-			class Renderer : public graphics::font::TextRenderer {
-			public:
-				explicit Renderer(TextViewer& viewer);
-				Renderer(const Renderer& other, TextViewer& viewer);
-				void displayShapingControls(bool display);
-				bool displaysShapingControls() const BOOST_NOEXCEPT;
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-				void rewrapAtWindowEdge();
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-				// TextRenderer
-				std::unique_ptr<const graphics::font::TextLayout> createLineLayout(Index line) const;
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-				graphics::Scalar width() const BOOST_NOEXCEPT;
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
+			/// @name Text Renderer
+			/// @{
+			void setTextRenderer(std::unique_ptr<graphics::font::TextRenderer> newTextRenderer);
+			BOOST_CONSTEXPR std::shared_ptr<graphics::font::TextRenderer> textRenderer() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR std::shared_ptr<const graphics::font::TextRenderer> textRenderer() const BOOST_NOEXCEPT;
+			/// @}
 
-			private:
-				TextViewer& viewer_;
-				boost::signals2::scoped_connection viewerFocusChangedConnection_, caretMotionConnection_;
-				bool displaysShapingControls_;
-			};
-			BOOST_CONSTEXPR Renderer& textRenderer() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR const Renderer& textRenderer() const BOOST_NOEXCEPT;
+			/// @name Text Viewport
+			/// @{
+			std::shared_ptr<graphics::font::TextViewport> viewport();
+			std::shared_ptr<const graphics::font::TextViewport> viewport() const;
 			/// @}
 
 			/// @name Redraw
@@ -137,6 +121,9 @@ namespace ascension {
 			/// @}
 
 		private:
+			std::unique_ptr<graphics::font::TextRenderer> createDefaultTextRenderer();
+			void installTextRenderer();
+			void uninstallTextRenderer();
 			// TextViewerComponent
 			void install(TextViewer& viewer, const Locator& locator) override;
 			void relocated() override;
@@ -162,8 +149,9 @@ namespace ascension {
 		private:
 			TextViewer* viewer_;
 			const Locator* locator_;
-			std::unique_ptr<Caret> caret_;
-			std::unique_ptr<Renderer> renderer_;
+			std::shared_ptr<Caret> caret_;
+			std::shared_ptr<graphics::font::TextRenderer> renderer_;
+			std::shared_ptr<graphics::font::TextViewport> viewport_;
 			std::unique_ptr<CaretPainter> caretPainter_;
 			boost::integer_range<Index> linesToRedraw_;
 			std::shared_ptr<TextAreaMouseInputStrategy> mouseInputStrategy_;
@@ -174,15 +162,22 @@ namespace ascension {
 			boost::signals2::scoped_connection viewerFocusChangedConnection_, viewerFrozenStateChangedConnection_,
 				caretMotionConnection_, defaultFontChangedConnection_, matchBracketsChangedConnection_, selectionShapeChangedConnection_;
 		};
+
+		/// @addtogroup shortcuts_to_main_objects
+		/// @{
+		kernel::Document& document(TextArea& textArea);
+		const kernel::Document& document(const TextArea& textArea);
+		/// @}
+
 		
-		/// Returns the caret.
-		inline BOOST_CONSTEXPR Caret& TextArea::caret() BOOST_NOEXCEPT {
-			return *caret_;
+		/// Returns the caret, or @c nullptr if not installed.
+		inline BOOST_CONSTEXPR std::shared_ptr<Caret> TextArea::caret() BOOST_NOEXCEPT {
+			return caret_;
 		}
 		
-		/// Returns the caret.
-		inline BOOST_CONSTEXPR const Caret& TextArea::caret() const BOOST_NOEXCEPT {
-			return *caret_;
+		/// Returns the caret, or @c nullptr if not installed.
+		inline BOOST_CONSTEXPR std::shared_ptr<const Caret> TextArea::caret() const BOOST_NOEXCEPT {
+			return caret_;
 		}
 
 		/**
@@ -193,14 +188,14 @@ namespace ascension {
 			return caretPainter_.get() != nullptr && static_cast<const detail::CaretPainterBase&>(*caretPainter_).shows();
 		}
 		
-		/// Returns the text renderer.
-		inline BOOST_CONSTEXPR TextArea::Renderer& TextArea::textRenderer() BOOST_NOEXCEPT {
-			return *renderer_;
+		/// Returns the text renderer, or @c nullptr if not installed.
+		inline BOOST_CONSTEXPR std::shared_ptr<graphics::font::TextRenderer> TextArea::textRenderer() BOOST_NOEXCEPT {
+			return renderer_;
 		}
 		
-		/// Returns the text renderer.
-		inline BOOST_CONSTEXPR const TextArea::Renderer& TextArea::textRenderer() const BOOST_NOEXCEPT {
-			return *renderer_;
+		/// Returns the text renderer, or @c nullptr if not installed.
+		inline BOOST_CONSTEXPR std::shared_ptr<const graphics::font::TextRenderer> TextArea::textRenderer() const BOOST_NOEXCEPT {
+			return renderer_;
 		}
 		
 		/// Returns the text viewer.
@@ -211,6 +206,16 @@ namespace ascension {
 		/// Returns the text viewer.
 		inline BOOST_CONSTEXPR const TextViewer& TextArea::textViewer() const BOOST_NOEXCEPT {
 			return *viewer_;
+		}
+		
+		/// Returns the text viewport, or @c nullptr if not installed.
+		inline BOOST_CONSTEXPR std::shared_ptr<graphics::font::TextViewport> TextArea::viewport() BOOST_NOEXCEPT {
+			return viewport_;
+		}
+		
+		/// Returns the text viewport, or @c nullptr if not installed.
+		inline BOOST_CONSTEXPR std::shared_ptr<const graphics::font::TextViewport> TextArea::viewport() const BOOST_NOEXCEPT {
+			return viewport_;
 		}
 	}
 }

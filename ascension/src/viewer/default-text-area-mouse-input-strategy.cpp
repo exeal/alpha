@@ -148,8 +148,8 @@ namespace ascension {
 				TextArea& textArea = caret.textArea();
 				const TextViewer& viewer = textArea.textViewer();
 				const graphics::Rectangle clientBounds(widgetapi::bounds(viewer, false));
-				graphics::font::TextRenderer& renderer = textArea.textRenderer();
-				const std::shared_ptr<const graphics::font::TextViewport> viewport(renderer.viewport());
+				auto& renderer = textArea.textRenderer();
+				const auto& viewport = textArea.viewport();
 //				const graphics::font::TextViewportNotificationLocker lock(viewport.get());
 				auto selectionBounds(
 					graphics::geometry::make<graphics::Rectangle>(
@@ -161,17 +161,17 @@ namespace ascension {
 //					yrange.advance_end(widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
 					yrange = boost::irange(
 						*boost::const_begin(yrange),
-						*boost::const_end(yrange) + widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
+						*boost::const_end(yrange) + widgetapi::createRenderingContext(viewer)->fontMetrics(renderer->defaultFont())->linePitch() * renderer->layouts()[line].numberOfLines());
 					geometry::range<1>(selectionBounds) = yrange;
 					if(geometry::dy(selectionBounds) > geometry::dy(clientBounds))
 						return std::unique_ptr<graphics::Image>();	// overflow
-					const graphics::font::TextLayout& layout = renderer.layouts()[line];
+					const graphics::font::TextLayout& layout = renderer->layouts()[line];
 					const presentation::WritingMode writingMode(graphics::font::writingMode(layout));
 					const Scalar indent = graphics::font::lineIndent(layout, viewport->contentMeasure());
 					for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
 						auto range(selectedRangeOnVisualLine(caret, graphics::font::VisualLine(line, subline)));
 						if(range != boost::none) {
-							range = boost::irange(*boost::const_begin(boost::get(range)), std::min(viewer.document().lineLength(line), *boost::const_end(boost::get(range))));
+							range = boost::irange(*boost::const_begin(boost::get(range)), std::min(caret.document().lineLength(line), *boost::const_end(boost::get(range))));
 							graphics::Rectangle sublineBounds;
 							{
 								graphics::PhysicalFourSides<graphics::Scalar> temp;
@@ -205,12 +205,12 @@ namespace ascension {
 					Scalar y = 0;
 					BOOST_FOREACH(Index line, selectedRegion.lines()) {
 						// render each lines
-						const graphics::font::TextLayout& layout = renderer.layouts()[line];
+						const graphics::font::TextLayout& layout = renderer->layouts()[line];
 						const Scalar indent = graphics::font::lineIndent(layout, viewport->contentMeasure());
 						for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
 							auto range(selectedRangeOnVisualLine(caret, graphics::font::VisualLine(line, subline)));
 							if(range != boost::none) {
-								range = boost::irange(*boost::const_begin(boost::get(range)), std::min(viewer.document().lineLength(line), *boost::const_end(boost::get(range))));
+								range = boost::irange(*boost::const_begin(boost::get(range)), std::min(caret.document().lineLength(line), *boost::const_end(boost::get(range))));
 								boost::geometry::model::multi_polygon<boost::geometry::model::polygon<graphics::Point>> region;
 								layout.blackBoxBounds(boost::get(range), region);
 								geometry::translate(
@@ -231,7 +231,7 @@ namespace ascension {
 							context->fill();
 								}
 							}
-							y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch();
+							y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer->defaultFont())->linePitch();
 						}
 					}
 				}
@@ -247,11 +247,11 @@ namespace ascension {
 					graphics::PaintContext context(move(image->createRenderingContext()), selectionExtent);
 					Scalar y = geometry::top(selectionBounds);
 					BOOST_FOREACH(Index line, selectedRegion.lines()) {
-						renderer.paint(line, context,
+						renderer->paint(line, context,
 							graphics::geometry::make<graphics::Point>((
-								geometry::_x = graphics::font::lineIndent(renderer.layouts()[line], viewport->contentMeasure()) - geometry::left(selectionBounds),
+								geometry::_x = graphics::font::lineIndent(renderer->layouts()[line], viewport->contentMeasure()) - geometry::left(selectionBounds),
 								geometry::_y = y)));
-						y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts().numberOfSublinesOfLine(line);
+						y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer->defaultFont())->linePitch() * renderer->layouts().numberOfSublinesOfLine(line);
 					}
 
 					// set alpha values
@@ -306,11 +306,11 @@ namespace ascension {
 		void DefaultTextAreaMouseInputStrategy::beginDragAndDrop(const widgetapi::event::LocatedUserInput& input) {
 			assert(isStateNeutral());
 			dragAndDrop_ = DragAndDrop();
-			Caret& caret = textArea_->caret();
-			if(!caret.isSelectionRectangle())
+			const auto caret(textArea_->caret());
+			if(!caret->isSelectionRectangle())
 				dragAndDrop_->numberOfRectangleLines = 0;
 			else {
-				const kernel::Region selection(caret.selectedRegion());
+				const kernel::Region selection(caret->selectedRegion());
 				dragAndDrop_->numberOfRectangleLines = boost::size(selection.lines());
 			}
 
@@ -318,11 +318,11 @@ namespace ascension {
 			TextViewer& viewer = textArea_->textViewer();
 			widgetapi::DragContext d(viewer);
 
-			const std::shared_ptr<const widgetapi::MimeData> draggingContent(utils::createMimeDataForSelectedString(textArea_->caret(), true));
-			d.setMimeData(draggingContent);
+			auto draggingContent(utils::createMimeDataForSelectedString(*textArea_->caret(), true));
+			d.setMimeData(std::move(draggingContent));
 
 			boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>> imageDimensions;
-			std::unique_ptr<graphics::Image> image(createSelectionImage(caret, dragAndDrop_->approachedPosition, true, imageDimensions));
+			std::unique_ptr<graphics::Image> image(createSelectionImage(*caret, dragAndDrop_->approachedPosition, true, imageDimensions));
 			boost::geometry::model::d2::point_xy<std::uint32_t> hotspot;
 			graphics::geometry::scale(
 				graphics::geometry::_from = graphics::geometry::topLeft(imageDimensions), graphics::geometry::_to = hotspot,
@@ -330,7 +330,7 @@ namespace ascension {
 			d.setImage(*image, hotspot);
 
 			widgetapi::DropAction possibleActions = widgetapi::DROP_ACTION_COPY;
-			if(!viewer.document().isReadOnly())
+			if(!caret->document().isReadOnly())
 				possibleActions |= widgetapi::DROP_ACTION_MOVE;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			d.execute(possibleActions, input.modifiers().native(), nullptr);
@@ -397,7 +397,7 @@ namespace ascension {
 		void DefaultTextAreaMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
 			input.setDropAction(widgetapi::DROP_ACTION_IGNORE);
 			TextViewer& viewer = textArea_->textViewer();
-			if(/*dnd_.supportLevel == DONT_SUPPORT_DND ||*/ viewer.document().isReadOnly() || !viewer.allowsMouseInput())
+			if(/*dnd_.supportLevel == DONT_SUPPORT_DND ||*/ textArea_->caret()->document().isReadOnly() || !viewer.allowsMouseInput())
 				return input.ignore(boost::none);
 
 			// validate the dragged data if can drop
@@ -448,9 +448,9 @@ namespace ascension {
 			graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> calculateDnDScrollOffset(const TextViewer& viewer) {
 				const graphics::Point p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
 				const graphics::Rectangle localBounds(widgetapi::bounds(viewer, false));
-				graphics::Rectangle inset(viewer.textArea().contentRectangle());
+				graphics::Rectangle inset(viewer.textArea()->contentRectangle());
 				std::unique_ptr<const graphics::font::FontMetrics<graphics::Scalar>> fontMetrics(
-					widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textArea().textRenderer().defaultFont()));
+					widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textArea()->textRenderer()->defaultFont()));
 
 				namespace geometry = graphics::geometry;
 				geometry::range<0>(inset) = boost::irange(
@@ -477,10 +477,10 @@ namespace ascension {
 		void DefaultTextAreaMouseInputStrategy::dragMoved(widgetapi::DragMoveInput& input) {
 			widgetapi::DropAction dropAction = widgetapi::DROP_ACTION_IGNORE;
 			bool acceptable = false;
-			const graphics::font::TextViewportNotificationLocker lock(textArea_->textRenderer().viewport().get());
+			const graphics::font::TextViewportNotificationLocker lock(textArea_->viewport().get());
 			const TextViewer& viewer = textArea_->textViewer();
 
-			if((dragAndDrop_ != boost::none) && !viewer.document().isReadOnly() && viewer.allowsMouseInput()) {
+			if((dragAndDrop_ != boost::none) && !textArea_->caret()->document().isReadOnly() && viewer.allowsMouseInput()) {
 				const graphics::Point caretPoint(widgetapi::mapFromGlobal(viewer, input.location()));
 				const kernel::Position p(viewToModel(viewer, caretPoint).characterIndex());
 //				viewer.setCaretPosition(viewer.localPointForCharacter(p, true, TextLayout::LEADING));
@@ -489,10 +489,10 @@ namespace ascension {
 				if(dragAndDrop_->numberOfRectangleLines == 0)
 					acceptable = true;
 				else {
-					const Index lines = std::min(viewer.document().numberOfLines(), kernel::line(p) + dragAndDrop_->numberOfRectangleLines);
+					const Index lines = std::min(textArea_->caret()->document().numberOfLines(), kernel::line(p) + dragAndDrop_->numberOfRectangleLines);
 					bool bidirectional = false;
 					for(Index line = kernel::line(p); line < lines; ++line) {
-						if(textArea_->textRenderer().layouts()[line].isBidirectional()) {
+						if(textArea_->textRenderer()->layouts()[line].isBidirectional()) {
 							bidirectional = true;
 							break;
 						}
@@ -510,10 +510,10 @@ namespace ascension {
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					// only one direction to scroll
 					if(scrollOffset.x() != 0)
-						textArea_->textRenderer().viewport()->scroll(
+						textArea_->viewport()->scroll(
 							graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(0, scrollOffset.y()));
 					else
-						textArea_->textRenderer().viewport()->scroll(
+						textArea_->viewport()->scroll(
 							graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(scrollOffset.x(), 0));
 				}
 			}
@@ -524,14 +524,13 @@ namespace ascension {
 		/// @see DropTarget#drop
 		void DefaultTextAreaMouseInputStrategy::dropped(widgetapi::DropInput& input) {
 			TextViewer& viewer = textArea_->textViewer();
-			kernel::Document& document = viewer.document();
+			auto& document = textArea_->caret()->document();
 			input.setDropAction(widgetapi::DROP_ACTION_IGNORE);
 			if(/*dnd_.supportLevel == DONT_SUPPORT_DND ||*/ dragAndDrop_ == boost::none || document.isReadOnly() || !viewer.allowsMouseInput())
 				return input.ignore();
 
-			Caret& caret = textArea_->caret();
-			const std::shared_ptr<graphics::font::TextViewport> viewport(textArea_->textRenderer().viewport());
-			const graphics::font::TextViewportNotificationLocker lock(viewport.get());
+			const auto caret(textArea_->caret());
+			const graphics::font::TextViewportNotificationLocker lock(textArea_->viewport().get());
 			const graphics::Point caretPoint(input.location());
 			const auto destination(viewToModel(viewer, caretPoint));
 
@@ -541,7 +540,7 @@ namespace ascension {
 			if(dragAndDrop_->state == DragAndDrop::PROCESSING_AS_TARGET) {	// dropped from the other widget
 				endLocationTracking();
 				if((input.possibleActions() & widgetapi::DROP_ACTION_COPY) != 0) {
-					caret.moveTo(destination);
+					caret->moveTo(destination);
 
 					std::pair<String, bool> content;
 					bool failed = false;
@@ -553,14 +552,14 @@ namespace ascension {
 					if(!failed) {
 						AutoFreeze af(&viewer);
 						try {
-							caret.replaceSelection(content.first, content.second);
+							caret->replaceSelection(content.first, content.second);
 						} catch(...) {
 							failed = true;
 						}
 						if(!failed) {
 							if(content.second)
-								caret.beginRectangleSelection();
-							caret.select(_anchor = insertionPosition(document, destination), _caret = caret.hit());
+								caret->beginRectangleSelection();
+							caret->select(_anchor = insertionPosition(document, destination), _caret = caret->hit());
 							input.setDropAction(widgetapi::DROP_ACTION_COPY);
 						}
 					}
@@ -568,30 +567,30 @@ namespace ascension {
 				dragAndDrop_ = boost::none;
 			} else {	// drop from the same widget
 				assert(dragAndDrop_->state == DragAndDrop::PROCESSING_AS_TARGET);
-				String text(selectedString(caret, text::Newline::USE_INTRINSIC_VALUE));
+				String text(selectedString(*caret, text::Newline::USE_INTRINSIC_VALUE));
 
 				// can't drop into the selection
-				if(isPointOverSelection(caret, caretPoint)) {
-					caret.moveTo(destination);
+				if(isPointOverSelection(*caret, caretPoint)) {
+					caret->moveTo(destination);
 					dragAndDrop_ = boost::none;
 				} else {
-					const bool rectangle = caret.isSelectionRectangle();
+					const bool rectangle = caret->isSelectionRectangle();
 					bool failed = false;
 					if(input.hasModifier(widgetapi::event::CONTROL_DOWN)) {	// copy
 						if((input.possibleActions() & widgetapi::DROP_ACTION_COPY) != 0) {
 							document.insertUndoBoundary();
 							AutoFreeze af(&viewer);
 //							textArea_->redrawLines(ca.beginning().line(), ca.end().line());
-							caret.enableAutoShow(false);
-							caret.moveTo(destination);
+							caret->enableAutoShow(false);
+							caret->moveTo(destination);
 							try {
-								caret.replaceSelection(text, rectangle);
+								caret->replaceSelection(text, rectangle);
 							} catch(...) {
 								failed = true;
 							}
-							caret.enableAutoShow(true);
+							caret->enableAutoShow(true);
 							if(!failed) {
-								caret.select(_anchor = insertionPosition(document, destination), _caret = caret.hit());
+								caret->select(_anchor = insertionPosition(document, destination), _caret = caret->hit());
 								input.setDropAction(widgetapi::DROP_ACTION_COPY);
 							}
 							document.insertUndoBoundary();
@@ -600,25 +599,25 @@ namespace ascension {
 						if((input.possibleActions() & widgetapi::DROP_ACTION_MOVE) != 0) {
 							document.insertUndoBoundary();
 							AutoFreeze af(&viewer);
-							const auto oldSelection(caret.selectedRegion());
-							caret.enableAutoShow(false);
-							caret.moveTo(destination);
+							const auto oldSelection(caret->selectedRegion());
+							caret->enableAutoShow(false);
+							caret->moveTo(destination);
 							try {
-								caret.replaceSelection(text, rectangle);
+								caret->replaceSelection(text, rectangle);
 							} catch(...) {
 								failed = true;
 							}
 							if(!failed) {
-								caret.select(_anchor = insertionPosition(document, destination), _caret = caret.hit());
+								caret->select(_anchor = insertionPosition(document, destination), _caret = caret->hit());
 								if(rectangle)
-									caret.beginRectangleSelection();
+									caret->beginRectangleSelection();
 								try {
-									kernel::erase(caret.document(), kernel::Region::fromRange(oldSelection));
+									kernel::erase(caret->document(), kernel::Region::fromRange(oldSelection));
 								} catch(...) {
 									failed = true;
 								}
 							}
-							caret.enableAutoShow(true);
+							caret->enableAutoShow(true);
 							if(!failed)
 								input.setDropAction(widgetapi::DROP_ACTION_MOVE);
 							document.insertUndoBoundary();
@@ -651,7 +650,7 @@ namespace ascension {
 		void DefaultTextAreaMouseInputStrategy::continueSelectionExtension(const TextHit& to) {
 			if(selectionExtender_.get() == nullptr)
 				throw IllegalStateException("not extending the selection.");
-			selectionExtender_->continueSelection(textArea_->caret(), to);
+			selectionExtender_->continueSelection(*textArea_->caret(), to);
 		}
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -674,7 +673,7 @@ namespace ascension {
 		 */
 		void DefaultTextAreaMouseInputStrategy::handleLeftButtonDoubleClick(widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) {
 			if(selectionExtender_.get() == nullptr) {
-				selectionExtender_.reset(new WordSelectionExtender(textArea_->caret(), viewToModel(textArea_->textViewer(), input.location())));
+				selectionExtender_.reset(new WordSelectionExtender(*textArea_->caret(), viewToModel(textArea_->textViewer(), input.location())));
 				beginLocationTracking(textArea_->textViewer(), &targetLocker, true, true);
 				return input.consume();
 			}
@@ -683,10 +682,10 @@ namespace ascension {
 
 		/// @internal
 		void DefaultTextAreaMouseInputStrategy::handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) {
-			Caret& caret = textArea_->caret();
+			const auto caret(textArea_->caret());
 			TextViewer& viewer = textArea_->textViewer();
 			utils::closeCompletionProposalsPopup(viewer);
-			texteditor::endIncrementalSearch(viewer.document());
+			texteditor::endIncrementalSearch(caret->document());
 
 			if(!isStateNeutral())
 				return interruptMouseReaction(false);
@@ -694,11 +693,11 @@ namespace ascension {
 			bool boxDragging = false;
 
 			// approach drag-and-drop
-			if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(caret) && isPointOverSelection(caret, input.location())) {
+			if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(*caret) && isPointOverSelection(*caret, input.location())) {
 				dragAndDrop_ = DragAndDrop();
 				dragAndDrop_->state = DragAndDrop::APPROACHING;
 				dragAndDrop_->approachedPosition = input.location();
-				if(caret.isSelectionRectangle())
+				if(caret->isSelectionRectangle())
 					boxDragging = true;
 			}
 
@@ -706,7 +705,7 @@ namespace ascension {
 				// try hyperlink
 				bool hyperlinkInvoked = false;
 				if(input.hasModifier(widgetapi::event::CONTROL_DOWN)) {
-					if(!isPointOverSelection(caret, input.location())) {
+					if(!isPointOverSelection(*caret, input.location())) {
 						if(const boost::optional<graphics::font::TextHit<kernel::Position>> p = viewToModelInBounds(viewer, input.location())) {
 							if(const presentation::hyperlink::Hyperlink* link = utils::getPointedHyperlink(viewer, p->characterIndex())) {
 								link->invoke();
@@ -726,23 +725,23 @@ namespace ascension {
 					assert(selectionExtender_.get() == nullptr);
 					if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
 						selectionExtender_.reset(
-							new WordSelectionExtender(caret,
+							new WordSelectionExtender(*caret,
 								input.hasModifier(widgetapi::event::SHIFT_DOWN) ?
 									boost::none : boost::make_optional(to)));	// begin word selection
 					else if(input.hasAnyOfModifiers(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN))) {
 						selectionExtender_.reset(
-							new CharacterSelectionExtender(caret,
+							new CharacterSelectionExtender(*caret,
 								input.hasModifier(widgetapi::event::SHIFT_DOWN) ?
 									boost::none : boost::make_optional(to)));	// begin character selection
 						if(input.hasModifier(widgetapi::event::ALT_DOWN))
-							caret.beginRectangleSelection();	// make the selection reactangle
+							caret->beginRectangleSelection();	// make the selection reactangle
 					} else
-						caret.moveTo(to);
+						caret->moveTo(to);
 
 					if(input.hasModifier(widgetapi::event::SHIFT_DOWN))
 						continueSelectionExtension(to);
 					if(!input.hasModifier(widgetapi::event::ALT_DOWN) || input.hasModifier(widgetapi::event::CONTROL_DOWN))
-						caret.endRectangleSelection();
+						caret->endRectangleSelection();
 					if(selectionExtender_.get() != nullptr)
 						beginLocationTracking(viewer, &targetLocker, true, true);
 				}
@@ -762,7 +761,7 @@ namespace ascension {
 					&& (dragAndDrop_->state == DragAndDrop::APPROACHING || dragAndDrop_->state == DragAndDrop::PROCESSING_AS_SOURCE)) {
 				// TODO: Should this handle only case APPROACHING_DND?
 				dragAndDrop_ = boost::none;
-				textArea_->caret().moveTo(viewToModel(textArea_->textViewer(), input.location()));
+				textArea_->caret()->moveTo(viewToModel(textArea_->textViewer(), input.location()));
 				::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
 			}
 
@@ -771,7 +770,7 @@ namespace ascension {
 			if(selectionExtender_ != nullptr) {
 				selectionExtender_.reset();
 				// if released the button when extending the selection, the scroll may not reach the caret position
-				utils::show(textArea_->caret());
+				utils::show(*textArea_->caret());
 			}
 			widgetapi::releaseInput(textArea_->textViewer());
 
@@ -853,17 +852,17 @@ namespace ascension {
 					else if(action == RELEASED)
 						handleLeftButtonReleased(input);
 					else if(action == DOUBLE_CLICKED) {
-						texteditor::abortIncrementalSearch(textArea_->textViewer().document());
+						texteditor::abortIncrementalSearch(textArea_->caret()->document());
 						handleLeftButtonDoubleClick(input, targetLocker);
 					}
 					break;
 				case widgetapi::event::LocatedUserInput::BUTTON2_DOWN:
 					if(action == PRESSED && isStateNeutral()) {
-						TextViewer& viewer = textArea_->textViewer();
-						if(viewer.document().numberOfLines() > textArea_->textRenderer().viewport()->numberOfVisibleLines()) {
+						if(textArea_->caret()->document().numberOfLines() > textArea_->viewport()->numberOfVisibleLines()) {
 							autoScroll_ = AutoScroll();
 							autoScroll_->state = AutoScroll::APPROACHING;
 							autoScroll_->approachedPosition = input.location();
+							TextViewer& viewer = textArea_->textViewer();
 							const graphics::Point p(widgetapi::mapToGlobal(viewer, input.location()));
 							widgetapi::setFocus(viewer);
 							// show the indicator margin
@@ -910,7 +909,7 @@ namespace ascension {
 		void DefaultTextAreaMouseInputStrategy::mouseMoved(widgetapi::event::LocatedUserInput& input, TargetLocker& targetLocker) {
 			if((autoScroll_ != boost::none && autoScroll_->state == AutoScroll::APPROACHING)
 					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ dragAndDrop_ != boost::none && dragAndDrop_->state == DragAndDrop::APPROACHING)) {	// dragging starts?
-				if(dragAndDrop_ != boost::none && isSelectionEmpty(textArea_->caret())) {
+				if(dragAndDrop_ != boost::none && isSelectionEmpty(*textArea_->caret())) {
 					dragAndDrop_ = boost::none;	// approaching... => cancel
 					input.consume();
 				} else {
@@ -934,7 +933,7 @@ namespace ascension {
 				}
 			} else if((input.buttons() & widgetapi::event::LocatedUserInput::BUTTON1_DOWN) != 0) {
 				if(selectionExtender_.get() == nullptr) {
-					selectionExtender_.reset(new CharacterSelectionExtender(textArea_->caret()));
+					selectionExtender_.reset(new CharacterSelectionExtender(*textArea_->caret()));
 					beginLocationTracking(textArea_->textViewer(), &targetLocker, true, true);
 				}
 				continueSelectionExtension(viewToModel(textArea_->textViewer(), input.location()));
@@ -944,8 +943,8 @@ namespace ascension {
 
 		/// @see MouseInputStrategy#mouseWheelRotated
 		void DefaultTextAreaMouseInputStrategy::mouseWheelRotated(widgetapi::event::MouseWheelInput& input, TargetLocker&) {
-			if(!endAutoScroll()) {
-				const std::shared_ptr<graphics::font::TextViewport> viewport(textArea_->textRenderer().viewport());
+			const auto viewport(textArea_->viewport());
+			if(!endAutoScroll() && viewport.get() != nullptr) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
 				// use system settings
 				UINT lines;	// the number of lines to scroll
@@ -967,17 +966,19 @@ namespace ascension {
 					viewport->scroll(offsets);
 					input.consume();
 				} else if(input.scrollType() == widgetapi::event::MouseWheelInput::WHEEL_BLOCK_SCROLL) {
-					const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> physicalPages(
-						graphics::_x = static_cast<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::dx(input.wheelRotation())),
-						graphics::_y = static_cast<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::dy(input.wheelRotation())));
-					presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::SignedScrollOffset> flowRelativePages;
-					presentation::mapDimensions(textArea_->textRenderer().presentation().computeWritingMode(), presentation::_from = physicalPages, presentation::_to = flowRelativePages);
-					if(flowRelativePages.bpd() != 0) {
-						viewport->scrollBlockFlowPage(flowRelativePages.bpd());
-						flowRelativePages.bpd() = 0;
+					if(const auto renderer = textArea_->textRenderer()) {
+						const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> physicalPages(
+							graphics::_x = static_cast<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::dx(input.wheelRotation())),
+							graphics::_y = static_cast<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::dy(input.wheelRotation())));
+						presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::SignedScrollOffset> flowRelativePages;
+						presentation::mapDimensions(renderer->writingModes(), presentation::_from = physicalPages, presentation::_to = flowRelativePages);
+						if(flowRelativePages.bpd() != 0) {
+							viewport->scrollBlockFlowPage(flowRelativePages.bpd());
+							flowRelativePages.bpd() = 0;
+						}
+						viewport->scroll(flowRelativePages);
+						input.consume();
 					}
-					viewport->scroll(flowRelativePages);
-					input.consume();
 				}
 #endif
 			}
@@ -1000,7 +1001,7 @@ namespace ascension {
 			const presentation::hyperlink::Hyperlink* newlyHoveredHyperlink = nullptr;
 			TextViewer& viewer = textArea_->textViewer();
 
-			if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(textArea_->caret()) && isPointOverSelection(textArea_->caret(), position))	// on a draggable text selection?
+			if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(*textArea_->caret()) && isPointOverSelection(*textArea_->caret(), position))	// on a draggable text selection?
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				builtinShape = Gdk::ARROW;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
@@ -1048,7 +1049,7 @@ namespace ascension {
 		void DefaultTextAreaMouseInputStrategy::timeElapsed(Timer<DefaultTextAreaMouseInputStrategy>& timer) {
 			if(textArea_ != nullptr) {
 				if(autoScroll_ != boost::none && autoScroll_->state != AutoScroll::APPROACHING) {
-					const std::shared_ptr<graphics::font::TextViewport> viewport(textArea_->textRenderer().viewport());
+					const auto& viewport = textArea_->viewport();
 					timer.stop();
 					TextViewer& viewer = textArea_->textViewer();
 					const graphics::Point p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
@@ -1056,8 +1057,8 @@ namespace ascension {
 						graphics::geometry::_dx =
 							graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
 						graphics::geometry::_dy =
-							widgetapi::createRenderingContext(viewer)->fontMetrics(textArea_->textRenderer().defaultFont())->linePitch());
-					if(presentation::isVertical(textArea_->textRenderer().computedBlockFlowDirection()))
+							widgetapi::createRenderingContext(viewer)->fontMetrics(textArea_->textRenderer()->defaultFont())->linePitch());
+					if(presentation::isVertical(textArea_->textRenderer()->blockFlowDirection()))
 						std::swap(graphics::geometry::dx(scrollUnits), graphics::geometry::dy(scrollUnits));
 					const graphics::Dimension scrollOffsets(
 						graphics::geometry::_dx =

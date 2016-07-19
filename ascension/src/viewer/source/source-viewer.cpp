@@ -24,10 +24,11 @@ namespace ascension {
 	namespace viewer {
 		namespace source {
 			/**
-			 * Constructor.
-			 * @param presentation The presentation object
+			 * Creates a @c SourceViewer instance.
+			 * @param document The document
+			 * @throw NullPointerException @a document is @c null
 			 */
-			SourceViewer::SourceViewer(presentation::Presentation& presentation) : TextViewer(presentation) {
+			SourceViewer::SourceViewer(std::shared_ptr<kernel::Document> document) : TextViewer(document) {
 				setRulerAlignment(graphics::font::TextAlignment::START);
 			}
 
@@ -70,7 +71,7 @@ namespace ascension {
 					return TextViewer::locateComponent(component);
 
 				const bool locateRuler = &component == ruler_.get();
-				if(!locateRuler && &component != &textArea())
+				if(!locateRuler && &component != textArea().get())
 					throw std::invalid_argument("component");
 
 				const graphics::Scalar rulerWidth = std::max<graphics::Scalar>(ruler_->width(), 0);
@@ -167,7 +168,12 @@ namespace ascension {
 			 * @c graphics#font#TextAlignment#RIGHT are treated as top and bottom respectively.
 			 */
 			void SourceViewer::setRulerAlignment(graphics::font::TextAlignment alignment) {
-				rulerPhysicalAlignment_ = calculateRulerPhysicalAlignment(alignment, presentation().computeWritingMode());
+				presentation::WritingMode writingMode;
+				if(const auto ta = textArea()) {
+					if(const auto renderer = ta->textRenderer())
+						writingMode = renderer->writingModes();
+				}
+				rulerPhysicalAlignment_ = calculateRulerPhysicalAlignment(alignment, writingMode);
 				rulerAbstractAlignment_ = alignment;
 				updateTextAreaAllocationRectangle();
 			}

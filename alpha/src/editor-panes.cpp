@@ -58,11 +58,11 @@ namespace alpha {
 	}
 
 	/// @see BufferList#BufferAdded
-	void EditorPanes::bufferAdded(BufferList& buffers, Buffer& buffer) {
+	void EditorPanes::bufferAdded(BufferList& buffers, std::shared_ptr<Buffer> buffer) {
 		// create new views for each panes
 		EditorView* originalView = nullptr;
 		BOOST_FOREACH(EditorPane& pane, *this) {
-			std::unique_ptr<EditorView> newView((originalView == nullptr) ? new EditorView(buffer.presentation()) : new EditorView(*originalView));
+			std::unique_ptr<EditorView> newView((originalView == nullptr) ? new EditorView(buffer) : new EditorView(*originalView));
 			newView->signal_focus_in_event().connect(sigc::mem_fun(*this, &EditorPanes::viewFocused));
 			if(originalView == nullptr)
 				originalView = newView.get();

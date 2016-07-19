@@ -27,7 +27,7 @@ namespace ascension {
 					return std::get<0>(p);
 				}
 				inline const kernel::Document& document(const PointProxy& p) BOOST_NOEXCEPT {
-					return textArea(p).caret().document();
+					return textArea(p).caret()->document();
 				}
 				inline const TextHit& hit(const PointProxy& p) BOOST_NOEXCEPT {
 					return std::get<1>(p);
@@ -107,7 +107,7 @@ namespace ascension {
 			 */
 			TextHit beginningOfVisualLine(const PointProxy& p) {
 				const auto h(normalHit(p));
-				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(h.characterIndex())))
+				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer()->layouts().at(kernel::line(h.characterIndex())))
 					return TextHit::leading(kernel::Position(kernel::line(h.characterIndex()), layout->lineOffset(layout->lineAt(inlineHit(h)))));
 				return TextHit::leading(kernel::locations::beginningOfLine(kernelProxy(p)));
 			}
@@ -160,7 +160,7 @@ namespace ascension {
 			TextHit endOfVisualLine(const PointProxy& p) {
 				auto h(normalHit(p));
 				const auto line = kernel::line(h.characterIndex());
-				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(line)) {
+				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer()->layouts().at(line)) {
 					const Index subline = layout->lineAt(inlineHit(h));
 					if(subline < layout->numberOfLines() - 1)
 						return otherHit(document(p), TextHit::leading(kernel::Position(line, layout->lineOffset(subline + 1))));
@@ -191,7 +191,7 @@ namespace ascension {
 			TextHit firstPrintableCharacterOfVisualLine(const PointProxy& p) {
 				kernel::Position np(normalPosition(p));
 				const String& s = document(p).lineString(kernel::line(np));
-				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(np))) {
+				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer()->layouts().at(kernel::line(np))) {
 					const Index subline = layout->lineAt(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np)));
 					np.offsetInLine = kernel::detail::identifierSyntax(kernelProxy(p)).eatWhiteSpaces(
 						s.begin() + layout->lineOffset(subline),
@@ -258,7 +258,7 @@ namespace ascension {
 				if(kernel::locations::isBeginningOfLine(kernelProxy(p)))	// this considers narrowing
 					return true;
 				const kernel::Position np(normalPosition(p));
-				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(np)))
+				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer()->layouts().at(kernel::line(np)))
 					return kernel::offsetInLine(np) == layout->lineOffset(layout->lineAt(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np))));
 				return kernel::locations::isBeginningOfLine(kernelProxy(p));
 			}
@@ -273,7 +273,7 @@ namespace ascension {
 				if(kernel::locations::isEndOfLine(kernelProxy(p)))	// this considers narrowing
 					return true;
 				const kernel::Position np(normalPosition(p));
-				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer().layouts().at(kernel::line(np))) {
+				if(const graphics::font::TextLayout* const layout = textArea(p).textRenderer()->layouts().at(kernel::line(np))) {
 					const Index subline = layout->lineAt(graphics::font::makeLeadingTextHit(kernel::offsetInLine(np)));
 					return kernel::offsetInLine(np) == layout->lineOffset(subline) + layout->lineLength(subline);
 				}

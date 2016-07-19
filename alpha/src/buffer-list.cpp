@@ -90,23 +90,23 @@ namespace alpha {
 	 * @throw ascension#encoding#UnsupportedEncodingException @a encoding is not supported
 	 * @throw ascension#UnknownValueException @a newline is invalid
 	 */
-	Buffer& BufferList::addNew(const Glib::ustring& name /* = Glib::ustring() */,
+	std::shared_ptr<Buffer> BufferList::addNew(const Glib::ustring& name /* = Glib::ustring() */,
 			const std::string& encoding /* = "UTF-8" */, ascension::text::Newline newline /* = ascension::text::Newline::USE_INTRINSIC_VALUE */) {
 		BufferEntry newEntry;
 		newEntry.buffer.reset(new Buffer(name));
-		Buffer& newBuffer = *newEntry.buffer;
+		std::shared_ptr<Buffer> newBuffer(newEntry.buffer);
 		newEntry.nameChangedConnection =
-			newBuffer.nameChangedSignal().connect(std::bind(&BufferList::fireDisplayNameChanged, this, std::placeholders::_1));
+			newBuffer->nameChangedSignal().connect(std::bind(&BufferList::fireDisplayNameChanged, this, std::placeholders::_1));
 		newEntry.modificationSignChangedConnection =
-			newBuffer.modificationSignChangedSignal().connect(std::bind(&BufferList::documentModificationSignChanged, this, std::placeholders::_1));
+			newBuffer->modificationSignChangedSignal().connect(std::bind(&BufferList::documentModificationSignChanged, this, std::placeholders::_1));
 		newEntry.readOnlySignChangedConnection =
-			newBuffer.readOnlySignChangedSignal().connect(std::bind(&BufferList::documentReadOnlySignChanged, this, std::placeholders::_1));
+			newBuffer->readOnlySignChangedSignal().connect(std::bind(&BufferList::documentReadOnlySignChanged, this, std::placeholders::_1));
 
-		newBuffer.textFile().setEncoding(encoding);
+		newBuffer->textFile().setEncoding(encoding);
 		if(newline.isLiteral())
-			newBuffer.textFile().setNewline(newline);
+			newBuffer->textFile().setNewline(newline);
 
-		editorSession_.addDocument(newBuffer);
+		editorSession_.addDocument(*newBuffer);
 //		newBuffer.setProperty(ascension::kernel::Document::TITLE_PROPERTY, !name.empty() ? name : L"*untitled*");
 		{
 			boost::lock_guard<decltype(locker_)> lg(locker_);
@@ -116,7 +116,7 @@ namespace alpha {
 		}
 
 //		view.addEventListener(app_);
-		newBuffer.textFile().addListener(*this);
+		newBuffer->textFile().addListener(*this);
 //		view.getLayoutSetter().setFont(lf);
 
 		resetResources();

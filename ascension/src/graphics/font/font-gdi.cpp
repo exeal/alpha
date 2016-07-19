@@ -15,6 +15,7 @@
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
+#include <ascension/win32/system-default-font.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
 #include <boost/math/special_functions/round.hpp>
@@ -356,15 +357,9 @@ namespace ascension {
 				static String familyName;
 				// TODO: 'familyName' should update when system property changed.
 				if(familyName.empty()) {
-					LOGFONTW lf;
-					if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(decltype(lf)), &lf) != 0)
-						familyName = lf.lfFaceName;
-					else {
-						win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
-						if(!win32::boole(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(decltype(ncm)), &ncm, 0)))
-							throw makePlatformError();
-						familyName = ncm.lfMessageFont.lfFaceName;
-					}
+					LOGFONT lf;
+					win32::systemDefaultFont(lf);
+					familyName = lf.lfFaceName;
 				}
 
 				const FontDescription description(FontFamily(familyName), pointSize, properties);

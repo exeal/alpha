@@ -22,7 +22,7 @@ namespace ascension {
 
 			class SourceViewer : public TextViewer, private RulerAllocationWidthSink {
 			public:
-				explicit SourceViewer(presentation::Presentation& presentation);
+				explicit SourceViewer(std::shared_ptr<kernel::Document> document);
 				SourceViewer(const SourceViewer& other);
 				// TextViewer
 				virtual const TextViewerComponent* hitTest(const graphics::Point& location) const BOOST_NOEXCEPT override;

@@ -20,32 +20,33 @@
 #include <ascension/graphics/geometry/rectangle-sides.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/log.hpp>
+#include <ascension/presentation/presentative-text-renderer.hpp>
 #include <ascension/text-editor/command.hpp>	// ascension.texteditor.commands.IncrementalSearchCommand
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>
+#include <ascension/viewer/text-area-rendering-strategy.hpp>
 #include <boost/range/algorithm/replace_if.hpp>
 #include <glibmm/i18n.h>
 
 namespace alpha {
-	/// Constructor.
-	EditorView::EditorView(ascension::presentation::Presentation& presentation) :
+	/// Default constructor.
+	EditorView::EditorView(std::shared_ptr<Buffer> buffer) :
 #ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 			Glib::ObjectBase("alpha.EditorView"),
 #endif
-			ascension::viewer::TextViewer(presentation), visualColumnStartValue_(1) {
-		document().bookmarker().addListener(*this);
+			ascension::viewer::TextViewer(buffer),
+			buffer_(buffer), visualColumnStartValue_(1) {
+		document()->bookmarker().addListener(*this);
 //		caretObject_.reset(new CaretProxy(caret()));
 	}
 
 	/// Copy-constructor.
-	EditorView::EditorView(const EditorView& other) : ascension::viewer::TextViewer(other), visualColumnStartValue_(other.visualColumnStartValue_) {
-		document().bookmarker().addListener(*this);
-//		caretObject_.reset(new CaretProxy(caret()));
+	EditorView::EditorView(const EditorView& other) : ascension::viewer::TextViewer(other), buffer_(other.buffer_), visualColumnStartValue_(other.visualColumnStartValue_) {
 	}
 
 	/// Destructor.
 	EditorView::~EditorView() {
-		document().bookmarker().removeListener(*this);
+		document()->bookmarker().removeListener(*this);
 	}
 
 	/// Begins incremental search.
@@ -55,7 +56,7 @@ namespace alpha {
 
 	/// @see BookmarkListener#bookmarkChanged
 	void EditorView::bookmarkChanged(ascension::Index line) {
-		textArea().redrawLine(line);
+		textArea()->redrawLine(line);
 	}
 
 	/// @see BookmarkListener#bookmarkCleared
@@ -65,7 +66,7 @@ namespace alpha {
 
 	/// @see TextViewer#drawIndicatorMargin
 	void EditorView::drawIndicatorMargin(ascension::Index line, ascension::graphics::PaintContext& context, const ascension::graphics::Rectangle& rect) {
-		if(document().bookmarker().isMarked(line)) {
+		if(document()->bookmarker().isMarked(line)) {
 			// draw a bookmark indication mark
 			namespace gfx = ascension::graphics;
 			const ascension::NumericRange<ascension::graphics::Scalar> xrange(gfx::geometry::range<0>(rect) | ascension::adaptors::ordered());
@@ -99,13 +100,13 @@ namespace alpha {
 	/// @see TextViewer#focusGained
 	void EditorView::focusGained(ascension::viewer::widgetapi::event::Event& event) {
 		ascension::viewer::TextViewer::focusGained(event);
-		BufferList::instance().select(document());
+		BufferList::instance().select(*document());
 	}
 
 	/// @see IncrementalSearchListener#incrementalSearchAborted
 	void EditorView::incrementalSearchAborted(const ascension::kernel::Position& initialPosition) {
 		incrementalSearchCompleted();
-		textArea().caret().moveTo(ascension::viewer::TextHit::leading(initialPosition));
+		textArea()->caret()->moveTo(ascension::viewer::TextHit::leading(initialPosition));
 	}
 
 	/// @see IncrementalSearchListener#incrementalSearchCompleted
@@ -124,11 +125,11 @@ namespace alpha {
 		bool messageIsFormat = true;
 
 		if(result == ascension::searcher::IncrementalSearchCallback::EMPTY_PATTERN) {
-			textArea().caret().select(ascension::viewer::SelectedRegion(isearch.matchedRegion()));
+			textArea()->caret()->select(ascension::viewer::SelectedRegion(isearch.matchedRegion()));
 			message = forward ? _("Incremental search : (empty pattern)") : _("Reversal incremental search : (empty pattern)");
 			messageIsFormat = false;
 		} else if(result == ascension::searcher::IncrementalSearchCallback::FOUND) {
-			textArea().caret().select(ascension::viewer::SelectedRegion(isearch.matchedRegion()));
+			textArea()->caret()->select(ascension::viewer::SelectedRegion(isearch.matchedRegion()));
 			message = forward ? _("Incremental search : %1") : _("Reversal incremental search : %1");
 		} else {
 			if(result == ascension::searcher::IncrementalSearchCallback::NOT_FOUND)
@@ -151,6 +152,14 @@ namespace alpha {
 
 	/// @see IncrementalSearchListener#incrementalSearchStarted
 	void EditorView::incrementalSearchStarted(const ascension::kernel::Document&) {
+	}
+
+	/// @see TextViewer#initialized
+	void EditorView::initialized() BOOST_NOEXCEPT {
+		std::unique_ptr<ascension::presentation::PresentativeTextRenderer> renderer(
+			new ascension::presentation::PresentativeTextRenderer(document()->presentation(), boost::geometry::make_zero<ascension::graphics::Dimension>()));
+		renderer->setStrategy(std::unique_ptr<ascension::viewer::TextAreaRenderingStrategy>(new ascension::viewer::TextAreaRenderingStrategy(*textArea())));
+		textArea()->setTextRenderer(std::move(renderer));
 	}
 
 	/// @see TextViewer#keyPressed

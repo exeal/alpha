@@ -91,6 +91,10 @@ namespace ascension {
 				widget->move(static_cast<int>(graphics::geometry::x(newOrigin)), static_cast<int>(graphics::geometry::y(newOrigin)));
 			}
 
+			Widget::pointer parentWidget(Proxy<const Widget> widget) {
+				return const_cast<Gtk::Container*>(widget->get_parent());
+			}
+
 			void raise(Proxy<Window> window) {
 				window->raise();
 			}

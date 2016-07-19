@@ -60,7 +60,7 @@ namespace alpha {
 
 		/// @name Open and Save
 		/// @{
-		Buffer& addNew(
+		std::shared_ptr<Buffer> addNew(
 			const Glib::ustring& name = Glib::ustring(), const std::string& encoding = "UTF-8",
 			ascension::text::Newline newline = ascension::text::Newline::USE_INTRINSIC_VALUE);
 //		Buffer* addNewDialog(const ascension::String& name = L"");
@@ -78,7 +78,7 @@ namespace alpha {
 		/// @{
 		typedef boost::signals2::signal<void(BufferList&, Buffer&)> BufferAboutToBeRemovedSignal;
 		ascension::SignalConnector<BufferAboutToBeRemovedSignal> bufferAboutToBeRemovedSignal() BOOST_NOEXCEPT;
-		typedef boost::signals2::signal<void(BufferList&, Buffer&)> BufferAddedSignal;
+		typedef boost::signals2::signal<void(BufferList&, std::shared_ptr<Buffer>)> BufferAddedSignal;
 		ascension::SignalConnector<BufferAddedSignal> bufferAddedSignal() BOOST_NOEXCEPT;
 		typedef boost::signals2::signal<void(BufferList&, Buffer&)> BufferRemovedSignal;
 		ascension::SignalConnector<BufferRemovedSignal> bufferRemovedSignal() BOOST_NOEXCEPT;
@@ -113,7 +113,7 @@ namespace alpha {
 	private:
 		ascension::texteditor::Session editorSession_;
 		struct BufferEntry : private boost::noncopyable {
-			std::unique_ptr<Buffer> buffer;
+			std::shared_ptr<Buffer> buffer;
 			boost::signals2::connection nameChangedConnection, modificationSignChangedConnection, readOnlySignChangedConnection;
 			BufferEntry() {}
 			BufferEntry(BufferEntry&& other) BOOST_NOEXCEPT : buffer(std::move(other.buffer)) {}

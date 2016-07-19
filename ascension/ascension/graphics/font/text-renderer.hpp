@@ -1,5 +1,6 @@
 /**
  * @file text-renderer.hpp
+ * Defines @c TextRenderer class.
  * @date 2003-2006 was LineLayout.h
  * @date 2006-2013
  * @date 2010-11-20 separated from ascension/layout.hpp
@@ -10,18 +11,24 @@
 #define ASCENSION_TEXT_RENDERER_HPP
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/signals.hpp>
+#include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
+#include <ascension/graphics/font/text-alignment.hpp>	// TextAnchor
 #include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
-#include <ascension/presentation/writing-mode.hpp>	// presentation.BlockFlowDirection
+#include <ascension/presentation/writing-mode.hpp>
+#include <boost/range/irange.hpp>
 #include <memory>	// std.shared_ptr, std.unique_ptr
 
 namespace ascension {
+	namespace kernel {
+		class Document;
+	}
+
 	namespace presentation {
 		struct ComputedStyledTextRunIterator;
 		struct ComputedTextLineStyle;
-		class Presentation;
 	}
 
 	namespace graphics {
@@ -37,7 +44,7 @@ namespace ascension {
 			class TextViewport;
 
 			// documentation is text-renderer.cpp
-			class TextRenderer {
+			class TextRenderer : private boost::noncopyable {
 			public:
 				/**
 				 * @see TextRenderer#lineRelativeAlignment, TextAlignment, TextAnchor
@@ -56,17 +63,9 @@ namespace ascension {
 					/// Vertical center of lines are vertical center of the renderer.
 					VERTICAL_CENTER
 				};
-			public:
-				TextRenderer(presentation::Presentation& presentation,
-					const FontCollection& fontCollection, const Dimension& initialSize);
-				TextRenderer(const TextRenderer& other);
-				virtual ~TextRenderer() BOOST_NOEXCEPT;
 
-				/// @name Viewport
-				/// @{
-				std::shared_ptr<TextViewport> viewport() BOOST_NOEXCEPT;
-				std::shared_ptr<const TextViewport> viewport() const BOOST_NOEXCEPT;
-				/// @}
+			public:
+				virtual ~TextRenderer() BOOST_NOEXCEPT;
 
 				/// @name Layout
 				/// @{
@@ -78,21 +77,21 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				/// @}
 
-				/// @name Presentation
-				/// @{
-				presentation::BlockFlowDirection computedBlockFlowDirection() const BOOST_NOEXCEPT;
-				presentation::Presentation& presentation() BOOST_NOEXCEPT;
-				const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-				Scalar textWrappingMeasureInPixels() const BOOST_NOEXCEPT;
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-				/// @}
-
 				/// @name The Default Font
 				/// @{
 				std::shared_ptr<const Font> defaultFont() const BOOST_NOEXCEPT;
 				typedef boost::signals2::signal<void(const TextRenderer&)> DefaultFontChangedSignal;
 				SignalConnector<DefaultFontChangedSignal> defaultFontChangedSignal() BOOST_NOEXCEPT;
+				/// @}
+
+				/// @name Writing Modes
+				/// @{
+				virtual presentation::BlockFlowDirection blockFlowDirection() const BOOST_NOEXCEPT = 0;
+				virtual presentation::ReadingDirection inlineFlowDirection() const BOOST_NOEXCEPT = 0;
+				virtual presentation::TextOrientation textOrientation() const BOOST_NOEXCEPT = 0;
+				presentation::WritingMode writingModes() const BOOST_NOEXCEPT;
+				typedef boost::signals2::signal<void(const TextRenderer&)> WritingModesChangedSignal;
+				SignalConnector<WritingModesChangedSignal> writingModesChangedSignal() BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Text Metrics
@@ -101,21 +100,20 @@ namespace ascension {
 				LineRelativeAlignmentAxis lineRelativeAlignment() const BOOST_NOEXCEPT;
 				Scalar lineStartEdge(const VisualLine& line) const;
 				const PhysicalFourSides<Scalar>& spaceWidths() const BOOST_NOEXCEPT;
+				virtual TextAnchor textAnchor() const BOOST_NOEXCEPT = 0;
 				/// @}
 
 				/// @name Painting
 				/// @{
-				void paint(PaintContext& context, const LineRenderingOptions* options = nullptr) const;
+				void paint(PaintContext& context, const TextViewport& viewport, const LineRenderingOptions* options = nullptr) const;
 				void paint(Index line, PaintContext& context,
 					const Point& alignmentPoint, const LineRenderingOptions* options = nullptr) const;
 				/// @}
 
 			protected:
-				std::pair<
-					const presentation::ComputedTextLineStyle&,
-					std::unique_ptr<presentation::ComputedStyledTextRunIterator>
-				> buildLineLayoutConstructionParameters(Index line, const RenderingContext2D& graphics2D) const;
-				const FontCollection& fontCollection() const BOOST_NOEXCEPT;
+				TextRenderer(kernel::Document& document, const Dimension& initialSize);
+				virtual Color actualLineBackgroundColor(const TextLayout& layout) const BOOST_NOEXCEPT = 0;
+				virtual std::shared_ptr<const Font> newDefaultFont() const BOOST_NOEXCEPT = 0;
 
 			private:
 				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
@@ -123,30 +121,20 @@ namespace ascension {
 					PaintContext& context, const Point& alignmentPoint, const LineRenderingOptions* options) const;
 				void updateDefaultFont();
 			private:
-				presentation::Presentation& presentation_;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				Scalar textWrappingMeasureInPixels_;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				std::unique_ptr<LineLayoutVector> layouts_;
-				const FontCollection fontCollection_;
 				std::shared_ptr<const Font> defaultFont_;
-				std::shared_ptr<TextViewport> viewport_;
 //				class SpacePainter;
 //				std::unique_ptr<SpacePainter> spacePainter_;
 				DefaultFontChangedSignal defaultFontChangedSignal_;
+				WritingModesChangedSignal writingModesChangedSignal_;
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 				mutable win32::Handle<HDC> memoryDC_;
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
 #endif // ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 			};
-
-			/**
-			 * Returns the @c FontCollection object used by this @c TextRenderer.
-			 * @see #buildLineLayoutConstructionParameters
-			 */
-			inline const FontCollection& TextRenderer::fontCollection() const BOOST_NOEXCEPT {
-				return fontCollection_;
-			}
 
 			/// Returns the vector of layouts.
 			inline LineLayoutVector& TextRenderer::layouts() BOOST_NOEXCEPT {
@@ -156,16 +144,6 @@ namespace ascension {
 			/// Returns the vector of layouts.
 			inline const LineLayoutVector& TextRenderer::layouts() const BOOST_NOEXCEPT {
 				return *layouts_;
-			}
-
-			/// Returns the presentation used by this object.
-			inline presentation::Presentation& TextRenderer::presentation() BOOST_NOEXCEPT {
-				return presentation_;
-			}
-
-			/// Returns the presentation used by this object.
-			inline const presentation::Presentation& TextRenderer::presentation() const BOOST_NOEXCEPT {
-				return presentation_;
 			}
 
 			/// Returns the primary font. The returned value can't be @c null.
@@ -182,6 +160,11 @@ namespace ascension {
 				return textWrappingMeasureInPixels_;
 			}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
+
+			/// Returns the @c WritingMode.
+			inline presentation::WritingMode TextRenderer::writingModes() const BOOST_NOEXCEPT {
+				return presentation::WritingMode(inlineFlowDirection(), blockFlowDirection(), textOrientation());
+			}
 		}
 	}
 } // namespace ascension.graphics.font

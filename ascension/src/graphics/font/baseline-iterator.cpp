@@ -57,6 +57,7 @@ namespace ascension {
 			 * @param viewport The text viewport
 			 * @param position The position gives a visual line
 			 * @param trackOutOfViewport
+			 * @throw IllegalStateException @c viewport.textRenderer().lock() returned @c null
 			 */
 			BaselineIterator::BaselineIterator(const TextViewport& viewport, const TextHit<kernel::Position>& position, bool trackOutOfViewport)
 					: viewport_(&viewport), tracksOutOfViewport_(trackOutOfViewport) {
@@ -67,13 +68,16 @@ namespace ascension {
 				else {
 					const Index offset = kernel::offsetInLine(position.characterIndex());
 					const TextHit<> hit(position.isLeadingEdge() ? TextHit<>::leading(offset) : TextHit<>::trailing(offset));
+					const auto textRenderer(this->viewport().textRenderer().lock());
+					if(textRenderer.get() == nullptr)
+						throw IllegalStateException("viewport.textRenderer().lock() returned null.");
 					if(line.line == this->viewport().firstVisibleLine().line) {
-						line.subline = this->viewport().textRenderer().layouts().at(line.line)->lineAt(hit);
+						line.subline = textRenderer->layouts().at(line.line)->lineAt(hit);
 						internalAdvance(&line, boost::none);
 					} else {
 						internalAdvance(&line, boost::none);
 						if(this->line() != boost::none)
-							std::advance(*this, this->viewport().textRenderer().layouts().at(line.line)->lineAt(hit));
+							std::advance(*this, textRenderer->layouts().at(line.line)->lineAt(hit));
 					}
 				}
 			}
@@ -136,14 +140,18 @@ namespace ascension {
 
 			/// @internal Moves this iterator to the first visible line in the viewport.
 			void BaselineIterator::initializeWithFirstVisibleLine() {
+				const auto textRenderer(viewport().textRenderer().lock());
+				if(textRenderer.get() == nullptr)
+					throw IllegalStateException("viewport.textRenderer().lock() returned null.");
+
 				const VisualLine firstVisibleLine(viewport().firstVisibleLine());
-				const TextLayout* const layout = viewport().textRenderer().layouts().at(firstVisibleLine.line);
+				const TextLayout* const layout = textRenderer->layouts().at(firstVisibleLine.line);
 				assert(layout != nullptr);
 				const auto lineMetrics(layout->lineMetrics(firstVisibleLine.subline));
 				const Scalar baseline = lineMetrics.baselineOffset() - *boost::const_begin(lineMetrics.extentWithHalfLeadings());
 				Point axis;
 				const Rectangle bounds(geometry::make<Rectangle>(boost::geometry::make_zero<Point>(), viewport().size()));
-				switch(viewport().textRenderer().computedBlockFlowDirection()) {
+				switch(textRenderer->blockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
 						axis = geometry::make<Point>((geometry::_x = 0.0f, geometry::_y = geometry::top(bounds) + baseline));
 						break;
@@ -168,10 +176,14 @@ namespace ascension {
 			/// @internal Implements constructor and @c #advance method.
 			void BaselineIterator::internalAdvance(const VisualLine* to, const boost::optional<difference_type>& delta) {
 				assert(viewport_ != nullptr);
+				const auto textRenderer(viewport().textRenderer().lock());
+				if(textRenderer.get() == nullptr)
+					throw IllegalStateException("viewport.textRenderer().lock() returned null.");
+
 				bool forward;
 				if(to != nullptr) {
 					assert(delta == boost::none);
-					if(to->line >= viewport().textRenderer().layouts().document().numberOfLines())
+					if(to->line >= textRenderer->layouts().document().numberOfLines())
 						throw IndexOutOfBoundsException("*to");
 					if(*to == line())
 						return;
@@ -197,14 +209,13 @@ namespace ascension {
 				}
 
 				// calculate extent of the viewport (if needed)
-				const TextRenderer& renderer = viewport().textRenderer();
-				const presentation::BlockFlowDirection blockFlowDirection(renderer.computedBlockFlowDirection());
+				const presentation::BlockFlowDirection blockFlowDirection(textRenderer->blockFlowDirection());
 				const NumericRange<Scalar> viewportExtent(viewportContentExtent(viewport()));
 
 				auto newLine(boost::get(line()));
 				auto newBaseline = **this;
 				difference_type n = 0;
-				const TextLayout* layout = /*tracksOutOfViewport() ? &renderer.layouts()[newLine.line] :*/ renderer.layouts().at(newLine.line);
+				const TextLayout* layout = /*tracksOutOfViewport() ? &renderer.layouts()[newLine.line] :*/ textRenderer->layouts().at(newLine.line);
 				auto lineMetrics(layout->lineMetrics(newLine.subline));
 				bool negativeVertical = detail::isNegativeVertical(*layout);
 				if(forward) {
@@ -220,8 +231,8 @@ namespace ascension {
 
 						// move to forward visual line
 						if(newLine.subline == layout->numberOfLines() - 1) {
-							if(newLine.line < renderer.presentation().document().numberOfLines() - 1) {
-								layout = renderer.layouts().at(++newLine.line);
+							if(newLine.line < textRenderer->layouts().document().numberOfLines() - 1) {
+								layout = textRenderer->layouts().at(++newLine.line);
 								lineMetrics = layout->lineMetrics(newLine.subline = 0);
 								negativeVertical = detail::isNegativeVertical(*layout);
 							} else
@@ -249,7 +260,7 @@ namespace ascension {
 
 						// move to backward visual line
 						if(newLine.subline == 0) {
-							layout = renderer.layouts().at(--newLine.line);
+							layout = textRenderer->layouts().at(--newLine.line);
 							lineMetrics = layout->lineMetrics(newLine.subline = layout->numberOfLines() - 1);
 							negativeVertical = detail::isNegativeVertical(*layout);
 						} else {

@@ -9,7 +9,6 @@
 #ifndef ASCENSION_PRESENTATION_HPP
 #define ASCENSION_PRESENTATION_HPP
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
-#include <ascension/corelib/signals.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <boost/core/noncopyable.hpp>
@@ -108,13 +107,13 @@ namespace ascension {
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const;
 #endif
 			/// @}
-
+#if 0
 			/// @name Default Writing Modes
 			/// @{
-			ReadingDirection defaultDirection() const BOOST_NOEXCEPT;
-			void setDefaultDirection(ReadingDirection direction);
+			ReadingDirection defaultDirection() const BOOST_NOEXCEPT override;
+			void setDefaultDirection(ReadingDirection direction) BOOST_NOEXCEPT override;
 			/// @}
-
+#endif
 			/// @name Computed Styles
 			/// @{
 			const ComputedTextLineStyle& computedTextLineStyle() const BOOST_NOEXCEPT;
@@ -131,7 +130,8 @@ namespace ascension {
 			const ComputedTextLineStyle& computeTextLineStyle(Index line) const;
 			const ComputedTextRunStyle& computeTextRunStyleForLine(Index line) const;
 			std::unique_ptr<ComputedStyledTextRunIterator> computeTextRunStyles(Index line) const;
-			WritingMode computeWritingMode(boost::optional<Index> line = boost::none) const;
+			WritingMode computeWritingMode() const BOOST_NOEXCEPT;
+			WritingMode computeWritingMode(Index line) const;
 			/// @}
 
 			/// @name Override Styles
@@ -170,7 +170,9 @@ namespace ascension {
 #ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
 			std::list<std::shared_ptr<TextLineColorSpecifier>> textLineColorSpecifiers_;
 #endif
+#if 0
 			ReadingDirection defaultDirection_;
+#endif
 			struct ComputedStyles;
 			std::unique_ptr<ComputedStyles> computedStyles_;
 			std::shared_ptr<const TextOverrideStyle> textOverrideStyle_;
@@ -190,12 +192,12 @@ namespace ascension {
 			assert(declaredTextToplevelStyle_.get() != nullptr);
 			return *declaredTextToplevelStyle_;
 		}
-
+#if 0
 		/// Returns the default direction.
 		inline ReadingDirection Presentation::defaultDirection() const BOOST_NOEXCEPT {
 			return defaultDirection_;
 		}
-
+#endif
 		/// Returns the registered @c TextOverrideStyle.
 		inline const TextOverrideStyle& Presentation::overrideStyle() const BOOST_NOEXCEPT {
 			assert(textOverrideStyle_.get() != nullptr);

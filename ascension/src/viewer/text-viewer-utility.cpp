@@ -98,6 +98,8 @@ namespace ascension {
 			}
 
 			const presentation::hyperlink::Hyperlink* getPointedHyperlink(const TextViewer& viewer, const kernel::Position& at) {
+				// TODO: Not implemented.
+#if 0
 				std::size_t numberOfHyperlinks;
 				if(const presentation::hyperlink::Hyperlink* const* hyperlinks = viewer.presentation().getHyperlinks(kernel::line(at), numberOfHyperlinks)) {
 					for(std::size_t i = 0; i < numberOfHyperlinks; ++i) {
@@ -105,6 +107,7 @@ namespace ascension {
 							return hyperlinks[i];
 					}
 				}
+#endif
 				return nullptr;
 			}
 
@@ -116,18 +119,18 @@ namespace ascension {
 			 */
 			boost::optional<kernel::Region> getPointedIdentifier(const TextViewer& viewer) {
 //				if(viewer.isWindow()) {
-					return getNearestIdentifier(viewer.document(),
+					return getNearestIdentifier(*document(viewer),
 						viewToModel(viewer, widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position())).characterIndex());
 //				}
 				return boost::none;
 			}
-
+#if 0
 			/**
 			 * Toggles the inline flow direction of the text viewer.
 			 * @param viewer The text viewer
 			 */
 			void toggleOrientation(TextViewer& viewer) BOOST_NOEXCEPT {
-				viewer.presentation().setDefaultDirection(!viewer.presentation().defaultDirection());
+				viewer.writingModeProvider().setDefaultDirection(!viewer.writingModeProvider().defaultDirection());
 //				viewer.synchronizeWritingModeUI();
 //				if(config.lineWrap.wrapsAtWindowEdge()) {
 //					win32::AutoZeroSize<SCROLLINFO> scroll;
@@ -135,6 +138,7 @@ namespace ascension {
 //					viewer.setScrollInformation(SB_HORZ, scroll);
 //				}
 			}
+#endif
 		}
 	}
 }

@@ -578,6 +578,18 @@
     <ClCompile Include="..\..\ascension\src\viewer\visual-locations.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\standard-text-renderer.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\widget-themed-text-renderer.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\presentation\presentative-text-renderer.cpp">
+      <Filter>ascension\Source Files\presentation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\text-area-rendering-strategy.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1341,6 +1353,21 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\named-argument-exists.hpp">
       <Filter>ascension\Header Files\corelib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widget-themed-text-renderer.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\standard-text-renderer.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\system-default-font.hpp">
+      <Filter>ascension\Header Files\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\presentative-text-renderer.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-area-rendering-strategy.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -18,6 +18,8 @@
 
 namespace ascension {
 	namespace presentation {
+		/// @defgroup writing_modes Writing Modes
+		/// @{
 		/**
 		 * [Copied from CSS3] This property specifies the inline base direction or directionality of any bidi
 		 * paragraph, embedding, isolate, or override established by the box.
@@ -87,7 +89,9 @@ namespace ascension {
 		 * Returns @c true if @a direction is vertical direction.
 		 * @throw UnknownValueException @a direction is invalid
 		 */
-		inline bool isVertical(BlockFlowDirection direction) {return !isHorizontal(direction);}
+		inline bool isVertical(BlockFlowDirection direction) {
+			return !isHorizontal(direction);
+		}
 
 		/**
 		 * [Copied from CSS3] This property specifies the orientation of text within a line. Current values only have
@@ -128,10 +132,10 @@ namespace ascension {
 		 * @see "XSL 1.1, 7.29 Writing-mode-related Properties"
 		 *      (http://www.w3.org/TR/xsl/#writing-mode-related)
 		 */
-		struct WritingMode : private boost::equality_comparable<WritingMode> {		
+		struct WritingMode : private boost::equality_comparable<WritingMode> {
 			ReadingDirection inlineFlowDirection;	///< The inline flow direction.
-			BlockFlowDirection blockFlowDirection;	///< The block flow direction.
-			TextOrientation textOrientation;		///< The text orientation.
+			BlockFlowDirection blockFlowDirection;	///< The block flow direction.		
+			TextOrientation textOrientation;	///< The text orientation.
 
 			/**
 			 * Constructor initializes the data members with the given values.
@@ -143,13 +147,11 @@ namespace ascension {
 				ReadingDirection inlineFlowDirection = LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
 				BlockFlowDirection blockFlowDirection = HORIZONTAL_TB,
 				TextOrientation textOrientation = MIXED) BOOST_NOEXCEPT :
-				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection),
-				textOrientation(textOrientation) {}
+				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection), textOrientation(textOrientation) {}
 			/// Equality operator.
 			inline bool operator==(const WritingMode& other) const BOOST_NOEXCEPT {
 				return inlineFlowDirection == other.inlineFlowDirection
-					&& blockFlowDirection == other.blockFlowDirection
-					&& textOrientation == other.textOrientation;
+					&& blockFlowDirection == other.blockFlowDirection && textOrientation == other.textOrientation;
 			}
 		};
 
@@ -182,6 +184,17 @@ namespace ascension {
 					return writingMode.textOrientation;
 			}
 		}
+
+		/// @overload
+		inline bool isHorizontal(const WritingMode& writingMode) {
+			return isHorizontal(writingMode.blockFlowDirection);
+		}
+
+		/// @overload
+		inline bool isVertical(const WritingMode& writingMode) {
+			return isVertical(writingMode.blockFlowDirection);
+		}
+		/// @}
 
 		namespace detail {
 			inline bool isNegativeVertical(const WritingMode& writingMode) BOOST_NOEXCEPT {

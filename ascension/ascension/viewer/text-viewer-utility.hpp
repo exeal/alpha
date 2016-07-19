@@ -37,7 +37,6 @@ namespace ascension {
 				const kernel::Document& document, const kernel::Position& position);
 			bool getNearestIdentifier(const kernel::Document& document,
 				const kernel::Position& position, Index* startOffsetInLine, Index* endOffsetInLine);
-			void toggleOrientation(TextViewer& viewer) BOOST_NOEXCEPT;
 		}
 	}
 }

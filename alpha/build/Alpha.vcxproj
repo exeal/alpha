@@ -212,6 +212,7 @@
     <ClCompile Include="..\..\ascension\src\graphics\font\font-pango.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\font-render-context.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\line-layout-vector.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\font\standard-text-renderer.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\text-layout-styles.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\text-layout-uniscribe.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\text-layout.cpp" />
@@ -234,6 +235,7 @@
     <ClCompile Include="..\..\ascension\src\presentation\partition-presentation-reconstructor.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\presentation-reconstructor.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\presentation.cpp" />
+    <ClCompile Include="..\..\ascension\src\presentation\presentative-text-renderer.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\text-line-style.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\text-run-style.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\text-toplevel-style.cpp" />
@@ -271,6 +273,7 @@
     <ClCompile Include="..\..\ascension\src\viewer\source\ruler-border-decorator.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\source\source-viewer.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\standard-caret-painter.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\text-area-rendering-strategy.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-area.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-events.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\text-viewer-gtk.cpp" />
@@ -281,6 +284,7 @@
     <ClCompile Include="..\..\ascension\src\viewer\virtual-box.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\visual-locations.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\visual-point.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\widget-themed-text-renderer.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\cursor-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\cursor-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\drag-and-drop-gtk.cpp" />
@@ -433,6 +437,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\line-rendering-options.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\number-substitution.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\open-type-layout-tag.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\standard-text-renderer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\tab-expander.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-alignment.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-hit.hpp" />
@@ -487,6 +492,7 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\partition-presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\presentative-text-renderer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\single-styled-text-run-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\style-property.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\styled-text-run-iterator.hpp" />
@@ -544,6 +550,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\standard-caret-painter.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\standard-line-rendering-options.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area-mouse-input-strategy.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\text-area-rendering-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-hit.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\text-viewer-component.hpp" />
@@ -554,6 +561,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-destination-proxy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-locations.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\widget-themed-text-renderer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\cursor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\drag-and-drop.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\event.hpp" />
@@ -571,6 +579,7 @@
     <ClInclude Include="..\..\ascension\ascension\win32\com\smart-pointer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\handle.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\message-dispatcher.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\system-default-font.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\window.hpp" />
     <ClInclude Include="..\src\ambient.hpp" />
     <ClInclude Include="..\src\application.hpp" />
