@@ -102,10 +102,10 @@ namespace ascension {
 		CaretShaper::Shape DefaultCaretShaper::createSolidShape(const Caret& caret,
 				const boost::optional<graphics::Color>& color, const boost::optional<std::uint32_t>& measure) const {
 			const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
-			const graphics::font::TextRenderer& renderer = caret.textArea().textRenderer();
+			const auto renderer(caret.textArea().textRenderer());
 			boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>> bounds;
 
-			if(const graphics::font::TextLayout* const layout = renderer.layouts().at(kernel::line(caret))) {
+			if(const graphics::font::TextLayout* const layout = renderer->layouts().at(kernel::line(caret))) {
 				boost::optional<graphics::Rectangle> characterBounds(currentCharacterLogicalBounds(caret));
 				assert(characterBounds);
 

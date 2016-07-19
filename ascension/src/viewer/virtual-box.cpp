@@ -54,14 +54,14 @@ namespace ascension {
 			if(!encompasses(lines_, line))
 				return boost::none;	// out of the region
 
-			const graphics::font::TextRenderer& renderer = textArea_.textRenderer();
-			const graphics::font::TextLayout* layout = renderer.layouts().at(line.line);
+			const auto renderer(textArea_.textRenderer());
+			const graphics::font::TextLayout* layout = renderer->layouts().at(line.line);
 			std::unique_ptr<const graphics::font::TextLayout> isolatedLayout;
 			if(layout == nullptr)
-				layout = (isolatedLayout = renderer.layouts().createIsolatedLayout(line.line)).get();
+				layout = (isolatedLayout = renderer->layouts().createIsolatedLayout(line.line)).get();
 			const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
 			const graphics::Scalar baseline = graphics::font::TextLayout::LineMetricsIterator(*layout, line.subline).baselineOffset();
-			const graphics::Scalar lineStartOffset = renderer.lineStartEdge(graphics::font::VisualLine(line.line, 0));
+			const graphics::Scalar lineStartOffset = renderer->lineStartEdge(graphics::font::VisualLine(line.line, 0));
 			auto ipds(ipds_);
 			ipds.advance_begin(-lineStartOffset);
 			ipds.advance_end(-lineStartOffset);
@@ -95,12 +95,9 @@ namespace ascension {
 			if(textArea_.textViewer().hitTest(p) != &textArea_)
 				return false;	// ignore if not in text area
 
-			const graphics::font::TextRenderer& renderer = textArea_.textRenderer();
-			const std::shared_ptr<const graphics::font::TextViewport> viewport(renderer.viewport());
-
 			// compute inline-progression-dimension in the TextRenderer for 'p'
-			graphics::Scalar ipd = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport);
-			switch(renderer.lineRelativeAlignment()) {
+			graphics::Scalar ipd = graphics::font::inlineProgressionOffsetInViewerGeometry(*textArea_.viewport());
+			switch(textArea_.textRenderer()->lineRelativeAlignment()) {
 				case TextRenderer::LEFT:
 					ipd = geometry::x(p) - geometry::left(textArea_.contentRectangle());
 					break;
@@ -143,23 +140,23 @@ namespace ascension {
 		void VirtualBox::update(const kernel::Region& region) BOOST_NOEXCEPT {
 			std::pair<graphics::font::VisualLine, graphics::font::VisualLine> lines;	// components correspond to 'region'
 			std::pair<graphics::Scalar, graphics::Scalar> ipds;
-			const graphics::font::TextRenderer& renderer = textArea_.textRenderer();
+			const auto renderer(textArea_.textRenderer());
 
 			// first
-			const graphics::font::TextLayout* layout = renderer.layouts().at(std::get<0>(lines).line = kernel::line(*boost::const_begin(region)));
+			const graphics::font::TextLayout* layout = renderer->layouts().at(std::get<0>(lines).line = kernel::line(*boost::const_begin(region)));
 			const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
 			std::get<0>(ipds) = layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(*boost::const_begin(region)))).ipd();
 			std::get<0>(ipds) = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, std::get<0>(ipds));
-			std::get<0>(ipds) += renderer.lineStartEdge(graphics::font::VisualLine(std::get<0>(lines).line, 0));
+			std::get<0>(ipds) += renderer->lineStartEdge(graphics::font::VisualLine(std::get<0>(lines).line, 0));
 			std::get<0>(lines).subline = layout->lineAt(graphics::font::TextHit<>::afterOffset(kernel::offsetInLine(*boost::const_begin(region))));
 
 			// second
 			if(!boost::empty(region)) {
-				layout = renderer.layouts().at(std::get<1>(lines).line = kernel::line(*boost::const_end(region)));
+				layout = renderer->layouts().at(std::get<1>(lines).line = kernel::line(*boost::const_end(region)));
 				const auto e(graphics::font::TextHit<>::beforeOffset(kernel::offsetInLine(*boost::const_end(region))));
 				std::get<1>(ipds) = layout->hitToPoint(e).ipd();
 				std::get<1>(ipds) = mapLineLayoutInlineProgressionDimensionToTextRenderer(writingMode, std::get<1>(ipds));
-				std::get<1>(ipds) += renderer.lineStartEdge(graphics::font::VisualLine(std::get<1>(lines).line, 0));
+				std::get<1>(ipds) += renderer->lineStartEdge(graphics::font::VisualLine(std::get<1>(lines).line, 0));
 				std::get<1>(lines).subline = layout->lineAt(e);
 			} else {
 				std::get<1>(ipds) = std::get<0>(ipds);

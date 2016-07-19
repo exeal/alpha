@@ -42,7 +42,7 @@ namespace alpha {
 //				WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 //			assert(succeeded);
 			newView->setConfiguration(src.configuration(), true);
-			newView->textArea().textRenderer().viewport()->scrollTo(src.textArea().textRenderer().viewport()->scrollPositions());
+			newView->textArea()->viewport()->scrollTo(src.textArea()->viewport()->scrollPositions());
 			add(std::move(newView));
 		}
 	}
@@ -110,7 +110,7 @@ namespace alpha {
 	 */
 	void EditorPane::remove(const EditorView& viewer) {
 		try {
-			return removeBuffer(viewer.document());
+			return removeBuffer(*viewer.document());
 		} catch(const ascension::NoSuchElementException&) {
 			throw ascension::NoSuchElementException("viewer");
 		}
@@ -131,13 +131,13 @@ namespace alpha {
 	void EditorPane::removeBuffer(const Buffer& buffer) {
 		if(!children_.empty()) {
 			auto i(std::begin(children_));
-			if(&std::get<2>(*(i++))->document() == &buffer) {
+			if(std::get<2>(*(i++))->document().get() == &buffer) {
 				if(i != std::end(children_))
 					select(*std::get<2>(*i));
 				--i;
 			} else {
 				for(const auto e(std::end(children_)); i != e; ++i) {
-					if(&std::get<2>(*i)->document() == &buffer)
+					if(std::get<2>(*i)->document().get() == &buffer)
 						break;
 				}
 			}
@@ -155,7 +155,7 @@ namespace alpha {
 	 */
 	void EditorPane::select(const EditorView& viewer) {
 		try {
-			return selectBuffer(viewer.document());
+			return selectBuffer(*viewer.document());
 		} catch(const ascension::NoSuchElementException&) {
 			throw ascension::NoSuchElementException("viewer");
 		}
@@ -173,7 +173,7 @@ namespace alpha {
 			// bring to the front of the list
 			const auto e(std::end(children_));
 			for(auto i(std::next(std::begin(children_))); i != e; ++i) {
-				if(&std::get<2>(*i)->document() == &buffer) {
+				if(std::get<2>(*i)->document().get() == &buffer) {
 					Child temp(std::move(*i));
 					children_.erase(i);
 					children_.push_front(std::move(temp));
@@ -186,7 +186,7 @@ namespace alpha {
 		BOOST_FOREACH(const Child& child, children_) {
 			Gtk::Box& box = *std::get<0>(child);
 			const std::unique_ptr<EditorView>& viewer = std::get<2>(child);
-			if(&viewer->document() == &buffer) {
+			if(viewer->document().get() == &buffer) {
 				box.show();
 				assert(box.get_visible());
 				set_visible_child(box);
@@ -225,12 +225,12 @@ namespace alpha {
 
 	/// Returns the selected buffer.
 	Buffer& EditorPane::selectedBuffer() {
-		return selectedView().document();
+		return *selectedView().document();
 	}
 
 	/// Returns the selected buffer.
 	const Buffer& EditorPane::selectedBuffer() const {
-		return selectedView().document();
+		return *selectedView().document();
 	}
 
 	/// @internal Implements @c #split(void) and @c #splitSideBySide methods.

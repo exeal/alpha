@@ -61,11 +61,11 @@ namespace ascension {
 			// invoked by the keyboard
 			if(byKeyboard) {
 				// MSDN says "the application should display the context menu at the location of the current selection."
-				location = modelToView(*this, textArea().caret().hit());
+				location = modelToView(*this, textArea()->caret()->hit());
 				// TODO: Support RTL and vertical window layout.
 				graphics::geometry::y(location) +=
-					widgetapi::createRenderingContext(*this)->fontMetrics(textArea().textRenderer().defaultFont())->cellHeight() + 1;
-				if(!graphics::geometry::within(location, textArea().contentRectangle()))
+					widgetapi::createRenderingContext(*this)->fontMetrics(textArea()->textRenderer()->defaultFont())->cellHeight() + 1;
+				if(!graphics::geometry::within(location, textArea()->contentRectangle()))
 					location = graphics::geometry::make<graphics::Point>((graphics::geometry::_x = 1.0f, graphics::geometry::_y = 1.0f));
 			} else {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -142,44 +142,47 @@ namespace ascension {
 
 		namespace {
 			void handleDirectionalKey(TextViewer& viewer, graphics::PhysicalDirection direction, const widgetapi::event::KeyboardModifiers& modifiers) {
-				using namespace ascension::texteditor::commands;
-				using presentation::FlowRelativeDirection;
-				static kernel::Position(*const nextCharacterLocation)(const kernel::locations::PointProxy&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
+				if(const auto renderer = viewer.textArea()->textRenderer()) {
+					using namespace ascension::texteditor::commands;
+					static kernel::Position(*const nextCharacterLocation)
+						(const kernel::locations::PointProxy&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
 
-				const presentation::WritingMode writingMode(viewer.presentation().computeWritingMode());
-				const FlowRelativeDirection abstractDirection = presentation::mapDirection<FlowRelativeDirection>(writingMode, direction);
-				const Direction logicalDirection = (abstractDirection == FlowRelativeDirection::AFTER || abstractDirection == FlowRelativeDirection::END) ? Direction::FORWARD : Direction::BACKWARD;
-				switch(boost::native_value(abstractDirection)) {
-					case FlowRelativeDirection::BEFORE:
-					case FlowRelativeDirection::AFTER:
-						if((modifiers & widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)).flip()).none()) {
-							if(!modifiers.test(widgetapi::event::ALT_DOWN))
-								makeCaretMovementCommand(viewer, &locations::nextVisualLine,
-									logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
-							else if(modifiers.test(widgetapi::event::SHIFT_DOWN))
-								makeRowSelectionExtensionCommand(viewer, &locations::nextVisualLine, logicalDirection)();
-						}
-						break;
-					case FlowRelativeDirection::START:
-					case FlowRelativeDirection::END:
-						if((modifiers & widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::CONTROL_DOWN, widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)).flip()).none()) {
-							if(!modifiers.test(widgetapi::event::ALT_DOWN)) {
-								if(modifiers.test(widgetapi::event::CONTROL_DOWN))
-									makeCaretMovementCommand(viewer, &kernel::locations::nextWord,
+					const auto abstractDirection = presentation::mapDirection<presentation::FlowRelativeDirection>(renderer->writingModes(), direction);
+					const Direction logicalDirection =
+						(abstractDirection == presentation::FlowRelativeDirection::AFTER || abstractDirection == presentation::FlowRelativeDirection::END) ?
+							Direction::FORWARD : Direction::BACKWARD;
+					switch(boost::native_value(abstractDirection)) {
+						case presentation::FlowRelativeDirection::BEFORE:
+						case presentation::FlowRelativeDirection::AFTER:
+							if((modifiers & widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)).flip()).none()) {
+								if(!modifiers.test(widgetapi::event::ALT_DOWN))
+									makeCaretMovementCommand(viewer, &locations::nextVisualLine,
 										logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
-								else
-									makeCaretMovementCommand(viewer, nextCharacterLocation,
-										logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
-							} else if(modifiers.test(widgetapi::event::SHIFT_DOWN)) {
-								if(modifiers.test(widgetapi::event::CONTROL_DOWN))
-									makeRowSelectionExtensionCommand(viewer, &kernel::locations::nextWord, logicalDirection)();
-								else
-									makeRowSelectionExtensionCommand(viewer, nextCharacterLocation, logicalDirection)();
+								else if(modifiers.test(widgetapi::event::SHIFT_DOWN))
+									makeRowSelectionExtensionCommand(viewer, &locations::nextVisualLine, logicalDirection)();
 							}
-						}
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
+							break;
+						case presentation::FlowRelativeDirection::START:
+						case presentation::FlowRelativeDirection::END:
+							if((modifiers & widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::CONTROL_DOWN, widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)).flip()).none()) {
+								if(!modifiers.test(widgetapi::event::ALT_DOWN)) {
+									if(modifiers.test(widgetapi::event::CONTROL_DOWN))
+										makeCaretMovementCommand(viewer, &kernel::locations::nextWord,
+											logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
+									else
+										makeCaretMovementCommand(viewer, nextCharacterLocation,
+											logicalDirection, modifiers.test(widgetapi::event::SHIFT_DOWN))();
+								} else if(modifiers.test(widgetapi::event::SHIFT_DOWN)) {
+									if(modifiers.test(widgetapi::event::CONTROL_DOWN))
+										makeRowSelectionExtensionCommand(viewer, &kernel::locations::nextWord, logicalDirection)();
+									else
+										makeRowSelectionExtensionCommand(viewer, nextCharacterLocation, logicalDirection)();
+								}
+							}
+							break;
+						default:
+							ASCENSION_ASSERT_NOT_REACHED();
+					}
 				}
 			}
 		}
@@ -266,8 +269,10 @@ namespace ascension {
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
 						makeCaretMovementCommand(*this, &locations::nextPage, Direction::BACKWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
-						if(std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
-							viewport->scrollBlockFlowPage(+1);
+						try {
+							textArea()->viewport()->scrollBlockFlowPage(+1);
+						} catch(...) {
+						}
 					}
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -280,8 +285,10 @@ namespace ascension {
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
 						makeCaretMovementCommand(*this, &locations::nextPage, Direction::FORWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
-						if(std::shared_ptr<graphics::font::TextViewport> viewport = textArea().textRenderer().viewport())
-							viewport->scrollBlockFlowPage(-1);
+						try {
+							textArea()->viewport()->scrollBlockFlowPage(-1);
+						} catch(...) {
+						}
 					}
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -359,7 +366,7 @@ namespace ascension {
 						if(input.hasModifier(widgetapi::event::SHIFT_DOWN))
 							PasteCommand(*this, input.hasModifier(widgetapi::event::CONTROL_DOWN))();
 						else if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
-							copySelection(textArea().caret(), true);
+							copySelection(*textArea()->caret(), true);
 						else
 							OvertypeModeToggleCommand(*this)();
 					}
@@ -375,7 +382,7 @@ namespace ascension {
 					if(input.modifiers() == widgetapi::event::KeyboardModifiers())
 						CharacterDeletionCommand(*this, Direction::FORWARD)();
 					else if(input.modifiers() == widgetapi::event::SHIFT_DOWN)
-						cutSelection(textArea().caret(), true);
+						cutSelection(*textArea()->caret(), true);
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
 						WordDeletionCommand(*this, Direction::FORWARD)();
 					break;
@@ -397,7 +404,7 @@ namespace ascension {
 				case 'C':
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						copySelection(textArea().caret(), true);	// ^C -> Copy
+						copySelection(*textArea()->caret(), true);	// ^C -> Copy
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_H:
@@ -450,7 +457,7 @@ namespace ascension {
 				case 'X':
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						cutSelection(textArea().caret(), true);	// ^X -> Cut
+						cutSelection(*textArea()->caret(), true);	// ^X -> Cut
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Y:
@@ -504,19 +511,19 @@ namespace ascension {
 				case GDK_KEY_Redo:
 					UndoCommand(*this, true)();
 					break;
-				case GDK_KEY_Shift_L:
-					if(input.hasModifier(widgetapi::event::CONTROL_DOWN) && configuration_.readingDirection == presentation::RIGHT_TO_LEFT)
-						presentation().setDefaultDirection(presentation::LEFT_TO_RIGHT);
-					break;
-				case GDK_KEY_Shift_R:
-					if(input.hasModifier(widgetapi::event::CONTROL_DOWN) && configuration_.readingDirection == presentation::LEFT_TO_RIGHT)
-						presentation().setDefaultDirection(presentation::RIGHT_TO_LEFT);
-					break;
+//				case GDK_KEY_Shift_L:
+//					if(input.hasModifier(widgetapi::event::CONTROL_DOWN) && configuration_.readingDirection == presentation::RIGHT_TO_LEFT)
+//						writingModeProvider_->setDefaultDirection(presentation::LEFT_TO_RIGHT);
+//					break;
+//				case GDK_KEY_Shift_R:
+//					if(input.hasModifier(widgetapi::event::CONTROL_DOWN) && configuration_.readingDirection == presentation::LEFT_TO_RIGHT)
+//						writingModeProvider_->setDefaultDirection(presentation::RIGHT_TO_LEFT);
+//					break;
 				case GDK_KEY_Copy:
-					copySelection(textArea().caret(), true);
+					copySelection(*textArea()->caret(), true);
 					break;
 				case GDK_KEY_Cut:
-					cutSelection(textArea().caret(), true);
+					cutSelection(*textArea()->caret(), true);
 					break;
 				case GDK_KEY_Paste:
 					PasteCommand(*this, false)();
@@ -551,7 +558,7 @@ namespace ascension {
 		void TextViewer::keyReleased(widgetapi::event::KeyInput& input) {
 			if(input.hasModifier(widgetapi::event::ALT_DOWN)) {
 				restoreHiddenCursor();
-				if(const auto mouseInputStrategy = textArea().mouseInputStrategy().lock())
+				if(const auto mouseInputStrategy = textArea()->mouseInputStrategy().lock())
 					mouseInputStrategy->interruptMouseReaction(true);
 			}
 			return input.ignore();
@@ -595,18 +602,19 @@ namespace ascension {
 
 		/// @see Widget#paint
 		void TextViewer::paint(graphics::PaintContext& context) {
-			if(isFrozen())	// skip if frozen
-				return;
-			graphics::Rectangle scheduledBounds(context.boundsToPaint());
-			if(graphics::geometry::isEmpty(graphics::geometry::normalize(scheduledBounds)))	// skip if the region to paint is empty
-				return;
-
-			const auto canvas(textArea().allocationRectangle());
-			context.save();
-			context.beginPath().rectangle(canvas).clip();
-			context.translate(graphics::geometry::left(canvas), graphics::geometry::top(canvas));
-			textArea().paint(context);
-			context.restore();
+			if(!isFrozen()) {	// skip if frozen
+				graphics::Rectangle scheduledBounds(context.boundsToPaint());
+				if(!graphics::geometry::isEmpty(graphics::geometry::normalize(scheduledBounds))) {	// skip if the region to paint is empty
+					if(const auto ta = textArea()) {
+						const auto canvas(ta->allocationRectangle());
+						context.save();
+						context.beginPath().rectangle(canvas).clip();
+						context.translate(graphics::geometry::left(canvas), graphics::geometry::top(canvas));
+						ta->paint(context);
+						context.restore();
+					}
+				}
+			}
 		}
 
 		/// @see Widget#resized

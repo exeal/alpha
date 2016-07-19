@@ -757,11 +757,11 @@ namespace ascension {
 			if(newCaretPainter == caretPainter_ && newCaretPainter.get() != nullptr)
 				return;
 			if(caretPainter_.get() != nullptr)
-				static_cast<detail::CaretPainterBase&>(*caretPainter_).uninstall(caret());	// TODO: Support multiple carets.
+				static_cast<detail::CaretPainterBase&>(*caretPainter_).uninstall(*caret());	// TODO: Support multiple carets.
 			if(newCaretPainter.get() == nullptr)
 				newCaretPainter.reset(new StandardCaretPainter());
 			caretPainter_ = std::move(newCaretPainter);
-			static_cast<detail::CaretPainterBase&>(*caretPainter_).install(caret());	// TODO: Support multiple carets.
+			static_cast<detail::CaretPainterBase&>(*caretPainter_).install(*caret());	// TODO: Support multiple carets.
 #ifdef ASCENSION_USE_SYSTEM_CARET
 			caretStaticShapeChanged(caret());	// update caret shapes immediately
 #endif

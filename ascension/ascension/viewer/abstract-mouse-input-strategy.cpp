@@ -62,7 +62,7 @@ namespace ascension {
 			if(!isTrackingLocation()) {
 				// cancel other modes
 				utils::closeCompletionProposalsPopup(viewer);
-				texteditor::endIncrementalSearch(viewer.document());
+				texteditor::endIncrementalSearch(*document(viewer));
 
 				// begin tracking
 				tracking_.reset(new Tracking);
@@ -172,13 +172,13 @@ namespace ascension {
 
 				// scroll the text viewer automatically
 				if(tracking_->autoScroll) {
-					const std::shared_ptr<graphics::font::TextViewport> viewport(viewer.textArea().textRenderer().viewport());
+					const auto viewport(viewer.textArea()->viewport());
 					const graphics::Point p(widgetapi::Cursor::position(widgetapi::cwindow(viewer)));
-					const graphics::Rectangle contentRectangle(viewer.textArea().contentRectangle());
+					const graphics::Rectangle contentRectangle(viewer.textArea()->contentRectangle());
 					graphics::Dimension scrollUnits(
 						graphics::geometry::_dx = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
-						graphics::geometry::_dy = widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textArea().textRenderer().defaultFont())->linePitch());
-					if(isVertical(viewer.textArea().textRenderer().computedBlockFlowDirection()))
+						graphics::geometry::_dy = widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textArea()->textRenderer()->defaultFont())->linePitch());
+					if(presentation::isVertical(viewer.textArea()->textRenderer()->blockFlowDirection()))
 						std::swap(graphics::geometry::dx(scrollUnits), graphics::geometry::dy(scrollUnits));
 
 					graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> scrollOffsets(0, 0);
@@ -208,7 +208,7 @@ namespace ascension {
 					graphics::Point p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
 
 					// snap cursor position into 'content-rectangle' of the text area
-					const graphics::Rectangle contentRectangle(viewer.textArea().contentRectangle());
+					const graphics::Rectangle contentRectangle(viewer.textArea()->contentRectangle());
 					graphics::geometry::x(p) = clamp(static_cast<graphics::Scalar>(graphics::geometry::x(p)), graphics::geometry::range<0>(contentRectangle));
 					graphics::geometry::y(p) = clamp(static_cast<graphics::Scalar>(graphics::geometry::y(p)), graphics::geometry::range<1>(contentRectangle));
 

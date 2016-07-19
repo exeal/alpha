@@ -27,8 +27,8 @@ namespace alpha {
 
 		/// @name Shortcuts
 		/// @{
-		ascension::presentation::Presentation& presentation() BOOST_NOEXCEPT;
-		const ascension::presentation::Presentation& presentation() const BOOST_NOEXCEPT;
+		std::shared_ptr<ascension::presentation::Presentation> presentation() BOOST_NOEXCEPT;
+		std::shared_ptr<const ascension::presentation::Presentation> presentation() const BOOST_NOEXCEPT;
 		ascension::kernel::fileio::TextFileDocumentInput& textFile() BOOST_NOEXCEPT;
 		const ascension::kernel::fileio::TextFileDocumentInput& textFile() const BOOST_NOEXCEPT;
 		/// @}
@@ -40,7 +40,7 @@ namespace alpha {
 		/// @}
 
 	private:
-		std::unique_ptr<ascension::presentation::Presentation> presentation_;
+		std::shared_ptr<ascension::presentation::Presentation> presentation_;
 		std::unique_ptr<ascension::kernel::fileio::TextFileDocumentInput> textFile_;
 		Glib::ustring name_;
 		NameChangedSignal nameChangedSignal_;
@@ -50,6 +50,16 @@ namespace alpha {
 	/// Returns the name of the buffer.
 	inline const Glib::ustring& Buffer::name() const BOOST_NOEXCEPT {
 		return name_;
+	}
+
+	/// Returns the presentation object of Ascension.
+	inline std::shared_ptr<ascension::presentation::Presentation> Buffer::presentation() BOOST_NOEXCEPT {
+		return presentation_;
+	}
+
+	/// Returns the presentation object of Ascension.
+	inline std::shared_ptr<const ascension::presentation::Presentation> Buffer::presentation() const BOOST_NOEXCEPT {
+		return presentation_;
 	}
 
 	/// Returns the input text file.

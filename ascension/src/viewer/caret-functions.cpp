@@ -216,7 +216,7 @@ namespace ascension {
 				if(textViewer.hitTest(p) == &textArea) {	// ignore if on the margin
 					const graphics::Rectangle viewerBounds(widgetapi::bounds(textViewer, false));
 					if(graphics::geometry::x(p) <= graphics::geometry::right(viewerBounds) && graphics::geometry::y(p) <= graphics::geometry::bottom(viewerBounds)) {
-						const auto viewport(textArea.textRenderer().viewport());
+						const auto viewport(textArea.viewport());
 						const auto hit(viewToModelInBounds(textViewer, p));
 						const auto selection(caret.selectedRegion());
 						return hit != boost::none && hit->characterIndex() >= *boost::const_begin(selection) && hit->characterIndex() <= *boost::const_end(selection);
@@ -256,8 +256,8 @@ namespace ascension {
 					if(range == boost::none)
 						return boost::none;
 					const graphics::font::TextLayout* const layout = useCalculatedLayout ?
-						&const_cast<Caret&>(caret).textArea().textRenderer().layouts().at(line.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)
-						: caret.textArea().textRenderer().layouts().at(line.line);
+						&const_cast<Caret&>(caret).textArea().textRenderer()->layouts().at(line.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT)
+						: caret.textArea().textRenderer()->layouts().at(line.line);
 					const Index sublineOffset = (layout != nullptr) ? layout->lineOffset(line.subline) : 0;
 					Index maximumEnd;
 					if(layout != nullptr)

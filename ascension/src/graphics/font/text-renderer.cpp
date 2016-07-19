@@ -21,11 +21,6 @@
 #include <ascension/graphics/geometry/rectangle-range.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
-#include <ascension/presentation/presentation.hpp>
-#include <ascension/presentation/styled-text-run-iterator.hpp>
-#include <ascension/presentation/text-line-style.hpp>
-#include <ascension/presentation/text-run-style.hpp>
-#include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/foreach.hpp>
@@ -158,28 +153,20 @@ namespace ascension {
 
 			/**
 			 * Constructor.
-			 * @param presentation The presentation
-			 * @param fontCollection The font collection provides fonts this renderer uses
-			 * @param enableDoubleBuffering Set @c true to use double-buffering for non-flicker drawing
+			 * @param document The document
+			 * @param renderingContextProvider The @c RenderingContextProvider strategy object
+			 * @param styleProvider The @c StyleProvider strategy object
+			 * @param initialSize
 			 */
-			TextRenderer::TextRenderer(presentation::Presentation& presentation,
-					const FontCollection& fontCollection, const Dimension& initialSize)
-					: presentation_(presentation), fontCollection_(fontCollection)/*, spacePainter_(new SpacePainter)*/ {
-			//	textWrapping_.measure = 0;
-				layouts_.reset(new LineLayoutVector(presentation.document(),
+			TextRenderer::TextRenderer(kernel::Document& document, const Dimension& initialSize) /*: spacePainter_(new SpacePainter)*/ {
+//				textWrapping_.measure = 0;
+				layouts_.reset(new LineLayoutVector(document,
 					std::bind(&TextRenderer::generateLineLayout, this, std::placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 //				viewport_ = detail::createTextViewport(*this);
-#if defined(BOOST_OS_WINDOWS)
-				LOGFONTW lf;
-				if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(LOGFONTW), &lf) == 0)
-					throw makePlatformError();
-				defaultFont_ = std::make_shared<Font>(win32::Handle<HFONT>::Type(::CreateFontIndirectW(&lf), &::DeleteObject));
-#else
-				// TODO: Not implemented.
-#endif
-				assert(defaultFont_.get() != nullptr);
-				presentation::FlowRelativeFourSides<presentation::styles::Length> zeroSpaces;
-				zeroSpaces.fill(presentation::styles::Length(0));
+	//			updateDefaultFont();
+	//			assert(defaultFont_.get() != nullptr);
+//				presentation::FlowRelativeFourSides<presentation::styles::Length> zeroSpaces;
+//				zeroSpaces.fill(presentation::styles::Length(0));
 //				spacePainter_->update(*this, initialSize, zeroSpaces);
 /*				switch(PRIMARYLANGID(getUserDefaultUILanguage())) {
 					case LANG_CHINESE:
@@ -190,21 +177,26 @@ namespace ascension {
 				}*/
 //				updateViewerSize(); ???
 			}
-
+#if 0
 			/// Copy-constructor.
-			TextRenderer::TextRenderer(const TextRenderer& other) :
-					presentation_(other.presentation_), layouts_(), fontCollection_(other.fontCollection_), defaultFont_(other.defaultFont_) {
-				layouts_.reset(new LineLayoutVector(other.presentation_.document(),
+			TextRenderer::TextRenderer(const TextRenderer& other) : layouts_(), defaultFont_(other.defaultFont_) {
+				layouts_.reset(new LineLayoutVector(const_cast<kernel::Document&>(other.layouts_->document()),
 					std::bind(&TextRenderer::generateLineLayout, this, std::placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 //				viewport_ = detail::createTextViewport(*this);
 			//	updateViewerSize(); ???
 			}
-
+#endif
 			/// Destructor.
 			TextRenderer::~TextRenderer() BOOST_NOEXCEPT {
 //				getTextViewer().removeDisplaySizeListener(*this);
 //				layouts_.removeVisualLinesListener(*this);
 			}
+
+			/**
+			 * @fn ascension::graphics::font::TextRenderer::actualLineBackgroundColor
+			 * Returns the "Actual Value" of background color of the specified line.
+			 * @param layout The line layout
+			 */
 
 			/**
 			 * Returns the distance from the baseline of the line @a from to the baseline of the line @a to in
@@ -237,27 +229,9 @@ namespace ascension {
 			}
 
 			/**
-			 * Builds construction parameters for @c TextLayout object.
-			 * @param line The line number
-			 * @param graphics2D The rendering context to pass to @c presentation#Length#Context object
-			 * @return The pair of the computed styles
-			 * @see #createLineLayout
+			 * @fn ascension::graphics::font::TextRenderer::computedBlockFlowDirection
+			 * Returns the computed block-flow-direction.
 			 */
-			std::pair<
-				const presentation::ComputedTextLineStyle&,
-				std::unique_ptr<presentation::ComputedStyledTextRunIterator>
-			> TextRenderer::buildLineLayoutConstructionParameters(Index line, const RenderingContext2D& graphics2D) const {
-				const presentation::styles::Length::Context lengthContext(graphics2D, viewport()->size());
-				return std::pair<
-					const presentation::ComputedTextLineStyle&,
-					std::unique_ptr<presentation::ComputedStyledTextRunIterator>
-				>(presentation().computeTextLineStyle(line), presentation().computeTextRunStyles(line/*, lengthContext*/));
-			}
-
-			/// Returns the computed block-flow-direction.
-			presentation::BlockFlowDirection TextRenderer::computedBlockFlowDirection() const BOOST_NOEXCEPT {
-				return boost::fusion::at_key<presentation::styles::WritingMode>(presentation().computedTextToplevelStyle());
-			}
 
 			/// Returns the @c DefaultFontChangedSignal signal connector.
 			SignalConnector<TextRenderer::DefaultFontChangedSignal> TextRenderer::defaultFontChangedSignal() BOOST_NOEXCEPT {
@@ -279,90 +253,42 @@ namespace ascension {
 
 			/// Returns the line relative alignment.
 			TextRenderer::LineRelativeAlignmentAxis TextRenderer::lineRelativeAlignment() const BOOST_NOEXCEPT {
-				const TextAlignment alignment(boost::fusion::at_key<presentation::styles::TextAlignment>(presentation().computedTextLineStyle()));
-				switch(boost::native_value(alignment)) {
-					case font::TextAlignment::START:
-					case font::TextAlignment::END:
-					case font::TextAlignment::JUSTIFY:
-					case font::TextAlignment::MATCH_PARENT:
-					case font::TextAlignment::START_END: {
-						const presentation::WritingMode writingMode(presentation().computeWritingMode());
-						std::pair<LineRelativeAlignmentAxis, LineRelativeAlignmentAxis> lra;
-						if(presentation::isHorizontal(writingMode.blockFlowDirection)) {
-							lra = std::make_pair(LEFT, RIGHT);
-							if(writingMode.inlineFlowDirection == presentation::RIGHT_TO_LEFT)
-								std::swap(lra.first, lra.second);
-						} else if(presentation::isVertical(writingMode.blockFlowDirection)) {
-							lra = std::make_pair(TOP, BOTTOM);
-							if(writingMode.inlineFlowDirection == presentation::RIGHT_TO_LEFT)
-								std::swap(lra.first, lra.second);
-							if(presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT)
-								std::swap(lra.first, lra.second);
+				const auto anchor = textAnchor();
+				switch(boost::native_value(anchor)) {
+					case TextAnchor::START:
+					case TextAnchor::END:
+					default: {
+						LineRelativeAlignmentAxis start, end;
+						if(presentation::isHorizontal(blockFlowDirection())) {
+							std::tie(start, end) = std::make_pair(LEFT, RIGHT);
+							if(inlineFlowDirection() == presentation::RIGHT_TO_LEFT)
+								std::swap(start, end);
+						} else if(presentation::isVertical(blockFlowDirection())) {
+							std::tie(start, end) = std::make_pair(TOP, BOTTOM);
+							if(inlineFlowDirection() == presentation::RIGHT_TO_LEFT)
+								std::swap(start, end);
+							if(presentation::resolveTextOrientation(writingModes()) == presentation::SIDEWAYS_LEFT)
+								std::swap(start, end);
 						} else
 							ASCENSION_ASSERT_NOT_REACHED();
-						return (alignment != font::TextAlignment::END) ? lra.first : lra.second;
+						return (anchor != TextAnchor::END) ? start : end;
 					}
-					case font::TextAlignment::LEFT:
-					case font::TextAlignment::RIGHT: {
-						const presentation::WritingMode writingMode(presentation().computeWritingMode());
-						if(presentation::isHorizontal(writingMode.blockFlowDirection))
-							return (alignment == font::TextAlignment::LEFT) ? LEFT : RIGHT;
-						else if(presentation::isVertical(writingMode.blockFlowDirection)) {
-							LineRelativeAlignmentAxis lra = (alignment == font::TextAlignment::LEFT) ? TOP : BOTTOM;
-							if(presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT)
-								lra = (lra == TOP) ? BOTTOM : TOP;
-							return lra;
-						}
-						break;
-					}
-					case font::TextAlignment::CENTER:
-						return presentation::isHorizontal(computedBlockFlowDirection()) ? HORIZONTAL_CENTER : VERTICAL_CENTER;
+					case TextAnchor::MIDDLE:
+						return presentation::isHorizontal(blockFlowDirection()) ? HORIZONTAL_CENTER : VERTICAL_CENTER;
 				}
 				ASCENSION_ASSERT_NOT_REACHED();
 			}
 
 			/**
-			 * Returns the start-edge of the specified visual line in pixels.
+			 * Returns the start-edge of the specified visual line in user units.
 			 * @param line The line number
 			 * @return The start-edge, which is distance from the start-edge of content-area to the one of the line
 			 * @throw IndexOutOfBoundsException @a line is invalid
 			 * @see TextLayout#lineStartEdge
 			 */
 			Scalar TextRenderer::lineStartEdge(const VisualLine& line) const {
-				if(line.line >= presentation().document().numberOfLines())
-					throw IndexOutOfBoundsException("line.line");
-
-				const TextLayout* const layout = layouts().at(line.line);
-				TextAnchor anchor;
-				if(layout != nullptr)
-					anchor = layout->anchor(0);
-				else {
-					presentation::styles::ComputedValue<presentation::TextLineStyle>::type computedStyle(presentation().computedTextLineStyle());
-					const TextAlignment alignment(boost::fusion::at_key<presentation::styles::TextAlignment>(computedStyle));
-					switch(boost::native_value(alignment)) {
-						case font::TextAlignment::START:
-						case font::TextAlignment::JUSTIFY:
-						case font::TextAlignment::MATCH_PARENT:
-						case font::TextAlignment::START_END:
-							anchor = TextAnchor::START;
-							break;
-						case font::TextAlignment::END:
-							anchor = TextAnchor::END;
-							break;
-						case font::TextAlignment::CENTER:
-							anchor = TextAnchor::MIDDLE;
-							break;
-						case font::TextAlignment::LEFT:
-							anchor = (boost::fusion::at_key<presentation::styles::Direction>(computedStyle) == presentation::LEFT_TO_RIGHT) ? TextAnchor::START : TextAnchor::END;
-							break;
-						case font::TextAlignment::RIGHT:
-							anchor = (boost::fusion::at_key<presentation::styles::Direction>(computedStyle) == presentation::RIGHT_TO_LEFT) ? TextAnchor::START : TextAnchor::END;
-							break;
-						default:
-							ASCENSION_ASSERT_NOT_REACHED();
-					}
-				}
-
+				const TextLayout* const layout = layouts().at(line.line);	// this may throw IndexOutOfBoundsException
+				const TextAnchor anchor = (layout != nullptr) ? layout->anchor(0) : textAnchor();
 				Scalar d;
 				switch(boost::native_value(anchor)) {
 					case TextAnchor::START:
@@ -377,35 +303,28 @@ namespace ascension {
 				}
 
 				if(layout != nullptr)
-					return d += layout->lineStartEdge(line.subline);	// this may throw
+					return d += layout->lineStartEdge(line.subline);	// this may throw IndexOutOfBoundsException
 				else if(line.subline > 0)
 					throw IndexOutOfBoundsException("line.subline");
 				else
 					return d;
 			}
 
-			inline Color alphaBlend(const Color& background, const Color& foreground) BOOST_NOEXCEPT {
-				// TODO: This code is adhoc.
-				const Byte a = foreground.alpha() + background.alpha() - foreground.alpha() * background.alpha() / 255;
-				return Color(
-					(foreground.red() * foreground.alpha() + background.red() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
-					(foreground.green() * foreground.alpha() + background.green() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
-					(foreground.blue() * foreground.alpha() + background.blue() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
-					a);
-			}
+			/**
+			 * @fn ascension::graphics::font::TextRenderer::newDefaultFont
+			 * Returns the default font for text rendering.
+			 * @see #defaultFont, #DefaultFontChangedSignal
+			 */
 
 			/**
 			 * Paints the specified output device with text layout.
 			 * @param context The graphics context
+			 * @param viewport Text viewport
 			 * @param options The optional @c LineRenderingOptions
 			 */
-			void TextRenderer::paint(PaintContext& context, const LineRenderingOptions* options /* = nullptr */) const {
-				const Color computedToplevelBackgroundColor(
-					boost::fusion::at_key<presentation::styles::BackgroundColor>(presentation().computedTextRunStyle().backgroundsAndBorders));
-				const Color actualToplevelBackgroundColor(alphaBlend(Color::OPAQUE_WHITE, computedToplevelBackgroundColor));
-
+			void TextRenderer::paint(PaintContext& context, const TextViewport& viewport, const LineRenderingOptions* options /* = nullptr */) const {
 				// scan lines in the text area
-				const bool horizontal = presentation::isHorizontal(computedBlockFlowDirection());
+				const bool horizontal = presentation::isHorizontal(blockFlowDirection());
 				const auto bpdRange(horizontal ? geometry::range<1>(context.boundsToPaint()) : geometry::range<0>(context.boundsToPaint()));
 				struct LineToPaint {
 					Index lineNumber;
@@ -416,7 +335,7 @@ namespace ascension {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				static_assert(false, "Not implemented.");
 #else
-				BaselineIterator baseline(*viewport(), true);
+				BaselineIterator baseline(viewport, true);
 				const BaselineIterator lastBaseline;
 				for(Index logicalLine; baseline != lastBaseline; ++baseline) {
 					assert(baseline.line() != boost::none);
@@ -456,17 +375,9 @@ namespace ascension {
 						boost::geometry::assign(physicalLineArea, geometry::make<Rectangle>(temp));
 					}
 					boost::geometry::intersection(physicalLineArea, context.boundsToPaint(), physicalLineArea);
+
 					// paint the background
-					boost::optional<Color> foregroundOverride, backgroundOverride;
-#ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
-					presentation().textLineColors(lineToPaint.lineNumber, foregroundOverride, backgroundOverride);
-#endif
-					const Color usedLineBackgroundColor(
-						boost::get_optional_value_or(
-							backgroundOverride,
-							boost::fusion::at_key<presentation::styles::BackgroundColor>(layout.defaultRunStyle().backgroundsAndBorders)));
-					const Color actualLineBackgroundColor(alphaBlend(actualToplevelBackgroundColor, usedLineBackgroundColor));
-					const SolidColor background(actualLineBackgroundColor);
+					const SolidColor background(actualLineBackgroundColor(layout));
 					context.setFillStyle(std::shared_ptr<const Paint>(&background, boost::null_deleter()));
 					context.fillRectangle(physicalLineArea);
 
@@ -476,7 +387,7 @@ namespace ascension {
 						writingMode(layout),
 						presentation::_from = presentation::makeFlowRelativeTwoAxes((
 							presentation::_bpd = lineToPaint.baseline,
-							presentation::_ipd = -inlineProgressionOffsetInViewerGeometry(*viewport()))),
+							presentation::_ipd = -inlineProgressionOffsetInViewerGeometry(viewport))),
 						presentation::_to = p);
 					paint(layout, lineToPaint.lineNumber, context, graphics::geometry::make<graphics::Point>(p), options);
 				}
@@ -607,32 +518,20 @@ namespace ascension {
 
 			/// @internal Updates the @c defaultFont_.
 			inline void TextRenderer::updateDefaultFont() {
-				const auto& styles = presentation().computedTextRunStyle();
-				// TODO: Use ActualFontSpecification.
-				const FontProperties properties(
-					boost::fusion::at_key<presentation::styles::FontWeight>(styles.fonts),
-					boost::fusion::at_key<presentation::styles::FontStretch>(styles.fonts),
-					boost::fusion::at_key<presentation::styles::FontStyle>(styles.fonts));
-				// TODO: Replace with more suitable way...
-				const auto& fontFamilies = boost::fusion::at_key<presentation::styles::FontFamily>(styles.fonts);
-				String matchedFamily;
-				if(!fontFamilies.empty()) {
-					const auto i(findMatchingFontFamily(fontCollection_, fontFamilies));
-					if(i != boost::const_end(fontFamilies))
-						matchedFamily = *i;
-				}
-				const FontDescription description(
-					FontFamily(matchedFamily),
-#if 0
-					presentation::Points(
-						presentation::styles::useFontSize(
-							boost::fusion::at_key<presentation::styles::FontSize>(styles.fonts),
-							systemDefaultFontSize(), systemDefaultFontSize())),	// TODO: Adhoc.
-#else
-					12,
+				auto newFont(newDefaultFont());
+				if(newFont.get() == nullptr) {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+					// TODO: Not implemented.
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+					// TODO: Not implemented.
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+					// TODO: Not implemented.
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+					LOGFONTW lf;
+					win32::systemDefaultFont(lf);
+					newFont = std::make_shared<const graphics::font::Font>(::CreateFontIndirectW(), &::DeleteObject);
 #endif
-					properties);
-				std::shared_ptr<const Font> newFont(fontCollection_.get(description));
+				}
 				assert(newFont.get() != nullptr);
 				std::swap(defaultFont_, newFont);
 				layouts().invalidate();
@@ -647,22 +546,14 @@ namespace ascension {
 				defaultFontChangedSignal_(*this);
 			}
 
-			/// Returns the viewport.
-			std::shared_ptr<TextViewport> TextRenderer::viewport() BOOST_NOEXCEPT {
-				if(viewport_.get() == nullptr) {
-					viewport_ = detail::createTextViewport(*this);
-					layouts().at(viewport_->firstVisibleLine().line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-				}
-				return viewport_;
-			}
+			/**
+			 * @fn ascension::graphics::font::TextRenderer::computedBlockFlowDirection
+			 * Returns the computed block-flow-direction.
+			 */
 
-			/// Returns the viewport.
-			std::shared_ptr<const TextViewport> TextRenderer::viewport() const BOOST_NOEXCEPT {
-				if(viewport_.get() == nullptr) {
-					const_cast<TextRenderer*>(this)->viewport_ = detail::createTextViewport(*const_cast<TextRenderer*>(this));
-					const_cast<TextRenderer*>(this)->layouts().at(viewport_->firstVisibleLine().line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-				}
-				return viewport_;
+			/// Returns the @c WritingModesChangedSignal signal connector.
+			SignalConnector<TextRenderer::WritingModesChangedSignal> TextRenderer::writingModesChangedSignal() BOOST_NOEXCEPT {
+				return makeSignalConnector(writingModesChangedSignal_);
 			}
 		}
 	}

@@ -22,8 +22,8 @@ namespace alpha {
 		public ascension::kernel::BookmarkListener, public ascension::searcher::IncrementalSearchCallback {
 	public:
 		// constructors
-		EditorView(ascension::presentation::Presentation& presentation);
-		EditorView(const EditorView& rhs);
+		explicit EditorView(std::shared_ptr<Buffer> buffer);
+		EditorView(const EditorView& other);
 		~EditorView();
 		// attributes
 #ifndef ALPHA_NO_AMBIENT
@@ -31,8 +31,8 @@ namespace alpha {
 		boost::python::object asTextEditor() const;
 #endif
 		const wchar_t* currentPositionString() const;
-		Buffer& document() BOOST_NOEXCEPT;
-		const Buffer& document() const BOOST_NOEXCEPT;
+		std::shared_ptr<Buffer> document() BOOST_NOEXCEPT;
+		std::shared_ptr<const Buffer> document() const BOOST_NOEXCEPT;
 		ascension::Index visualColumnStartValue() const /*throw()*/;
 		void setVisualColumnStartValue() throw();
 		// operations
@@ -46,6 +46,7 @@ namespace alpha {
 #endif
 		// ascension.viewer.TextViewer (overrides)
 		void drawIndicatorMargin(ascension::Index line, ascension::graphics::PaintContext& context, const ascension::graphics::Rectangle& rect) override;
+		void initialized() override BOOST_NOEXCEPT;
 		void keyPressed(ascension::viewer::widgetapi::event::KeyInput& input) override;
 		void focusAboutToBeLost(ascension::viewer::widgetapi::event::Event& event) override;
 		void focusGained(ascension::viewer::widgetapi::event::Event& event) override;
@@ -69,6 +70,7 @@ namespace alpha {
 #ifndef ALPHA_NO_AMBIENT
 		mutable boost::python::object asCaret_, asTextEditor_;
 #endif
+		std::shared_ptr<Buffer> buffer_;	// for .document
 		ascension::Index visualColumnStartValue_;
 	};
 
@@ -90,13 +92,13 @@ namespace alpha {
 #endif
 
 	/// @see ascension#viewer#TextViewer#document
-	inline Buffer& EditorView::document() BOOST_NOEXCEPT {
-		return reinterpret_cast<Buffer&>(ascension::viewer::TextViewer::document());
+	inline std::shared_ptr<Buffer> EditorView::document() BOOST_NOEXCEPT {
+		return buffer_;
 	}
 
 	/// @see ascension#viewer#TextViewer#document
-	inline const Buffer& EditorView::document() const BOOST_NOEXCEPT {
-		return reinterpret_cast<const Buffer&>(ascension::viewer::TextViewer::document());
+	inline std::shared_ptr<const Buffer> EditorView::document() const BOOST_NOEXCEPT {
+		return buffer_;
 	}
 }
 

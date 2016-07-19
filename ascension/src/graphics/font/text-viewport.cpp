@@ -37,43 +37,53 @@ namespace ascension {
 			PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
 			convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
 					const presentation::FlowRelativeTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
-				switch(viewport.textRenderer().computedBlockFlowDirection()) {
-					case presentation::HORIZONTAL_TB:
-						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.ipd(), positions.bpd());
-					case presentation::VERTICAL_RL:
-						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(
-							(positions.bpd() != boost::none) ?
-								boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.bpd() - 1) : boost::none,
-							positions.ipd());
-					case presentation::VERTICAL_LR:
-						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.bpd(), positions.ipd());
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
+				if(const auto textRenderer = viewport.textRenderer().lock()) {
+					switch(textRenderer->blockFlowDirection()) {
+						case presentation::HORIZONTAL_TB:
+							return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.ipd(), positions.bpd());
+						case presentation::VERTICAL_RL:
+							return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(
+								(positions.bpd() != boost::none) ?
+									boost::make_optional(textRenderer->layouts().numberOfVisualLines() - *positions.bpd() - 1) : boost::none,
+								positions.ipd());
+						case presentation::VERTICAL_LR:
+							return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.bpd(), positions.ipd());
+						default:
+							ASCENSION_ASSERT_NOT_REACHED();
+					}
 				}
+
+				static const boost::optional<TextViewport::ScrollOffset> zero(0);
+				return makePhysicalTwoAxes((_x = zero, _y = zero));
 			}
 
 			presentation::FlowRelativeTwoAxes<boost::optional<TextViewport::ScrollOffset>>
 			convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
 					const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
-				presentation::FlowRelativeTwoAxes<boost::optional<TextViewport::ScrollOffset>> result;
-				switch(viewport.textRenderer().computedBlockFlowDirection()) {
-					case presentation::HORIZONTAL_TB:
-						result.bpd() = positions.y();
-						result.ipd() = positions.x();
-						break;
-					case presentation::VERTICAL_RL:
-						result.bpd() = (positions.x() != boost::none) ?
-							boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.x() - 1) : boost::none;
-						result.ipd() = positions.y();
-						break;
-					case presentation::VERTICAL_LR:
-						result.bpd() = positions.x();
-						result.ipd() = positions.y();
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
+				if(const auto textRenderer = viewport.textRenderer().lock()) {
+					presentation::FlowRelativeTwoAxes<boost::optional<TextViewport::ScrollOffset>> result;
+					switch(textRenderer->blockFlowDirection()) {
+						case presentation::HORIZONTAL_TB:
+							result.bpd() = positions.y();
+							result.ipd() = positions.x();
+							break;
+						case presentation::VERTICAL_RL:
+							result.bpd() = (positions.x() != boost::none) ?
+								boost::make_optional(textRenderer->layouts().numberOfVisualLines() - *positions.x() - 1) : boost::none;
+							result.ipd() = positions.y();
+							break;
+						case presentation::VERTICAL_LR:
+							result.bpd() = positions.x();
+							result.ipd() = positions.y();
+							break;
+						default:
+							ASCENSION_ASSERT_NOT_REACHED();
+					}
+					return result;
 				}
-				return result;
+
+				static const boost::optional<TextViewport::ScrollOffset> zero(0);
+				return presentation::makeFlowRelativeTwoAxes((presentation::_bpd = zero, presentation::_ipd = zero));
 			}
 
 			/**
@@ -147,11 +157,12 @@ namespace ascension {
 
 			namespace {
 				Point lineStartEdge(const TextViewport& viewport, const VisualLine& line, const TextLayout* layout) {
-					const TextRenderer& renderer = viewport.textRenderer();
+					const auto textRenderer(viewport.textRenderer().lock());
+					assert(textRenderer.get() != nullptr);
 					const presentation::FlowRelativeTwoAxes<Scalar> lineStart(
-						presentation::_ipd = renderer.lineStartEdge(line) - viewport.scrollPositions().ipd(), presentation::_bpd = static_cast<Scalar>(0));
+						presentation::_ipd = textRenderer->lineStartEdge(line) - viewport.scrollPositions().ipd(), presentation::_bpd = static_cast<Scalar>(0));
 
-					const presentation::WritingMode wm((layout != nullptr) ? writingMode(*layout) : renderer.presentation().computeWritingMode());
+					const presentation::WritingMode wm((layout != nullptr) ? writingMode(*layout) : textRenderer->writingModes());
 					Point result;
 					{
 						PhysicalTwoAxes<Scalar> temp;
@@ -159,7 +170,7 @@ namespace ascension {
 						boost::geometry::assign(result, geometry::make<Point>(temp));
 					}
 
-					switch(renderer.lineRelativeAlignment()) {
+					switch(textRenderer->lineRelativeAlignment()) {
 						case TextRenderer::LEFT:
 							geometry::x(result) += 0;
 							break;
@@ -183,7 +194,7 @@ namespace ascension {
 					}
 
 					assert(geometry::x(result) == 0 || geometry::y(result) == 0);
-					return (result);
+					return result;
 				}
 			}
 
@@ -196,7 +207,9 @@ namespace ascension {
 			 * @throw IndexOutOfBoundsException @a line is invalid
 			 */
 			Point lineStartEdge(const TextViewport& viewport, const VisualLine& line) {
-				return lineStartEdge(viewport, line, viewport.textRenderer().layouts().at(line.line));	// this may throw IndexOutOfBoundsException
+				if(const auto textRenderer = viewport.textRenderer().lock())
+					return lineStartEdge(viewport, line, textRenderer->layouts().at(line.line));	// this may throw IndexOutOfBoundsException
+				return boost::geometry::make_zero<Point>();
 			}
 
 			/**
@@ -208,7 +221,9 @@ namespace ascension {
 			 * @throw IndexOutOfBoundsException @a line is invalid
 			 */
 			Point lineStartEdge(TextViewport& viewport, const VisualLine& line, const UseCalculatedLayoutTag&) {
-				return lineStartEdge(viewport, line, &viewport.textRenderer().layouts().at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT));	// this may throw IndexOutOfBoundsException
+				if(const auto textRenderer = viewport.textRenderer().lock())
+					return lineStartEdge(viewport, line, &textRenderer->layouts().at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT));	// this may throw IndexOutOfBoundsException
+				return boost::geometry::make_zero<Point>();
 			}
 
 			/**
@@ -217,13 +232,18 @@ namespace ascension {
 			 * @param p The point in the viewport in user coordinates
 			 * @param[out] snapped @c true if there was not a line at @a p. Optional
 			 * @return The visual line numbers
+			 * @throw IllegalStateException @c viewport.lock() returned @c null
 			 * @note This function may change the layout.
 			 * @see scrollPositions, TextLayout#hitTestCharacter, TextLayout#locateLine
 			 */
-			VisualLine locateLine(const TextViewport& viewport, const Point& p, bool* snapped /* = nullptr */) BOOST_NOEXCEPT {
+			VisualLine locateLine(const TextViewport& viewport, const Point& p, bool* snapped /* = nullptr */) {
+				const auto textRenderer(const_cast<TextViewport&>(viewport).textRenderer().lock());
+				if(textRenderer.get() == nullptr)
+					throw IllegalStateException("viewport.lock() returned null.");
+
 				// calculate block-progression-dimension
 				Scalar bpd;
-				switch(viewport.textRenderer().computedBlockFlowDirection()) {
+				switch(textRenderer->blockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
 						bpd = geometry::y(p) - *boost::const_begin(viewportContentExtent(viewport));
 						break;
@@ -238,8 +258,8 @@ namespace ascension {
 				}
 
 				// locate visual line
-				const Index nlines = viewport.textRenderer().presentation().document().numberOfLines();
-				LineLayoutVector& layouts = const_cast<TextViewport&>(viewport).textRenderer().layouts();
+				LineLayoutVector& layouts = textRenderer->layouts();
+				const Index nlines = layouts.document().numberOfLines();
 				BaselineIterator baseline(viewport, false);
 				VisualLine result(boost::get(baseline.line()));
 				bool snap = true;
@@ -288,6 +308,10 @@ namespace ascension {
 			 * @see #viewToModel, #viewToModelInBounds, TextLayout#location
 			 */
 			Point modelToView(const TextViewport& viewport, const TextHit<kernel::Position>& position/*, bool fullSearchBpd*/) {
+				const auto textRenderer(viewport.textRenderer().lock());
+				if(textRenderer.get() == nullptr)
+					return boost::geometry::make_zero<Point>();
+
 				// compute alignment-point of the line
 				const BaselineIterator baseline(viewport, position, false/*fullSearchBpd*/);
 				Point p(baseline.positionInViewport());
@@ -297,10 +321,10 @@ namespace ascension {
 				geometry::translate(
 					geometry::_from = p, geometry::_to = p,
 					geometry::_tx = geometry::x(lineStart), geometry::_ty = geometry::y(lineStart));
-				const bool horizontal = isHorizontal(viewport.textRenderer().computedBlockFlowDirection());
+				const bool horizontal = isHorizontal(textRenderer->blockFlowDirection());
 
 				// compute offset in the line layout
-				const TextLayout* const layout = viewport.textRenderer().layouts().at(kernel::line(position.characterIndex()));
+				const TextLayout* const layout = textRenderer->layouts().at(kernel::line(position.characterIndex()));
 				assert(layout != nullptr);
 				const TextHit<> hitInLine(position.isLeadingEdge() ?
 					TextHit<>::leading(kernel::offsetInLine(position.characterIndex())) : TextHit<>::trailing(kernel::offsetInLine(position.characterIndex())));
@@ -322,8 +346,11 @@ namespace ascension {
 
 			template<>
 			float pageSize<presentation::ReadingDirection>(const TextViewport& viewport) {
-				const Dimension bounds = viewport.size();
-				return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ? geometry::dx(bounds) : geometry::dy(bounds);
+				if(const auto textRenderer = viewport.textRenderer().lock()) {
+					const Dimension bounds = viewport.size();
+					return isHorizontal(textRenderer->blockFlowDirection()) ? geometry::dx(bounds) : geometry::dy(bounds);
+				}
+				return 0.f;
 			}
 
 			/**
@@ -336,22 +363,27 @@ namespace ascension {
 
 			template<>
 			float pageSize<0>(const TextViewport& viewport) {
-				switch(viewport.textRenderer().computedBlockFlowDirection()) {
-					case presentation::HORIZONTAL_TB:
-						return pageSize<presentation::ReadingDirection>(viewport);
-					case presentation::VERTICAL_RL:
-						return -pageSize<presentation::BlockFlowDirection>(viewport);
-					case presentation::VERTICAL_LR:
-						return +pageSize<presentation::BlockFlowDirection>(viewport);
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
+				if(const auto textRenderer = viewport.textRenderer().lock()) {
+					switch(textRenderer->blockFlowDirection()) {
+						case presentation::HORIZONTAL_TB:
+							return pageSize<presentation::ReadingDirection>(viewport);
+						case presentation::VERTICAL_RL:
+							return -pageSize<presentation::BlockFlowDirection>(viewport);
+						case presentation::VERTICAL_LR:
+							return +pageSize<presentation::BlockFlowDirection>(viewport);
+						default:
+							ASCENSION_ASSERT_NOT_REACHED();
+					}
 				}
+				return 0.f;
 			}
 
 			template<>
 			float pageSize<1>(const TextViewport& viewport) {
-				return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ?
-					pageSize<presentation::BlockFlowDirection>(viewport) : pageSize<presentation::ReadingDirection>(viewport);
+				if(const auto textRenderer = viewport.textRenderer().lock())
+					return isHorizontal(textRenderer->blockFlowDirection()) ?
+						pageSize<presentation::BlockFlowDirection>(viewport) : pageSize<presentation::ReadingDirection>(viewport);
+				return 0.f;
 			}
 
 //			template TextViewport::SignedScrollOffset pageSize<presentation::BlockFlowDirection>(const TextViewport& viewport);
@@ -361,8 +393,10 @@ namespace ascension {
 
 			template<>
 			boost::integer_range<TextViewport::ScrollOffset> scrollableRange<presentation::BlockFlowDirection>(const TextViewport& viewport) {
-				return boost::irange(static_cast<TextViewport::ScrollOffset>(0),
-					static_cast<TextViewport::ScrollOffset>(viewport.textRenderer().layouts().numberOfVisualLines() - pageSize<presentation::BlockFlowDirection>(viewport)) + 1);
+				if(const auto textRenderer = viewport.textRenderer().lock())
+					return boost::irange(static_cast<TextViewport::ScrollOffset>(0),
+						static_cast<TextViewport::ScrollOffset>(textRenderer->layouts().numberOfVisualLines() - pageSize<presentation::BlockFlowDirection>(viewport)) + 1);
+				return boost::irange<TextViewport::ScrollOffset>(0, 0);
 			}
 
 			template<>
@@ -373,14 +407,18 @@ namespace ascension {
 
 			template<>
 			boost::integer_range<TextViewport::ScrollOffset> scrollableRange<0>(const TextViewport& viewport) {
-				return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ?
-					scrollableRange<presentation::ReadingDirection>(viewport) : scrollableRange<presentation::BlockFlowDirection>(viewport);
+				if(const auto textRenderer = viewport.textRenderer().lock())
+					return isHorizontal(textRenderer->blockFlowDirection()) ?
+						scrollableRange<presentation::ReadingDirection>(viewport) : scrollableRange<presentation::BlockFlowDirection>(viewport);
+				return boost::irange<TextViewport::ScrollOffset>(0, 0);
 			}
 
 			template<>
 			boost::integer_range<TextViewport::ScrollOffset> scrollableRange<1>(const TextViewport& viewport) {
-				return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ?
-					scrollableRange<presentation::BlockFlowDirection>(viewport) : scrollableRange<presentation::ReadingDirection>(viewport);
+				if(const auto textRenderer = viewport.textRenderer().lock())
+					return isHorizontal(textRenderer->blockFlowDirection()) ?
+						scrollableRange<presentation::BlockFlowDirection>(viewport) : scrollableRange<presentation::ReadingDirection>(viewport);
+				return boost::irange<TextViewport::ScrollOffset>(0, 0);
 			}
 
 //			template boost::integer_range<TextViewport::ScrollOffset> scrollableRange<presentation::BlockFlowDirection>(const TextViewport& viewport);
@@ -394,40 +432,45 @@ namespace ascension {
 			 * @param pages The number of pages to scroll
 			 */
 			void scrollPage(TextViewport& viewport, const PhysicalTwoAxes<TextViewport::SignedScrollOffset>& pages) {
-				presentation::FlowRelativeTwoAxes<TextViewport::SignedScrollOffset> delta;
-				presentation::mapDimensions(viewport.textRenderer().presentation().computeWritingMode(), presentation::_from = pages, presentation::_to = delta);
-				viewport.scrollBlockFlowPage(delta.bpd());
-				delta.bpd() = 0;
-				delta.ipd() *= static_cast<TextViewport::ScrollOffset>(pageSize<presentation::ReadingDirection>(viewport));
-				viewport.scroll(delta);
+				if(const auto textRenderer = viewport.textRenderer().lock()) {
+					presentation::FlowRelativeTwoAxes<TextViewport::SignedScrollOffset> delta;
+					presentation::mapDimensions(textRenderer->writingModes(), presentation::_from = pages, presentation::_to = delta);
+					viewport.scrollBlockFlowPage(delta.bpd());
+					delta.bpd() = 0;
+					delta.ipd() *= static_cast<TextViewport::ScrollOffset>(pageSize<presentation::ReadingDirection>(viewport));
+					viewport.scroll(delta);
+				}
 			}
 
 			/***/
 			NumericRange<Scalar> viewportContentExtent(const TextViewport& viewport) BOOST_NOEXCEPT {
-				const presentation::BlockFlowDirection blockFlowDirection = viewport.textRenderer().computedBlockFlowDirection();
-				const PhysicalFourSides<Scalar>& physicalSpaces = viewport.textRenderer().spaceWidths();
-				Scalar spaceBefore, spaceAfter;
-				switch(blockFlowDirection) {
-					case presentation::HORIZONTAL_TB:
-						spaceBefore = physicalSpaces.top();
-						spaceAfter = physicalSpaces.bottom();
-						break;
-					case presentation::VERTICAL_RL:
-						spaceBefore = physicalSpaces.right();
-						spaceAfter = physicalSpaces.left();
-						break;
-					case presentation::VERTICAL_LR:
-						spaceBefore = physicalSpaces.left();
-						spaceAfter = physicalSpaces.right();
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
+				if(const auto textRenderer = viewport.textRenderer().lock()) {
+					const presentation::BlockFlowDirection blockFlowDirection = textRenderer->blockFlowDirection();
+					const PhysicalFourSides<Scalar>& physicalSpaces = textRenderer->spaceWidths();
+					Scalar spaceBefore, spaceAfter;
+					switch(blockFlowDirection) {
+						case presentation::HORIZONTAL_TB:
+							spaceBefore = physicalSpaces.top();
+							spaceAfter = physicalSpaces.bottom();
+							break;
+						case presentation::VERTICAL_RL:
+							spaceBefore = physicalSpaces.right();
+							spaceAfter = physicalSpaces.left();
+							break;
+						case presentation::VERTICAL_LR:
+							spaceBefore = physicalSpaces.left();
+							spaceAfter = physicalSpaces.right();
+							break;
+						default:
+							ASCENSION_ASSERT_NOT_REACHED();
+					}
+					const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;	// TODO: Not implemented.
+					const Scalar before = spaceBefore + borderBefore + paddingBefore;
+					const Scalar after = (presentation::isHorizontal(blockFlowDirection) ?
+						geometry::dy(viewport.size()) : geometry::dx(viewport.size())) - spaceAfter - borderAfter - paddingBefore;
+					return nrange(before, after);
 				}
-				const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;	// TODO: Not implemented.
-				const Scalar before = spaceBefore + borderBefore + paddingBefore;
-				const Scalar after = (presentation::isHorizontal(blockFlowDirection) ?
-					geometry::dy(viewport.size()) : geometry::dx(viewport.size())) - spaceAfter - borderAfter - paddingBefore;
-				return nrange(before, after);
+				return nrange<Scalar>(0, 0);
 			}
 
 			namespace {
@@ -438,12 +481,16 @@ namespace ascension {
 				// implements viewToModel and viewToModelInBounds in font namespace.
 				boost::optional<TextHit<kernel::Position>> internalViewToModel(const TextViewport& viewport,
 						const Point& point, bool abortNoCharacter, kernel::locations::CharacterUnit snapPolicy) {
+					const auto textRenderer(viewport.textRenderer().lock());
+					if(textRenderer.get() == nullptr)
+						return boost::none;
+
 					// locate the logical line
 					bool outside;
 					const Index line(locateLine(viewport, point, &outside).line);
 					if(abortNoCharacter && outside)
 						return boost::none;
-					const TextLayout* const layout = viewport.textRenderer().layouts().at(line);
+					const TextLayout* const layout = textRenderer->layouts().at(line);
 					assert(layout != nullptr);
 					const BaselineIterator baseline(viewport, VisualLine(line, 0), false);
 					// locate the position in the line
@@ -465,7 +512,7 @@ namespace ascension {
 					// snap intervening position to the boundary
 					if(hitInLine.characterIndex() != 0 && snapPolicy != kernel::locations::UTF16_CODE_UNIT) {
 						using namespace text;
-						const kernel::Document& document = viewport.textRenderer().presentation().document();
+						const kernel::Document& document = textRenderer->layouts().document();
 						const String& s = document.lineString(line);
 						const bool interveningSurrogates =
 							surrogates::isLowSurrogate(s[hitInLine.characterIndex()]) && surrogates::isHighSurrogate(s[hitInLine.characterIndex() - 1]);
@@ -562,10 +609,11 @@ namespace ascension {
 			 */
 
 			/**
-			 * Private constructor.
-			 * @param textRenderer
+			 * Creates a new @c TextViewport instance.
+			 * @param textRenderer The text renderer
+			 * @throw NullPointerException @a textRenderer is @c null
 			 */
-			TextViewport::TextViewport(TextRenderer& textRenderer
+			TextViewport::TextViewport(std::weak_ptr<TextRenderer> textRenderer
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				, const FontRenderContext& frc
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -575,22 +623,26 @@ namespace ascension {
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 					size_(boost::geometry::make_zero<Dimension>()),
 					scrollPositions_(0, 0), firstVisibleLine_(0, 0), repairingLayouts_(false) {
-				documentAccessibleRegionChangedConnection_ =
-					this->textRenderer().presentation().document().accessibleRegionChangedSignal().connect(
-						std::bind(&TextViewport::documentAccessibleRegionChanged, this, std::placeholders::_1));
-				defaultFontChangedConnection_ = this->textRenderer().defaultFontChangedSignal().connect(
-					std::bind(&TextViewport::defaultFontChanged, this, std::placeholders::_1));
-				this->textRenderer().layouts().addVisualLinesListener(*this);
-				computedTextToplevelStyleChangedConnection_ = this->textRenderer().presentation().computedTextToplevelStyleChangedSignal().connect(
-					std::bind(&TextViewport::computedTextToplevelStyleChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+				if(const auto renderer = textRenderer_.lock()) {
+					documentAccessibleRegionChangedConnection_ =
+						const_cast<kernel::Document&>(renderer->layouts().document()).accessibleRegionChangedSignal().connect(
+							std::bind(&TextViewport::documentAccessibleRegionChanged, this, std::placeholders::_1));
+					defaultFontChangedConnection_ = renderer->defaultFontChangedSignal().connect(
+						std::bind(&TextViewport::defaultFontChanged, this, std::placeholders::_1));
+					renderer->layouts().addVisualLinesListener(*this);
+					writingModesChangedConnection_ =
+						renderer->writingModesChangedSignal().connect(std::bind(&TextViewport::writingModesChanged, this, std::placeholders::_1));
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				updateDefaultLineExtent();
+					updateDefaultLineExtent();
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				} else
+					throw NullPointerException("textRenderer");
 			}
 
 			/// Destructor.
 			TextViewport::~TextViewport() BOOST_NOEXCEPT {
-				textRenderer().layouts().removeVisualLinesListener(*this);
+				if(const auto renderer = textRenderer().lock())
+					renderer->layouts().removeVisualLinesListener(*this);
 			}
 
 			/**
@@ -598,35 +650,37 @@ namespace ascension {
 			 * @see #calculateBpdScrollPosition
 			 */
 			inline void TextViewport::adjustBpdScrollPositions() BOOST_NOEXCEPT {
-				auto newScrollPositions(scrollPositions());
+				if(const auto renderer = textRenderer().lock()) {
+					auto newScrollPositions(scrollPositions());
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				auto newBlockFlowScrollOffsetInFirstVisibleVisualLine(blockFlowScrollOffsetInFirstVisibleVisualLine_);
+					auto newBlockFlowScrollOffsetInFirstVisibleVisualLine(blockFlowScrollOffsetInFirstVisibleVisualLine_);
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 
-				decltype(firstVisibleLine_) newFirstVisibleLine;
-				const Index nlines = textRenderer().presentation().document().numberOfLines();
-				if(firstVisibleLine().line > nlines - 1) {
-					newFirstVisibleLine.line = nlines - 1;
-					newFirstVisibleLine.subline = textRenderer().layouts().numberOfSublinesOfLine(newFirstVisibleLine.line) - 1;
-				} else {
-					newFirstVisibleLine.line = firstVisibleLine().line;
-					newFirstVisibleLine.subline = std::min(
-						firstVisibleLine().subline, textRenderer().layouts().numberOfSublinesOfLine(newFirstVisibleLine.line) - 1);
-				}
-				if(newFirstVisibleLine != firstVisibleLine()) {
-					newScrollPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);
+					decltype(firstVisibleLine_) newFirstVisibleLine;
+					const Index nlines = renderer->layouts().document().numberOfLines();
+					if(firstVisibleLine().line > nlines - 1) {
+						newFirstVisibleLine.line = nlines - 1;
+						newFirstVisibleLine.subline = renderer->layouts().numberOfSublinesOfLine(newFirstVisibleLine.line) - 1;
+					} else {
+						newFirstVisibleLine.line = firstVisibleLine().line;
+						newFirstVisibleLine.subline = std::min(
+							firstVisibleLine().subline, renderer->layouts().numberOfSublinesOfLine(newFirstVisibleLine.line) - 1);
+					}
+					if(newFirstVisibleLine != firstVisibleLine()) {
+						newScrollPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-					newBlockFlowScrollOffsetInFirstVisibleVisualLine = 0;
-					// TODO: Not implemented.
+						newBlockFlowScrollOffsetInFirstVisibleVisualLine = 0;
+						// TODO: Not implemented.
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				}
+					}
 
-				// commit
-				updateScrollPositions(newScrollPositions, newFirstVisibleLine,
+					// commit
+					updateScrollPositions(newScrollPositions, newFirstVisibleLine,
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-					newBlockFlowScrollOffsetInFirstVisibleVisualLine,
+						newBlockFlowScrollOffsetInFirstVisibleVisualLine,
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-					false);
+						false);
+				}
 			}
 
 			/**
@@ -635,15 +689,17 @@ namespace ascension {
 			 * @see #contentMeasure
 			 */
 			Scalar TextViewport::allocationMeasure() const BOOST_NOEXCEPT {
-				const TextRenderer& renderer = textRenderer();
-				const bool horizontal = isHorizontal(renderer.computedBlockFlowDirection());
-				const Scalar spaces = horizontal ?
-					renderer.spaceWidths().left() + renderer.spaceWidths().right()
-					: renderer.spaceWidths().top() + renderer.spaceWidths().bottom();
-				const Scalar borders = 0;
-				const Scalar paddings = 0;
-				return std::max(renderer.layouts().maximumMeasure() + spaces + borders + paddings,
-					static_cast<Scalar>(horizontal ? geometry::dx(size()) : geometry::dy(size())));
+				if(const auto renderer = textRenderer().lock()) {
+					const bool horizontal = presentation::isHorizontal(renderer->blockFlowDirection());
+					const Scalar spaces = horizontal ?
+						renderer->spaceWidths().left() + renderer->spaceWidths().right()
+						: renderer->spaceWidths().top() + renderer->spaceWidths().bottom();
+					const Scalar borders = 0;
+					const Scalar paddings = 0;
+					return std::max(renderer->layouts().maximumMeasure() + spaces + borders + paddings,
+						static_cast<Scalar>(horizontal ? geometry::dx(size()) : geometry::dy(size())));
+				}
+				return static_cast<Scalar>(0);
 			}
 
 			/**
@@ -653,29 +709,26 @@ namespace ascension {
 			 * @see #adjustBpdScrollPositions
 			 */
 			inline TextViewport::ScrollOffset TextViewport::calculateBpdScrollPosition(const boost::optional<VisualLine>& line) const BOOST_NOEXCEPT {
-				const VisualLine ln(boost::get_optional_value_or(line, firstVisibleLine()));
+				if(const auto renderer = textRenderer().lock()) {
+					const VisualLine ln(boost::get_optional_value_or(line, firstVisibleLine()));
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				// TODO: Not implemented.
-				boost::value_initialized<ScrollOffset> newBpdOffset;
-				for(Index line = 0; ; ++line) {
-					const TextLayout* const layout = textRenderer().layouts().at(line);
-					if(line == ln.line) {
-						// TODO: Consider *rate* of scroll.
-						newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ?
-							boost::size(layout->extent(boost::irange<Index>(0, ln.subline))) : (defaultLineExtent_ * ln.subline));
-						break;
-					} else
-						newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ? boost::size(layout->extent()) : defaultLineExtent_);
-				}
+					// TODO: Not implemented.
+					boost::value_initialized<ScrollOffset> newBpdOffset;
+					for(Index line = 0; ; ++line) {
+						const TextLayout* const layout = renderer->layouts().at(line);
+						if(line == ln.line) {
+							// TODO: Consider *rate* of scroll.
+							newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ?
+								boost::size(layout->extent(boost::irange<Index>(0, ln.subline))) : (defaultLineExtent_ * ln.subline));
+							break;
+						} else
+							newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ? boost::size(layout->extent()) : defaultLineExtent_);
+					}
 #else
-				return textRenderer().layouts().mapLogicalLineToVisualLine(ln.line) + ln.subline;
+					return renderer->layouts().mapLogicalLineToVisualLine(ln.line) + ln.subline;
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-			}
-
-			/// @see ComputedBlockFlowDirectionListener#computedTextToplevelStyleChanged
-			void TextViewport::computedTextToplevelStyleChanged(const presentation::Presentation&,
-					const presentation::DeclaredTextToplevelStyle&, const presentation::ComputedTextToplevelStyle&) {
-				emitScrollPropertiesChanged(presentation::FlowRelativeTwoAxes<bool>(presentation::_ipd = true, presentation::_bpd = true));
+				}
+				return 0;
 			}
 
 			/**
@@ -684,10 +737,12 @@ namespace ascension {
 			 * @see #allocationMeasure
 			 */
 			Scalar TextViewport::contentMeasure() const BOOST_NOEXCEPT {
-				return std::max(
-					textRenderer().layouts().maximumMeasure(),
-					static_cast<Scalar>(isHorizontal(textRenderer().computedBlockFlowDirection()) ?
-						geometry::dx(size()) : geometry::dy(size())));
+				if(const auto renderer = textRenderer().lock())
+					return std::max(
+						renderer->layouts().maximumMeasure(),
+						static_cast<Scalar>(presentation::isHorizontal(renderer->blockFlowDirection()) ?
+							geometry::dx(size()) : geometry::dy(size())));
+				return static_cast<Scalar>(0);
 			}
 
 			/// @see TextRenderer#DefaultFontChangedSignal
@@ -776,14 +831,18 @@ namespace ascension {
 			 * @return The number of visual lines
 			 */
 			float TextViewport::numberOfVisibleLines() const BOOST_NOEXCEPT {
-				const bool horizontal = isHorizontal(textRenderer().computedBlockFlowDirection());
+				const auto renderer(const_cast<TextViewport*>(this)->textRenderer().lock());
+				if(renderer.get() == nullptr)
+					return 0.f;
+
+				const bool horizontal = presentation::isHorizontal(renderer->blockFlowDirection());
 				Scalar bpd(horizontal ? geometry::dy(size()) : geometry::dx(size()));
 				if(bpd <= 0)
 					return 0;
 //				bpd -= horizontal ? (spaceWidths().top() + spaceWidths().bottom()) : (spaceWidths().left() + spaceWidths().right());
 
 				Index line = firstVisibleLine().line, nlines = 0;
-				LineLayoutVector& layouts = const_cast<TextViewport*>(this)->textRenderer().layouts();
+				LineLayoutVector& layouts = renderer->layouts();
 				const TextLayout* layout = &layouts.at(line, LineLayoutVector::USE_CALCULATED_LAYOUT);
 				for(TextLayout::LineMetricsIterator lm(*layout, firstVisibleLine().subline); ; ) {
 					const Scalar lineExtent = lm.height();
@@ -792,7 +851,7 @@ namespace ascension {
 					bpd -= lineExtent;
 					++nlines;
 					if(lm.line() == layout->numberOfLines() - 1) {
-						if(line == textRenderer().presentation().document().numberOfLines() - 1)
+						if(line == renderer->layouts().document().numberOfLines() - 1)
 							return static_cast<float>(nlines);
 						layout = &layouts[++line];
 						lm = TextLayout::LineMetricsIterator(*layout, 0);
@@ -803,24 +862,26 @@ namespace ascension {
 
 			void TextViewport::repairUncalculatedLayouts() {
 				if(!repairingLayouts_) {
-					ascension::detail::ValueSaver<bool> temp(repairingLayouts_);
-					repairingLayouts_ = true;
+					if(const auto renderer = textRenderer().lock()) {
+						ascension::detail::ValueSaver<bool> temp(repairingLayouts_);
+						repairingLayouts_ = true;
 
-					const Scalar extent = isHorizontal(textRenderer().computedBlockFlowDirection()) ? geometry::dy(size()) : geometry::dx(size());
-					LineLayoutVector& layouts = textRenderer().layouts();
-					VisualLine line(firstVisibleLine());
-					const TextLayout* layout = &layouts.at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-					Scalar bpd = 0;
+						const Scalar extent = presentation::isHorizontal(renderer->blockFlowDirection()) ? geometry::dy(size()) : geometry::dx(size());
+						LineLayoutVector& layouts = renderer->layouts();
+						VisualLine line(firstVisibleLine());
+						const TextLayout* layout = &layouts.at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT);
+						Scalar bpd = 0;
 
-					// process the partially visible line
-					if(line.subline > 0)
-						bpd -= boost::size(layout->extent(boost::irange(static_cast<Index>(0), line.subline)));
+						// process the partially visible line
+						if(line.subline > 0)
+							bpd -= boost::size(layout->extent(boost::irange(static_cast<Index>(0), line.subline)));
 
-					// repair the following lines
-					for(const Index nlines = layouts.document().numberOfLines(); ++line.line < nlines && bpd < extent; ) {
-						layout = &layouts.at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT);	// repair the line
-						const auto lineExtent(layout->extent());
-						bpd += boost::size(lineExtent);
+						// repair the following lines
+						for(const Index nlines = layouts.document().numberOfLines(); ++line.line < nlines && bpd < extent; ) {
+							layout = &layouts.at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT);	// repair the line
+							const auto lineExtent(layout->extent());
+							bpd += boost::size(lineExtent);
+						}
 					}
 				}
 			}
@@ -849,7 +910,8 @@ namespace ascension {
 						TextViewport::SignedScrollOffset bpd, bool dontModifyLayout, Scalar defaultLineExtent, VisualLine& line, TextViewport::ScrollOffset& offsetInVisualLine) {
 					if(bpd == 0)
 						return;
-					const LineLayoutVector& layouts = viewport.textRenderer().layouts();
+					const auto textRenderer(viewport.textRenderer().lock());
+					const LineLayoutVector& layouts = renderer->layouts();
 					const TextLayout* layout;
 					line = lineFrom;
 
@@ -878,7 +940,7 @@ namespace ascension {
 						}
 
 						for(; ; ++line.line) {
-							if(line.line == viewport.textRenderer().presentation().document().numberOfLines()) {	// reached the last line
+							if(line.line == textRenderer->presentation().document().numberOfLines()) {	// reached the last line
 								--line.line;
 								if(layout == nullptr)
 									layout = !dontModifyLayout ? &layouts.at(line.line) : layouts.atIfCached(line.line);
@@ -961,7 +1023,8 @@ namespace ascension {
 
 					TextViewport::ScrollOffset bpd = from;
 					VisualLine line(lineFrom);
-					const TextLayout* layout = viewport.textRenderer().layouts().at(line.line);
+					const auto textRenderer(viewport.textRenderer().lock());
+					const TextLayout* layout = textRenderer->layouts().at(line.line);
 					while((to != boost::none && boost::get(to) > bpd) || (toLine != boost::none && boost::get(toLine) > line)) {
 						if(layout != nullptr) {
 							if(line.subline < layout->numberOfLines() - 1) {
@@ -970,9 +1033,9 @@ namespace ascension {
 								continue;
 							}
 						}
-						if(line.line == viewport.textRenderer().presentation().document().numberOfLines() - 1)
+						if(line.line == textRenderer->layouts().document().numberOfLines() - 1)
 							break;
-						layout = viewport.textRenderer().layouts().at(++line.line);
+						layout = textRenderer->layouts().at(++line.line);
 						line.subline = 0;
 						++bpd;
 					}
@@ -986,7 +1049,7 @@ namespace ascension {
 						}
 						if(line.line == 0)
 							break;
-						layout = viewport.textRenderer().layouts().at(--line.line);
+						layout = textRenderer->layouts().at(--line.line);
 						line.subline = (layout != nullptr) ? layout->numberOfLines() - 1 : 0;
 						--bpd;
 					}
@@ -1002,7 +1065,8 @@ namespace ascension {
 			 * @param offsets The offsets to scroll in abstract dimensions in user units
 			 */
 			void TextViewport::scroll(const presentation::FlowRelativeTwoAxes<SignedScrollOffset>& offsets) {
-				if(isScrollLocked())
+				const auto renderer(textRenderer().lock());
+				if(renderer.get() == nullptr || isScrollLocked())
 					return;
 
 				auto newPositions(scrollPositions());
@@ -1011,7 +1075,7 @@ namespace ascension {
 				if(offsets.ipd() < 0)
 					newPositions.ipd() = (static_cast<ScrollOffset>(-offsets.ipd()) < scrollPositions().ipd()) ? (scrollPositions().ipd() + offsets.ipd()) : 0;
 				else if(offsets.ipd() > 0) {
-					const bool vertical = presentation::isVertical(textRenderer().computedBlockFlowDirection());
+					const bool vertical = presentation::isVertical(renderer->blockFlowDirection());
 					const Scalar maximumIpd = !vertical ? geometry::dx(size()) : geometry::dy(size());
 					newPositions.ipd() = std::min(scrollPositions().ipd() + offsets.ipd(), static_cast<ScrollOffset>(contentMeasure() - maximumIpd));
 				}
@@ -1030,7 +1094,7 @@ namespace ascension {
 						false, defaultLineExtent_, newFirstVisibleLine, newBlockFlowScrollOffsetInFirstVisibleVisualLine);
 #else
 					newFirstVisibleLine = firstVisibleLine();
-					newPositions.bpd() += textRenderer().layouts().offsetVisualLine(newFirstVisibleLine, offsets.bpd(), LineLayoutVector::USE_CALCULATED_LAYOUT);
+					newPositions.bpd() += renderer->layouts().offsetVisualLine(newFirstVisibleLine, offsets.bpd(), LineLayoutVector::USE_CALCULATED_LAYOUT);
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 					if(frozenNotification_.dimensionsPropertiesChanged.bpd()/*scrollableRange<BlockFlowDirection>(*this).back() != scrollableRangeBeforeScroll.back()*/)
 						newPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);	// some layout might be changed in this code
@@ -1055,9 +1119,11 @@ namespace ascension {
 			 * @param offsets The offsets to scroll in physical dimensions in user units
 			 */
 			void TextViewport::scroll(const PhysicalTwoAxes<SignedScrollOffset>& offsets) {
-				presentation::FlowRelativeTwoAxes<SignedScrollOffset> abstractOffsets;
-				presentation::mapDimensions(textRenderer().presentation().computeWritingMode(), presentation::_from = offsets, presentation::_to = abstractOffsets);
-				return scroll(abstractOffsets);
+				if(const auto renderer = textRenderer().lock()) {
+					presentation::FlowRelativeTwoAxes<SignedScrollOffset> abstractOffsets;
+					presentation::mapDimensions(renderer->writingModes(), presentation::_from = offsets, presentation::_to = abstractOffsets);
+					return scroll(abstractOffsets);
+				}
 			}
 
 			/**
@@ -1066,7 +1132,8 @@ namespace ascension {
 			 * @param pages The number of pages to scroll in block flow direction
 			 */
 			void TextViewport::scrollBlockFlowPage(SignedScrollOffset pages) {
-				if(isScrollLocked())
+				const auto renderer(textRenderer().lock());
+				if(renderer.get() == nullptr || isScrollLocked())
 					return;
 
 				const boost::integer_range<ScrollOffset> rangeBeforeScroll(scrollableRange<presentation::BlockFlowDirection>(*this));
@@ -1086,8 +1153,8 @@ namespace ascension {
 					static_assert(std::is_integral<ScrollOffset>::value, "");
 					{
 						const TextViewportNotificationLocker notificationLockGuard(this);	// the following code can change the layouts
-						LineLayoutVector& layouts = textRenderer().layouts();
-						const Scalar bpd = isHorizontal(textRenderer().computedBlockFlowDirection()) ? geometry::dy(size()) : geometry::dx(size());
+						LineLayoutVector& layouts = renderer->layouts();
+						const Scalar bpd = presentation::isHorizontal(renderer->blockFlowDirection()) ? geometry::dy(size()) : geometry::dx(size());
 						Index line = firstVisibleLine().line;
 						const TextLayout* layout = &layouts.at(line, LineLayoutVector::USE_CALCULATED_LAYOUT);
 						TextLayout::LineMetricsIterator lineMetrics(*layout, firstVisibleLine().subline);
@@ -1143,7 +1210,8 @@ namespace ascension {
 			 * @param positions The destination of scroll in abstract dimensions in user units
 			 */
 			void TextViewport::scrollTo(const presentation::FlowRelativeTwoAxes<boost::optional<ScrollOffset>>& positions) {
-				if(isScrollLocked())
+				const auto renderer(textRenderer().lock());
+				if(renderer.get() == nullptr || isScrollLocked())
 					return;
 
 				decltype(scrollPositions_) newPositions(
@@ -1170,7 +1238,7 @@ namespace ascension {
 					newPositions.bpd() = clamp(newPositions.bpd(), range);
 
 					// locate the nearest visual line
-					const Index numberOfLogicalLines = textRenderer().presentation().document().numberOfLines();
+					const Index numberOfLogicalLines = renderer->layouts().document().numberOfLines();
 					ScrollOffset bpd;
 					VisualLine line;
 					assert(includes(range, scrollPositions().bpd()));
@@ -1195,7 +1263,7 @@ namespace ascension {
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 							line = firstVisibleLine();
 						} else {
-							if(const TextLayout* const lastLine = textRenderer().layouts().at(line.line = numberOfLogicalLines - 1)) {
+							if(const TextLayout* const lastLine = renderer->layouts().at(line.line = numberOfLogicalLines - 1)) {
 								line.subline = lastLine->numberOfLines() - 1;
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 								bpd = *boost::const_end(range) - boost::size(lastLine->extent(boost::irange(line.subline, line.subline + 1)));
@@ -1207,7 +1275,7 @@ namespace ascension {
 								line.subline = 0;
 							}
 #ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-							bpd = textRenderer().layouts().numberOfVisualLines() - 1;
+							bpd = renderer->layouts().numberOfVisualLines() - 1;
 #endif	// !ASCENSION_PIXELFUL_SCROLL_IN_BPD
 						}
 					}
@@ -1355,12 +1423,9 @@ namespace ascension {
 				repairUncalculatedLayouts();
 			}
 
-			namespace detail {
-				/// @internal
-				std::shared_ptr<TextViewport> createTextViewport(TextRenderer& textRenderer) {
-//					return std::make_shared<TextViewport>(textRenderer);
-					return std::shared_ptr<TextViewport>(new TextViewport(textRenderer));
-				}
+			/// @see TextRenderer#WritingModesChangedSignal
+			void TextViewport::writingModesChanged(const TextRenderer&) {
+				emitScrollPropertiesChanged(presentation::FlowRelativeTwoAxes<bool>(presentation::_ipd = true, presentation::_bpd = true));
 			}
 		}
 	}

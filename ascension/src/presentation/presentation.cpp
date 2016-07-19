@@ -151,14 +151,17 @@ namespace ascension {
 		 * @param document The target document
 		 */
 		Presentation::Presentation(kernel::Document& document) BOOST_NOEXCEPT : document_(document),
-				defaultDirection_(ASCENSION_DEFAULT_TEXT_READING_DIRECTION), computedStyles_(new ComputedStyles) {
+#if 0
+				defaultDirection_(ASCENSION_DEFAULT_TEXT_READING_DIRECTION),
+#endif
+				computedStyles_(new ComputedStyles) {
 			setDeclaredTextToplevelStyle(std::shared_ptr<const DeclaredTextToplevelStyle>());
-			document_.addListener(*this);
+			this->document().addListener(*this);
 		}
 		
 		/// Destructor.
 		Presentation::~Presentation() BOOST_NOEXCEPT {
-			document_.removeListener(*this);
+			document().removeListener(*this);
 			clearHyperlinksCache();
 		}
 #ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
@@ -276,7 +279,7 @@ namespace ascension {
 		 * @throw NullPointerException Internal @c Length#value call may throw this exception
 		 */
 		const ComputedTextLineStyle& Presentation::computeTextLineStyle(Index line) const {
-			if(line >= document_.numberOfLines())
+			if(line >= document().numberOfLines())
 				throw kernel::BadPositionException(kernel::Position::bol(line));
 
 			const std::shared_ptr<const DeclaredTextLineStyle> declared(declaredTextLineStyle(line));
@@ -351,7 +354,7 @@ namespace ascension {
 		 * @throw BadPositionException @a line is outside of the document
 		 */
 		const ComputedTextRunStyle& Presentation::computeTextRunStyleForLine(Index line) const {
-			if(line >= document_.numberOfLines())
+			if(line >= document().numberOfLines())
 				throw kernel::BadPositionException(kernel::Position::bol(line));
 
 			const CachedComputedTextRunStyle computed(computeTextRunStyle(*declaredTextLineStyle(line)->runsStyle(), computedTextRunStyle()));
@@ -399,7 +402,7 @@ namespace ascension {
 		 * @throw BadPositionException @a line is outside of the document
 		 */
 		std::unique_ptr<ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line) const {
-			if(line >= document_.numberOfLines())
+			if(line >= document().numberOfLines())
 				throw kernel::BadPositionException(kernel::Position::bol(line));
 			if(textRunStyleDeclarator_.get() != nullptr) {
 				std::unique_ptr<DeclaredStyledTextRunIterator> declaredRunStyles(textRunStyleDeclarator_->declareTextRunStyle(line));
@@ -412,56 +415,58 @@ namespace ascension {
 					kernel::Region::makeSingleLine(line, boost::irange<Index>(0, document().lineLength(line))), computedStyles_->forRuns.get()));
 		}
 
+		/// @see WritingModeProvider#computeWritingMode
+		WritingMode Presentation::computeWritingMode() const BOOST_NOEXCEPT {
+			return WritingMode(
+				boost::fusion::at_key<styles::Direction>(computedTextLineStyle()),
+				boost::fusion::at_key<styles::WritingMode>(computedTextToplevelStyle()),
+				boost::fusion::at_key<styles::TextOrientation>(computedTextLineStyle()));
+		}
+
 		/**
-		 * Computes the writing mode.
-		 * @param line The line to test. If this is @c boost#none, this method returns the entire writing mode
-		 * @return The computed writing mode value
+		 * Computes the writing modes.
+		 * @param line The line to test
+		 * @return The computed writing modes value
 		 * @throw IndexOutOfBoundsException @a line is invalid
 		 */
-		WritingMode Presentation::computeWritingMode(boost::optional<Index> line /* = boost::none */) const {
-			const BlockFlowDirection writingMode = boost::fusion::at_key<styles::WritingMode>(computedTextToplevelStyle());
-			if(line == boost::none)
-				return WritingMode(boost::fusion::at_key<styles::Direction>(computedTextLineStyle()),
-					writingMode, boost::fusion::at_key<styles::TextOrientation>(computedTextLineStyle()));
-			else {
-				// compute 'direction' and 'text-orientation' properties
-				const std::shared_ptr<const DeclaredTextLineStyle> declared(declaredTextLineStyle(boost::get(line)));
+		WritingMode Presentation::computeWritingMode(Index line) const {
+			// compute 'direction' and 'text-orientation' properties
+			const std::shared_ptr<const DeclaredTextLineStyle> declared(declaredTextLineStyle(line));
 #if 0
-				const styles::DeclaredValue<TextLineStyle>::type& cascaded = styles::cascade(declared);
+			const styles::DeclaredValue<TextLineStyle>::type& cascaded = styles::cascade(declared);
 #else
-				const styles::DeclaredValue<TextLineStyle>::type& cascaded = *declared;
+			const styles::DeclaredValue<TextLineStyle>::type& cascaded = *declared;
 #endif
 
-				styles::SpecifiedValue<styles::Direction>::type specifiedDirection;
-				const auto& cascadedDirection(boost::fusion::at_key<styles::Direction>(cascaded));
-				const auto& computedParentDirection(boost::fusion::at_key<styles::Direction>(computedTextLineStyle()));
-				static_assert(!std::is_same<std::decay<decltype(cascadedDirection)>::type, boost::mpl::void_>::value, "");
-				static_assert(!std::is_same<std::decay<decltype(computedParentDirection)>::type, boost::mpl::void_>::value, "");
-				styles::specifiedValueFromCascadedValue<styles::Direction>(
-					cascadedDirection,
-					[&computedParentDirection]() {
-						return computedParentDirection;
-					},
-					specifiedDirection);
+			styles::SpecifiedValue<styles::Direction>::type specifiedDirection;
+			const auto& cascadedDirection(boost::fusion::at_key<styles::Direction>(cascaded));
+			const auto& computedParentDirection(boost::fusion::at_key<styles::Direction>(computedTextLineStyle()));
+			static_assert(!std::is_same<std::decay<decltype(cascadedDirection)>::type, boost::mpl::void_>::value, "");
+			static_assert(!std::is_same<std::decay<decltype(computedParentDirection)>::type, boost::mpl::void_>::value, "");
+			styles::specifiedValueFromCascadedValue<styles::Direction>(
+				cascadedDirection,
+				[&computedParentDirection]() {
+					return computedParentDirection;
+				},
+				specifiedDirection);
 
-				styles::SpecifiedValue<styles::TextOrientation>::type specifiedTextOrientation;
-				const auto& cascadedTextOrientation(boost::fusion::at_key<styles::TextOrientation>(cascaded));
-				const auto& computedParentTextOrientation(boost::fusion::at_key<styles::TextOrientation>(computedTextLineStyle()));
-				static_assert(!std::is_same<std::decay<decltype(cascadedTextOrientation)>::type, boost::mpl::void_>::value, "");
-				static_assert(!std::is_same<std::decay<decltype(computedParentTextOrientation)>::type, boost::mpl::void_>::value, "");
-				styles::specifiedValueFromCascadedValue<styles::TextOrientation>(
-					cascadedTextOrientation,
-					[&computedParentTextOrientation]() {
-						return computedParentTextOrientation;
-					},
-					specifiedTextOrientation);
+			styles::SpecifiedValue<styles::TextOrientation>::type specifiedTextOrientation;
+			const auto& cascadedTextOrientation(boost::fusion::at_key<styles::TextOrientation>(cascaded));
+			const auto& computedParentTextOrientation(boost::fusion::at_key<styles::TextOrientation>(computedTextLineStyle()));
+			static_assert(!std::is_same<std::decay<decltype(cascadedTextOrientation)>::type, boost::mpl::void_>::value, "");
+			static_assert(!std::is_same<std::decay<decltype(computedParentTextOrientation)>::type, boost::mpl::void_>::value, "");
+			styles::specifiedValueFromCascadedValue<styles::TextOrientation>(
+				cascadedTextOrientation,
+				[&computedParentTextOrientation]() {
+					return computedParentTextOrientation;
+				},
+				specifiedTextOrientation);
 
-				styles::ComputedValue<styles::Direction>::type computedDirection(
-					styles::computeAsSpecified<styles::Direction>(specifiedDirection));
-				styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(
-					styles::computeAsSpecified<styles::TextOrientation>(specifiedTextOrientation));
-				return WritingMode(computedDirection, writingMode, computedTextOrientation);
-			}		
+			styles::ComputedValue<styles::Direction>::type computedDirection(
+				styles::computeAsSpecified<styles::Direction>(specifiedDirection));
+			styles::ComputedValue<styles::TextOrientation>::type computedTextOrientation(
+				styles::computeAsSpecified<styles::TextOrientation>(specifiedTextOrientation));
+			return WritingMode(computedDirection, boost::fusion::at_key<styles::WritingMode>(computedTextToplevelStyle()), computedTextOrientation);
 		}
 
 		/// @internal
@@ -521,7 +526,7 @@ namespace ascension {
 		 * @throw BadPositionException @a line is outside of the document
 		 */
 		const hyperlink::Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOfHyperlinks) const {
-			if(line >= document_.numberOfLines())
+			if(line >= document().numberOfLines())
 				throw kernel::BadPositionException(kernel::Position::bol(line));
 			else if(hyperlinkDetector_.get() == nullptr) {
 				numberOfHyperlinks = 0;
@@ -548,8 +553,8 @@ namespace ascension {
 				hyperlinks_.pop_back();
 			}
 			std::vector<hyperlink::Hyperlink*> temp;
-			for(Index offsetInLine = 0, eol = document_.lineLength(line); offsetInLine < eol; ) {
-				std::unique_ptr<hyperlink::Hyperlink> h(hyperlinkDetector_->nextHyperlink(document_, line, boost::irange(offsetInLine, eol)));
+			for(Index offsetInLine = 0, eol = document().lineLength(line); offsetInLine < eol; ) {
+				std::unique_ptr<hyperlink::Hyperlink> h(hyperlinkDetector_->nextHyperlink(document(), line, boost::irange(offsetInLine, eol)));
 				if(h.get() == nullptr)
 					break;
 				// check result
@@ -581,15 +586,15 @@ namespace ascension {
 			}
 		}
 #endif
-		/**
-		 * Sets the default direction.
-		 */
+#if 0
+		/// @see #setDefaultDirection
 		void Presentation::setDefaultDirection(ReadingDirection direction) {
 			if(direction != defaultDirection_) {
 				defaultDirection_ = direction;
+				invokeDefaultDirectionChangedSignal();
 			}
 		}
-		
+#endif		
 		/**
 		 * Sets the hyperlink detector.
 		 * @param newDetector The director. Set @c null to unregister
@@ -600,11 +605,16 @@ namespace ascension {
 		}
 
 		/**
-		 * Sets the line style declarator.
+		 * Sets the line style declarator. This method invokes @c WritingModeProvider#WritingModeChangedSignal.
 		 * @param newDeclarator The declarator. @c null to unregister
 		 */
 		void Presentation::setTextLineStyleDeclarator(std::shared_ptr<TextLineStyleDeclarator> newDeclarator) BOOST_NOEXCEPT {
-			textLineStyleDeclarator_ = newDeclarator;
+//			if(newDeclarator != textLineStyleDeclarator_) {
+				textLineStyleDeclarator_ = newDeclarator;
+#if 0
+				invokeWritingModeChangedSignal();
+#endif
+//			}
 		}
 		
 		/**
@@ -659,6 +669,9 @@ namespace ascension {
 			swap(newlyComputedRunStyles, computedStyles_->forRuns);
 			if(previouslyDeclared.get() != nullptr)
 				computedTextToplevelStyleChangedSignal_(*this, *previouslyDeclared, previouslyComputed.get());
+#if 0
+			invokeWritingModeChangedSignal();
+#endif
 		}
 
 		/**
@@ -682,7 +695,7 @@ namespace ascension {
 		 */
 		void Presentation::textLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const {
-			if(line >= document_.numberOfLines())
+			if(line >= document().numberOfLines())
 				throw kernel::BadPositionException(kernel::Position::bol(line));
 			TextLineColorSpecifier::Priority highestPriority = 0, p;
 			boost::optional<graphics::Color> f, g;

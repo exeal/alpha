@@ -36,7 +36,7 @@ namespace ascension {
 			inline std::uint8_t LineNumberRuler::computeNumberOfDigits() const BOOST_NOEXCEPT {
 				assert(viewer() != nullptr);
 				std::uint8_t n = 1;
-				Index lines = viewer()->document().numberOfLines() + startValue_ - 1;
+				Index lines = document(*viewer())->numberOfLines() + startValue_ - 1;
 				while(lines >= 10) {
 					lines /= 10;
 					++n;
@@ -47,15 +47,15 @@ namespace ascension {
 			/// @internal
 			void LineNumberRuler::continueLineSelection(const kernel::Position& to) {
 				if(viewer() != nullptr && lineSelectionAnchorLine_ != boost::none) {
-					const kernel::Document& document = viewer()->document();
-					const Index nlines = document.numberOfLines();
+					const auto d(document(*viewer()));
+					const Index nlines = d->numberOfLines();
 					kernel::Position anchor;
 					anchor.line = (kernel::line(to) >= boost::get(lineSelectionAnchorLine_)) ? boost::get(lineSelectionAnchorLine_) : boost::get(lineSelectionAnchorLine_) + 1;
-					anchor.offsetInLine = (kernel::line(anchor) > nlines - 1) ? document.lineLength(--anchor.line) : 0;
+					anchor.offsetInLine = (kernel::line(anchor) > nlines - 1) ? d->lineLength(--anchor.line) : 0;
 					kernel::Position caret;
 					caret.line = (kernel::line(to) >= boost::get(lineSelectionAnchorLine_)) ? kernel::line(to) + 1 : kernel::line(to);
-					caret.offsetInLine = (kernel::line(caret) > nlines - 1) ? document.lineLength(--caret.line) : 0;
-					viewer()->textArea().caret().select(_anchor = anchor, _caret = TextHit::leading(caret));
+					caret.offsetInLine = (kernel::line(caret) > nlines - 1) ? d->lineLength(--caret.line) : 0;
+					viewer()->textArea()->caret()->select(_anchor = anchor, _caret = TextHit::leading(caret));
 				}
 			}
 
@@ -71,7 +71,7 @@ namespace ascension {
 			void LineNumberRuler::install(SourceViewer& viewer, const Locator& locator, RulerAllocationWidthSink& allocationWidthSink) {
 				AbstractRuler::install(viewer, locator, allocationWidthSink);
 				if(this->viewer() == &viewer) {
-					const auto viewport(viewer.textArea().textRenderer().viewport());
+					const auto viewport(viewer.textArea()->viewport());
 					viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
 						// TODO: This implementation is adhoc.
 						invalidate();
@@ -107,11 +107,11 @@ namespace ascension {
 					if(input.button() == widgetapi::event::LocatedUserInput::BUTTON1_DOWN) {
 						if(action == PRESSED) {
 							// select line(s)
-							Caret& caret = viewer()->textArea().caret();
+							const auto caret(viewer()->textArea()->caret());
 							const kernel::Position to(viewToModel(*viewer(), input.location()).insertionIndex());
-							const bool extend = input.hasModifier(widgetapi::event::SHIFT_DOWN) && kernel::line(to) != kernel::line(caret.anchor());
-							lineSelectionAnchorLine_ = extend ? kernel::line(caret.anchor()) : kernel::line(to);
-							caret.endRectangleSelection();
+							const bool extend = input.hasModifier(widgetapi::event::SHIFT_DOWN) && kernel::line(to) != kernel::line(caret->anchor());
+							lineSelectionAnchorLine_ = extend ? kernel::line(caret->anchor()) : kernel::line(to);
+							caret->endRectangleSelection();
 							continueLineSelection(to);
 							beginLocationTracking(*viewer(), &targetLocker, true, true);
 							return input.consume();
@@ -291,7 +291,7 @@ namespace ascension {
 			void LineNumberRuler::visualLinesDeleted(const boost::integer_range<Index>& lines,
 					Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
 				if(const SourceViewer* const sourceViewer = viewer()) {
-					if(*boost::const_end(lines) < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// deleted before visible area
+					if(*boost::const_end(lines) < sourceViewer->textArea()->viewport()->firstVisibleLine().line)	// deleted before visible area
 						invalidate();
 				}
 			}
@@ -299,7 +299,7 @@ namespace ascension {
 			/// @see graphics#font#VisualLinesListener#visualLinesInserted
 			void LineNumberRuler::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
 				if(const SourceViewer* const sourceViewer = viewer()) {
-					if(*boost::const_end(lines) < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// inserted before visible area
+					if(*boost::const_end(lines) < sourceViewer->textArea()->viewport()->firstVisibleLine().line)	// inserted before visible area
 						invalidate();
 				}
 			}
@@ -309,7 +309,7 @@ namespace ascension {
 					SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT {
 				if(const SourceViewer* const sourceViewer = viewer()) {
 					if(sublinesDifference != 0) {	// number of visual lines was changed
-						if(*boost::const_end(lines) < sourceViewer->textArea().textRenderer().viewport()->firstVisibleLine().line)	// changed before visible area
+						if(*boost::const_end(lines) < sourceViewer->textArea()->viewport()->firstVisibleLine().line)	// changed before visible area
 							invalidate();
 					}
 				}
@@ -322,14 +322,12 @@ namespace ascension {
 				if(width_ == boost::none) {
 					const graphics::Scalar interiorWidth = paddingStart_ + paddingEnd_;
 
-					const std::shared_ptr<const graphics::font::Font> font((font_.get() != nullptr) ? font_ : viewer()->textArea().textRenderer().defaultFont());
+					const std::shared_ptr<const graphics::font::Font> font((font_.get() != nullptr) ? font_ : viewer()->textArea()->textRenderer()->defaultFont());
 					std::unique_ptr<graphics::RenderingContext2D> context(widgetapi::createRenderingContext(*viewer()));
 					LineNumberRuler& self = *const_cast<LineNumberRuler*>(this);
 					self.updateNumberOfDigits();
-					graphics::Scalar contentWidth = computeContentWidth(*context, font, boost::get(numberOfDigits_),
-						boost::fusion::at_key<presentation::styles::WritingMode>(
-							static_cast<const presentation::styles::ComputedValue<presentation::TextToplevelStyle>::type&>(
-								viewer()->presentation().computedTextToplevelStyle())), numberSubstitution_);
+					graphics::Scalar contentWidth = computeContentWidth(*context, font,
+						boost::get(numberOfDigits_), viewer()->textArea()->textRenderer()->blockFlowDirection(), numberSubstitution_);
 					const graphics::Scalar minimumContentWidth = context->fontMetrics(font)->averageCharacterWidth() * boost::get(numberOfDigits_);
 					contentWidth = std::max(contentWidth, minimumContentWidth);
 

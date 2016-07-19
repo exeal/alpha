@@ -83,7 +83,7 @@ namespace alpha {
 		EditorPane* lastPane() const;
 		// BufferList signals
 		void bufferAboutToBeRemoved(BufferList& buffers, Buffer& buffer);
-		void bufferAdded(BufferList& buffers, Buffer& buffer);
+		void bufferAdded(BufferList& buffers, std::shared_ptr<Buffer> buffer);
 		// EditorView signals
 		bool viewFocused(GdkEventFocus* event);
 		// Gtk.Widget

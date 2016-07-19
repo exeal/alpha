@@ -17,13 +17,13 @@ namespace ascension {
 	namespace viewer {
 		namespace {
 			inline std::shared_ptr<const graphics::font::TextViewport> viewport(const TextViewer& textViewer) BOOST_NOEXCEPT {
-				return textViewer.textArea().textRenderer().viewport();
+				return textViewer.textArea()->viewport();
 			}
 
 			template<typename Point>	// a 'Point' should have the copy-constructor
 			inline Point viewToView(const TextViewer& textViewer, const Point& pointInViewport, bool toViewer) {
 				Point pointInViewer(pointInViewport);
-				auto offset(graphics::geometry::origin(textViewer.textArea().contentRectangle()));
+				auto offset(graphics::geometry::origin(textViewer.textArea()->contentRectangle()));
 				if(!toViewer)
 					graphics::geometry::scale(
 					graphics::geometry::_from = offset, graphics::geometry::_to = offset,

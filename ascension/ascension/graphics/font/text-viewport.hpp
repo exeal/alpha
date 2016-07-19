@@ -41,20 +41,21 @@ namespace ascension {
 			class TextViewport;
 			class UseCalculatedLayoutTag;
 
-			namespace detail {
-				std::shared_ptr<TextViewport> createTextViewport(TextRenderer& textRenderer);
-			}
-
 			/**
 			 */
 			class TextViewport : public TextViewportBase, public VisualLinesListener, private boost::noncopyable {
 			public:
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				TextViewport(std::weak_ptr<TextRenderer> textRenderer, const FontRenderContext& frc);
+#else
+				explicit TextViewport(std::weak_ptr<TextRenderer> textRenderer);
+#endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				~TextViewport() BOOST_NOEXCEPT;
 
 				/// @name Text Renderer
 				/// @{
-				TextRenderer& textRenderer() BOOST_NOEXCEPT;
-				const TextRenderer& textRenderer() const BOOST_NOEXCEPT;
+				std::weak_ptr<TextRenderer> textRenderer() BOOST_NOEXCEPT;
+				std::weak_ptr<const TextRenderer> textRenderer() const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Notifications
@@ -107,11 +108,6 @@ namespace ascension {
 				/// @}
 
 			private:
-				TextViewport(TextRenderer& textRenderer
-#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-					, const FontRenderContext& frc
-#endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				);
 				void adjustBpdScrollPositions() BOOST_NOEXCEPT;
 				ScrollOffset calculateBpdScrollPosition(const boost::optional<VisualLine>& line) const BOOST_NOEXCEPT;
 				void documentAccessibleRegionChanged(const kernel::Document& document);
@@ -139,13 +135,10 @@ namespace ascension {
 				void visualLinesModified(
 					const boost::integer_range<Index>& lines, SignedIndex sublinesDifference,
 					bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT;
-				// Presentation.ComputedTextToplevelStyleChangedSignal
-				void computedTextToplevelStyleChanged(
-					const presentation::Presentation& presentation,
-					const presentation::DeclaredTextToplevelStyle& previouslyDeclared,
-					const presentation::ComputedTextToplevelStyle& previouslyComputed);
+				// TextRenderer.WritingModesChangedSignal
+				void writingModesChanged(const TextRenderer& textRenderer);
 			private:
-				TextRenderer& textRenderer_;
+				std::weak_ptr<TextRenderer> textRenderer_;
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				boost::flyweight<FontRenderContext> fontRenderContext_;
 #endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -174,9 +167,8 @@ namespace ascension {
 				ResizedSignal resizedSignal_;
 				ScrolledSignal scrolledSignal_;
 				ScrollPropertiesChangedSignal scrollPropertiesChangedSignal_;
-				boost::signals2::scoped_connection computedTextToplevelStyleChangedConnection_,
+				boost::signals2::scoped_connection writingModesChangedConnection_,
 					documentAccessibleRegionChangedConnection_, defaultFontChangedConnection_;
-				friend std::shared_ptr<TextViewport> detail::createTextViewport(TextRenderer& textRenderer);
 			};
 
 			typedef ascension::detail::MutexWithClass<
@@ -216,8 +208,7 @@ namespace ascension {
 			/// @{
 			Point lineStartEdge(const TextViewport& viewport, const VisualLine& line);
 			Point lineStartEdge(TextViewport& viewport, const VisualLine& line, const UseCalculatedLayoutTag&);
-			VisualLine locateLine(const TextViewport& viewport,
-				const Point& p, bool* snapped = nullptr) BOOST_NOEXCEPT;
+			VisualLine locateLine(const TextViewport& viewport, const Point& p, bool* snapped = nullptr);
 			Point modelToView(const TextViewport& viewport, const TextHit<kernel::Position>& position/*, bool fullSearchBpd*/);
 			TextHit<kernel::Position> viewToModel(
 				const TextViewport& viewport, const Point& point,
@@ -291,12 +282,12 @@ namespace ascension {
 			}
 
 			/// Returns @c TextRenderer object.
-			inline TextRenderer& TextViewport::textRenderer() BOOST_NOEXCEPT {
+			inline std::weak_ptr<TextRenderer> TextViewport::textRenderer() BOOST_NOEXCEPT {
 				return textRenderer_;
 			}
 
 			/// Returns @c TextRenderer object.
-			inline const TextRenderer& TextViewport::textRenderer() const BOOST_NOEXCEPT {
+			inline std::weak_ptr<const TextRenderer> TextViewport::textRenderer() const BOOST_NOEXCEPT {
 				return textRenderer_;
 			}
 

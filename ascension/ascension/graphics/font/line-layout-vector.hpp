@@ -10,8 +10,7 @@
 #define ASCENSION_LINE_LAYOUT_VECTOR_HPP
 #include <ascension/corelib/detail/listeners.hpp>
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
-#include <ascension/kernel/document-observers.hpp>
-#include <ascension/kernel/partition.hpp>
+#include <ascension/kernel/document.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/graphics/geometry/common.hpp>
 #include <boost/range/algorithm/find_if.hpp>

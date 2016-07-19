@@ -71,23 +71,13 @@ namespace alpha {
 	 * @throw std#invalid_argument @a name is empty
 	 */
 	Buffer::Buffer(const Glib::ustring& name) : name_(BufferList::instance().makeUniqueName(name)) {
-		presentation_.reset(new ascension::presentation::Presentation(*this));
+		presentation_ = std::make_shared<ascension::presentation::Presentation>(*this);
 		textFile_.reset(new ascension::kernel::fileio::TextFileDocumentInput(*this));
 	}
 
 	/// Returns the @c NameChangedSignal signal connector.
 	ascension::SignalConnector<Buffer::NameChangedSignal> Buffer::nameChangedSignal() BOOST_NOEXCEPT {
 		return nameChangedSignal_;
-	}
-
-	/// Returns the presentation object of Ascension.
-	ascension::presentation::Presentation& Buffer::presentation() BOOST_NOEXCEPT {
-		return *presentation_;
-	}
-
-	/// Returns the presentation object of Ascension.
-	const ascension::presentation::Presentation& Buffer::presentation() const BOOST_NOEXCEPT {
-		return *presentation_;
 	}
 
 	/**
