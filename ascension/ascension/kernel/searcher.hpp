@@ -13,6 +13,7 @@
 #ifndef ASCENSION_NO_UNICODE_COLLATION
 #	include <ascension/corelib/text/collator.hpp>
 #endif // !ASCENSION_NO_UNICODE_COLLATION
+#include <ascension/kernel/bookmarker.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #ifndef ASCENSION_NO_REGEX
 #	include <ascension/corelib/regex.hpp>

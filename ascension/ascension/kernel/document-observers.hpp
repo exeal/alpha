@@ -11,17 +11,15 @@
 
 namespace ascension {
 	namespace kernel {
-
 		class Position;
 		class Document;
 		class DocumentChange;
 		class DocumentPropertyKey;
-		class Bookmarker;
 
 		/**
 		 * A listener notified about the document change.
-		 * @see DocumentChange, Document#addListener, Document#addPrenotifiedListener,
-		 *      Document#removeListener, Document#removePrenotifiedListener
+		 * @see DocumentChange, Document#addListener, Document#addPrenotifiedListener, Document#removeListener,
+		 *      Document#removePrenotifiedListener
 		 */
 		class DocumentListener {
 		public:
@@ -36,8 +34,8 @@ namespace ascension {
 			/**
 			 * The text was deleted or inserted.
 			 * @param document The document
-			 * @param change The modification content. Both @c change.erasedRegion() and
-			 *               @c change.insertedRegion() may return an empty
+			 * @param change The modification content. Both @c change.erasedRegion() and @c change.insertedRegion() may
+			 *               return an empty
 			 */
 			virtual void documentChanged(const Document& document, const DocumentChange& change) = 0;
 			friend class Document;
@@ -45,8 +43,8 @@ namespace ascension {
 
 #if 0
 		/**
-		 * Interface for objects which are interested in getting informed about changes of a
-		 * document's compound change.
+		 * Interface for objects which are interested in getting informed about changes of a document's compound
+		 * change.
 		 * @see Document#beginCompoundChange
 		 */
 		class CompoundChangeListener {
@@ -65,8 +63,8 @@ namespace ascension {
 		};
 #endif
 		/**
-		 * Interface for objects which are interested in getting informed about undo/redo operation
-		 * invocation of document.
+		 * Interface for objects which are interested in getting informed about undo/redo operation invocation of
+		 * document.
 		 * @see Document#beginCompoundChange, Document#undo
 		 */
 		class DocumentRollbackListener {
@@ -85,24 +83,6 @@ namespace ascension {
 				const Document& document, const Position& resultPosition) = 0;
 			friend class Document;
 		};
-
-		/**
-		 * Interface for objects which are interested in getting informed about change of bookmarks
-		 * of the document.
-		 * @see Bookmarker, Bookmarker#addListener, Bookmarker#removeListener
-		 */
-		class BookmarkListener {
-		private:
-			/**
-			 * The bookmark on @a line was set or removed. Note that this is not called when the
-			 * bookmarks were changed by the document's change.
-			 */
-			virtual void bookmarkChanged(Index line) = 0;
-			/// All bookmarks were removed.
-			virtual void bookmarkCleared() = 0;
-			friend class Bookmarker;
-		};
-
 	}
 }
 

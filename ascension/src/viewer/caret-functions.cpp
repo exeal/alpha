@@ -17,6 +17,7 @@
 #include <ascension/graphics/geometry/rectangle-sides.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/kernel/document-input.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>

@@ -10,6 +10,7 @@
 #include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>	// text.ucd.BinaryProperty
+#include <ascension/kernel/bookmarker.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/locations.hpp>

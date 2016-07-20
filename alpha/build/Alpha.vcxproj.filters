@@ -590,6 +590,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\text-area-rendering-strategy.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\bookmarker.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1368,6 +1371,15 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area-rendering-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\bookmarker.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\document-input.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\document-exceptions.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

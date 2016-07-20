@@ -10,23 +10,28 @@
 #include <ascension/config.hpp>				// ASCENSION_DEFAULT_NEWLINE
 #include <ascension/direction.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
-#include <ascension/corelib/detail/gap-vector.hpp>	// detail.GapVector
+#include <ascension/corelib/detail/gap-vector.hpp>
 #include <ascension/corelib/detail/listeners.hpp>
 #include <ascension/corelib/detail/scope-guard.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
 #include <ascension/corelib/signals.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/newline.hpp>
+#include <ascension/kernel/document-exceptions.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/partition.hpp>
 #ifdef ASCENSION_OS_POSIX
 #	include <sys/stat.h>	// for POSIX environment
 #endif
-#include <iostream>
+#include <iosfwd>
+#include <list>
 #include <map>
+#include <memory>
 #include <set>
-#include <boost/iterator/iterator_facade.hpp>
-#include <boost/optional.hpp>
+#include <utility>
+#include <boost/core/noncopyable.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
 
 namespace ascension {
 	namespace text {
@@ -46,8 +51,10 @@ namespace ascension {
 		} // namespace detail
 
 		class AbstractPoint;
-		class Point;
+		class Bookmarker;
 		class Document;
+		class DocumentInput;
+		class Point;
 
 		/**
 		 * A changed content of the document.
@@ -77,134 +84,6 @@ namespace ascension {
 		 * @see Document#property, Document#setProperty
 		 */
 		class DocumentPropertyKey : private boost::noncopyable {};
-
-		/**
-		 * Base class of the exceptions represent @c Document#replace could not change the document
-		 * because of its property.
-		 * @see ReadOnlyDocumentException, DocumentInput#ChangeRejectedException
-		 */
-		class DocumentCantChangeException {
-		public:
-			virtual ~DocumentCantChangeException();
-		protected:
-			DocumentCantChangeException();
-		};
-
-		/// Thrown when the read only document is about to be modified.
-		class ReadOnlyDocumentException : public DocumentCantChangeException, public IllegalStateException {
-		public:
-			ReadOnlyDocumentException();
-			~ReadOnlyDocumentException() BOOST_NOEXCEPT;
-		};
-
-		/**
-		 * Thrown when the caller accessed inaccessible region of the document.
-		 * Document#accessibleRegion, Document#erase, Document#insert
-		 */
-		class DocumentAccessViolationException : public DocumentCantChangeException, public std::invalid_argument {
-		public:
-			DocumentAccessViolationException();
-			~DocumentAccessViolationException() throw();
-		};
-
-		/**
-		 * Provides information about a document input.
-		 * @see Document
-		 */
-		class DocumentInput {
-		public:
-			typedef
-#ifdef BOOST_OS_WINDOWS
-				std::wstring
-#else // ASCENSION_OS_POSIX
-				std::string
-#endif
-				LocationType;
-			/**
-			 * Thrown if @c DocumentInput rejected the change of the document. For details, see the
-			 * documentation of @c Document class.
-			 * @see Document#redo, Document#replace, Document#resetContent, Document#undo,
-			 *      DocumentInput#documentAboutToBeChanged
-			 */
-			class ChangeRejectedException : public DocumentCantChangeException {
-			public:
-				ChangeRejectedException();
-			};
-		public:
-			/// Destructor.
-			virtual ~DocumentInput() BOOST_NOEXCEPT {}
-			/// Returns the character encoding of the document input.
-			virtual std::string encoding() const BOOST_NOEXCEPT = 0;
-			/// Returns a string represents the location of the document input or an empty string.
-			virtual LocationType location() const BOOST_NOEXCEPT = 0;
-			/// Returns the default newline of the document. The returned value can be neighter
-			/// @c text#Newline#USE_INTRINSIC_VALUE nor @c text#Newline#USE_DOCUMENT_INPUT.
-			virtual text::Newline newline() const BOOST_NOEXCEPT = 0;
-		private:
-			virtual bool isChangeable(const Document& document) const BOOST_NOEXCEPT = 0;
-			virtual void postFirstDocumentChange(const Document& document) BOOST_NOEXCEPT = 0;
-			friend class Document;
-		};
-
-		/**
-		 * A @c Bookmarker manages bookmarks of the document.
-		 * @note This class is not intended to be subclassed.
-		 * @see Document#bookmarker, locations#nextBookmark
-		 */
-		class Bookmarker : private DocumentListener, private boost::noncopyable {
-		public:
-			/// A @c Bookmarker#Iterator enumerates the all marked lines.
-			class Iterator : public boost::iterators::iterator_facade<
-				Iterator, Index, boost::bidirectional_traversal_tag, Index, std::ptrdiff_t> {
-			private:
-				Iterator(ascension::detail::GapVector<Index>::const_iterator impl) : impl_(impl) {}
-				ascension::detail::GapVector<Index>::const_iterator impl_;
-				// boost.iterators.iterator_facade requirements
-				friend class boost::iterators::iterator_core_access;
-				void decrement() {--impl_;}
-				value_type dereference() const {return *impl_;}
-				bool equal(const Iterator& other) const {return impl_ == other.impl_;}
-				void increment() {++impl_;}
-//				bool less(const Iterator& other) const {return impl_ < other.impl_;}
-				friend class Bookmarker;
-			};
-
-		public:
-			~Bookmarker() BOOST_NOEXCEPT;
-
-			/// @name Marks
-			/// @{
-			void clear() BOOST_NOEXCEPT;
-			bool isMarked(Index line) const;
-			void mark(Index line, bool set = true);
-			std::size_t numberOfMarks() const BOOST_NOEXCEPT;
-			void toggle(Index line);
-			/// @}
-
-			/// @name Enumerations
-			/// @{
-			Iterator begin() const;
-			Iterator end() const;
-			boost::optional<Index> next(Index from, Direction direction, bool wrapAround = true, std::size_t marks = 1) const;
-			/// @}
-
-			/// @name Listeners
-			/// @{
-			void addListener(BookmarkListener& listener);
-			void removeListener(BookmarkListener& listener);
-			/// @}
-		private:
-			ascension::detail::GapVector<Index>::iterator find(Index line) const BOOST_NOEXCEPT;
-			// DocumentListener
-			void documentAboutToBeChanged(const Document& document);
-			void documentChanged(const Document& document, const DocumentChange& change);
-		private:
-			explicit Bookmarker(Document& document) BOOST_NOEXCEPT;
-			Document& document_;
-			ascension::detail::GapVector<Index> markedLines_;
-			ascension::detail::Listeners<BookmarkListener> listeners_;
-			friend class Document;
-		};
 
 		// the documentation is at document.cpp
 		class Document : public detail::PointCollection<AbstractPoint>,
@@ -310,6 +189,7 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 			/// @name Undo/Redo and Compound Changes
+			/// @{
 			void beginCompoundChange();
 			void clearUndoBuffer() BOOST_NOEXCEPT;
 			void endCompoundChange();
