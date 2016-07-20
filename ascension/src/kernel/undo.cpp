@@ -7,7 +7,9 @@
 
 #include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/utility.hpp>	// detail.ValueSaver
+#include <ascension/kernel/bookmarker.hpp>
 #include <ascension/kernel/document.hpp>
+#include <ascension/kernel/document-input.hpp>
 #include <ascension/kernel/point.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/find_first_of.hpp>

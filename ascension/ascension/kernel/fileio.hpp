@@ -12,6 +12,7 @@
 #include <ascension/config.hpp>				// ASCENSION_NO_GREP
 #include <ascension/platforms.hpp>
 #include <ascension/kernel/document.hpp>
+#include <ascension/kernel/document-input.hpp>
 #include <ascension/corelib/encoder.hpp>	// encoding.Encoder.*
 #if defined(BOOST_OS_WINDOWS)
 #	include <ascension/win32/windows.hpp>

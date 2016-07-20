@@ -9,6 +9,7 @@
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
 #include <ascension/kernel/document.hpp>
+#include <ascension/kernel/document-input.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/kernel/searcher.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
