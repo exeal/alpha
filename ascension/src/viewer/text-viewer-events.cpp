@@ -29,18 +29,8 @@ namespace ascension {
 	namespace viewer {
 		void TextViewer::doShowContextMenu(void* nativeEvent) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			const Gdk::Event abstractEvent(Glib::wrap(static_cast<GdkEvent*>(nativeEvent)));
-			bool byKeyboard;
-			switch(abstractEvent.gobj()->type) {
-				case Gdk::BUTTON_RELEASE:
-					byKeyboard = false;
-					break;
-				case Gdk::KEY_RELEASE:
-					byKeyboard = true;
-					break;
-				default:
-					return;
-			}
+			const Gdk::Event abstractEvent(Glib::wrap(static_cast<GdkEvent*>(nativeEvent), true));
+			const bool byKeyboard = abstractEvent.gobj()->type == Gdk::KEY_PRESS || abstractEvent.gobj()->type == Gdk::KEY_RELEASE;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
