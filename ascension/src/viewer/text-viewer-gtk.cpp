@@ -18,6 +18,7 @@
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
+#include <glibmm/i18n.h>
 
 
 namespace ascension {
@@ -493,6 +494,40 @@ namespace ascension {
 
 		void TextViewer::showContextMenu(const widgetapi::event::LocatedUserInput& input, void* nativeEvent) {
 			// TODO: Not implemented.
+
+			Gtk::Menu menu;
+			menu.get_style_context()->add_class(GTK_STYLE_CLASS_CONTEXT_MENU);
+			menu.attach_to_widget(*this);
+
+			Gtk::MenuItem cut(_("Cu_t"), true);
+			cut.signal_activate().connect([]() {});
+			cut.set_sensitive(true);
+			cut.show();
+			menu.append(cut);
+
+			bool invoked = false;
+			if(nativeEvent != nullptr) {
+				GdkEvent* const e = static_cast<GdkEvent*>(nativeEvent);
+				if(e->type == Gdk::BUTTON_PRESS || e->type == Gdk::DOUBLE_BUTTON_PRESS || e->type == Gdk::TRIPLE_BUTTON_PRESS || e->type == Gdk::BUTTON_RELEASE) {
+					GdkEventButton* const e = static_cast<GdkEventButton*>(nativeEvent);
+					::g_object_ref(e->device);
+					Glib::RefPtr<Gdk::Device> device(Glib::wrap(e->device));
+					menu.popup(e->button, e->time, device);
+					invoked = true;
+				}
+			}
+			if(!invoked) {
+				menu.popup(
+					[&input](int& x, int&y, bool& pushIn) {
+						x = static_cast<int>(graphics::geometry::x(input.location()));
+						y = static_cast<int>(graphics::geometry::y(input.location()));
+						pushIn = false;
+					},
+					0, ::gtk_get_current_event_time());
+				menu.select_first(false);
+			}
+
+			menu.detach();
 		}
 
 		namespace detail {

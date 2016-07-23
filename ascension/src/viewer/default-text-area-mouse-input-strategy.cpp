@@ -10,7 +10,7 @@
 
 // TODO: This code does not support platforms other than Win32.
 
-#include <ascension/corelib/text/break-iterator.hpp>
+#include <ascension/corelib/text/word-break-iterator.hpp>
 #include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>

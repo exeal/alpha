@@ -7,7 +7,9 @@
 
 #include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
+#include <ascension/corelib/text/grapheme-break-iterator.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
+#include <ascension/corelib/text/word-break-iterator.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-input.hpp>
 #include <ascension/kernel/point.hpp>

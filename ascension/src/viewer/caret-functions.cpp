@@ -8,8 +8,9 @@
  */
 
 #include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
-#include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/corelib/text/grapheme-break-iterator.hpp>
+#include <ascension/corelib/text/word-break-iterator.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
