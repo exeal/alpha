@@ -9,7 +9,7 @@
  */
 
 #include <ascension/corelib/numeric-range-algorithm/clamp.hpp>
-#include <ascension/corelib/text/break-iterator.hpp>	// text.GraphemeBreakIterator
+#include <ascension/corelib/text/grapheme-break-iterator.hpp>
 #include <ascension/graphics/font/baseline-iterator.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-layout.hpp>

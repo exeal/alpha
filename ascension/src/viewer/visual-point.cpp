@@ -7,7 +7,7 @@
  * @date 2011-2015
  */
 
-#include <ascension/corelib/text/break-iterator.hpp>
+#include <ascension/corelib/text/grapheme-break-iterator.hpp>
 #include <ascension/corelib/text/identifier-syntax.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>

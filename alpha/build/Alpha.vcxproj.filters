@@ -153,6 +153,9 @@
     <Filter Include="ascension\Header Files\graphics\geometry\algorithms">
       <UniqueIdentifier>{f56f726d-54a0-4b16-a893-1803b9cdc642}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\corelib\text\detail">
+      <UniqueIdentifier>{6ca410af-06de-4649-aee5-31734fa9d1bb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -277,9 +280,6 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\regex.cpp">
       <Filter>ascension\Source Files\corelib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp">
-      <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\text\collator.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
@@ -592,6 +592,18 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\kernel\bookmarker.cpp">
       <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\grapheme-break-iterator.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\line-break-iterator.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\sentence-break-iterator.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\word-break-iterator.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1380,6 +1392,24 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\kernel\document-exceptions.hpp">
       <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\detail\break-iterator-facade.hpp">
+      <Filter>ascension\Header Files\corelib\text\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\line-break-iterator.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\sentence-break-iterator.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\word-break-iterator.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\grapheme-break-iterator.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\detail\break-iterator-scan-base.hpp">
+      <Filter>ascension\Header Files\corelib\text\detail</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

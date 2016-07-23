@@ -190,7 +190,6 @@
     <ClCompile Include="..\..\ascension\src\content-assist\default-content-assistant.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\identifiers-proposal-processor.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\string-piece-gtk.cpp" />
-    <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\character-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp">
@@ -198,8 +197,12 @@
       </ShowIncludes>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\text\collator.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\grapheme-break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\identifier-syntax.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\line-break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\normalizer.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\sentence-break-iterator.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\word-break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\actual-text-styles.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\baseline-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\default-special-character-renderer.cpp">
@@ -408,12 +411,18 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character-property.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\collator.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\detail\break-iterator-facade.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\detail\break-iterator-scan-base.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\grapheme-break-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\identifier-syntax.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\line-break-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\newline.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\normalizer.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\sentence-break-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\string-character-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\utf.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\word-break-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\timer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp" />
     <ClInclude Include="..\..\ascension\ascension\direction.hpp" />

@@ -1,157 +1,25 @@
 /**
- * @file break-iterator.cpp
+ * @file word-break-iterator.cpp
+ * Implements @c WordBreakIterator class.
+ * @author exeal
  * @date 2006-2007 was iterator.cpp
  * @date 2007-2014
- * @author exeal
+ * @date-2016-07-24 Separated from break-iterator.hpp.
  */
 
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
-#include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/corelib/text/word-break-iterator.hpp>
+#include <ascension/corelib/text/detail/break-iterator-scan-base.hpp>
 #include <boost/core/ignore_unused.hpp>
-#include <memory>	// std.unique_ptr
 
 #if ASCENSION_UAX29_REVISION_NUMBER > 11
 #	error "These codes are based on old version of UAX #29"
 #endif
 
-
 namespace ascension {
 	namespace text {
-		// GraphemeBreakIteratorBase //////////////////////////////////////////////////////////////////////////////////
-
-		void GraphemeBreakIteratorBase::next(std::size_t n) {
-			using ucd::GraphemeClusterBreak;
-			if(!characterIterator_.hasNext())	// (GB2)
-				return;
-			CodePoint prevCP, cp = *characterIterator_;
-			int prev, current = GraphemeClusterBreak::of(cp);
-			while(n > 0 && (++characterIterator_).hasNext()) {	// (GB2)
-				prevCP = cp;
-				prev = current;
-				current = GraphemeClusterBreak::of(cp = *characterIterator_);
-				if(prev == GraphemeClusterBreak::CR) {	// (GB3, GB4)
-					if(current != GraphemeClusterBreak::LF)
-						--n;
-				} else if(prev == GraphemeClusterBreak::CONTROL || prev == GraphemeClusterBreak::LF	// (GB4)
-						|| current == GraphemeClusterBreak::CONTROL || current == GraphemeClusterBreak::CR || current == GraphemeClusterBreak::LF)	// (GB5)
-					--n;
-				else if(prev == GraphemeClusterBreak::L) {
-					if(current != GraphemeClusterBreak::L && current != GraphemeClusterBreak::V && current != GraphemeClusterBreak::LV
-							&& current != GraphemeClusterBreak::LVT && current != GraphemeClusterBreak::EXTEND)	// (GB6, GB9)
-						--n;
-				} else if(prev == GraphemeClusterBreak::LV || prev == GraphemeClusterBreak::V) {
-					if(current != GraphemeClusterBreak::V && current != GraphemeClusterBreak::T && current != GraphemeClusterBreak::EXTEND)	// (GB7, GB9)
-						--n;
-				} else if(prev == GraphemeClusterBreak::LVT || prev == GraphemeClusterBreak::T) {
-					if(current != GraphemeClusterBreak::T && current != GraphemeClusterBreak::EXTEND)	// (GB8, GB9)
-						--n;
-				} else if(current != GraphemeClusterBreak::EXTEND)	// (GB9)
-					--n;
-			}
-		}
-
-		void GraphemeBreakIteratorBase::previous(std::size_t n) {
-			using ucd::GraphemeClusterBreak;
-			if(!characterIterator_.hasPrevious() || !(--characterIterator_).hasPrevious())	// (GB1)
-				return;
-			CodePoint prevCP, cp = *characterIterator_;
-			int prev, current = GraphemeClusterBreak::of(cp);
-			do {
-				prevCP = cp;
-				prev = current;
-				current = GraphemeClusterBreak::of(cp = *--characterIterator_);
-				if(prev == GraphemeClusterBreak::LF) {	// (GB3, GB5)
-					if(current != GraphemeClusterBreak::CR)
-						--n;
-				} else if(current == GraphemeClusterBreak::CONTROL || current == GraphemeClusterBreak::CR || current == GraphemeClusterBreak::LF	// (GB4)
-						|| prev == GraphemeClusterBreak::CONTROL || prev == GraphemeClusterBreak::CR)	// (GB5)
-					--n;
-				else if(current == GraphemeClusterBreak::L) {
-					if(prev != GraphemeClusterBreak::L && prev != GraphemeClusterBreak::V && prev != GraphemeClusterBreak::LV
-							&& prev != GraphemeClusterBreak::LVT && prev != GraphemeClusterBreak::EXTEND)	// (GB6, GB9)
-						--n;
-				} else if(current == GraphemeClusterBreak::LV || current == GraphemeClusterBreak::V) {
-					if(prev != GraphemeClusterBreak::V && prev != GraphemeClusterBreak::T && prev != GraphemeClusterBreak::EXTEND)	// (GB7, GB9)
-						--n;
-				} else if(current == GraphemeClusterBreak::LVT || current == GraphemeClusterBreak::T) {
-					if(prev != GraphemeClusterBreak::T && prev != GraphemeClusterBreak::EXTEND)	// (GB8, GB9)
-						--n;
-				} else if(prev != GraphemeClusterBreak::EXTEND)	// (GB9)
-					--n;
-				if(n == 0) {
-					++characterIterator_;
-					return;
-				}
-			} while(characterIterator_.hasPrevious());	// (GB1)
-		}
-
-		/// @internal Implements @c GraphemeBreakIterator#isBoundary
-		bool GraphemeBreakIteratorBase::isBoundary(const detail::CharacterIterator& at) const {
-			using ucd::GraphemeClusterBreak;
-			if(!at.hasNext() || !at.hasPrevious())	// (GB1, GB2)
-				return true;
-			const int p = GraphemeClusterBreak::of(*at);
-			if(p == GraphemeClusterBreak::CR || p == GraphemeClusterBreak::CONTROL)	// (GB5)
-				return true;
-			detail::CharacterIterator i(at);
-			--i;
-			const int prev = GraphemeClusterBreak::of(*i);
-			if(prev == GraphemeClusterBreak::CR)
-				return p != GraphemeClusterBreak::LF;	// (GB3, GB4)
-			else if(prev == GraphemeClusterBreak::LF || prev == GraphemeClusterBreak::CONTROL || p == GraphemeClusterBreak::LF)	// (GB4, GB5)
-				return true;
-			else if(prev == GraphemeClusterBreak::L)	// (GB6)
-				return p != GraphemeClusterBreak::L && p != GraphemeClusterBreak::V && p != GraphemeClusterBreak::LV && p != GraphemeClusterBreak::LVT;
-			else if(prev == GraphemeClusterBreak::LV || prev == GraphemeClusterBreak::V)	// (GB7)
-				return p != GraphemeClusterBreak::V && p != GraphemeClusterBreak::T;
-			else if(prev == GraphemeClusterBreak::LVT || prev == GraphemeClusterBreak::T)	// (GB8)
-				return p != GraphemeClusterBreak::T;
-			return p != GraphemeClusterBreak::EXTEND;	// (GB9, 10)
-		}
-
-
-		// WordBreakIteratorBase //////////////////////////////////////////////////////////////////////////////////////
-
 		namespace {
-			/// @internal Advances @a i to the next character neither Extend nor Format.
-			int nextBase(detail::CharacterIterator& i) {
-				if(!i.hasNext())
-					return ucd::GeneralCategory::LAST_VALUE;
-				CodePoint cp = *i;
-				if(cp == LINE_FEED || cp == CARRIAGE_RETURN || cp == NEXT_LINE || cp == LINE_SEPARATOR || cp == PARAGRAPH_SEPARATOR) {	// !Sep
-					++i;
-					return ucd::GeneralCategory::LAST_VALUE;
-				}
-				int gc = ucd::GeneralCategory::LAST_VALUE;
-				while((++i).hasNext()) {
-					gc = ucd::GeneralCategory::of(cp = *i);
-					if(gc != ucd::GeneralCategory::FORMAT && !ucd::BinaryProperty::is<ucd::BinaryProperty::GRAPHEME_EXTEND>(cp))
-						break;
-				}
-				return gc;
-			}
-
-			/// @internal Advances @a i to the previous character neither Extend nor Format.
-			int previousBase(detail::CharacterIterator& i) {
-				if(!i.hasPrevious())
-					return ucd::GeneralCategory::of(*i);
-				int gc = ucd::GeneralCategory::LAST_VALUE;
-				CodePoint cp;
-				do {
-					cp = *--i;
-					if(gc != ucd::GeneralCategory::LAST_VALUE
-							&& (cp == LINE_FEED || cp == CARRIAGE_RETURN || cp == NEXT_LINE || cp == LINE_SEPARATOR || cp == PARAGRAPH_SEPARATOR)) {	// !Sep
-						++i;
-						break;
-					}
-							gc = ucd::GeneralCategory::of(cp);
-					if(gc != ucd::GeneralCategory::FORMAT && !ucd::BinaryProperty::is<ucd::BinaryProperty::GRAPHEME_EXTEND>(cp))
-						break;
-				} while(i.hasPrevious());
-				return gc;
-			}
-
 			/**
 			 * Returns true if the scripts of the two code points are same. This method assumes that the two code
 			 * points are alphabetical and treats all ASCII characters as Latin scripts.
@@ -180,6 +48,7 @@ namespace ascension {
 			}
 		}
 
+		/// @internal Implements @c WordBreakIterator#next.
 		void WordBreakIteratorBase::next(std::size_t n) {
 			assert(n > 0);
 #define ASCENSION_TRY_RETURN() {if(--n == 0) return;}
@@ -283,6 +152,7 @@ namespace ascension {
 #undef ASCENSION_TRY_RETURN
 		}
 
+		/// @internal Implements @c WordBreakIterator#previous.
 		void WordBreakIteratorBase::previous(std::size_t n) {
 			assert(n > 0);
 #define ASCENSION_TRY_RETURN() {if(--n == 0) return;}
@@ -449,179 +319,6 @@ namespace ascension {
 			if((component & ~BOUNDARY_OF_ALPHANUMERICS) != 0)
 				throw UnknownValueException("component");
 			component_ = component;
-		}
-
-
-		// SentenceBreakIteratorBase //////////////////////////////////////////////////////////////////////////////////
-
-		namespace {
-			/// Tries SB8 rule.
-			bool trySB8(detail::CharacterIterator& i) {
-				detail::CharacterIterator j(i);
-				for(; j.hasNext(); nextBase(j)) {
-					switch(ucd::SentenceBreak::of(*j)) {
-						case ucd::SentenceBreak::O_LETTER:
-						case ucd::SentenceBreak::UPPER:
-						case ucd::SentenceBreak::SEP:
-							break;
-						case ucd::SentenceBreak::LOWER:
-							while(i.offset() < j.offset())
-								nextBase(i);
-							return false;	// (SB8)
-						default:
-							previousBase(i);
-							return true;	// (SB12)
-					}
-				}
-				previousBase(i);
-				return true;	// (SB12)
-			}
-
-			/// Handles after (STerm|ATerm).
-			bool tryToExtendTerm(detail::CharacterIterator& i, bool aTerm) {
-				using ucd::SentenceBreak;
-				assert(i.hasPrevious());
-				bool closeOccured = false;	// true if (STerm|ATerm) Close+
-				bool spOccured = false;		// true if (STerm|ATerm) Sp+ or (STerm|ATerm) Close+ Sp+
-				while(i.hasNext()) {
-					switch(SentenceBreak::of(*i)) {
-					case SentenceBreak::SEP:
-						nextBase(i);
-						return true;	// (SB4)
-					case SentenceBreak::FORMAT:
-						assert(false);
-					case SentenceBreak::SP:
-						spOccured = true;	// (SB9)
-						break;
-					case SentenceBreak::LOWER:
-						return !aTerm;	// (SB8, SB11)
-					case SentenceBreak::UPPER:	// (SB7, SB12)?
-						if(!aTerm || (!closeOccured && !spOccured))
-							return false;	// (SB12)
-						else {
-							detail::CharacterIterator temp(i);
-							previousBase(temp);
-							if(!temp.hasPrevious())
-								return true;	// (SB12)
-							previousBase(temp);
-							return SentenceBreak::of(*temp) != SentenceBreak::UPPER;
-						}
-					case SentenceBreak::O_LETTER:
-						return true;	// (SB12)
-					case SentenceBreak::NUMERIC:
-						if(aTerm && !closeOccured && !spOccured)
-							return false;	// (SB6)
-						nextBase(i);
-						return trySB8(i);	// (SB8?)
-					case SentenceBreak::A_TERM:
-					case SentenceBreak::S_TERM:
-						return false;	// (SB8a)
-					case SentenceBreak::CLOSE:	// (SB8, SB12)?
-						if(!spOccured)
-							closeOccured = true;	// (SB9)
-						else if(aTerm) {
-							nextBase(i);
-							return trySB8(i);	// (SB8?)
-						} else
-							return true;	// (SB12)
-					case SentenceBreak::OTHER:
-						return true;	// (SB12)
-					}
-					nextBase(i);	// (SB5)
-				}
-				return true;	// (SB2)
-			}
-		}	// namespace @0
-
-		void SentenceBreakIteratorBase::next(std::size_t n) {
-			// TODO: not implemented.
-			while(characterIterator_.hasNext()) {
-				if(*characterIterator_ == CARRIAGE_RETURN) {
-					++characterIterator_;
-					if(!characterIterator_.hasNext())
-						return;	// (SB2)
-					if(*characterIterator_ == LINE_FEED)
-						++characterIterator_;	// (SB3)
-					return;	// (SB4)
-				}
-
-				using ucd::SentenceBreak;
-				switch(SentenceBreak::of(*characterIterator_)) {
-					case SentenceBreak::SEP:
-						++characterIterator_;
-						return;	// (SB4)
-					case SentenceBreak::A_TERM:
-						nextBase(characterIterator_);
-						if(tryToExtendTerm(characterIterator_, true))
-							return;	// (SB11)
-						break;
-					case SentenceBreak::S_TERM:
-						nextBase(characterIterator_);
-						if(tryToExtendTerm(characterIterator_, false))
-							return;	// (SB11)
-						break;
-					default:
-						break;	// (SB5, SB12)
-				}
-			}
-			// (SB2)
-		}
-
-		void SentenceBreakIteratorBase::previous(std::size_t n) {
-			// TODO: not implemented.
-		}
-
-		/// @internal Implements @c SentenceBreakIterator#isBoundary
-		bool SentenceBreakIteratorBase::isBoundary(const detail::CharacterIterator& at) const {
-			if(!at.hasNext() || !at.hasPrevious())
-				return true;	// (SB1, SB2)
-			detail::CharacterIterator i(at);
-			if(*at == LINE_FEED) {
-				if(*--i == CARRIAGE_RETURN)
-					return false;	// (SB3)
-				else if(!i.hasPrevious())
-					return true;	// (SB12)
-				const int p = ucd::SentenceBreak::of(*i);
-				if(p == ucd::GraphemeClusterBreak::EXTEND || p == ucd::SentenceBreak::FORMAT)
-					previousBase(i);	// (SB5)
-			} else
-				previousBase(i);	// (SB5)
-			do {
-				switch(ucd::SentenceBreak::of(*i)) {
-					case ucd::SentenceBreak::SEP:
-						return at.offset() - i.offset() == 1;	// (SB4)
-					case ucd::SentenceBreak::A_TERM:
-						nextBase(i);
-						return tryToExtendTerm(i, true) && i.offset() == at.offset();
-					case ucd::SentenceBreak::S_TERM:
-						nextBase(i);
-						return tryToExtendTerm(i, false) && i.offset() == at.offset();
-					default:
-						break;
-				}
-				previousBase(i);
-			} while(i.hasPrevious());
-			return false;	// (SB1)
-		}
-
-		/**
-		 * Sets the word component to search.
-		 * @param component The new component to set
-		 * @throw UnknownValueException @a component is invalid
-		 */
-		void SentenceBreakIteratorBase::setComponent(Component component) {
-			if((component & ~BOUNDARY_OF_SEGMENT) != 0)
-				throw UnknownValueException("component");
-			component_ = component;
-		}
-
-
-		// LineBreakIteratorBase //////////////////////////////////////////////////////////////////////////////////////
-
-		/// @see BreakIterator#isBoundary
-		bool LineBreakIteratorBase::isBoundary(const detail::CharacterIterator& at) const {
-			// TODO: not implemented.
-			return true;
 		}
 	}
 }
