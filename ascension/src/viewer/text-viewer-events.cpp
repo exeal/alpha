@@ -185,7 +185,6 @@ namespace ascension {
 			// TODO: This code is temporary. The following code provides a default implementation of
 			// TODO: "key combination to command" map.
 			using namespace ascension::viewer::widgetapi::event;
-			using namespace ascension::texteditor::commands;
 			static kernel::Position(*const nextCharacterLocation)(const kernel::locations::PointProxy&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
 //			if(hasModifier<UserInput::ALT_DOWN>(input)) {
 //				if(!hasModifier<UserInput::SHIFT_DOWN>(input)
@@ -205,11 +204,22 @@ namespace ascension {
 				case VK_F16:
 #endif
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
-						CharacterDeletionCommand(*this, Direction::BACKWARD)();
+						texteditor::commands::CharacterDeletionCommand(*this, Direction::BACKWARD)();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						WordDeletionCommand(*this, Direction::BACKWARD)();
+						texteditor::commands::WordDeletionCommand(*this, Direction::BACKWARD)();
 					else if(!input.hasModifierOtherThan(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)) && input.hasModifier(widgetapi::event::ALT_DOWN))
-						UndoCommand(*this, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+						texteditor::commands::UndoCommand(*this, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+					break;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				case GDK_KEY_Tab:
+				case GDK_KEY_KP_Tab:
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+				case Qt::Key_Tab:
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				case VK_TAB:
+#endif
+					if(input.modifiers().none())
+						texteditor::commands::CharacterInputCommand(*this, 0x0009u)();
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Clear:
@@ -219,7 +229,7 @@ namespace ascension {
 				case VK_CLEAR:
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						EntireDocumentSelectionCreationCommand(*this)();
+						texteditor::commands::EntireDocumentSelectionCreationCommand(*this)();
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Return:
@@ -233,11 +243,11 @@ namespace ascension {
 				case VK_RETURN:
 #endif
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
-						NewlineCommand(*this)();
+						texteditor::commands::NewlineCommand(*this)();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						NewlineCommand(*this, Direction::BACKWARD)();
+						texteditor::commands::NewlineCommand(*this, Direction::BACKWARD)();
 					else if(input.modifiers() == widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::CONTROL_DOWN, widgetapi::event::SHIFT_DOWN)))
-						NewlineCommand(*this, Direction::FORWARD)();	
+						texteditor::commands::NewlineCommand(*this, Direction::FORWARD)();	
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Escape:
@@ -247,7 +257,7 @@ namespace ascension {
 				case VK_ESCAPE:
 #endif
 					if(input.modifiers() == 0)
-						CancelCommand(*this)();
+						texteditor::commands::CancelCommand(*this)();
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Page_Up:	// 'GDK_KEY_Prior' has same value
@@ -257,7 +267,8 @@ namespace ascension {
 				case VK_PRIOR:
 #endif
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
-						makeCaretMovementCommand(*this, &locations::nextPage, Direction::BACKWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+						texteditor::commands::makeCaretMovementCommand(
+							*this, &locations::nextPage, Direction::BACKWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
 						try {
 							textArea()->viewport()->scrollBlockFlowPage(+1);
@@ -273,7 +284,8 @@ namespace ascension {
 				case VK_NEXT:
 #endif
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
-						makeCaretMovementCommand(*this, &locations::nextPage, Direction::FORWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+						texteditor::commands::makeCaretMovementCommand(
+							*this, &locations::nextPage, Direction::FORWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
 						try {
 							textArea()->viewport()->scrollBlockFlowPage(-1);
@@ -290,9 +302,11 @@ namespace ascension {
 #endif
 					if(!input.hasModifierOtherThan(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::CONTROL_DOWN))) {
 						if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
-							makeCaretMovementCommand(*this, &kernel::locations::beginningOfDocument, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+							texteditor::commands::makeCaretMovementCommand(*this,
+								&kernel::locations::beginningOfDocument, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 						else
-							makeCaretMovementCommand(*this, &locations::beginningOfVisualLine, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+							texteditor::commands::makeCaretMovementCommand(*this,
+								&locations::beginningOfVisualLine, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					}
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -304,9 +318,11 @@ namespace ascension {
 #endif
 					if(!input.hasModifierOtherThan(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::CONTROL_DOWN))) {
 						if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
-							makeCaretMovementCommand(*this, &kernel::locations::endOfDocument, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+							texteditor::commands::makeCaretMovementCommand(*this,
+								&kernel::locations::endOfDocument, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 						else
-							makeCaretMovementCommand(*this, &locations::endOfVisualLine, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+							texteditor::commands::makeCaretMovementCommand(*this,
+								&locations::endOfVisualLine, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					}
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -354,11 +370,11 @@ namespace ascension {
 #endif
 					if(!input.hasModifierOtherThan(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::CONTROL_DOWN))) {
 						if(input.hasModifier(widgetapi::event::SHIFT_DOWN))
-							PasteCommand(*this, input.hasModifier(widgetapi::event::CONTROL_DOWN))();
+							texteditor::commands::PasteCommand(*this, input.hasModifier(widgetapi::event::CONTROL_DOWN))();
 						else if(input.hasModifier(widgetapi::event::CONTROL_DOWN))
 							copySelection(*textArea()->caret(), true);
 						else
-							OvertypeModeToggleCommand(*this)();
+							texteditor::commands::OvertypeModeToggleCommand(*this)();
 					}
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -370,11 +386,11 @@ namespace ascension {
 				case VK_DELETE:
 #endif
 					if(input.modifiers() == widgetapi::event::KeyboardModifiers())
-						CharacterDeletionCommand(*this, Direction::FORWARD)();
+						texteditor::commands::CharacterDeletionCommand(*this, Direction::FORWARD)();
 					else if(input.modifiers() == widgetapi::event::SHIFT_DOWN)
 						cutSelection(*textArea()->caret(), true);
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						WordDeletionCommand(*this, Direction::FORWARD)();
+						texteditor::commands::WordDeletionCommand(*this, Direction::FORWARD)();
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_A:
@@ -384,7 +400,7 @@ namespace ascension {
 				case 'A':
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						EntireDocumentSelectionCreationCommand(*this)();	// ^A -> Select All
+						texteditor::commands::EntireDocumentSelectionCreationCommand(*this)();	// ^A -> Select All
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_C:
@@ -404,7 +420,7 @@ namespace ascension {
 				case 'H':
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;	// ^H -> Backspace
+						texteditor::commands::CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;	// ^H -> Backspace
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_I:
@@ -414,7 +430,7 @@ namespace ascension {
 				case 'I':
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						CharacterInputCommand(*this, 0x0009u)();	// ^I -> Tab
+						texteditor::commands::CharacterInputCommand(*this, 0x0009u)();	// ^I -> Tab
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_J:
@@ -427,7 +443,7 @@ namespace ascension {
 				case 'M':
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						NewlineCommand(*this, boost::none)();	// ^J or ^M -> New Line
+						texteditor::commands::NewlineCommand(*this, boost::none)();	// ^J or ^M -> New Line
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_V:
@@ -437,7 +453,7 @@ namespace ascension {
 				case 'V':
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						PasteCommand(*this, false)();	// ^V -> Paste
+						texteditor::commands::PasteCommand(*this, false)();	// ^V -> Paste
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_X:
@@ -457,7 +473,7 @@ namespace ascension {
 				case 'Y':
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						UndoCommand(*this, true)();	// ^Y -> Redo
+						texteditor::commands::UndoCommand(*this, true)();	// ^Y -> Redo
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Z:
@@ -467,7 +483,7 @@ namespace ascension {
 				case 'Z':
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						UndoCommand(*this, false)();	// ^Z -> Undo
+						texteditor::commands::UndoCommand(*this, false)();	// ^Z -> Undo
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_KP_5:
@@ -480,7 +496,7 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 						if(hasModifier<Qt::KeypadModifier>(input))
 #endif
-						EntireDocumentSelectionCreationCommand(*this)();
+						texteditor::commands::EntireDocumentSelectionCreationCommand(*this)();
 					}
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -491,15 +507,15 @@ namespace ascension {
 				case VK_F12:
 #endif
 					if(input.modifiers() == widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::CONTROL_DOWN | widgetapi::event::SHIFT_DOWN)))
-						CodePointToCharacterConversionCommand(*this)();
+						texteditor::commands::CodePointToCharacterConversionCommand(*this)();
 					break;
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Undo:
-					UndoCommand(*this, false)();
+					texteditor::commands::UndoCommand(*this, false)();
 					break;
 				case GDK_KEY_Redo:
-					UndoCommand(*this, true)();
+					texteditor::commands::UndoCommand(*this, true)();
 					break;
 //				case GDK_KEY_Shift_L:
 //					if(input.hasModifier(widgetapi::event::CONTROL_DOWN) && configuration_.readingDirection == presentation::RIGHT_TO_LEFT)
@@ -516,7 +532,7 @@ namespace ascension {
 					cutSelection(*textArea()->caret(), true);
 					break;
 				case GDK_KEY_Paste:
-					PasteCommand(*this, false)();
+					texteditor::commands::PasteCommand(*this, false)();
 					break;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Copy:
@@ -526,7 +542,7 @@ namespace ascension {
 					cutSelection(textArea().caret(), true);
 					break;
 				case Qt::Key_Paste:
-					PasteCommand(*this, false)();
+					texteditor::commands::PasteCommand(*this, false)();
 					break;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_SHIFT:
