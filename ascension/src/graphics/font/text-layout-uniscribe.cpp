@@ -3207,8 +3207,14 @@ namespace ascension {
 					TextRunImpl::substituteGlyphs(boost::make_iterator_range(textRuns));
 
 					// 4. position glyphs for each text runs
-					for(auto run(std::begin(textRuns)), b(std::begin(textRuns)), e(std::end(textRuns)); run != e; ++run)
-						(*run)->positionGlyphs(context.native(), calculatedStyles[run - b].attribute);
+					{
+						auto calculatedStyle(boost::const_begin(calculatedStyles));
+						BOOST_FOREACH(TextRunImpl* run, textRuns) {
+							while(calculatedStyle < boost::const_end(calculatedStyles) && calculatedStyle->position < boost::const_begin(*run))
+								++calculatedStyle;
+							run->positionGlyphs(context.native(), calculatedStyle->attribute);
+						}
+					}
 
 					// 5. position each text runs
 					const auto tabSize(boost::fusion::at_key<presentation::styles::TabSize>(style()));
