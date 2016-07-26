@@ -51,7 +51,8 @@ BOOST_AUTO_TEST_CASE(literality_test) {
 }
 
 BOOST_AUTO_TEST_CASE(line_counting_test) {
-	BOOST_TEST(ascension::text::calculateNumberOfLines(std::string()) == static_cast<ascension::Index>(0));
+	BOOST_TEST(ascension::text::calculateNumberOfLines(std::string()) == static_cast<ascension::Index>(1));
+	BOOST_TEST(ascension::text::calculateNumberOfLines(std::string(), 0) == static_cast<ascension::Index>(0));
 	BOOST_TEST(ascension::text::calculateNumberOfLines(std::string("xyzzy")) == static_cast<ascension::Index>(1));
 	BOOST_TEST(ascension::text::calculateNumberOfLines(std::string("\n")) == static_cast<ascension::Index>(2));
 	BOOST_TEST(ascension::text::calculateNumberOfLines(std::string("\r\n")) == static_cast<ascension::Index>(2));
