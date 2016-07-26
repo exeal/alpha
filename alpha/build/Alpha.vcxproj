@@ -200,6 +200,7 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\grapheme-break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\identifier-syntax.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\line-break-iterator.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\newline.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\normalizer.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\sentence-break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\word-break-iterator.cpp" />
