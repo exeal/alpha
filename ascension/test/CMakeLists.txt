@@ -49,6 +49,13 @@ add_test(
 
 # corelib.text
 add_executable(
+	character-test
+	src/character-test.cpp)
+add_test(
+	NAME character
+	COMMAND $<TARGET_FILE:character-test>
+	CONFIGURATIONS Debug)
+add_executable(
 	newline-test
 	src/newline-test.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/newline.cpp)
