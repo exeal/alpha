@@ -18,13 +18,13 @@
 
 
 namespace ascension {
-	namespace text {
+	namespace kernel {
 		namespace {
-			inline Newline resolveNewline(const kernel::Document& document, const Newline& newline) {
-				if(newline == Newline::USE_DOCUMENT_INPUT) {
+			inline text::Newline resolveNewline(const Document& document, const text::Newline& newline) {
+				if(newline == text::Newline::USE_DOCUMENT_INPUT) {
 					// fallback
-					std::shared_ptr<kernel::DocumentInput> input(document.input().lock());
-					const Newline resolved((input.get() != nullptr) ? input->newline() : ASCENSION_DEFAULT_NEWLINE);
+					std::shared_ptr<DocumentInput> input(document.input().lock());
+					const text::Newline resolved((input.get() != nullptr) ? input->newline() : ASCENSION_DEFAULT_NEWLINE);
 					assert(resolved.isLiteral());
 					return resolved;
 				}
@@ -33,37 +33,6 @@ namespace ascension {
 		} // namespace @0
 
 
-		// text.Newline ///////////////////////////////////////////////////////////////////////////////////
-
-		/// Line feed. Standard of Unix (Lf, U+000A).
-		const Newline Newline::LINE_FEED(LINE_FEED);
-
-		/// Carriage return. Old standard of Macintosh (Cr, U+000D).
-		const Newline Newline::CARRIAGE_RETURN(CARRIAGE_RETURN);
-
-		/// CR+LF. Standard of Windows (CrLf, U+000D U+000A).
-		const Newline Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED((text::CARRIAGE_RETURN << 16) | text::LINE_FEED);
-
-		/// Next line. Standard of EBCDIC-based OS (U+0085).
-		const Newline Newline::NEXT_LINE(NEXT_LINE);
-
-		/// Line separator (U+2028).
-		const Newline Newline::LINE_SEPARATOR(LINE_SEPARATOR);
-
-		/// Paragraph separator (U+2029).
-		const Newline Newline::PARAGRAPH_SEPARATOR(PARAGRAPH_SEPARATOR);
-
-		/// Represents any NLF as the actual newline of the line (@c kernel#Document#Line#newline()).
-		const Newline Newline::USE_INTRINSIC_VALUE(0x80000000u);
-
-		/// Represents any NLF as the value of @c kernel#DocumentInput#newline().
-		const Newline Newline::USE_DOCUMENT_INPUT(0x80000001u);
-
-		Newline::Newline(std::uint32_t value) BOOST_NOEXCEPT : value_(value) {
-		}
-	}
-
-	namespace kernel {
 		// kernel free functions //////////////////////////////////////////////////////////////////////////////////////
 
 		/// Returns the content type of the document partition contains the point.
@@ -93,7 +62,7 @@ namespace ascension {
 					out.write(document.lineString(line(end)).data() + offsetInLine(beginning), static_cast<std::streamsize>(offsetInLine(end) - offsetInLine(beginning)));
 				}
 			} else {
-				const text::Newline resolvedNewline(text::resolveNewline(document, newline));
+				const text::Newline resolvedNewline(resolveNewline(document, newline));
 				const String eol(resolvedNewline.isLiteral() ? resolvedNewline.asString() : String());
 				assert(!eol.empty() || resolvedNewline == text::Newline::USE_INTRINSIC_VALUE);
 				for(Index i = beginning.line; out; ++i) {
@@ -449,7 +418,7 @@ namespace ascension {
 		 * @return The number of characters
 		 */
 		Index Document::length(const text::Newline& newline /* = Newline::USE_INTRINSIC_VALUE */) const BOOST_NOEXCEPT {
-			const text::Newline resolvedNewline(text::resolveNewline(*this, newline));
+			const text::Newline resolvedNewline(resolveNewline(*this, newline));
 			if(resolvedNewline.isLiteral())
 				return length_ + (numberOfLines() - 1) * ((resolvedNewline != text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED) ? 1 : 2);
 			assert(resolvedNewline == text::Newline::USE_INTRINSIC_VALUE);
@@ -471,7 +440,7 @@ namespace ascension {
 			if(line >= numberOfLines())
 				throw BadPositionException(Position::bol(line));
 		
-			const text::Newline resolvedNewline(text::resolveNewline(*this, newline));
+			const text::Newline resolvedNewline(resolveNewline(*this, newline));
 			Index offset = 0, eolLength = resolvedNewline.isLiteral() ? resolvedNewline.asString().length() : 0;
 			assert(eolLength != 0 || resolvedNewline == text::Newline::USE_INTRINSIC_VALUE);
 			for(Index i = 0; i < line; ++i) {

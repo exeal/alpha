@@ -1,5 +1,6 @@
 /**
  * @file newline.hpp
+ * Defines @c Newline class and some related functions.
  * @author exeal
  * @date 2003-2006 was EditDoc.h
  * @date 2006-2011 was document.hpp
@@ -60,13 +61,14 @@ namespace ascension {
 					return String(1, static_cast<Char>(value_ & 0xffffu));
 				else {
 					static const Char crlf[] = {text::CARRIAGE_RETURN, text::LINE_FEED};
-					return String(crlf, crlf + 1);
+					return String(crlf, crlf + 2);
 				}
 			}
 			/// Returns @c true if the given newline value is a literal.
 			bool isLiteral() const BOOST_NOEXCEPT {
 				return (value_ & 0x80000000u) == 0;
 			}
+
 		private:
 			Newline(std::uint32_t value) BOOST_NOEXCEPT;
 			std::uint32_t value_;

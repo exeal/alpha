@@ -605,6 +605,9 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\word-break-iterator.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\newline.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
