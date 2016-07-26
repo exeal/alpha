@@ -118,7 +118,7 @@ namespace ascension {
 		 * Returns the newline at the beginning of the specified buffer.
 		 * @tparam ForwardIterator The type of @a first and @a last
 		 * @param first The beginning of the buffer
-		 * @param last The end of the buffer
+		 * @param last The end of the buffer. This should greater than @a first
 		 * @return The newline or @c boost#none if the beginning of the buffer is not newline
 		 */
 		template<typename ForwardIterator>
@@ -143,7 +143,7 @@ namespace ascension {
 		/**
 		 * Returns the newline at the beginning of the specified range.
 		 * @tparam SinglePassReadableRange The type of @a range
-		 * @param range The character range
+		 * @param range The character range. This can't be empty
 		 * @return The newline or @c boost#none if the beginning of the buffer is not newline
 		 */
 		template<typename SinglePassReadableRange>

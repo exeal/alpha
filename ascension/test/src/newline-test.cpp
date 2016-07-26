@@ -63,7 +63,6 @@ BOOST_AUTO_TEST_CASE(line_counting_test) {
 }
 
 BOOST_AUTO_TEST_CASE(scan_test) {
-	BOOST_TEST((ascension::text::eatNewline(std::string()) == boost::none));
 	BOOST_TEST((ascension::text::eatNewline(std::string("xyzzy")) == boost::none));
 
 	auto newline(ascension::text::eatNewline(std::string("\n")));
