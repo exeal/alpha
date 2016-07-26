@@ -75,17 +75,18 @@ namespace ascension {
 		};
 		
 		/**
-		 * Returns the number of lines in the specified character sequence.
+		 * Returns the number of lines in the specified UTF-16 or UTF-32 character sequence.
 		 * This method is exception-neutral (does not throw if @a ForwardIterator does not).
 		 * @tparam ForwardIterator The type of @a first and @a last
 		 * @param first The beginning of the character sequence
 		 * @param last The end of the character sequence
-		 * @return The number of lines. Zero if and only if the input sequence is empty
+		 * @param emptyCase If the character sequence is empty, this function returns this value
+		 * @return The number of lines
 		 */
 		template<typename ForwardIterator>
-		inline Index calculateNumberOfLines(ForwardIterator first, ForwardIterator last) {
+		inline Index calculateNumberOfLines(ForwardIterator first, ForwardIterator last, Index emptyCase = 1) {
 			if(first == last)
-				return 0;
+				return emptyCase;
 			Index lines = 1;
 			while(true) {
 				first = boost::find_first_of(boost::make_iterator_range(first, last), NEWLINE_CHARACTERS);
@@ -104,14 +105,15 @@ namespace ascension {
 		}
 
 		/**
-		 * Returns the number of lines in the specified text.
+		 * Returns the number of lines in the specified UTF-16 or UTF-32 text.
 		 * @tparam SinglePassReadableRange The type of @a range
 		 * @param range The character range
+		 * @param emptyCase If the character sequence is empty, this function returns this value
 		 * @return The number of lines
 		 */
 		template<typename SinglePassReadableRange>
-		inline Index calculateNumberOfLines(const SinglePassReadableRange& range) BOOST_NOEXCEPT {
-			return calculateNumberOfLines(boost::const_begin(range), boost::const_end(range));
+		inline Index calculateNumberOfLines(const SinglePassReadableRange& range, Index emptyCase = 1) {
+			return calculateNumberOfLines(boost::const_begin(range), boost::const_end(range), emptyCase);
 		}
 
 		/**
@@ -147,7 +149,7 @@ namespace ascension {
 		 * @return The newline or @c boost#none if the beginning of the buffer is not newline
 		 */
 		template<typename SinglePassReadableRange>
-		inline boost::optional<Newline> eatNewline(const SinglePassReadableRange& range) BOOST_NOEXCEPT {
+		inline boost::optional<Newline> eatNewline(const SinglePassReadableRange& range) {
 			return eatNewline(boost::const_begin(range), boost::const_end(range));
 		}
 	}
