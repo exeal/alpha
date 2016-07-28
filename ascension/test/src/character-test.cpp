@@ -2,15 +2,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <ascension/corelib/text/character.hpp>
-
-namespace {
-	const ascension::Char NON_PRIVATE_USE_HIGH_SURROGATE_FIRST = 0xd800u;
-	const ascension::Char NON_PRIVATE_USE_HIGH_SURROGATE_LAST = 0xdb7fu;
-	const ascension::Char PRIVATE_USE_HIGH_SURROGATE_FIRST = 0xdb80u;
-	const ascension::Char PRIVATE_USE_HIGH_SURROGATE_LAST = 0xdbffu;
-	const ascension::Char LOW_SURROGATE_FIRST = 0xdc00u;
-	const ascension::Char LOW_SURROGATE_LAST = 0xdfffu;
-}
+#include "unicode-surrogates.hpp"
 
 BOOST_AUTO_TEST_CASE(surrogate_category_test) {
 	BOOST_TEST(!ascension::text::surrogates::isSupplemental(0x0000u));
