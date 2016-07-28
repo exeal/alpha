@@ -4,41 +4,40 @@
 #include <ascension/corelib/text/utf-iterator.hpp>
 #include <algorithm>
 #include <vector>
+#include "unicode-string-sample.hpp"
 
 // from boost/libs/regex/test/unicode/unicode_iterator_test.cpp
 BOOST_AUTO_TEST_CASE(spot_checks) {
-	ascension::CodePoint spot16[] = {0x10302u};
-	ascension::text::utf::CharacterEncodeIterator<ascension::CodePoint*, std::uint16_t> i(spot16);
+	ascension::text::utf::CharacterEncodeIterator<const ascension::CodePoint*, std::uint16_t> i(SPOT16);
 
-	BOOST_TEST(*i++ == 0xd800u);
-	BOOST_TEST(*i++ == 0xdf02u);
-	BOOST_TEST(*--i == 0xdf02u);
-	BOOST_TEST(*--i == 0xd800u);
+	BOOST_TEST(*i++ == SPOT16_IN_UTF16[0]);
+	BOOST_TEST(*i++ == SPOT16_IN_UTF16[1]);
+	BOOST_TEST(*--i == SPOT16_IN_UTF16[1]);
+	BOOST_TEST(*--i == SPOT16_IN_UTF16[0]);
 
-	ascension::CodePoint spot8[] = {0x004du, 0x0430u, 0x4e8cu, 0x10302u};
-	ascension::text::utf::CharacterEncodeIterator<ascension::CodePoint*, std::uint8_t> i8(spot8);
+	ascension::text::utf::CharacterEncodeIterator<const ascension::CodePoint*, std::uint8_t> i8(SPOT8);
 
-	BOOST_TEST(*i8++ == 0x4du);
-	BOOST_TEST(*i8++ == 0xd0u);
-	BOOST_TEST(*i8++ == 0xb0u);
-	BOOST_TEST(*i8++ == 0xe4u);
-	BOOST_TEST(*i8++ == 0xbau);
-	BOOST_TEST(*i8++ == 0x8cu);
-	BOOST_TEST(*i8++ == 0xf0u);
-	BOOST_TEST(*i8++ == 0x90u);
-	BOOST_TEST(*i8++ == 0x8cu);
-	BOOST_TEST(*i8++ == 0x82u);
+	BOOST_TEST(*i8++ == SPOT8_IN_UTF8[0]);
+	BOOST_TEST(*i8++ == SPOT8_IN_UTF8[1]);
+	BOOST_TEST(*i8++ == SPOT8_IN_UTF8[2]);
+	BOOST_TEST(*i8++ == SPOT8_IN_UTF8[3]);
+	BOOST_TEST(*i8++ == SPOT8_IN_UTF8[4]);
+	BOOST_TEST(*i8++ == SPOT8_IN_UTF8[5]);
+	BOOST_TEST(*i8++ == SPOT8_IN_UTF8[6]);
+	BOOST_TEST(*i8++ == SPOT8_IN_UTF8[7]);
+	BOOST_TEST(*i8++ == SPOT8_IN_UTF8[8]);
+	BOOST_TEST(*i8++ == SPOT8_IN_UTF8[9]);
 	
-	BOOST_TEST(*--i8 == 0x82u);
-	BOOST_TEST(*--i8 == 0x8cu);
-	BOOST_TEST(*--i8 == 0x90u);
-	BOOST_TEST(*--i8 == 0xf0u);
-	BOOST_TEST(*--i8 == 0x8cu);
-	BOOST_TEST(*--i8 == 0xbau);
-	BOOST_TEST(*--i8 == 0xe4u);
-	BOOST_TEST(*--i8 == 0xb0u);
-	BOOST_TEST(*--i8 == 0xd0u);
-	BOOST_TEST(*--i8 == 0x4du);
+	BOOST_TEST(*--i8 == SPOT8_IN_UTF8[9]);
+	BOOST_TEST(*--i8 == SPOT8_IN_UTF8[8]);
+	BOOST_TEST(*--i8 == SPOT8_IN_UTF8[7]);
+	BOOST_TEST(*--i8 == SPOT8_IN_UTF8[6]);
+	BOOST_TEST(*--i8 == SPOT8_IN_UTF8[5]);
+	BOOST_TEST(*--i8 == SPOT8_IN_UTF8[4]);
+	BOOST_TEST(*--i8 == SPOT8_IN_UTF8[3]);
+	BOOST_TEST(*--i8 == SPOT8_IN_UTF8[2]);
+	BOOST_TEST(*--i8 == SPOT8_IN_UTF8[1]);
+	BOOST_TEST(*--i8 == SPOT8_IN_UTF8[0]);
 }
 
 BOOST_AUTO_TEST_CASE(boundaries_test) {

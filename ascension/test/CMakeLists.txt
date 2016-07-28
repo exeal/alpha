@@ -64,6 +64,13 @@ add_test(
 	COMMAND $<TARGET_FILE:newline-test>
 	CONFIGURATIONS Debug)
 add_executable(
+	utf-test
+	src/utf-test.cpp)
+add_test(
+	NAME utf
+	COMMAND $<TARGET_FILE:utf-test>
+	CONFIGURATIONS Debug)
+add_executable(
 	utf-iterator-test
 	src/utf-iterator-test.cpp)
 add_test(
