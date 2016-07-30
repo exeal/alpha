@@ -12,13 +12,11 @@
 #include <cstddef>		// std.size_t
 
 namespace ascension {
-
 	/**
 	 * Defines entities the clients of Ascension do not access.
 	 * @internal
 	 */
 	namespace detail {
-
 		/**
 		 * Returns the iterator addresses the first element in the sorted range which satisfies
 		 * comp(value, *i) (@a i is the iterator).
@@ -56,25 +54,7 @@ namespace ascension {
 			T& value_;
 			T originalValue_;
 		};
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-		/// @internal Produces @c operator&gt;, @c operator&lt;= and @c operator&gt;= from @c operator&lt;.
-		template<typename Derived>
-		struct LessThanComparable {
-			friend bool operator>(const Derived& lhs, const Derived& rhs) {return rhs < lhs;}
-			friend bool operator<=(const Derived& lhs, const Derived& rhs) {return !(rhs < lhs);}
-			friend bool operator>=(const Derived& lhs, const Derived& rhs) {return !(lhs < rhs);}
-		};
-
-		/// @internal Produces @c operator!= from @c operator==.
-		template<typename Derived>
-		struct EqualityComparable {
-			friend bool operator!=(const Derived& lhs, const Derived& rhs) {return !(lhs == rhs);}
-		};
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
 	} // namespace detail
-
-} // namespace ascension
+} // namespace ascension.detail
 
 #endif // !ASCENSION_UTILITY_HPP
