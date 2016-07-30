@@ -44,16 +44,23 @@ namespace ascension {
 			 * Returns direction opposite @a direction.
 			 * @throw UnknownValueException @a direction is invalid
 			 */
-			inline BOOST_SCOPED_ENUM_NATIVE(LineRelativeDirection) operator!(LineRelativeDirection direction) {
-				static const LineRelativeDirection opposites[4] = {
+			inline BOOST_SCOPED_ENUM_NATIVE(LineRelativeDirection) operator!(BOOST_SCOPED_ENUM_NATIVE(LineRelativeDirection) direction) {
+				static const BOOST_SCOPED_ENUM_NATIVE(LineRelativeDirection) opposites[4] = {
 					LineRelativeDirection::UNDER, LineRelativeDirection::OVER,
 					LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::LINE_LEFT
 				};
-				const std::size_t index = boost::underlying_cast<std::size_t>(direction);
+				const std::size_t index = direction;
 				if(index >= std::extent<decltype(opposites)>::value)
 					throw UnknownValueException("direction");
-				return boost::native_value(opposites[index]);
+				return opposites[index];
 			}
+
+#ifdef BOOST_NO_CXX11_SCOPED_ENUMS
+			/// @overload
+			inline LineRelativeDirection operator!(LineRelativeDirection direction) {
+				return LineRelativeDirection(!boost::native_value(direction));
+			}
+#endif // BOOST_NO_CXX11_SCOPED_ENUMS
 			/// @}
 		}
 	}
