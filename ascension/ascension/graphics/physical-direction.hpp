@@ -35,16 +35,23 @@ namespace ascension {
 		 * Returns direction opposite @a direction.
 		 * @throw UnknownValueException @a direction is invalid
 		 */
-		inline BOOST_SCOPED_ENUM_NATIVE(PhysicalDirection) operator!(PhysicalDirection direction) {
-			static const PhysicalDirection opposites[4] = {
+		inline BOOST_SCOPED_ENUM_NATIVE(PhysicalDirection) operator!(BOOST_SCOPED_ENUM_NATIVE(PhysicalDirection) direction) {
+			static const BOOST_SCOPED_ENUM_NATIVE(PhysicalDirection) opposites[4] = {
 				PhysicalDirection::BOTTOM, PhysicalDirection::LEFT,
 				PhysicalDirection::TOP, PhysicalDirection::RIGHT
 			};
-			const std::size_t index = boost::underlying_cast<std::size_t>(direction);
+			const std::size_t index = direction;
 			if(index >= std::extent<decltype(opposites)>::value)
 				throw UnknownValueException("direction");
-			return boost::native_value(opposites[index]);
+			return opposites[index];
 		}
+
+#ifdef BOOST_NO_CXX11_SCOPED_ENUMS
+		/// @overload
+		inline PhysicalDirection operator!(PhysicalDirection direction) {
+			return PhysicalDirection(!boost::native_value(direction));
+		}
+#endif // BOOST_NO_CXX11_SCOPED_ENUMS
 		/// @}
 	}
 }

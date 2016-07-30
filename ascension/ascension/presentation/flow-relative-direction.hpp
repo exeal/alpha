@@ -52,16 +52,23 @@ namespace ascension {
 		 * Returns direction opposite @a direction.
 		 * @throw UnknownValueException @a direction is invalid
 		 */
-		inline BOOST_SCOPED_ENUM_NATIVE(FlowRelativeDirection) operator!(FlowRelativeDirection direction) {
-			static const FlowRelativeDirection opposites[4] = {
+		inline BOOST_SCOPED_ENUM_NATIVE(FlowRelativeDirection) operator!(BOOST_SCOPED_ENUM_NATIVE(FlowRelativeDirection) direction) {
+			static const BOOST_SCOPED_ENUM_NATIVE(FlowRelativeDirection) opposites[4] = {
 				FlowRelativeDirection::BLOCK_END, FlowRelativeDirection::BLOCK_START,
 				FlowRelativeDirection::INLINE_END, FlowRelativeDirection::INLINE_START
 			};
-			const std::size_t index = boost::underlying_cast<std::size_t>(direction);
+			const std::size_t index = direction;
 			if(index >= std::extent<decltype(opposites)>::value)
 				throw UnknownValueException("direction");
-			return boost::native_value(opposites[index]);
+			return opposites[index];
 		}
+
+#ifdef BOOST_NO_CXX11_SCOPED_ENUMS
+		/// @overload
+		inline FlowRelativeDirection operator!(FlowRelativeDirection direction) {
+			return FlowRelativeDirection(!boost::native_value(direction));
+		}
+#endif // BOOST_NO_CXX11_SCOPED_ENUMS
 		/// @}
 	}
 }
