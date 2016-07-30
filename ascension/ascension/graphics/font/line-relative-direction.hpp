@@ -44,7 +44,7 @@ namespace ascension {
 			 * Returns direction opposite @a direction.
 			 * @throw UnknownValueException @a direction is invalid
 			 */
-			inline LineRelativeDirection operator!(LineRelativeDirection direction) {
+			inline BOOST_SCOPED_ENUM_NATIVE(LineRelativeDirection) operator!(LineRelativeDirection direction) {
 				static const LineRelativeDirection opposites[4] = {
 					LineRelativeDirection::UNDER, LineRelativeDirection::OVER,
 					LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::LINE_LEFT
@@ -52,7 +52,7 @@ namespace ascension {
 				const std::size_t index = boost::underlying_cast<std::size_t>(direction);
 				if(index >= std::extent<decltype(opposites)>::value)
 					throw UnknownValueException("direction");
-				return opposites[index];
+				return boost::native_value(opposites[index]);
 			}
 			/// @}
 		}
