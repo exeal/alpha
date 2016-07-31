@@ -170,3 +170,45 @@ BOOST_AUTO_TEST_SUITE(encode)
 		BOOST_CHECK_EQUAL_COLLECTIONS(buffer.cbegin(), buffer.cend(), SPOT8, SPOT8 + 4);
 	}
 BOOST_AUTO_TEST_SUITE_END()
+/*
+BOOST_AUTO_TEST_SUITE(round_trip)
+	BOOST_AUTO_TEST_CASE(utf8_round_trip_test) {
+		for(ascension::CodePoint c = 0x0000u; c <= 0x10ffffu; ++c) {
+			if(ascension::text::isScalarValue(c)) {
+				std::vector<std::uint8_t> v;
+				auto i(std::back_inserter(v));
+				ascension::text::utf::encode(c, i);
+				BOOST_TEST(ascension::text::utf::decodeFirst(v.cbegin(), v.cend()) == c);
+				if(c % 0x10000 == 0)
+					BOOST_TEST_MESSAGE("round_trip/utf8_round_trip_test: Checking for U+" << std::hex << c);
+			}
+		}
+	}
+
+	BOOST_AUTO_TEST_CASE(utf16_round_trip_test) {
+		for(ascension::CodePoint c = 0x0000u; c <= 0x10ffffu; ++c) {
+			if(ascension::text::isScalarValue(c)) {
+				std::vector<std::uint16_t> v;
+				auto i(std::back_inserter(v));
+				ascension::text::utf::encode(c, i);
+				BOOST_TEST(ascension::text::utf::decodeFirst(v.cbegin(), v.cend()) == c);
+				if(c % 0x10000 == 0)
+					BOOST_TEST_MESSAGE("round_trip/utf16_round_trip_test: Checking for U+" << std::hex << c);
+			}
+		}
+	}
+
+	BOOST_AUTO_TEST_CASE(utf32_round_trip_test) {
+		for(ascension::CodePoint c = 0x0000u; c <= 0x10ffffu; ++c) {
+			if(ascension::text::isScalarValue(c)) {
+				std::vector<std::uint32_t> v;
+				auto i(std::back_inserter(v));
+				ascension::text::utf::encode(c, i);
+				BOOST_TEST(ascension::text::utf::decodeFirst(v.cbegin(), v.cend()) == c);
+				if(c % 0x10000 == 0)
+					BOOST_TEST_MESSAGE("round_trip/utf32_round_trip_test: Checking for U+" << std::hex << c);
+			}
+		}
+	}
+BOOST_AUTO_TEST_SUITE_END()
+*/

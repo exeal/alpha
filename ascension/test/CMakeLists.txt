@@ -78,6 +78,15 @@ add_test(
 	COMMAND $<TARGET_FILE:utf-iterator-test>
 	CONFIGURATIONS Debug)
 
+#graphics
+add_executable(
+	physical-directional-test
+	src/physical-directional-test.cpp)
+add_test(
+	NAME physical_directions
+	COMMAND $<TARGET_FILE:physical-directional-test>
+	CONFIGURATIONS Debug)
+
 #graphics.geometry
 add_executable(
 	geometry-test
