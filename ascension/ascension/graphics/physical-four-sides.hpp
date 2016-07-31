@@ -84,7 +84,11 @@ namespace ascension {
 		public:
 			/// Constructor takes a physical rectangle.
 			template<typename Rectangle>
-			PhysicalFourSides(const Rectangle& rectangle) {
+			PhysicalFourSides(const Rectangle& rectangle, typename std::enable_if<
+					std::is_same<
+						typename boost::geometry::tag<typename std::remove_cv<Rectangle>::type>::type,
+						boost::geometry::box_tag
+					>::value>::type* = nullptr) {
 				top() = geometry::top(rectangle);
 				right() = geometry::right(rectangle);
 				bottom() = geometry::bottom(rectangle);
