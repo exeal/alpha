@@ -46,13 +46,13 @@ namespace ascension {
 					ipd() = boost::get(v);
 			}
 			/// Returns a reference to 'block-dimension' value.
-			typename Super::value_type& bpd() BOOST_NOEXCEPT {return std::get<0>(*this);}
+			typename Super::reference bpd() BOOST_NOEXCEPT {return std::get<0>(*this);}
 			/// Returns a reference to 'block-dimension' value.
-			const typename Super::value_type& bpd() const BOOST_NOEXCEPT {return std::get<0>(*this);}
+			typename Super::const_reference bpd() const BOOST_NOEXCEPT {return std::get<0>(*this);}
 			/// Returns a reference to 'inline-dimension' value.
-			typename Super::value_type& ipd() BOOST_NOEXCEPT {return std::get<1>(*this);}
+			typename Super::reference ipd() BOOST_NOEXCEPT {return std::get<1>(*this);}
 			/// Returns a reference to 'inline-dimension' value.
-			const typename Super::value_type& ipd() const BOOST_NOEXCEPT {return std::get<1>(*this);}
+			typename Super::const_reference ipd() const BOOST_NOEXCEPT {return std::get<1>(*this);}
 		};
 
 		/**
