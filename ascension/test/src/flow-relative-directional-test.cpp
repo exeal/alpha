@@ -4,10 +4,18 @@
 #include <ascension/presentation/flow-relative-four-sides.hpp>
 
 BOOST_AUTO_TEST_CASE(negation_test) {
-	BOOST_TEST(!ascension::presentation::FlowRelativeDirection::BLOCK_START == ascension::presentation::FlowRelativeDirection::BLOCK_END);
-	BOOST_TEST(!ascension::presentation::FlowRelativeDirection::BLOCK_END == ascension::presentation::FlowRelativeDirection::BLOCK_START);
-	BOOST_TEST(!ascension::presentation::FlowRelativeDirection::INLINE_START == ascension::presentation::FlowRelativeDirection::INLINE_END);
-	BOOST_TEST(!ascension::presentation::FlowRelativeDirection::INLINE_END == ascension::presentation::FlowRelativeDirection::INLINE_START);
+	BOOST_TEST(
+		static_cast<int>(!ascension::presentation::FlowRelativeDirection::BLOCK_START)
+		== static_cast<int>(ascension::presentation::FlowRelativeDirection::BLOCK_END));
+	BOOST_TEST(
+		static_cast<int>(!ascension::presentation::FlowRelativeDirection::BLOCK_END)
+		== static_cast<int>(ascension::presentation::FlowRelativeDirection::BLOCK_START));
+	BOOST_TEST(
+		static_cast<int>(!ascension::presentation::FlowRelativeDirection::INLINE_START)
+		== static_cast<int>(ascension::presentation::FlowRelativeDirection::INLINE_END));
+	BOOST_TEST(
+		static_cast<int>(!ascension::presentation::FlowRelativeDirection::INLINE_END)
+		== static_cast<int>(ascension::presentation::FlowRelativeDirection::INLINE_START));
 }
 
 BOOST_AUTO_TEST_SUITE(two_axes)
