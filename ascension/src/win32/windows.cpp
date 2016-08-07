@@ -9,7 +9,7 @@
  */
 
 #include <ascension/platforms.hpp>
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 #include <ascension/win32/handle.hpp>
 #include <ascension/win32/windows.hpp>
 #include <boost/optional.hpp>

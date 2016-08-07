@@ -15,13 +15,13 @@
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/algorithm/find_first_of.hpp>
 #include <limits>	// std.numeric_limits
-#ifdef ASCENSION_OS_POSIX
+#if ASCENSION_OS_POSIX
 #	include <cstdio>		// std.tempnam
 #	include <fcntl.h>		// fcntl
 #	include <unistd.h>		// fcntl
 #	include <sys/mman.h>	// mmap, munmap, ...
 #endif // !ASCENSION_OS_POSIX
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 #	include <cwctype>
 #endif
 
@@ -39,7 +39,7 @@ namespace ascension {
 
 				inline boost::filesystem::filesystem_error&& makeFileSystemError(const std::string& what,
 						const boost::filesystem::path& path, const boost::optional<int>& value = boost::none) {
-#ifdef ASCENSION_OS_POSIX
+#if ASCENSION_OS_POSIX
 					return makeGenericFileSystemError(what, path, boost::get_optional_value_or(value, makePlatformError().code().value()));
 #else
 					return boost::filesystem::filesystem_error(what, path,
@@ -66,7 +66,7 @@ namespace ascension {
 				 * @throw IOException any I/O error occurred
 				 */
 				bool pathExists(const PathStringPiece& name) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 #ifdef PathFileExists
 					return win32::boole(::PathFileExistsW(name.cbegin()));
 #else
@@ -96,7 +96,7 @@ namespace ascension {
 				 * @throw IOException Any I/O error occurred
 				 */
 				void getFileLastWriteTime(const PathStringPiece& fileName, TextFileDocumentInput::Time& timeStamp) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					WIN32_FILE_ATTRIBUTE_DATA attributes;
 					if(::GetFileAttributesExW(fileName.cbegin(), GetFileExInfoStandard, &attributes) != 0)
 						timeStamp = attributes.ftLastWriteTime;
@@ -118,7 +118,7 @@ namespace ascension {
 				 * @throw IOException Any I/O error occurred
 				 */
 				std::ptrdiff_t getFileSize(const PathStringPiece& fileName) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					WIN32_FILE_ATTRIBUTE_DATA attributes;
 					if(::GetFileAttributesExW(fileName.cbegin(), GetFileExInfoStandard, &attributes) != 0)
 						return (attributes.nFileSizeHigh == 0
@@ -146,7 +146,7 @@ namespace ascension {
 					boost::filesystem::path parentPath(seed);
 					if(name != parentPath)
 						parentPath.remove_filename();
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					boost::filesystem::path::value_type result[MAX_PATH];
 					if(::GetTempFileNameW(parentPath.c_str(), name.c_str(), 0, result) != 0)
 						return result;
@@ -168,7 +168,7 @@ namespace ascension {
 				 * @throw IOException Any I/O error occurred
 				 */
 				bool isSpecialFile(const PathStringPiece& fileName) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					HANDLE file = ::CreateFileW(fileName.cbegin(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, 0, nullptr);
 					if(file != INVALID_HANDLE_VALUE) {
 						const DWORD fileType = ::GetFileType(file);
@@ -236,7 +236,7 @@ namespace ascension {
 			 * @see comparePathNames
 			 */
 			boost::filesystem::path fileio::canonicalizePathName(const boost::filesystem::path& pathName) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				static const std::array<boost::filesystem::path::value_type, 2> PATH_SEPARATORS = {0x005cu, 0x002fu};	// \ or /
 #else // ASCENSION_OS_POSIX
 				static const std::array<boost::filesystem::path::value_type, 1> PATH_SEPARATORS = {'/'};
@@ -244,7 +244,7 @@ namespace ascension {
 //				static const boost::filesystem::path::value_type PREFERRED_PATH_SEPARATOR = PATH_SEPARATORS[0];
 				const auto native(pathName.native());
 
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				// resolve relative path name
 				std::array<WCHAR, MAX_PATH> shortFullName;
 				std::unique_ptr<WCHAR[]> longFullName;
@@ -332,7 +332,7 @@ namespace ascension {
 				sanityCheckPathName(s1, "s1");
 				sanityCheckPathName(s2, "s2");
 
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 #ifdef PathMatchSpec
 				if(win32::boole(::PathMatchSpecW(s1, s2)))
 					return true;
@@ -434,7 +434,7 @@ namespace ascension {
 					throw makeGenericFileSystemError("ascension.fileio.writeRegion", fileName, boost::system::errc::no_such_device_or_address);
 
 				// check if writable
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				const DWORD originalAttributes = ::GetFileAttributesW(fileName.native().c_str());
 				if(originalAttributes != INVALID_FILE_ATTRIBUTES && win32::boole(originalAttributes & FILE_ATTRIBUTE_READONLY))
 #else // ASCENSION_OS_POSIX
@@ -492,7 +492,7 @@ namespace ascension {
 
 			bool IOException::isFileNotFound(const IOException& e) BOOST_NOEXCEPT {
 				const std::error_code::value_type code(e.code().value());
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				return code == ERROR_FILE_NOT_FOUND || code == ERROR_PATH_NOT_FOUND
 					|| code == ERROR_BAD_NETPATH /*|| code == ERROR_INVALID_PARAMETER*/ || code == ERROR_INVALID_NAME;
 
@@ -503,7 +503,7 @@ namespace ascension {
 
 			bool IOException::isPermissionDenied(const IOException& e) BOOST_NOEXCEPT {
 				const std::error_code::value_type code(e.code().value());
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				return code == ERROR_ACCESS_DENIED || code == ERROR_SHARING_VIOLATION;
 #else // ASCENSION_OS_POSIX
 				return code == EACCES;
@@ -522,7 +522,7 @@ namespace ascension {
 				class SystemErrorSaver {
 				public:
 					SystemErrorSaver() BOOST_NOEXCEPT : code_(makePlatformError().code().value()) {}
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					~SystemErrorSaver() BOOST_NOEXCEPT {::SetLastError(code_);}
 #else // ASCENSION_OS_POSIX
 					~SystemErrorSaver() BOOST_NOEXCEPT {errno = code_;}
@@ -603,7 +603,7 @@ namespace ascension {
 			void TextFileStreamBuffer::buildInputMapping() {
 				assert(isOpen());
 				const std::uintmax_t fileSize = boost::filesystem::file_size(fileName());
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				if(fileSize != 0) {
 					fileMapping_ = ::CreateFileMappingW(fileHandle_, nullptr, PAGE_READONLY, 0, 0, nullptr);
 					if(fileMapping_ == nullptr)
@@ -661,7 +661,7 @@ namespace ascension {
 					} else
 						return nullptr;
 				} else if(mode() == (std::ios_base::out | std::ios_base::app)) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					::SetFilePointerEx(fileHandle_, originalFileEnd_, nullptr, FILE_BEGIN);
 					::SetEndOfFile(fileHandle_);
 #else // ASCENSION_OS_POSIX
@@ -674,7 +674,7 @@ namespace ascension {
 			}
 
 			TextFileStreamBuffer* TextFileStreamBuffer::closeFile() BOOST_NOEXCEPT {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				if(fileMapping_ != nullptr) {
 					::UnmapViewOfFile(const_cast<Byte*>(std::begin(inputMapping_.buffer)));
 					::CloseHandle(fileMapping_);
@@ -714,7 +714,7 @@ namespace ascension {
 
 			/// Returns @c true if the file is open.
 			bool TextFileStreamBuffer::isOpen() const BOOST_NOEXCEPT {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				return fileHandle_ != INVALID_HANDLE_VALUE;
 #else // ASCENSION_OS_POSIX
 				return fileDescriptor_ != -1;
@@ -724,7 +724,7 @@ namespace ascension {
 			// called by only the constructor
 			void TextFileStreamBuffer::openForReading(const std::string& encoding) {
 				// open the file
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				fileHandle_ = ::CreateFileW(fileName().c_str(), GENERIC_READ,
 					FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 				if(fileHandle_ == INVALID_HANDLE_VALUE)
@@ -748,7 +748,7 @@ namespace ascension {
 			// called by only the constructor
 			void TextFileStreamBuffer::openForWriting(const std::string& encoding, bool writeUnicodeByteOrderMark) {
 				if((mode_ & std::ios_base::app) != 0) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					fileHandle_ = ::CreateFileW(fileName_.c_str(), GENERIC_READ | GENERIC_WRITE,
 						0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 					if(fileHandle_ == INVALID_HANDLE_VALUE) {
@@ -778,7 +778,7 @@ namespace ascension {
 #endif
 				}
 				if((mode_ & ~std::ios_base::trunc) == std::ios_base::out) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					fileHandle_ = ::CreateFileW(fileName().c_str(), GENERIC_WRITE, 0, nullptr,
 						CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 					if(fileHandle_ == INVALID_HANDLE_VALUE)
@@ -847,7 +847,7 @@ namespace ascension {
 							throw text::MalformedInputException<Char>(*fromNext);
 
 						// write into the file
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 						DWORD writtenBytes;
 						assert(static_cast<std::size_t>(toNext - nativeBuffer.data()) <= std::numeric_limits<DWORD>::max());
 						const DWORD bytes = static_cast<DWORD>(toNext - nativeBuffer.data());
@@ -910,7 +910,7 @@ namespace ascension {
 				bool unlock() BOOST_NOEXCEPT;
 private:
 				LockType type_;
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				HANDLE file_;
 #else // ASCENSION_OS_POSIX
 				int file_;
@@ -921,7 +921,7 @@ private:
 
 			/// Default constructor.
 			TextFileDocumentInput::FileLocker::FileLocker() BOOST_NOEXCEPT : type_(NO_LOCK), file_(
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					INVALID_HANDLE_VALUE
 #else // ASCENSION_OS_POSIX
 					-1), deleteFileOnClose_(false
@@ -935,7 +935,7 @@ private:
 			}
 
 			inline bool TextFileDocumentInput::FileLocker::hasLock() const BOOST_NOEXCEPT {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				return file_ != INVALID_HANDLE_VALUE;
 #else // ASCENSION_OS_POSIX
 				return file_ != -1;
@@ -955,7 +955,7 @@ private:
 				if(fileName.empty())
 					throw makeGenericFileSystemError("ascension.fileio.TextFileDocumentInput.FileLocker.lock", fileName, boost::system::errc::no_such_file_or_directory);
 				bool alreadyShared = false;
-#ifdef ASCENSION_OS_POSIX
+#if ASCENSION_OS_POSIX
 				flock fl;
 				fl.l_whence = SEEK_SET;
 				fl.l_start = 0;
@@ -964,7 +964,7 @@ private:
 
 				if(share) {
 					// check the file had already been shared-locked
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					HANDLE temp = ::CreateFileW(fileName.c_str(),
 						GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 					if(temp == INVALID_HANDLE_VALUE) {
@@ -987,7 +987,7 @@ private:
 #endif
 				}
 
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				HANDLE f = ::CreateFileW(fileName.c_str(), GENERIC_READ,
 					share ? FILE_SHARE_READ : 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 				if(f == INVALID_HANDLE_VALUE) {
@@ -1035,7 +1035,7 @@ private:
 			bool TextFileDocumentInput::FileLocker::unlock() BOOST_NOEXCEPT {
 				bool succeeded = true;
 				if(hasLock()) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					succeeded = win32::boole(::CloseHandle(file_));
 					file_ = INVALID_HANDLE_VALUE;
 #else // ASCENSION_OS_POSIX
@@ -1207,7 +1207,7 @@ private:
 #ifndef ASCENSION_ABANDONED_AT_VERSION_08
 				return fileName().native();
 #else
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				return fileName().native();
 #else // ASCENSION_OS_POSIX
 				const std::codecvt<Char, PathCharacter, std::mbstate_t>& converter =
@@ -1295,7 +1295,7 @@ private:
 				savedDocumentRevision_ = document().revisionNumber();
 				timeStampDirector_ = unexpectedTimeStampDirector;
 				// TODO: "String" type may change. The following code is as if wchar_t.
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				document_.setProperty(Document::TITLE_PROPERTY, fileName().native());
 #else // ASCENSION_OS_POSIX
 #	ifndef ASCENSION_ABANDONED_AT_VERSION_08
@@ -1460,7 +1460,7 @@ private:
 
 					bool fileMayLost = false;
 					boost::system::error_code ignored;
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					const DWORD attributes = ::GetFileAttributesW(fileName().c_str());
 					if(attributes != INVALID_FILE_ATTRIBUTES) {
 						::SetFileAttributesW(tempFileName.c_str(), attributes);
@@ -1545,7 +1545,7 @@ private:
 			 * @throw IOException Any I/O error occurred
 			 */
 			DirectoryIterator::DirectoryIterator(const PathStringPiece& directoryName) :
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					handle_(INVALID_HANDLE_VALUE),
 #else // ASCENSION_OS_POSIX
 					handle_(0),
@@ -1553,13 +1553,13 @@ private:
 					done_(false) {
 				sanityCheckPathName(directoryName, "directoryName");
 				if(directoryName[0] == 0)
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					throw IOException(directoryName, ERROR_PATH_NOT_FOUND);
 #else // ASCENSION_OS_POSIX
 					throw IOException(directoryName, ENOENT);
 #endif
 
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				if(!pathExists(directoryName))
 					throw IOException(directoryName, ERROR_PATH_NOT_FOUND);
 				PathString pattern;
@@ -1588,7 +1588,7 @@ private:
 
 			/// Destructor.
 			DirectoryIterator::~DirectoryIterator() BOOST_NOEXCEPT {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				if(handle_ != INVALID_HANDLE_VALUE)
 					::FindClose(handle_);
 #else // ASCENSION_OS_POSIX
@@ -1624,7 +1624,7 @@ private:
 			/// @see DirectoryIteratorBase#next
 			void DirectoryIterator::next() {
 				if(!done_) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					WIN32_FIND_DATAW data;
 					if(::FindNextFileW(handle_, &data) == 0) {
 						if(::GetLastError() == ERROR_NO_MORE_FILES)
@@ -1642,7 +1642,7 @@ private:
 			}
 
 			void DirectoryIterator::update(const void* info) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				const WIN32_FIND_DATAW& data = *static_cast<const WIN32_FIND_DATAW*>(info);
 				current_ = data.cFileName;
 				currentIsDirectory_ = win32::boole(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);

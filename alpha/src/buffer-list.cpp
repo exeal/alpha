@@ -448,7 +448,7 @@ namespace alpha {
 	}
 
 	namespace {
-#if defined(BOOST_OS_WINDOWS) && 0
+#if BOOST_OS_WINDOWS && 0
 		std::basic_string<WCHAR> resolveShortcut(const std::basic_string<WCHAR>& s) {
 			const WCHAR* extension = ::PathFindExtensionW(s.c_str());
 			if(std::wcslen(extension) != 0 && (

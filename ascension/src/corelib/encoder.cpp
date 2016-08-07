@@ -162,7 +162,7 @@ namespace ascension {
 
 		/// Returns the default encoder.
 		Encoder& Encoder::defaultInstance() BOOST_NOEXCEPT {
-//#ifdef BOOST_OS_WINDOWS
+//#if BOOST_OS_WINDOWS
 //			return convertWin32CPtoMIB(::GetACP());
 //#else
 			static std::unique_ptr<Encoder> instance(forMIB(fundamental::UTF_8));
@@ -236,7 +236,7 @@ namespace ascension {
 			return (factory.get() != nullptr) ? factory->create() : std::unique_ptr<Encoder>();
 		}
 
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 		/**
 		 * Returns the encoder which has the given Win32 code page.
 		 * @param codePage The code page
@@ -465,7 +465,7 @@ namespace ascension {
 			return nullptr;
 		}
 
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 		/**
 		 * Returns the encoding detector which has the given Windows code page.
 		 * @param codePage The code page

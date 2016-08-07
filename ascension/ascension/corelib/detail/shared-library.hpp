@@ -8,10 +8,10 @@
 #define SHARED_LIBRARY_HPP
 #include <ascension/platforms.hpp>
 #include <algorithm>	// std.fill
-#if defined(BOOST_OS_WINDOWS)
+#if BOOST_OS_WINDOWS
 #	include <ascension/corelib/basic-exceptions.hpp>
 #	include <ascension/win32/windows.hpp>	// LoadLibraryA, FreeLibrary, GetProcAddress, HMODULE
-#elif defined(ASCENSION_OS_POSIX)
+#elif ASCENSION_OS_POSIX
 #	include <stdexcept>
 #	include <dlfcn.h>
 #endif
@@ -23,14 +23,14 @@ namespace ascension {
 		class SharedLibrary : private boost::noncopyable {
 		public:
 			explicit SharedLibrary(const char* fileName) : library_(
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					::LoadLibraryA(fileName)
 #else	// ASCENSION_OS_POSIX
 					::dlopen(fileName, RTLD_LAZY)
 #endif
 					) {
 				if(library_ == nullptr)
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					throw makePlatformError();
 #else	// ASCENSION_OS_POSIX
 					throw std::runtime_error(::dlerror());
@@ -38,7 +38,7 @@ namespace ascension {
 				std::fill(procedures_, procedures_ + ProcedureEntries::NUMBER_OF_ENTRIES, reinterpret_cast<NativeProcedure>(1));
 			}
 			~SharedLibrary() BOOST_NOEXCEPT {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				::FreeLibrary(library_);
 #else
 				::dlclose(library_);
@@ -49,7 +49,7 @@ namespace ascension {
 				typedef typename ProcedureEntries::template Procedure<index> Procedure;
 				if(procedures_[index] == reinterpret_cast<NativeProcedure>(1))
 					procedures_[index] =
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 						::GetProcAddress
 #else
 						::dlsym
@@ -58,7 +58,7 @@ namespace ascension {
 				return reinterpret_cast<typename Procedure::signature>(procedures_[index]);
 			}
 		private:
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 			HMODULE library_;
 			typedef FARPROC NativeProcedure;
 #else

@@ -2894,8 +2894,8 @@ namespace ascension {
 					p.v() += line.baselineOffset();
 
 					LineRelativeFourSides<Scalar> runAllocationBox;	// relative to 'lineLeftPoint'
-					runAllocationBox.over() = p.v() - line.ascent();
-					runAllocationBox.under() = p.v() + line.descent();
+					runAllocationBox.lineOver() = p.v() - line.ascent();
+					runAllocationBox.lineUnder() = p.v() + line.descent();
 //					context.setGlobalAlpha(1.0);
 //					context.setGlobalCompositeOperation(SOURCE_OVER);
 					BOOST_FOREACH(const std::unique_ptr<const TextRun>& run, runsForLine(line.line())) {

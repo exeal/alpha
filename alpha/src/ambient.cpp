@@ -171,7 +171,7 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 		boost::python::object Interpreter::executeFile(const boost::filesystem::path& fileName) {
 			if(!boost::filesystem::exists(fileName)) {
 				const std::string s = "No such file or directory: '"
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					+ fileName.string(std::codecvt_utf8_utf16<wchar_t>());
 #else
 					+ fileName.native();
@@ -192,7 +192,7 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 					script += line;
 
 				std::string fileNameString;
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				{
 					boost::python::object s(fileName.native());
 					boost::python::handle<> a(::PyUnicode_EncodeFSDefault(s.ptr()));

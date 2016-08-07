@@ -357,7 +357,7 @@ namespace alpha {
 
 		boost::python::register_exception_translator<boost::filesystem::filesystem_error>(
 			[](const boost::filesystem::filesystem_error& e) {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				::PyErr_SetFromWindowsErr(e.code().value());
 #else
 				assert(errno == e.code().value());

@@ -12,9 +12,9 @@
 #include <sstream>	// std.ostringstream
 #include <string>	// std.string
 #include <system_error>
-#if defined(BOOST_OS_WINDOWS)
+#if BOOST_OS_WINDOWS
 #	include <windows.h>	// DWORD, GetLastError
-#elif defined(ASCENSION_OS_POSIX)
+#elif ASCENSION_OS_POSIX
 #	include <cerrno>
 #	include <cstring>	// std.strerror
 #endif
@@ -65,7 +65,7 @@ namespace ascension {
 		explicit UnknownValueException(const std::string& message) : invalid_argument(message) {}
 	};
 
-#if defined(BOOST_OS_WINDOWS)
+#if BOOST_OS_WINDOWS
 	inline std::system_error makePlatformError(DWORD code = ::GetLastError()) {
 		std::string message;
 		void* buffer;
@@ -77,7 +77,7 @@ namespace ascension {
 		}
 		return std::system_error(std::error_code(code, std::system_category()), message);
 	}
-#elif defined(ASCENSION_OS_POSIX)
+#elif ASCENSION_OS_POSIX
 	inline std::system_error makePlatformError(int code = errno) {
 		const char* const s = std::strerror(code);
 		return std::system_error(std::error_code(code, std::system_category()), std::string((s != nullptr) ? s : ""));
@@ -109,7 +109,7 @@ namespace ascension {
 		const Code code_;
 	};
 
-#if defined(BOOST_OS_WINDOWS)
+#if BOOST_OS_WINDOWS
 	template<typename Base = std::runtime_error>
 	class PlatformDependentError : public IntegralError<DWORD, Base> {
 	public:
@@ -127,7 +127,7 @@ namespace ascension {
 	private:
 		std::string message_;
 	};
-#elif defined(ASCENSION_OS_POSIX)
+#elif ASCENSION_OS_POSIX
 	template<typename Base = std::runtime_error>
 	class PlatformDependentError : public IntegralError<int, Base> {
 	public:
