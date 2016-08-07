@@ -85,7 +85,7 @@ namespace ascension {
 			BOOST_CONSTEXPR typename boost::iterators::iterator_difference<Self>::type offset() const BOOST_NOEXCEPT {
 				return (p_ < target()->gapLast_) ? (p_ - target()->first_) : ((p_ - target()->first_) - target()->gap());
 			}
-			BOOST_CONSTEXPR bool validate(bool allowGapFirst) const BOOST_NOEXCEPT {
+			bool validate(bool allowGapFirst) const BOOST_NOEXCEPT {
 				auto gf(target()->gapFirst_);
 				if(allowGapFirst)
 					++gf;
@@ -711,8 +711,8 @@ namespace ascension {
 			allocator_type allocator_;
 			pointer first_, last_;
 			pointer gapFirst_, gapLast_;
-			friend class iterator;
-			friend class const_iterator;
+			friend iterator;
+			friend const_iterator;
 		};
 
 
