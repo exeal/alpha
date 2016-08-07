@@ -57,7 +57,7 @@ namespace ascension {
 				FlowRelativeDirection::BLOCK_END, FlowRelativeDirection::BLOCK_START,
 				FlowRelativeDirection::INLINE_END, FlowRelativeDirection::INLINE_START
 			};
-			const std::size_t index = direction;
+			const std::size_t index = static_cast<std::size_t>(direction);
 			if(index >= std::extent<decltype(opposites)>::value)
 				throw UnknownValueException("direction");
 			return opposites[index];
