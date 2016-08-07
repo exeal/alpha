@@ -33,45 +33,63 @@ namespace ascension {
 		template<typename T>
 		class PhysicalFourSidesBase : public std::array<T, 4> {
 		public:
+			typedef std::array<T, 4> Super;	///< The base type.
+		public:
 			/// Default constructor initializes nothing.
 			PhysicalFourSidesBase() {}
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			PhysicalFourSidesBase(const Arguments& arguments) {
-				if(const boost::optional<value_type> v = arguments[_top | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_top | boost::none])
 					top() = boost::get(v);
-				if(const boost::optional<value_type> v = arguments[_right | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_right | boost::none])
 					right() = boost::get(v);
-				if(const boost::optional<value_type> v = arguments[_bottom | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_bottom | boost::none])
 					bottom() = boost::get(v);
-				if(const boost::optional<value_type> v = arguments[_left | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_left | boost::none])
 					left() = boost::get(v);
 			}
 			/// Returns a reference to value of @a direction.
-			reference operator[](PhysicalDirection direction) {
-				return (*this)[boost::underlying_cast<size_type>(direction)];
+			typename Super::reference operator[](PhysicalDirection direction) {
+				return (*this)[boost::underlying_cast<typename Super::size_type>(direction)];
 			}
 			/// Returns a reference to value of @a direction.
-			const_reference operator[](PhysicalDirection direction) const {
-				return (*this)[boost::underlying_cast<size_type>(direction)];
+			typename Super::const_reference operator[](PhysicalDirection direction) const {
+				return (*this)[boost::underlying_cast<typename Super::size_type>(direction)];
 			}
 			using std::array<T, 4>::operator[];
 			/// Returns a reference to 'top' value.
-			reference top() BOOST_NOEXCEPT {return std::get<PhysicalDirection::TOP>(*this);}
+			typename Super::reference top() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(PhysicalDirection::TOP)>(*this);
+			}
 			/// Returns a reference to 'top' value.
-			const_reference top() const BOOST_NOEXCEPT {return std::get<PhysicalDirection::TOP>(*this);}
+			typename Super::const_reference top() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(PhysicalDirection::TOP)>(*this);
+			}
 			/// Returns a reference to 'right' value.
-			reference right() BOOST_NOEXCEPT {return std::get<PhysicalDirection::RIGHT>(*this);}
+			typename Super::reference right() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(PhysicalDirection::RIGHT)>(*this);
+			}
 			/// Returns a reference to 'right' value.
-			const_reference right() const BOOST_NOEXCEPT {return std::get<PhysicalDirection::RIGHT>(*this);}
+			typename Super::const_reference right() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(PhysicalDirection::RIGHT)>(*this);
+			}
 			/// Returns a reference to 'bottom' value.
-			reference bottom() BOOST_NOEXCEPT {return std::get<PhysicalDirection::BOTTOM>(*this);}
+			typename Super::reference bottom() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(PhysicalDirection::BOTTOM)>(*this);
+			}
 			/// Returns a reference to 'bottom' value.
-			const_reference bottom() const BOOST_NOEXCEPT {return std::get<PhysicalDirection::BOTTOM>(*this);}
+			typename Super::const_reference bottom() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(PhysicalDirection::BOTTOM)>(*this);
+			}
 			/// Returns a reference to 'left' value.
-			reference left() BOOST_NOEXCEPT {return std::get<PhysicalDirection::LEFT>(*this);}
+			typename Super::reference left() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(PhysicalDirection::LEFT)>(*this);
+			}
 			/// Returns a reference to 'left' value.
-			const_reference left() const BOOST_NOEXCEPT {return std::get<PhysicalDirection::LEFT>(*this);}
+			typename Super::const_reference left() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(PhysicalDirection::LEFT)>(*this);
+			}
 		};
 
 		/**
@@ -90,10 +108,10 @@ namespace ascension {
 						typename boost::geometry::tag<typename std::remove_cv<Rectangle>::type>::type,
 						boost::geometry::box_tag
 					>::value>::type* = nullptr) {
-				top() = geometry::top(rectangle);
-				right() = geometry::right(rectangle);
-				bottom() = geometry::bottom(rectangle);
-				left() = geometry::left(rectangle);
+				this->top() = geometry::top(rectangle);
+				this->right() = geometry::right(rectangle);
+				this->bottom() = geometry::bottom(rectangle);
+				this->left() = geometry::left(rectangle);
 			}
 			/**
 			 * Creates a @c PhysicalFourSides with the given initial values by named parameters.
@@ -106,24 +124,24 @@ namespace ascension {
 			BOOST_PARAMETER_CONSTRUCTOR(
 				PhysicalFourSides, (PhysicalFourSidesBase<T>), tag,
 				(optional
-					(top, (boost::optional<value_type>))
-					(right, (boost::optional<value_type>))
-					(bottom, (boost::optional<value_type>))
-					(left, (boost::optional<value_type>))))
+					(top, (boost::optional<T>))
+					(right, (boost::optional<T>))
+					(bottom, (boost::optional<T>))
+					(left, (boost::optional<T>))))
 			/// Compound-add operator calls same operators of @c T for the all elements.
 			PhysicalFourSides& operator+=(const PhysicalTwoAxes<T>& other) {
-				top() += other.y();
-				right() += other.x();
-				bottom() += other.y();
-				left() += other.x();
+				this->top() += other.y();
+				this->right() += other.x();
+				this->bottom() += other.y();
+				this->left() += other.x();
 				return *this;
 			}
 			/// Compound-subtract operator calls same operators of @c T for the all elements.
 			PhysicalFourSides& operator-=(const PhysicalTwoAxes<T>& other) {
-				top() -= other.y();
-				right() -= other.x();
-				bottom() -= other.y();
-				left() -= other.x();
+				this->top() -= other.y();
+				this->right() -= other.x();
+				this->bottom() -= other.y();
+				this->left() -= other.x();
 				return *this;
 			}
 		};

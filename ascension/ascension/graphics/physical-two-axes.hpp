@@ -31,6 +31,8 @@ namespace ascension {
 		template<typename T>
 		class PhysicalTwoAxesBase : public std::array<T, 2> {
 		public:
+			typedef std::array<T, 2> Super;	///< The base type.
+		public:
 			/// Default constructor initializes nothing.
 			PhysicalTwoAxesBase() {}
 			/// Copy-constructor.
@@ -38,19 +40,19 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			PhysicalTwoAxesBase(const Arguments& arguments) {
-				if(const boost::optional<value_type> v = arguments[_x | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_x | boost::none])
 					x() = boost::get(v);
-				if(const boost::optional<value_type> v = arguments[_y | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_y | boost::none])
 					y() = boost::get(v);
 			}
 			/// Returns a reference 'x' (horizontal position) value.
-			value_type& x() BOOST_NOEXCEPT {return std::get<0>(*this);}
+			typename Super::reference x() BOOST_NOEXCEPT {return std::get<0>(*this);}
 			/// Returns a reference 'x' (horizontal position) value.
-			const value_type& x() const BOOST_NOEXCEPT {return std::get<0>(*this);}
+			typename Super::const_reference x() const BOOST_NOEXCEPT {return std::get<0>(*this);}
 			/// Returns a reference 'y' (vertical position) value.
-			value_type& y() BOOST_NOEXCEPT {return std::get<1>(*this);}
+			typename Super::reference y() BOOST_NOEXCEPT {return std::get<1>(*this);}
 			/// Returns a reference 'y' (vertical position) value.
-			const value_type& y() BOOST_NOEXCEPT const {return std::get<1>(*this);}
+			typename Super::const_reference y() BOOST_NOEXCEPT const {return std::get<1>(*this);}
 		};
 
 		/**
@@ -77,21 +79,21 @@ namespace ascension {
 			BOOST_PARAMETER_CONSTRUCTOR(
 				PhysicalTwoAxes, (PhysicalTwoAxesBase<T>), tag,
 				(optional
-					(x, (boost::optional<value_type>))
-					(y, (boost::optional<value_type>))))
+					(x, (boost::optional<T>))
+					(y, (boost::optional<T>))))
 #else
-			PhysicalTwoAxes(value_type x, value_type y);
+			PhysicalTwoAxes(T x, T y);
 #endif
 			/// Compound-add operator calls same operators of @c T for @c #x and @c #y.
 			PhysicalTwoAxes& operator+=(const PhysicalTwoAxes<T>& other) {
-				x() += other.x();
-				y() += other.y();
+				this->x() += other.x();
+				this->y() += other.y();
 				return *this;
 			}
 			/// Compound-subtract operator calls same operators of @c T for @c #x and @c #y.
 			PhysicalTwoAxes& operator-=(const PhysicalTwoAxes<T>& other) {
-				x() -= other.x();
-				y() -= other.y();
+				this->x() -= other.x();
+				this->y() -= other.y();
 				return *this;
 			}
 		};
