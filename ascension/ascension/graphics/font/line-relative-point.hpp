@@ -31,6 +31,8 @@ namespace ascension {
 			template<typename T>
 			class LineRelativePointBase : public std::array<T, 2> {
 			public:
+				typedef std::array<T, 2> Super;	///< The base type.
+			public:
 				/// Default constructor initializes nothing.
 				LineRelativePointBase() {}
 				/// Copy-constructor.
@@ -38,19 +40,19 @@ namespace ascension {
 				/// Constructor takes named parameters as initial values.
 				template<typename Arguments>
 				LineRelativePointBase(const Arguments& arguments) {
-					if(const boost::optional<value_type> value = arguments[_u | boost::none])
+					if(const boost::optional<typename Super::value_type> value = arguments[_u | boost::none])
 						u() = boost::get(value);
-					if(const boost::optional<value_type> value = arguments[_v | boost::none])
+					if(const boost::optional<typename Super::value_type> value = arguments[_v | boost::none])
 						v() = boost::get(value);
 				}
 				/// Returns a reference 'u' value.
-				value_type& u() BOOST_NOEXCEPT {return std::get<0>(*this);}
+				typename Super::reference u() BOOST_NOEXCEPT {return std::get<0>(*this);}
 				/// Returns a reference 'u' value.
-				const value_type& u() const BOOST_NOEXCEPT {return std::get<0>(*this);}
+				typename Super::const_reference u() const BOOST_NOEXCEPT {return std::get<0>(*this);}
 				/// Returns a reference 'v' value.
-				value_type& v() BOOST_NOEXCEPT {return std::get<1>(*this);}
+				typename Super::reference v() BOOST_NOEXCEPT {return std::get<1>(*this);}
 				/// Returns a reference 'v' value.
-				const value_type& v() BOOST_NOEXCEPT const {return std::get<1>(*this);}
+				typename Super::const_reference v() const BOOST_NOEXCEPT {return std::get<1>(*this);}
 			};
 
 			/**
@@ -73,21 +75,21 @@ namespace ascension {
 				BOOST_PARAMETER_CONSTRUCTOR(
 					LineRelativePoint, (LineRelativePointBase<T>), tag,
 					(optional
-						(u, (boost::optional<value_type>))
-						(v, (boost::optional<value_type>))))
+						(u, (boost::optional<T>))
+						(v, (boost::optional<T>))))
 #else
-				LineRelativePoint(value_type u, value_type v);
+				LineRelativePoint(T u, T v);
 #endif
 				/// Compound-add operator calls same operators of @c T for @c #u and @c #v.
 				LineRelativePoint& operator+=(const LineRelativePoint<T>& other) {
-					u() += other.u();
-					v() += other.v();
+					this->u() += other.u();
+					this->v() += other.v();
 					return *this;
 				}
 				/// Compound-subtract operator calls same operators of @c T for @c #u and @c #v.
 				LineRelativePoint& operator-=(const LineRelativePoint<T>& other) {
-					u() -= other.u();
-					v() -= other.v();
+					this->u() -= other.u();
+					this->v() -= other.v();
 					return *this;
 				}
 			};

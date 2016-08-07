@@ -5,12 +5,24 @@
 #include <ascension/graphics/font/line-relative-point.hpp>
 
 BOOST_AUTO_TEST_CASE(negation_test) {
-	BOOST_TEST(!ascension::graphics::font::LineRelativeDirection::OVER == ascension::graphics::font::LineRelativeDirection::UNDER);
-	BOOST_TEST(!ascension::graphics::font::LineRelativeDirection::UNDER == ascension::graphics::font::LineRelativeDirection::OVER);
-	BOOST_TEST(!ascension::graphics::font::LineRelativeDirection::LINE_LEFT == ascension::graphics::font::LineRelativeDirection::LINE_RIGHT);
-	BOOST_TEST(!ascension::graphics::font::LineRelativeDirection::LINE_RIGHT == ascension::graphics::font::LineRelativeDirection::LINE_LEFT);
-	BOOST_TEST(!ascension::graphics::font::LineRelativeDirection::LINE_OVER == ascension::graphics::font::LineRelativeDirection::LINE_UNDER);
-	BOOST_TEST(!ascension::graphics::font::LineRelativeDirection::LINE_UNDER == ascension::graphics::font::LineRelativeDirection::LINE_OVER);
+	BOOST_TEST(
+		static_cast<int>(!ascension::graphics::font::LineRelativeDirection::OVER)
+		== static_cast<int>(ascension::graphics::font::LineRelativeDirection::UNDER));
+	BOOST_TEST(
+		static_cast<int>(!ascension::graphics::font::LineRelativeDirection::UNDER)
+		== static_cast<int>(ascension::graphics::font::LineRelativeDirection::OVER));
+	BOOST_TEST(
+		static_cast<int>(!ascension::graphics::font::LineRelativeDirection::LINE_LEFT)
+		== static_cast<int>(ascension::graphics::font::LineRelativeDirection::LINE_RIGHT));
+	BOOST_TEST(
+		static_cast<int>(!ascension::graphics::font::LineRelativeDirection::LINE_RIGHT)
+		== static_cast<int>(ascension::graphics::font::LineRelativeDirection::LINE_LEFT));
+	BOOST_TEST(
+		static_cast<int>(!ascension::graphics::font::LineRelativeDirection::LINE_OVER)
+		== static_cast<int>(ascension::graphics::font::LineRelativeDirection::LINE_UNDER));
+	BOOST_TEST(
+		static_cast<int>(!ascension::graphics::font::LineRelativeDirection::LINE_UNDER)
+		== static_cast<int>(ascension::graphics::font::LineRelativeDirection::LINE_OVER));
 }
 
 BOOST_AUTO_TEST_SUITE(two_axes)
