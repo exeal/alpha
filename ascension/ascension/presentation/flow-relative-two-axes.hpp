@@ -10,9 +10,10 @@
 
 #ifndef ASCENSION_FLOW_RELATIVE_TWO_AXES_HPP
 #define ASCENSION_FLOW_RELATIVE_TWO_AXES_HPP
-#include <ascension/corelib/detail/decay-or-refer.hpp>
 #include <ascension/corelib/detail/named-argument-exists.hpp>
+#include <ascension/corelib/detail/named-arguments-single-type.hpp>
 #include <boost/operators.hpp>
+#include <boost/optional.hpp>
 #include <boost/parameter.hpp>
 #include <array>
 
@@ -37,10 +38,10 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			FlowRelativeTwoAxesBase(const Arguments& arguments) {
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::bpd>::value)
-					bpd() = arguments[_bpd | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::ipd>::value)
-					ipd() = arguments[_ipd | value_type()];
+				if(const boost::optional<value_type> v = arguments[_bpd | boost::none])
+					bpd() = boost::get(v);
+				if(const boost::optional<value_type> v = arguments[_ipd | boost::none])
+					ipd() = boost::get(v);
 			}
 			/// Returns a reference to 'block-dimension' value.
 			value_type& bpd() BOOST_NOEXCEPT {return std::get<0>(*this);}
@@ -73,8 +74,8 @@ namespace ascension {
 			BOOST_PARAMETER_CONSTRUCTOR(
 				FlowRelativeTwoAxes, (FlowRelativeTwoAxesBase<T>), tag,
 				(optional
-					(bpd, (value_type))
-					(ipd, (value_type))))
+					(bpd, (boost::optional<value_type>))
+					(ipd, (boost::optional<value_type>))))
 			/// Compound-add operator calls same operators of @c T for @c #bpd() and @c #ipd().
 			FlowRelativeTwoAxes& operator+=(const FlowRelativeTwoAxes& other) {
 				bpd() += other.bpd();
@@ -89,22 +90,6 @@ namespace ascension {
 			}
 		};
 
-		namespace detail {
-			template<typename Arguments>
-			struct FlowRelativeTwoAxesFactoryResult {
-				typedef typename boost::parameter::value_type<Arguments, tag::bpd, void>::type BpdType;
-				typedef typename boost::parameter::value_type<Arguments, tag::ipd, void>::type IpdType;
-				typedef typename ascension::detail::DecayOrRefer<
-					typename std::conditional<!std::is_same<BpdType, void>::value, BpdType,
-						typename std::conditional<!std::is_same<IpdType, void>::value, IpdType,
-							void
-						>::type
-					>::type
-				>::Type Type;
-				static_assert(!std::is_same<Type, void>::value, "ascension.graphics.detail.FlowRelativeTwoAxesFactoryResult.Type");
-			};
-		}
-
 		/**
 		 * Creates a @c FlowRelativeTwoAxes object, deducing the target type from the types of arguments.
 		 * @tparam Arguments The type of @a arguments
@@ -112,9 +97,18 @@ namespace ascension {
 		 * @return A created @c FlowRelativeTwoAxes object
 		 */
 		template<typename Arguments>
-		inline FlowRelativeTwoAxes<typename detail::FlowRelativeTwoAxesFactoryResult<Arguments>::Type> makeFlowRelativeTwoAxes(const Arguments& arguments) {
-			typedef typename detail::FlowRelativeTwoAxesFactoryResult<Arguments>::Type Coordinate;
-			return FlowRelativeTwoAxes<Coordinate>(_bpd = arguments[_bpd], _ipd = arguments[_ipd]);
+		inline FlowRelativeTwoAxes<
+			typename ascension::detail::NamedArgumentsSingleType<
+				Arguments, tag::bpd, tag::ipd
+			>::Type
+		> makeFlowRelativeTwoAxes(const Arguments& arguments) {
+			typedef typename ascension::detail::NamedArgumentsSingleType<Arguments, tag::bpd, tag::ipd>::Type Coordinate;
+			boost::optional<Coordinate> bpd, ipd;
+			if(ascension::detail::NamedArgumentExists<Arguments, tag::bpd>::value)
+				bpd = arguments[_bpd];
+			if(ascension::detail::NamedArgumentExists<Arguments, tag::ipd>::value)
+				ipd = arguments[_ipd];
+			return FlowRelativeTwoAxes<Coordinate>(_bpd = bpd, _ipd = ipd);
 		}
 		/// @}
 	}

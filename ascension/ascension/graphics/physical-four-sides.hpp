@@ -11,6 +11,7 @@
 #ifndef ASCENSION_PHYSICAL_FOUR_SIDES_HPP
 #define ASCENSION_PHYSICAL_FOUR_SIDES_HPP
 #include <ascension/corelib/detail/named-argument-exists.hpp>
+#include <ascension/corelib/detail/named-arguments-single-type.hpp>
 #include <ascension/corelib/numeric-range.hpp>
 #include <ascension/graphics/geometry/rectangle-sides.hpp>
 #include <ascension/graphics/physical-direction.hpp>
@@ -37,14 +38,14 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			PhysicalFourSidesBase(const Arguments& arguments) {
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::top>::value)
-					top() = arguments[_top | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::right>::value)
-					right() = arguments[_right | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::bottom>::value)
-					bottom() = arguments[_bottom | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::left>::value)
-					left() = arguments[_left | value_type()];
+				if(const boost::optional<value_type> v = arguments[_top | boost::none])
+					top() = boost::get(v);
+				if(const boost::optional<value_type> v = arguments[_right | boost::none])
+					right() = boost::get(v);
+				if(const boost::optional<value_type> v = arguments[_bottom | boost::none])
+					bottom() = boost::get(v);
+				if(const boost::optional<value_type> v = arguments[_left | boost::none])
+					left() = boost::get(v);
 			}
 			/// Returns a reference to value of @a direction.
 			reference operator[](PhysicalDirection direction) {
@@ -105,10 +106,10 @@ namespace ascension {
 			BOOST_PARAMETER_CONSTRUCTOR(
 				PhysicalFourSides, (PhysicalFourSidesBase<T>), tag,
 				(optional
-					(top, (value_type))
-					(right, (value_type))
-					(bottom, (value_type))
-					(left, (value_type))))
+					(top, (boost::optional<value_type>))
+					(right, (boost::optional<value_type>))
+					(bottom, (boost::optional<value_type>))
+					(left, (boost::optional<value_type>))))
 			/// Compound-add operator calls same operators of @c T for the all elements.
 			PhysicalFourSides& operator+=(const PhysicalTwoAxes<T>& other) {
 				top() += other.y();
@@ -131,15 +132,25 @@ namespace ascension {
 		 * Creates a @c PhysicalFourSides object, deducing the target type from the types of arguments.
 		 * @tparam ArgumentPack The type of @a arguments
 		 * @param arguments The named arguments same as the constructor of @c PhysicalFourSides class
+		 * @return A created @c PhysicalFourSides object
 		 */
-		template<typename ArgumentPack>
-		inline auto makePhysicalFourSides(const ArgumentPack& arguments)
-				-> PhysicalFourSides<typename ascension::detail::DecayOrRefer<decltype(arguments[_top])>::Type> {
-			typedef typename ascension::detail::DecayOrRefer<decltype(arguments[_top])>::Type Coordinate;
-			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_right])>::Type, Coordinate>::value, "");
-			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_bottom])>::Type, Coordinate>::value, "");
-			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_left])>::Type, Coordinate>::value, "");
-			return PhysicalFourSides<Coordinate>(_top = arguments[_top], _right = arguments[_right], _bottom = arguments[_bottom], _left = arguments[_left]);
+		template<typename Arguments>
+		inline PhysicalFourSides<
+			typename ascension::detail::NamedArgumentsSingleType<
+				Arguments, tag::top, tag::right, tag::bottom, tag::left
+			>::Type
+		> makePhysicalFourSides(const Arguments& arguments) {
+			typedef typename ascension::detail::NamedArgumentsSingleType<Arguments, tag::top, tag::right, tag::bottom, tag::left>::Type Coordinate;
+			boost::optional<Coordinate> top, right, bottom, left;
+			if(ascension::detail::NamedArgumentExists<Arguments, tag::top>::value)
+				top = arguments[_top];
+			if(ascension::detail::NamedArgumentExists<Arguments, tag::right>::value)
+				right = arguments[_right];
+			if(ascension::detail::NamedArgumentExists<Arguments, tag::bottom>::value)
+				bottom = arguments[_bottom];
+			if(ascension::detail::NamedArgumentExists<Arguments, tag::left>::value)
+				left = arguments[_left];
+			return PhysicalFourSides<Coordinate>(_top = top, _right = right, _bottom = bottom, _left = left);
 		}
 
 		/**

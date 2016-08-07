@@ -1414,6 +1414,9 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\text\detail\break-iterator-scan-base.hpp">
       <Filter>ascension\Header Files\corelib\text\detail</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\named-arguments-single-type.hpp">
+      <Filter>ascension\Header Files\corelib\detail</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

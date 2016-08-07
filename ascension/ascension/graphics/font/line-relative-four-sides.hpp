@@ -12,6 +12,7 @@
 #define ASCENSION_LINE_RELATIVE_FOUR_SIDES_HPP
 #include <ascension/corelib/detail/decay-or-refer.hpp>
 #include <ascension/corelib/detail/named-argument-exists.hpp>
+#include <ascension/corelib/detail/named-arguments-single-type.hpp>
 #include <ascension/graphics/font/line-relative-direction.hpp>
 #include <boost/parameter.hpp>
 #include <array>
@@ -22,8 +23,6 @@ namespace ascension {
 			/// @addtogroup line_relative_directions_dimensions
 			/// @{
 #ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
-			BOOST_PARAMETER_NAME(over)
-			BOOST_PARAMETER_NAME(under)
 			BOOST_PARAMETER_NAME(lineOver)
 			BOOST_PARAMETER_NAME(lineUnder)
 			BOOST_PARAMETER_NAME(lineLeft)
@@ -39,19 +38,14 @@ namespace ascension {
 				/// Constructor takes named parameters as initial values.
 				template<typename Arguments>
 				LineRelativeFourSidesBase(const Arguments& arguments) {
-					const bool shortKeyword =
-						ascension::detail::NamedArgumentExists<Arguments, tag::over>::value
-						|| ascension::detail::NamedArgumentExists<Arguments, tag::under>::value;
-					const bool longKeyword =
-						ascension::detail::NamedArgumentExists<Arguments, tag::lineOver>::value
-						|| ascension::detail::NamedArgumentExists<Arguments, tag::lineUnder>::value;
-					const int m = shortKeyword ? 1 : 0;
-					const int n = m + (longKeyword ? 2 : 0);
-					initializeOverAndUnder(arguments, boost::mpl::int_<(n != 0) ? n : 1>());
-					if(ascension::detail::NamedArgumentExists<Arguments, tag::lineLeft>::value)
-						lineLeft() = arguments[_lineLeft | value_type()];
-					if(ascension::detail::NamedArgumentExists<Arguments, tag::lineRight>::value)
-						lineRight() = arguments[_lineRight | value_type()];
+					if(const boost::optional<value_type> v = arguments[_lineOver | boost::none])
+						lineOver() = boost::get(v);
+					if(const boost::optional<value_type> v = arguments[_lineUnder | boost::none])
+						lineUnder() = boost::get(v);
+					if(const boost::optional<value_type> v = arguments[_lineLeft | boost::none])
+						lineLeft() = boost::get(v);
+					if(const boost::optional<value_type> v = arguments[_lineRight | boost::none])
+						lineRight() = boost::get(v);
 				}
 				/// Returns a reference to value of @a direction.
 				reference operator[](LineRelativeDirection direction) {
@@ -62,22 +56,6 @@ namespace ascension {
 					return (*this)[static_cast<size_type>(direction)];
 				}
 				using std::array<T, 4>::operator[];
-				/// Returns a reference to 'over' value.
-				reference over() BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::OVER>(*this);
-				}
-				/// Returns a reference to 'over' value.
-				const_reference over() const BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::OVER>(*this);
-				}
-				/// Returns a reference to 'under' value.
-				reference under() BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::UNDER>(*this);
-				}
-				/// Returns a reference to 'under' value.
-				const_reference under() const BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::UNDER>(*this);
-				}
 				/// Returns a reference to 'line-left' value.
 				reference lineLeft() BOOST_NOEXCEPT {
 					return std::get<LineRelativeDirection::LINE_LEFT>(*this);
@@ -110,22 +88,6 @@ namespace ascension {
 				const_reference lineUnder() const BOOST_NOEXCEPT {
 					return std::get<LineRelativeDirection::LINE_UNDER>(*this);
 				}
-
-			private:
-				template<typename Arguments>
-				void initializeOverAndUnder(const Arguments& arguments, boost::mpl::int_<1>) {
-					if(ascension::detail::NamedArgumentExists<Arguments, tag::over>::value)
-						over() = arguments[_over | value_type()];
-					if(ascension::detail::NamedArgumentExists<Arguments, tag::under>::value)
-						under() = arguments[_under | value_type()];
-				}
-				template<typename Arguments>
-				void initializeOverAndUnder(const Arguments& arguments, boost::mpl::int_<2>) {
-					if(ascension::detail::NamedArgumentExists<Arguments, tag::lineOver>::value)
-						lineOver() = arguments[_lineOver | value_type()];
-					if(ascension::detail::NamedArgumentExists<Arguments, tag::lineUnder>::value)
-						lineUnder() = arguments[_lineUnder | value_type()];
-				}
 			};
 
 			/**
@@ -141,55 +103,23 @@ namespace ascension {
 				/**
 				 * Constructor which takes named parameters as initial values.
 				 * Omitted elements are initialized by the default constructor.
-				 * @param over The initial value of 'over' (optional)
-				 * @param under The initial value of 'under' (optional)
 				 * @param lineOver The initial value of 'lineOver' (optional)
 				 * @param lineUnder The initial value of 'lineUnder' (optional)
 				 * @param lineLeft The initial value of 'lineLeft' (optional)
 				 * @param lineRight The initial value of 'lineRight' (optional)
-				 * @note You can't give both @a over and @a lineOver.
-				 * @note You can't give both @a under and @a lineUnder.
 				 */
 #ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 				BOOST_PARAMETER_CONSTRUCTOR(
 					LineRelativeFourSides, (LineRelativeFourSidesBase<T>), tag,
 					(optional
-						(over, (value_type))
-						(under, (value_type))
-						(lineOver, (value_type))
-						(lineUnder, (value_type))
-						(lineLeft, (value_type))
-						(lineRight, (value_type))))
+						(lineOver, (boost::optional<value_type>))
+						(lineUnder, (boost::optional<value_type>))
+						(lineLeft, (boost::optional<value_type>))
+						(lineRight, (boost::optional<value_type>))))
 #else
-				LineRelativeFourSides(value_type over, value_type under, value_type lineLeft, value_type lineRight);
+				LineRelativeFourSides(value_type lineOver, value_type lineUnder, value_type lineLeft, value_type lineRight);
 #endif
 			};
-
-			namespace detail {
-				template<typename Arguments>
-				struct LineRelativeFourSidesFactoryResult {
-					typedef typename boost::parameter::value_type<Arguments, tag::over, void>::type OverType;
-					typedef typename boost::parameter::value_type<Arguments, tag::under, void>::type UnderType;
-					typedef typename boost::parameter::value_type<Arguments, tag::lineOver, void>::type LineOverType;
-					typedef typename boost::parameter::value_type<Arguments, tag::lineUnder, void>::type LineUnderType;
-					typedef typename boost::parameter::value_type<Arguments, tag::lineLeft, void>::type LineLeftType;
-					typedef typename boost::parameter::value_type<Arguments, tag::lineRight, void>::type LineRightType;
-					typedef typename ascension::detail::DecayOrRefer<
-						typename std::conditional<!std::is_same<OverType, void>::value, OverType,
-							typename std::conditional<!std::is_same<UnderType, void>::value, UnderType,
-								typename std::conditional<!std::is_same<LineOverType, void>::value, LineOverType,
-									typename std::conditional<!std::is_same<LineUnderType, void>::value, LineUnderType,
-										typename std::conditional<!std::is_same<LineLeftType, void>::value, LineLeftType,
-											typename std::conditional<!std::is_same<LineRightType, void>::value, LineRightType, void>
-										>
-									>
-								>
-							>
-						>::type
-					>::Type Type;
-					static_assert(!std::is_same<Type, void>::value, "");
-				};
-			}
 
 			/**
 			 * Creates a @c LineRelativeFourSides object, deducing the target type from the types of arguments.
@@ -198,9 +128,22 @@ namespace ascension {
 			 * @return A @c LineRelativeFourSides object
 			 */
 			template<typename Arguments>
-			inline LineRelativeFourSides<typename detail::LineRelativeFourSidesFactoryResult<Arguments>::Type> makeLineRelativeFourSides(const Arguments& arguments) {
-				typedef typename detail::LineRelativeFourSidesFactoryResult<Arguments>::Type Coordinate;
-				return LineRelativeFourSides<Coordinate>(arguments);
+			inline LineRelativeFourSides<
+				typename ascension::detail::NamedArgumentsSingleType<
+					Arguments, tag::lineOver, tag::lineUnder, tag::lineLeft, tag::lineRight
+				>::Type
+			> makeLineRelativeFourSides(const Arguments& arguments) {
+				typedef typename ascension::detail::NamedArgumentsSingleType<Arguments, tag::lineOver, tag::lineUnder, tag::lineLeft, tag::lineRight>::Type Coordinate;
+				boost::optional<Coordinate> over, under, left, right;
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::lineOver>::value)
+					over = arguments[_lineOver];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::lineUnder>::value)
+					under = arguments[_lineUnder];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::lineLeft>::value)
+					left = arguments[_lineLeft];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::lineRight>::value)
+					right = arguments[_lineRight];
+				return LineRelativeFourSides<Coordinate>(_lineOver = over, _lineUnder = under, _lineLeft = left, _lineRight = right);
 			}
 
 			/**
@@ -211,8 +154,8 @@ namespace ascension {
 			 * @see height, measure, width
 			 */
 			template<typename T>
-			inline auto extent(const LineRelativeFourSides<T>& sides) -> decltype(sides.under() - sides.over()) {
-				return sides.under() - sides.over();
+			inline auto extent(const LineRelativeFourSides<T>& sides) -> decltype(sides.lineUnder() - sides.lineOver()) {
+				return sides.lineUnder() - sides.lineOver();
 			}
 
 			/**

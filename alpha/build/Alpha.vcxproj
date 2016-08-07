@@ -392,6 +392,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\is-close.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\listeners.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\named-argument-exists.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\detail\named-arguments-single-type.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\scope-guard.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\shared-library.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp" />

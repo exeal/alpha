@@ -46,7 +46,7 @@ namespace ascension {
 			 */
 			inline BOOST_SCOPED_ENUM_NATIVE(LineRelativeDirection) operator!(BOOST_SCOPED_ENUM_NATIVE(LineRelativeDirection) direction) {
 				static const BOOST_SCOPED_ENUM_NATIVE(LineRelativeDirection) opposites[4] = {
-					LineRelativeDirection::UNDER, LineRelativeDirection::OVER,
+					LineRelativeDirection::LINE_UNDER, LineRelativeDirection::LINE_OVER,
 					LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::LINE_LEFT
 				};
 				const std::size_t index = direction;

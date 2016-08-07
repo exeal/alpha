@@ -10,8 +10,8 @@
 
 #ifndef ASCENSION_PHYSICAL_TWO_AXES_HPP
 #define ASCENSION_PHYSICAL_TWO_AXES_HPP
-#include <ascension/corelib/detail/decay-or-refer.hpp>
 #include <ascension/corelib/detail/named-argument-exists.hpp>
+#include <ascension/corelib/detail/named-arguments-single-type.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <boost/geometry/algorithms/make.hpp>
 #include <boost/operators.hpp>
@@ -38,10 +38,10 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			PhysicalTwoAxesBase(const Arguments& arguments) {
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::x>::value)
-					x() = arguments[_x | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::y>::value)
-					y() = arguments[_y | value_type()];
+				if(const boost::optional<value_type> v = arguments[_x | boost::none])
+					x() = boost::get(v);
+				if(const boost::optional<value_type> v = arguments[_y | boost::none])
+					y() = boost::get(v);
 			}
 			/// Returns a reference 'x' (horizontal position) value.
 			value_type& x() BOOST_NOEXCEPT {return std::get<0>(*this);}
@@ -73,11 +73,15 @@ namespace ascension {
 			 * @param x The initial value of 'x' (optional)
 			 * @param y The initial value of 'y' (optional)
 			 */
+#ifndef ASCENSION_DETAIL_DOXYGEN_IS_PREPROCESSING
 			BOOST_PARAMETER_CONSTRUCTOR(
 				PhysicalTwoAxes, (PhysicalTwoAxesBase<T>), tag,
 				(optional
-					(x, (value_type))
-					(y, (value_type))))
+					(x, (boost::optional<value_type>))
+					(y, (boost::optional<value_type>))))
+#else
+			PhysicalTwoAxes(value_type x, value_type y);
+#endif
 			/// Compound-add operator calls same operators of @c T for @c #x and @c #y.
 			PhysicalTwoAxes& operator+=(const PhysicalTwoAxes<T>& other) {
 				x() += other.x();
@@ -92,22 +96,6 @@ namespace ascension {
 			}
 		};
 
-		namespace detail {
-			template<typename Arguments>
-			struct PhysicalTwoAxesFactoryResult {
-				typedef typename boost::parameter::value_type<Arguments, tag::x, void>::type XType;
-				typedef typename boost::parameter::value_type<Arguments, tag::y, void>::type YType;
-				typedef typename ascension::detail::DecayOrRefer<
-					typename std::conditional<!std::is_same<XType, void>::value, XType,
-						typename std::conditional<!std::is_same<YType, void>::value, YType,
-							void
-						>::type
-					>::type
-				>::Type Type;
-				static_assert(!std::is_same<Type, void>::value, "ascension.graphics.detail.PhysicalTwoAxesFactoryResult.Type");
-			};
-		}
-
 		/**
 		 * Creates a @c PhysicalTwoAxes object, deducing the target type from the types of arguments.
 		 * @tparam Arguments The type of @a arguments
@@ -115,9 +103,18 @@ namespace ascension {
 		 * @return A created @c PhysicalTwoAxes object
 		 */
 		template<typename Arguments>
-		inline PhysicalTwoAxes<typename detail::PhysicalTwoAxesFactoryResult<Arguments>::Type> makePhysicalTwoAxes(const Arguments& arguments) {
-			typedef typename detail::PhysicalTwoAxesFactoryResult<Arguments>::Type Coordinate;
-			return PhysicalTwoAxes<Coordinate>(_x = arguments[_x], _y = arguments[_y]);
+		inline PhysicalTwoAxes<
+			typename ascension::detail::NamedArgumentsSingleType<
+				Arguments, tag::x, tag::y
+			>::Type
+		> makePhysicalTwoAxes(const Arguments& arguments) {
+			typedef typename ascension::detail::NamedArgumentsSingleType<Arguments, tag::x, tag::y>::Type Coordinate;
+			boost::optional<Coordinate> x, y;
+			if(ascension::detail::NamedArgumentExists<Arguments, tag::x>::value)
+				x = arguments[_x];
+			if(ascension::detail::NamedArgumentExists<Arguments, tag::y>::value)
+				y = arguments[_y];
+			return PhysicalTwoAxes<Coordinate>(_x = x, _y = y);
 		}
 		/// @}
 
