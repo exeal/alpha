@@ -152,7 +152,7 @@ namespace ascension {
 		class FlowRelativeFourSides : public FlowRelativeFourSidesBase<T>,
 			private boost::additive<FlowRelativeFourSides<T>, FlowRelativeTwoAxes<T>> {
 		public:
-#ifdef BOOST_COMP_MSVC
+#if BOOST_COMP_MSVC
 			FlowRelativeFourSides(const FlowRelativeFourSides& other) : FlowRelativeFourSidesBase<T>(static_cast<const FlowRelativeFourSidesBase<T>&>(other)) {}
 			FlowRelativeFourSides(FlowRelativeFourSides&& other) : FlowRelativeFourSidesBase<T>(std::forward<FlowRelativeFourSidesBase>(other)) {}
 #endif	// BOOST_COMP_MSVC
@@ -328,7 +328,7 @@ namespace std {
 			typedef std::function<
 				std::hash<void*>::result_type(const ascension::presentation::FlowRelativeFourSides<T>&)
 			> Super;
-			return boost::hash<Super::argument_type>()(key);
+			return boost::hash<typename Super::argument_type>()(key);
 		}
 	};
 }
