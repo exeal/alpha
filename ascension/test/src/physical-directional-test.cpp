@@ -4,10 +4,18 @@
 #include <ascension/graphics/physical-four-sides.hpp>
 
 BOOST_AUTO_TEST_CASE(negation_test) {
-	BOOST_TEST(!ascension::graphics::PhysicalDirection::TOP == ascension::graphics::PhysicalDirection::BOTTOM);
-	BOOST_TEST(!ascension::graphics::PhysicalDirection::RIGHT == ascension::graphics::PhysicalDirection::LEFT);
-	BOOST_TEST(!ascension::graphics::PhysicalDirection::BOTTOM == ascension::graphics::PhysicalDirection::TOP);
-	BOOST_TEST(!ascension::graphics::PhysicalDirection::LEFT == ascension::graphics::PhysicalDirection::RIGHT);
+	BOOST_TEST(
+		static_cast<int>(!ascension::graphics::PhysicalDirection::TOP)
+		== static_cast<int>(ascension::graphics::PhysicalDirection::BOTTOM));
+	BOOST_TEST(
+		static_cast<int>(!ascension::graphics::PhysicalDirection::RIGHT)
+		== static_cast<int>(ascension::graphics::PhysicalDirection::LEFT));
+	BOOST_TEST(
+		static_cast<int>(!ascension::graphics::PhysicalDirection::BOTTOM)
+		== static_cast<int>(ascension::graphics::PhysicalDirection::TOP));
+	BOOST_TEST(
+		static_cast<int>(!ascension::graphics::PhysicalDirection::LEFT)
+		== static_cast<int>(ascension::graphics::PhysicalDirection::RIGHT));
 }
 
 BOOST_AUTO_TEST_SUITE(two_axes)
