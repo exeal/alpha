@@ -52,7 +52,7 @@ namespace ascension {
 			/// Returns a reference 'y' (vertical position) value.
 			typename Super::reference y() BOOST_NOEXCEPT {return std::get<1>(*this);}
 			/// Returns a reference 'y' (vertical position) value.
-			typename Super::const_reference y() BOOST_NOEXCEPT const {return std::get<1>(*this);}
+			typename Super::const_reference y() const BOOST_NOEXCEPT {return std::get<1>(*this);}
 		};
 
 		/**
