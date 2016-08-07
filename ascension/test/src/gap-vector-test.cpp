@@ -9,7 +9,7 @@
 
 namespace {
 	std::array<int, 8> make_random_array() {
-		const std::array<int, 8> a = {12, 23, 34, 45, 56, 67, 78, 89};
+		const std::array<int, 8> a = {{12, 23, 34, 45, 56, 67, 78, 89}};
 		return a;
 	}
 	ascension::detail::GapVector<int> make_random_gap_vector() {
