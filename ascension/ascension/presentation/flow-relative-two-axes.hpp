@@ -80,14 +80,14 @@ namespace ascension {
 					(ipd, (boost::optional<T>))))
 			/// Compound-add operator calls same operators of @c T for @c #bpd() and @c #ipd().
 			FlowRelativeTwoAxes& operator+=(const FlowRelativeTwoAxes& other) {
-				bpd() += other.bpd();
-				ipd() += other.ipd();
+				this->bpd() += other.bpd();
+				this->ipd() += other.ipd();
 				return *this;
 			}
 			/// Compound-subtract operator calls same operators of @c T for @c #bpd() and @c #ipd().
 			FlowRelativeTwoAxes& operator-=(const FlowRelativeTwoAxes& other) {
-				bpd() -= other.bpd();
-				ipd() -= other.ipd();
+				this->bpd() -= other.bpd();
+				this->ipd() -= other.ipd();
 				return *this;
 			}
 		};
