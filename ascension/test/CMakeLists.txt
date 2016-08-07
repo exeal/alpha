@@ -78,7 +78,7 @@ add_test(
 	COMMAND $<TARGET_FILE:utf-iterator-test>
 	CONFIGURATIONS Debug)
 
-#graphics
+# graphics
 add_executable(
 	physical-directional-test
 	src/physical-directional-test.cpp)
@@ -87,11 +87,29 @@ add_test(
 	COMMAND $<TARGET_FILE:physical-directional-test>
 	CONFIGURATIONS Debug)
 
-#graphics.geometry
+# graphics.font
+add_executable(
+	line-relative-directional-test
+	src/line-relative-directional-test.cpp)
+add_test(
+	NAME line_relative_directions
+	COMMAND $<TARGET_FILE:line-relative-directional-test>
+	CONFIGURATIONS Debug)
+
+# graphics.geometry
 add_executable(
 	geometry-test
 	src/geometry-test.cpp)
 add_test(
 	NAME geometry
 	COMMAND $<TARGET_FILE:geometry-test>
+	CONFIGURATIONS Debug)
+
+# presentation
+add_executable(
+	flow-relative-directional-test
+	src/flow-relative-directional-test.cpp)
+add_test(
+	NAME flow_relative_directions
+	COMMAND $<TARGET_FILE:flow-relative-directional-test>
 	CONFIGURATIONS Debug)
