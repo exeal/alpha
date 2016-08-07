@@ -51,11 +51,11 @@ namespace ascension {
 				}
 				/// Returns a reference to value of @a direction.
 				typename Super::reference operator[](LineRelativeDirection direction) {
-					return (*this)[static_cast<size_type>(direction)];
+					return (*this)[static_cast<typename Super::size_type>(direction)];
 				}
 				/// Returns a reference to value of @a direction.
 				typename Super::const_reference operator[](LineRelativeDirection direction) const {
-					return (*this)[static_cast<size_type>(direction)];
+					return (*this)[static_cast<typename Super::size_type>(direction)];
 				}
 				using std::array<T, 4>::operator[];
 				/// Returns a reference to 'line-left' value.
