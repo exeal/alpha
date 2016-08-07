@@ -15,7 +15,7 @@ namespace {
 		const ascension::NumericRange<int> bounds;
 		ascension::NumericRange<int> ranges[9];
 
-		Fixture() : bounds(ascension::nrange(23, 42)) BOOST_NOEXCEPT {
+		Fixture() BOOST_NOEXCEPT : bounds(ascension::nrange(23, 42)) {
 			ranges[0] = ascension::nrange(-9, 11);
 			ranges[1] = ascension::nrange(-9, 23);
 			ranges[2] = ascension::nrange(11, 31);
@@ -65,6 +65,8 @@ BOOST_AUTO_TEST_SUITE(construction)
 
 	BOOST_AUTO_TEST_CASE(nrange_test) {
 		auto nr(ascension::nrange(23, 42));
+		BOOST_TEST(*boost::const_begin(nr) == 23);
+		BOOST_TEST(*boost::const_end(nr) == 42);
 	}
 BOOST_AUTO_TEST_SUITE_END()
 

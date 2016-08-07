@@ -61,7 +61,7 @@ namespace ascension {
 		typedef boost::iterator_range<Iterator> Super;
 
 	public:
-		typedef difference_type size_type;	// override to handle floating-point numbers
+		typedef typename Super::difference_type size_type;	// override to handle floating-point numbers
 	public:
 		NumericRange() {}
 		NumericRange(Value first, Value last) : Super(Iterator(first), Iterator(last)) {}
