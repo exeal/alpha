@@ -244,10 +244,10 @@ namespace ascension {
 		 * @tparam T An arithmetic type
 		 * @param sides The flow-relative four sides
 		 * @return A range
-		 * @see inlineRange, horizontalRange, verticalRange
+		 * @see inlineFlowRange, horizontalRange, verticalRange
 		 */
 		template<typename T>
-		inline NumericRange<T> blockRange(const FlowRelativeFourSides<T>& sides) {
+		inline NumericRange<T> blockFlowRange(const FlowRelativeFourSides<T>& sides) {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
 			return nrange(sides.blockStart(), sides.blockEnd());
 		}
@@ -257,10 +257,10 @@ namespace ascension {
 		 * @tparam T An arithmetic type
 		 * @param sides The flow-relative four sides
 		 * @return A range
-		 * @see blockRange, horizontalRange, verticalRange
+		 * @see blockFlowRange, horizontalRange, verticalRange
 		 */
 		template<typename T>
-		inline NumericRange<T> inlineRange(const FlowRelativeFourSides<T>& sides) {
+		inline NumericRange<T> inlineFlowRange(const FlowRelativeFourSides<T>& sides) {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
 			return nrange(sides.inlineStart(), sides.inlineEnd());
 		}
@@ -273,8 +273,8 @@ namespace ascension {
 		 * @see height, measure, width
 		 */
 		template<typename T>
-		inline auto extent(const FlowRelativeFourSides<T>& sides) -> decltype(boost::size(blockRange(sides))) {
-			return boost::size(blockRange(sides));
+		inline auto extent(const FlowRelativeFourSides<T>& sides) -> decltype(boost::size(blockFlowRange(sides))) {
+			return boost::size(blockFlowRange(sides));
 		}
 
 		/**
@@ -285,8 +285,8 @@ namespace ascension {
 		 * @see extent, height, width
 		 */
 		template<typename T>
-		inline auto measure(const FlowRelativeFourSides<T>& sides) -> decltype(boost::size(inlineRange(sides))) {
-			return boost::size(inlineRange(sides));
+		inline auto measure(const FlowRelativeFourSides<T>& sides) -> decltype(boost::size(inlineFlowRange(sides))) {
+			return boost::size(inlineFlowRange(sides));
 		}
 
 		/// Specialization of @c boost#hash_value function template for @c FlowRelativeFourSides.

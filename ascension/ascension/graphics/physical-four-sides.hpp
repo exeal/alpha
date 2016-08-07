@@ -158,7 +158,7 @@ namespace ascension {
 		 * @tparam T An arithmetic type
 		 * @param sides The physical four sides
 		 * @return A range
-		 * @see verticalRange, blockRange, inlineRange
+		 * @see verticalRange, blockFlowRange, inlineFlowRange
 		 */
 		template<typename T>
 		inline NumericRange<T> horizontalRange(const PhysicalFourSides<T>& sides) {
@@ -171,7 +171,7 @@ namespace ascension {
 		 * @tparam T An arithmetic type
 		 * @param sides The physical four sides
 		 * @return A range
-		 * @see horizontalRange, blockRange, inlineRange
+		 * @see horizontalRange, blockFlowRange, inlineFlowRange
 		 */
 		template<typename T>
 		inline NumericRange<T> verticalRange(const PhysicalFourSides<T>& sides) {
