@@ -10,7 +10,7 @@
 #include <ascension/presentation/hyperlink/hyperlink.hpp>
 #include <ascension/presentation/hyperlink/hyperlink-detector.hpp>
 #include <ascension/rules/uri-detector.hpp>
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 #	include <shellapi.h>	// ShellExecuteW
 #else
 #endif
@@ -31,7 +31,7 @@ namespace ascension {
 					return PRECEDING + uri_ + FOLLOWING;
 				}
 				void invoke() const BOOST_NOEXCEPT {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 					::ShellExecuteW(nullptr, nullptr, uri_.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 #else
 #endif

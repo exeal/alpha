@@ -31,7 +31,7 @@
 //#include <commdlg.h>	// ChooseFont
 //#include <shlwapi.h>	// PathXxxx
 //#include <comcat.h>		// ICatInformation
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 #	include <CommCtrl.h>	// InitMUILanguage
 #	include <Ole2.h>		// OleInitialize, OleUninitialize
 #endif
@@ -49,7 +49,7 @@
 #endif
 
 
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 namespace alpha {
 	namespace {
 		void callOleUninitialize() {
@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
 
 	int	exitCode = 0/*EXIT_SUCCESS*/;
 
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 	// Shift キーを押しながら起動すると英語モードになるようにしてみた
 	if(ascension::win32::boole(::GetAsyncKeyState(VK_SHIFT) & 0x8000)) {
 		::MessageBeep(MB_OK);
@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
 
 		const Glib::RefPtr<alpha::Application> application(alpha::Application::create(argc, argv));
 		exitCode = application->run(application->window());
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 	} else {	// pass the command line arguments to the existing process
 		HWND existWnd = ::FindWindowW(IDS_APPNAME, nullptr);
 		while(!ascension::win32::boole(::IsWindow(existWnd))) {

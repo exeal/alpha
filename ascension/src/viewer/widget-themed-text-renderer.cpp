@@ -12,7 +12,7 @@
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/widget-themed-text-renderer.hpp>
 #include <ascension/graphics/native-conversion.hpp>
-#if (ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)) && defined(BOOST_OS_WINDOWS)
+#if (ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)) && BOOST_OS_WINDOWS
 #	include <ascension/graphics/rendering-context.hpp>
 #endif
 
@@ -135,7 +135,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
 			return std::shared_ptr<const graphics::font::Font>(std::shared_ptr<const QFont>(&textViewer_.font(), boost::null_deleter()));
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
-#	ifdef BOOST_OS_WINDOWS
+#	if BOOST_OS_WINDOWS
 			if(const auto context = widgetapi::createRenderingContext(textViewer_))
 				return context->font();
 #	else

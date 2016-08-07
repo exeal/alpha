@@ -39,7 +39,7 @@ namespace ascension {
 		/// Clipboard Win32 API was failed.
 		class ClipboardException : public std::system_error {
 		public:
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 			typedef HRESULT NativeErrorCode;
 #else
 			typedef void NativeErrorCode;
@@ -99,7 +99,7 @@ namespace ascension {
 			/// @name Clipboard
 			/// @{
 			bool canPaste(bool useKillRing) const BOOST_NOEXCEPT;
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 			LCID clipboardLocale() const BOOST_NOEXCEPT;
 			LCID setClipboardLocale(LCID newLocale);
 #endif // BOOST_OS_WINDOWS
@@ -213,7 +213,7 @@ namespace ascension {
 				boost::optional<kernel::Position> positionBeforeUpdate_;
 			};
 			std::unique_ptr<SelectionAnchor> anchor_;
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 			LCID clipboardLocale_;
 #endif // BOOST_OS_WINDOWS
 			CharacterInputSignal characterInputSignal_;

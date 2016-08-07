@@ -81,7 +81,7 @@ namespace ascension {
 			}
 
 			inline std::uint32_t systemDefinedCaretMeasure() {
-#if defined(BOOST_OS_WINDOWS)
+#if BOOST_OS_WINDOWS
 				DWORD width;
 				if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 					width = 1;	// NT4 does not support SPI_GETCARETWIDTH
@@ -144,7 +144,7 @@ namespace ascension {
 		}
 
 		namespace {
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 			/// Returns @c true if the specified language is RTL.
 			inline bool isRtlLanguage(LANGID id) BOOST_NOEXCEPT {
 				return id == LANG_ARABIC || id == LANG_FARSI || id == LANG_HEBREW || id == LANG_SYRIAC || id == LANG_URDU;

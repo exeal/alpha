@@ -92,7 +92,7 @@ namespace ascension {
 		 */
 		void Session::setMigemoDictionaryPathName(const boost::filesystem::path& pathName) {
 #if 0
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 			if(pathName.length() > MAX_PATH - 1)
 #else // ASCENSION_OS_POSIX
 			if(pathName.length() > PATH_MAX - 1)
@@ -110,7 +110,7 @@ namespace ascension {
 		 */
 		void Session::setMigemoLibraryPathName(const boost::filesystem::path& pathName) {
 #if 0
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 			if(pathName.length() > MAX_PATH - 1)
 #else // ASCENSION_OS_POSIX
 			if(pathName.length() > PATH_MAX - 1)

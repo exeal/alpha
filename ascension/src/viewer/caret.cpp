@@ -120,7 +120,7 @@ namespace ascension {
 		 */
 		Caret::Caret(kernel::Document& document, const TextHit& position /* = TextHit::leading(kernel::Position::zero()) */) :
 				VisualPoint(document, position), anchor_(new SelectionAnchor(document, insertionPosition(document, position))),
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
 				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
@@ -138,7 +138,7 @@ namespace ascension {
 					const_cast<kernel::Document&>(other.characterIndex().document()),
 					insertionPosition(other.characterIndex().document(),
 						other.isLeadingEdge() ? TextHit::leading(other.characterIndex().position()) : TextHit::trailing(other.characterIndex().position())))),
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
 				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
@@ -152,7 +152,7 @@ namespace ascension {
 		 */
 		Caret::Caret(const VisualPoint& other) :
 				VisualPoint(other), anchor_(new SelectionAnchor(other)),
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
 				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
@@ -167,7 +167,7 @@ namespace ascension {
 		 */
 		Caret::Caret(TextArea& textArea, const TextHit& position /* = TextHit::leading(kernel::Position::zero()) */) :
 				VisualPoint(textArea, position), anchor_(new SelectionAnchor(textArea, position.characterIndex())),
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
 				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {

@@ -14,9 +14,9 @@
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-input.hpp>
 #include <ascension/corelib/encoder.hpp>	// encoding.Encoder.*
-#if defined(BOOST_OS_WINDOWS)
+#if BOOST_OS_WINDOWS
 #	include <ascension/win32/windows.hpp>
-#elif defined(ASCENSION_OS_POSIX)
+#elif ASCENSION_OS_POSIX
 #	include <dirent.h>						// DIR
 #endif
 #include <boost/filesystem/path.hpp>
@@ -171,7 +171,7 @@ namespace ascension {
 				int_type underflow();
 			private:
 				typedef std::basic_streambuf<Char> Base;
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				HANDLE fileHandle_, fileMapping_;
 #else // ASCENSION_OS_POSIX
 				int fileDescriptor_;
@@ -183,7 +183,7 @@ namespace ascension {
 					const Byte* current;
 					InputMapping() BOOST_NOEXCEPT : buffer(nullptr, nullptr), current(nullptr) {}
 				} inputMapping_;
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				LARGE_INTEGER originalFileEnd_;
 #else // ASCENSION_OS_POSIX
 				off_t originalFileEnd_;
@@ -319,7 +319,7 @@ namespace ascension {
 			private:
 				void update(const void* info);
 			private:
-#ifdef BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
 				HANDLE handle_;
 #else // ASCENSION_OS_POSIX
 				DIR* handle_;
