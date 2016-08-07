@@ -153,8 +153,8 @@ namespace ascension {
 			private boost::additive<FlowRelativeFourSides<T>, FlowRelativeTwoAxes<T>> {
 		public:
 #ifdef BOOST_COMP_MSVC
-			FlowRelativeFourSides(const FlowRelativeFourSides& other) : FlowRelativeFourSidesBase(static_cast<const FlowRelativeFourSidesBase<T>&>(other)) {}
-			FlowRelativeFourSides(FlowRelativeFourSides&& other) : FlowRelativeFourSidesBase(std::forward<FlowRelativeFourSidesBase>(other)) {}
+			FlowRelativeFourSides(const FlowRelativeFourSides& other) : FlowRelativeFourSidesBase<T>(static_cast<const FlowRelativeFourSidesBase<T>&>(other)) {}
+			FlowRelativeFourSides(FlowRelativeFourSides&& other) : FlowRelativeFourSidesBase<T>(std::forward<FlowRelativeFourSidesBase>(other)) {}
 #endif	// BOOST_COMP_MSVC
 #ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 			/**
@@ -325,7 +325,10 @@ namespace std {
 		public std::function<std::hash<void*>::result_type(const ascension::presentation::FlowRelativeFourSides<T>&)> {
 	public:
 		std::size_t operator()(const ascension::presentation::FlowRelativeFourSides<T>& key) const BOOST_NOEXCEPT {
-			return boost::hash<argument_type>()(key);
+			typedef std::function<
+				std::hash<void*>::result_type(const ascension::presentation::FlowRelativeFourSides<T>&)
+			> Super;
+			return boost::hash<Super::argument_type>()(key);
 		}
 	};
 }
