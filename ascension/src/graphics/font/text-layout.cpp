@@ -831,7 +831,7 @@ namespace ascension {
 								PhysicalFourSides<Scalar> temp;
 								presentation::mapDimensions(wm,
 									presentation::_from = LineRelativeFourSides<Scalar>(
-										_over = lineOver, _under = lineUnder,
+										_lineOver = lineOver, _lineUnder = lineUnder,
 										_lineLeft = std::min(leading, trailing), _lineRight = std::max(leading, trailing)),
 									presentation::_to = temp);
 								Rectangle rectangle(geometry::make<Rectangle>(temp));

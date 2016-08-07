@@ -262,7 +262,10 @@ namespace ascension {
 			 * @param positions The destination of scroll in abstract dimensions in user units
 			 */
 			inline void TextViewport::scrollTo(const presentation::FlowRelativeTwoAxes<ScrollOffset>& positions) {
-				 return scrollTo(presentation::FlowRelativeTwoAxes<boost::optional<ScrollOffset>>(presentation::_ipd = positions.ipd(), presentation::_bpd = positions.bpd()));
+				presentation::FlowRelativeTwoAxes<boost::optional<ScrollOffset>> temp;
+				temp.bpd() = positions.bpd();
+				temp.ipd() = positions.ipd();
+				return scrollTo(temp);
 			}
 
 			/**
@@ -270,7 +273,10 @@ namespace ascension {
 			 * @param positions
 			 */
 			inline void TextViewport::scrollTo(const PhysicalTwoAxes<ScrollOffset>& positions) {
-				 return scrollTo(PhysicalTwoAxes<boost::optional<ScrollOffset>>(_x = positions.x(), _y = positions.y()));
+				PhysicalTwoAxes<boost::optional<ScrollOffset>> temp;
+				temp.x() = positions.x();
+				temp.y() = positions.y();
+				return scrollTo(temp);
 			}
 
 			/**

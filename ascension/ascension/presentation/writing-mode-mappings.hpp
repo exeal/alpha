@@ -262,11 +262,11 @@ namespace ascension {
 				inline void mapDimensions(const WritingMode& writingMode, const graphics::font::LineRelativeFourSides<T>& from, graphics::PhysicalFourSides<T>& to) {
 					using namespace graphics;
 					if(isHorizontal(writingMode.blockFlowDirection))
-						to = PhysicalFourSides<T>(_top = from.over(), _right = from.lineRight(), _bottom = from.under(), _left = from.lineLeft());
+						to = PhysicalFourSides<T>(_top = from.lineOver(), _right = from.lineRight(), _bottom = from.lineUnder(), _left = from.lineLeft());
 					else if(resolveTextOrientation(writingMode) != SIDEWAYS_LEFT)
-						to = PhysicalFourSides<T>(_top = from.lineLeft(), _right = from.over(), _bottom = from.lineRight(), _left = from.under());
+						to = PhysicalFourSides<T>(_top = from.lineLeft(), _right = from.lineOver(), _bottom = from.lineRight(), _left = from.lineUnder());
 					else
-						to = PhysicalFourSides<T>(_top = from.lineRight(), _right = from.under(), _bottom = from.lineLeft(), _left = from.over());
+						to = PhysicalFourSides<T>(_top = from.lineRight(), _right = from.lineUnder(), _bottom = from.lineLeft(), _left = from.lineOver());
 				}
 
 				template<typename T>

@@ -11,6 +11,7 @@
 #ifndef ASCENSION_LINE_RELATIVE_POINT_HPP
 #define ASCENSION_LINE_RELATIVE_POINT_HPP
 #include <ascension/corelib/detail/named-argument-exists.hpp>
+#include <ascension/corelib/detail/named-arguments-single-type.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <boost/operators.hpp>
 #include <boost/parameter.hpp>
@@ -37,10 +38,10 @@ namespace ascension {
 				/// Constructor takes named parameters as initial values.
 				template<typename Arguments>
 				LineRelativePointBase(const Arguments& arguments) {
-					if(ascension::detail::NamedArgumentExists<Arguments, tag::u>::value)
-						u() = arguments[_u | value_type()];
-					if(ascension::detail::NamedArgumentExists<Arguments, tag::v>::value)
-						v() = arguments[_v | value_type()];
+					if(const boost::optional<value_type> value = arguments[_u | boost::none])
+						u() = boost::get(value);
+					if(const boost::optional<value_type> value = arguments[_v | boost::none])
+						v() = boost::get(value);
 				}
 				/// Returns a reference 'u' value.
 				value_type& u() BOOST_NOEXCEPT {return std::get<0>(*this);}
@@ -72,8 +73,8 @@ namespace ascension {
 				BOOST_PARAMETER_CONSTRUCTOR(
 					LineRelativePoint, (LineRelativePointBase<T>), tag,
 					(optional
-						(u, (value_type))
-						(v, (value_type))))
+						(u, (boost::optional<value_type>))
+						(v, (boost::optional<value_type>))))
 #else
 				LineRelativePoint(value_type u, value_type v);
 #endif
@@ -84,12 +85,33 @@ namespace ascension {
 					return *this;
 				}
 				/// Compound-subtract operator calls same operators of @c T for @c #u and @c #v.
-				LineRelativePoint& operator-=(const PhysicalTwoAxes<T>& other) {
+				LineRelativePoint& operator-=(const LineRelativePoint<T>& other) {
 					u() -= other.u();
 					v() -= other.v();
 					return *this;
 				}
 			};
+
+			/**
+			 * Creates a @c LineRelativePoint object, deducing the target type from the types of arguments.
+			 * @tparam Arguments The type of @a arguments
+			 * @param arguments The named arguments same as the constructor of @c LineRelativePoint class template
+			 * @return A created @c LineRelativePoint object
+			 */
+			template<typename Arguments>
+			inline LineRelativePoint<
+				typename ascension::detail::NamedArgumentsSingleType<
+					Arguments, tag::u, tag::v
+				>::Type
+			> makeLineRelativePoint(const Arguments& arguments) {
+				typedef typename ascension::detail::NamedArgumentsSingleType<Arguments, tag::u, tag::v>::Type Coordinate;
+				boost::optional<Coordinate> u, v;
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::u>::value)
+					u = arguments[_u];
+				if(ascension::detail::NamedArgumentExists<Arguments, tag::v>::value)
+					v = arguments[_v];
+				return LineRelativePoint<Coordinate>(_u = u, _v = v);
+			}
 			/// @}
 		}
 	}
