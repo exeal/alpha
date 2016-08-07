@@ -548,7 +548,7 @@ namespace ascension {
 				if(n == 0)
 					return position;
 				if(n > gap()) {
-					const const_iterator::difference_type index = std::distance(cbegin(), position);
+					const typename const_iterator::difference_type index = std::distance(cbegin(), position);
 					reallocate(std::max(n + size(), capacity() * 2));
 					position = std::next(cbegin(), index);
 				}
