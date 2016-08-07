@@ -30,27 +30,29 @@ namespace ascension {
 		template<typename T>
 		class FlowRelativeTwoAxesBase : public std::array<T, 2> {
 		public:
+			typedef std::array<T, 2> Super;	///< The base type.
+		public:
 			/// Default constructor initializes nothing.
 			FlowRelativeTwoAxesBase() {}
-#ifdef BOOST_COMP_MSVC
+#if BOOST_COMP_MSVC
 			FlowRelativeTwoAxesBase(const FlowRelativeTwoAxesBase& other) : std::array<T, 2>(other) {}
 #endif	// BOOST_COMP_MSVC
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			FlowRelativeTwoAxesBase(const Arguments& arguments) {
-				if(const boost::optional<value_type> v = arguments[_bpd | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_bpd | boost::none])
 					bpd() = boost::get(v);
-				if(const boost::optional<value_type> v = arguments[_ipd | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_ipd | boost::none])
 					ipd() = boost::get(v);
 			}
 			/// Returns a reference to 'block-dimension' value.
-			value_type& bpd() BOOST_NOEXCEPT {return std::get<0>(*this);}
+			typename Super::value_type& bpd() BOOST_NOEXCEPT {return std::get<0>(*this);}
 			/// Returns a reference to 'block-dimension' value.
-			const value_type& bpd() const BOOST_NOEXCEPT {return std::get<0>(*this);}
+			const typename Super::value_type& bpd() const BOOST_NOEXCEPT {return std::get<0>(*this);}
 			/// Returns a reference to 'inline-dimension' value.
-			value_type& ipd() BOOST_NOEXCEPT {return std::get<1>(*this);}
+			typename Super::value_type& ipd() BOOST_NOEXCEPT {return std::get<1>(*this);}
 			/// Returns a reference to 'inline-dimension' value.
-			const value_type& ipd() const BOOST_NOEXCEPT {return std::get<1>(*this);}
+			const typename Super::value_type& ipd() const BOOST_NOEXCEPT {return std::get<1>(*this);}
 		};
 
 		/**
@@ -62,7 +64,7 @@ namespace ascension {
 		template<typename T>
 		class FlowRelativeTwoAxes : public FlowRelativeTwoAxesBase<T>, private boost::additive<FlowRelativeTwoAxes<T>> {
 		public:
-#ifdef BOOST_COMP_MSVC
+#if BOOST_COMP_MSVC
 			FlowRelativeTwoAxes(const FlowRelativeTwoAxes& other) : FlowRelativeTwoAxesBase<T>(static_cast<const FlowRelativeTwoAxesBase<T>&>(other)) {}
 #endif	// BOOST_COMP_MSVC
 			/**
@@ -74,8 +76,8 @@ namespace ascension {
 			BOOST_PARAMETER_CONSTRUCTOR(
 				FlowRelativeTwoAxes, (FlowRelativeTwoAxesBase<T>), tag,
 				(optional
-					(bpd, (boost::optional<value_type>))
-					(ipd, (boost::optional<value_type>))))
+					(bpd, (boost::optional<T>))
+					(ipd, (boost::optional<T>))))
 			/// Compound-add operator calls same operators of @c T for @c #bpd() and @c #ipd().
 			FlowRelativeTwoAxes& operator+=(const FlowRelativeTwoAxes& other) {
 				bpd() += other.bpd();

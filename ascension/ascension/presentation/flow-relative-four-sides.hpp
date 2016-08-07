@@ -42,70 +42,72 @@ namespace ascension {
 		template<typename T>
 		class FlowRelativeFourSidesBase : public std::array<T, 4> {
 		public:
+			typedef std::array<T, 4> Super;	///< The base type.
+		public:
 			/// Default constructor initializes nothing.
 			FlowRelativeFourSidesBase() {}
-#ifdef BOOST_COMP_MSVC
+#if BOOST_COMP_MSVC
 			FlowRelativeFourSidesBase(const FlowRelativeFourSidesBase& other) : std::array<T, 4>(other) {}
 			FlowRelativeFourSidesBase(FlowRelativeFourSidesBase&& other) : std::array<T, 4>(other) {}
 #endif	// BOOST_COMP_MSVC
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			FlowRelativeFourSidesBase(const Arguments& arguments) {
-				if(const boost::optional<value_type> v = arguments[_blockStart | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_blockStart | boost::none])
 					blockStart() = boost::get(v);
-				if(const boost::optional<value_type> v = arguments[_blockEnd | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_blockEnd | boost::none])
 					blockEnd() = boost::get(v);
-				if(const boost::optional<value_type> v = arguments[_inlineStart | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_inlineStart | boost::none])
 					inlineStart() = boost::get(v);
-				if(const boost::optional<value_type> v = arguments[_inlineEnd | boost::none])
+				if(const boost::optional<typename Super::value_type> v = arguments[_inlineEnd | boost::none])
 					inlineEnd() = boost::get(v);
 #ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 #endif // !ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 			}
 			/// Returns a reference to value of @a direction.
-			reference operator[](FlowRelativeDirection direction) {
-				return (*this)[boost::underlying_cast<size_type>(direction)];
+			typename Super::reference operator[](FlowRelativeDirection direction) {
+				return (*this)[boost::underlying_cast<typename Super::size_type>(direction)];
 			}
 			/// Returns a reference to value of @a direction.
-			const_reference operator[](FlowRelativeDirection direction) const {
-				return (*this)[boost::underlying_cast<size_type>(direction)];
+			typename Super::const_reference operator[](FlowRelativeDirection direction) const {
+				return (*this)[boost::underlying_cast<typename Super::size_type>(direction)];
 			}
 			using std::array<T, 4>::operator[];
 			/// Returns a reference to 'block-start' value.
-			reference blockStart() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_START>(*this);}
+			typename Super::reference blockStart() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_START>(*this);}
 			/// Returns a reference to 'block-start' value.
-			const_reference blockStart() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_START>(*this);}
+			typename Super::const_reference blockStart() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_START>(*this);}
 			/// Returns a reference to 'block-end' value.
-			reference blockEnd() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_END>(*this);}
+			typename Super::reference blockEnd() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_END>(*this);}
 			/// Returns a reference to 'block-end' value.
-			const_reference blockEnd() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_END>(*this);}
+			typename Super::const_reference blockEnd() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_END>(*this);}
 			/// Returns a reference to 'line-start' value.
-			reference inlineStart() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_START>(*this);}
+			typename Super::reference inlineStart() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_START>(*this);}
 			/// Returns a reference to 'line-start' value.
-			const_reference inlineStart() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_START>(*this);}
+			typename Super::const_reference inlineStart() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_START>(*this);}
 			/// Returns a reference to 'line-end' value.
-			reference inlineEnd() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_END>(*this);}
+			typename Super::reference inlineEnd() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_END>(*this);}
 			/// Returns a reference to 'line-end' value.
-			const_reference inlineEnd() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_END>(*this);}
+			typename Super::const_reference inlineEnd() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_END>(*this);}
 #ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 			/// Returns a reference to 'before' value.
-			reference before() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BEFORE>(*this);}
+			typename Super::reference before() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BEFORE>(*this);}
 			/// Returns a reference to 'before' value.
-			const_reference before() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BEFORE>(*this);}
+			typename Super::const_reference before() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BEFORE>(*this);}
 			/// Returns a reference to 'after' value.
-			reference after() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::AFTER>(*this);}
+			typename Super::reference after() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::AFTER>(*this);}
 			/// Returns a reference to 'after' value.
-			const_reference after() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::AFTER>(*this);}
+			typename Super::const_reference after() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::AFTER>(*this);}
 			/// Returns a reference to 'start' value.
-			reference start() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::START>(*this);}
+			typename Super::reference start() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::START>(*this);}
 			/// Returns a reference to 'start' value.
-			const_reference start() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::START>(*this);}
+			typename Super::const_reference start() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::START>(*this);}
 			/// Returns a reference to 'end' value.
 			/// @note This method hides @c std#array#end.
-			reference end() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::END>(*this);}
+			typename Super::reference end() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::END>(*this);}
 			/// Returns a reference to 'end' value.
 			/// @note This method hides @c std#array#end.
-			const_reference end() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::END>(*this);}
+			typename Super::const_reference end() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::END>(*this);}
 #endif // !ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 
 		private:
@@ -164,14 +166,14 @@ namespace ascension {
 			BOOST_PARAMETER_CONSTRUCTOR(
 				FlowRelativeFourSides, (FlowRelativeFourSidesBase<T>), tag,
 				(optional
-					(blockStart, (boost::optional<value_type>))
-					(blockEnd, (boost::optional<value_type>))
-					(inlineStart, (boost::optional<value_type>))
-					(inlineEnd, (boost::optional<value_type>))
-					(before, (boost::optional<value_type>))
-					(after, (boost::optional<value_type>))
-					(start, (boost::optional<value_type>))
-					(end, (boost::optional<value_type>))))
+					(blockStart, (boost::optional<T>))
+					(blockEnd, (boost::optional<T>))
+					(inlineStart, (boost::optional<T>))
+					(inlineEnd, (boost::optional<T>))
+					(before, (boost::optional<T>))
+					(after, (boost::optional<T>))
+					(start, (boost::optional<T>))
+					(end, (boost::optional<T>))))
 #else
 			/**
 			 * Creates a @c FlowRelativeFourSides instance with the given initial values by named parameters.
@@ -184,13 +186,13 @@ namespace ascension {
 			BOOST_PARAMETER_CONSTRUCTOR(
 				FlowRelativeFourSides, (FlowRelativeFourSidesBase<T>), tag,
 				(optional
-					(blockStart, (boost::optional<value_type>))
-					(blockEnd, (boost::optional<value_type>))
-					(inlineStart, (boost::optional<value_type>))
-					(inlineEnd, (boost::optional<value_type>))))
+					(blockStart, (boost::optional<T>))
+					(blockEnd, (boost::optional<T>))
+					(inlineStart, (boost::optional<T>))
+					(inlineEnd, (boost::optional<T>))))
 #endif // !ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 			template<typename U>
-#if !defined(BOOST_COMP_MSVC) || BOOST_COMP_MSVC >= BOOST_VERSION_NUMBER(11, 0, 0)
+#if !BOOST_COMP_MSVC || BOOST_COMP_MSVC >= BOOST_VERSION_NUMBER(11, 0, 0)
 			FlowRelativeFourSides(const U& other, typename std::enable_if<std::is_constructible<T, const U&>::value>::type* = nullptr)
 #else
 			FlowRelativeFourSides(const U& other, typename std::enable_if<std::is_convertible<U, T>::value>::type* = nullptr)
