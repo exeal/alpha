@@ -74,65 +74,71 @@ namespace ascension {
 			}
 			using std::array<T, 4>::operator[];
 			/// Returns a reference to 'block-start' value.
-			typename Super::reference blockStart() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_START>(*this);}
+			typename Super::reference blockStart() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::BLOCK_START)>(*this);
+			}
 			/// Returns a reference to 'block-start' value.
-			typename Super::const_reference blockStart() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_START>(*this);}
+			typename Super::const_reference blockStart() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::BLOCK_START)>(*this);
+			}
 			/// Returns a reference to 'block-end' value.
-			typename Super::reference blockEnd() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_END>(*this);}
+			typename Super::reference blockEnd() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::BLOCK_END)>(*this);
+			}
 			/// Returns a reference to 'block-end' value.
-			typename Super::const_reference blockEnd() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BLOCK_END>(*this);}
+			typename Super::const_reference blockEnd() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::BLOCK_END)>(*this);
+			}
 			/// Returns a reference to 'line-start' value.
-			typename Super::reference inlineStart() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_START>(*this);}
+			typename Super::reference inlineStart() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::INLINE_START)>(*this);
+			}
 			/// Returns a reference to 'line-start' value.
-			typename Super::const_reference inlineStart() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_START>(*this);}
+			typename Super::const_reference inlineStart() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::INLINE_START)>(*this);
+			}
 			/// Returns a reference to 'line-end' value.
-			typename Super::reference inlineEnd() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_END>(*this);}
+			typename Super::reference inlineEnd() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::INLINE_END)>(*this);
+			}
 			/// Returns a reference to 'line-end' value.
-			typename Super::const_reference inlineEnd() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::INLINE_END>(*this);}
-#ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
-			/// Returns a reference to 'before' value.
-			typename Super::reference before() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BEFORE>(*this);}
-			/// Returns a reference to 'before' value.
-			typename Super::const_reference before() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BEFORE>(*this);}
-			/// Returns a reference to 'after' value.
-			typename Super::reference after() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::AFTER>(*this);}
-			/// Returns a reference to 'after' value.
-			typename Super::const_reference after() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::AFTER>(*this);}
-			/// Returns a reference to 'start' value.
-			typename Super::reference start() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::START>(*this);}
-			/// Returns a reference to 'start' value.
-			typename Super::const_reference start() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::START>(*this);}
-			/// Returns a reference to 'end' value.
-			/// @note This method hides @c std#array#end.
-			typename Super::reference end() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::END>(*this);}
-			/// Returns a reference to 'end' value.
-			/// @note This method hides @c std#array#end.
-			typename Super::const_reference end() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::END>(*this);}
-#endif // !ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
-
-		private:
-			template<typename Arguments>
-			void initialize(const Arguments& arguments, boost::mpl::int_<1>) {
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::blockStart>::value)
-					blockStart() = arguments[_blockStart | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::blockEnd>::value)
-					blockEnd() = arguments[_blockEnd | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::inlineStart>::value)
-					inlineStart() = arguments[_inlineStart | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::inlineEnd>::value)
-					inlineEnd() = arguments[_inlineEnd | value_type()];
+			typename Super::const_reference inlineEnd() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::INLINE_END)>(*this);
 			}
 #ifndef ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
-			template<typename Arguments>
-			void initialize(const Arguments& arguments, boost::mpl::int_<2>) {
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::before>::value)
-					before() = arguments[_before | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::after>::value)
-					after() = arguments[_after | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::start>::value)
-					start() = arguments[_start | value_type()];
-				if(ascension::detail::NamedArgumentExists<Arguments, tag::end>::value)
-					end() = arguments[_end | value_type()];
+			/// Returns a reference to 'before' value.
+			typename Super::reference before() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::BEFORE)>(*this);
+			}
+			/// Returns a reference to 'before' value.
+			typename Super::const_reference before() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::BEFORE)>(*this);
+			}
+			/// Returns a reference to 'after' value.
+			typename Super::reference after() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::AFTER)>(*this);
+			}
+			/// Returns a reference to 'after' value.
+			typename Super::const_reference after() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::AFTER)>(*this);
+			}
+			/// Returns a reference to 'start' value.
+			typename Super::reference start() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::START)>(*this);
+			}
+			/// Returns a reference to 'start' value.
+			typename Super::const_reference start() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::START)>(*this);
+			}
+			/// Returns a reference to 'end' value.
+			/// @note This method hides @c std#array#end.
+			typename Super::reference end() BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::END)>(*this);
+			}
+			/// Returns a reference to 'end' value.
+			/// @note This method hides @c std#array#end.
+			typename Super::const_reference end() const BOOST_NOEXCEPT {
+				return std::get<static_cast<std::size_t>(FlowRelativeDirection::END)>(*this);
 			}
 #endif // !ASCENSION_NO_XSL_FLOW_RELATIVE_DIRECTIONS
 		};
@@ -197,21 +203,21 @@ namespace ascension {
 #else
 			FlowRelativeFourSides(const U& other, typename std::enable_if<std::is_convertible<U, T>::value>::type* = nullptr)
 #endif
-				: FlowRelativeFourSidesBase<T>((_blockStart = other, _blockEnd = other, _lineStart = other, _lineEnd = other)) {}
+				: FlowRelativeFourSidesBase<T>((_blockStart = other, _blockEnd = other, _inlineStart = other, _inlineEnd = other)) {}
 			/// Compound-add operator calls same operators of @c T for the all elements.
 			FlowRelativeFourSides& operator+=(const FlowRelativeTwoAxes<T>& other) {
-				blockStart() += other.bpd();
-				blockEnd() += other.bpd();
-				inlineStart() += other.ipd();
-				inlineEnd() += other.ipd();
+				this->blockStart() += other.bpd();
+				this->blockEnd() += other.bpd();
+				this->inlineStart() += other.ipd();
+				this->inlineEnd() += other.ipd();
 				return *this;
 			}
 			/// Compound-subtract operator calls same operators of @c T for the all elements.
 			FlowRelativeFourSides& operator-=(const FlowRelativeTwoAxes<T>& other) {
-				blockStart() -= other.bpd();
-				blockEnd() -= other.bpd();
-				inlineStart() -= other.ipd();
-				inlineEnd() -= other.ipd();
+				this->blockStart() -= other.bpd();
+				this->blockEnd() -= other.bpd();
+				this->inlineStart() -= other.ipd();
+				this->inlineEnd() -= other.ipd();
 				return *this;
 			}
 		};
