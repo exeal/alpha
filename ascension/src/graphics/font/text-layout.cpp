@@ -498,7 +498,7 @@ namespace ascension {
 			/// @internal Implements @c #hitTestCharacter methods.
 			TextHit<> TextLayout::internalHitTestCharacter(const presentation::FlowRelativeTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
-				const auto line(locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(presentation::blockRange(*bounds)) : boost::none));
+				const auto line(locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(presentation::blockFlowRange(*bounds)) : boost::none));
 				const auto runsInLine(runsForLine(std::get<0>(line)));
 				const Scalar lineStart = lineStartEdge(std::get<0>(line));
 
