@@ -33,60 +33,62 @@ namespace ascension {
 			template<typename T>
 			class LineRelativeFourSidesBase : public std::array<T, 4> {
 			public:
+				typedef std::array<T, 4> Super;	///< The base type.
+			public:
 				/// Default constructor initializes nothing.
 				LineRelativeFourSidesBase() {}
 				/// Constructor takes named parameters as initial values.
 				template<typename Arguments>
 				LineRelativeFourSidesBase(const Arguments& arguments) {
-					if(const boost::optional<value_type> v = arguments[_lineOver | boost::none])
+					if(const boost::optional<typename Super::value_type> v = arguments[_lineOver | boost::none])
 						lineOver() = boost::get(v);
-					if(const boost::optional<value_type> v = arguments[_lineUnder | boost::none])
+					if(const boost::optional<typename Super::value_type> v = arguments[_lineUnder | boost::none])
 						lineUnder() = boost::get(v);
-					if(const boost::optional<value_type> v = arguments[_lineLeft | boost::none])
+					if(const boost::optional<typename Super::value_type> v = arguments[_lineLeft | boost::none])
 						lineLeft() = boost::get(v);
-					if(const boost::optional<value_type> v = arguments[_lineRight | boost::none])
+					if(const boost::optional<typename Super::value_type> v = arguments[_lineRight | boost::none])
 						lineRight() = boost::get(v);
 				}
 				/// Returns a reference to value of @a direction.
-				reference operator[](LineRelativeDirection direction) {
+				typename Super::reference operator[](LineRelativeDirection direction) {
 					return (*this)[static_cast<size_type>(direction)];
 				}
 				/// Returns a reference to value of @a direction.
-				const_reference operator[](LineRelativeDirection direction) const {
+				typename Super::const_reference operator[](LineRelativeDirection direction) const {
 					return (*this)[static_cast<size_type>(direction)];
 				}
 				using std::array<T, 4>::operator[];
 				/// Returns a reference to 'line-left' value.
-				reference lineLeft() BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::LINE_LEFT>(*this);
+				typename Super::reference lineLeft() BOOST_NOEXCEPT {
+					return std::get<static_cast<std::size_t>(LineRelativeDirection::LINE_LEFT)>(*this);
 				}
 				/// Returns a reference to 'line-left' value.
-				const_reference lineLeft() const BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::LINE_LEFT>(*this);
+				typename Super::const_reference lineLeft() const BOOST_NOEXCEPT {
+					return std::get<static_cast<std::size_t>(LineRelativeDirection::LINE_LEFT)>(*this);
 				}
 				/// Returns a reference to 'line-right' value.
-				reference lineRight() BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::LINE_RIGHT>(*this);
+				typename Super::reference lineRight() BOOST_NOEXCEPT {
+					return std::get<static_cast<std::size_t>(LineRelativeDirection::LINE_RIGHT)>(*this);
 				}
 				/// Returns a reference to 'line-right' value.
-				const_reference lineRight() const BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::LINE_RIGHT>(*this);
+				typename Super::const_reference lineRight() const BOOST_NOEXCEPT {
+					return std::get<static_cast<std::size_t>(LineRelativeDirection::LINE_RIGHT)>(*this);
 				}
 				/// Returns a reference to 'line-over' value.
-				reference lineOver() BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::LINE_OVER>(*this);
+				typename Super::reference lineOver() BOOST_NOEXCEPT {
+					return std::get<static_cast<std::size_t>(LineRelativeDirection::LINE_OVER)>(*this);
 				}
 				/// Returns a reference to 'line-over' value.
-				const_reference lineOver() const BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::LINE_OVER>(*this);
+				typename Super::const_reference lineOver() const BOOST_NOEXCEPT {
+					return std::get<static_cast<std::size_t>(LineRelativeDirection::LINE_OVER)>(*this);
 				}
 				/// Returns a reference to 'line-under' value.
-				reference lineUnder() BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::LINE_UNDER>(*this);
+				typename Super::reference lineUnder() BOOST_NOEXCEPT {
+					return std::get<static_cast<std::size_t>(LineRelativeDirection::LINE_UNDER)>(*this);
 				}
 				/// Returns a reference to 'line-under' value.
-				const_reference lineUnder() const BOOST_NOEXCEPT {
-					return std::get<LineRelativeDirection::LINE_UNDER>(*this);
+				typename Super::const_reference lineUnder() const BOOST_NOEXCEPT {
+					return std::get<static_cast<std::size_t>(LineRelativeDirection::LINE_UNDER)>(*this);
 				}
 			};
 
@@ -112,12 +114,12 @@ namespace ascension {
 				BOOST_PARAMETER_CONSTRUCTOR(
 					LineRelativeFourSides, (LineRelativeFourSidesBase<T>), tag,
 					(optional
-						(lineOver, (boost::optional<value_type>))
-						(lineUnder, (boost::optional<value_type>))
-						(lineLeft, (boost::optional<value_type>))
-						(lineRight, (boost::optional<value_type>))))
+						(lineOver, (boost::optional<T>))
+						(lineUnder, (boost::optional<T>))
+						(lineLeft, (boost::optional<T>))
+						(lineRight, (boost::optional<T>))))
 #else
-				LineRelativeFourSides(value_type lineOver, value_type lineUnder, value_type lineLeft, value_type lineRight);
+				LineRelativeFourSides(T lineOver, T lineUnder, T lineLeft, T lineRight);
 #endif
 			};
 
