@@ -15,6 +15,7 @@
 #include <ascension/corelib/memory.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/character.hpp>
+#include <ascension/corelib/text/utf.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/optional.hpp>
 #include <boost/range/algorithm/find_first_of.hpp>
@@ -57,12 +58,16 @@ namespace ascension {
 			String asString() const {
 				if(!isLiteral())
 					throw std::logic_error("The newline is not literal.");
-				else if(value_ < 0x10000u)
-					return String(1, static_cast<Char>(value_ & 0xffffu));
+				String s;
+				s.reserve(8);
+				auto inserter(std::back_inserter(s));
+				if(value_ < 0x10000u)
+					text::utf::encode(static_cast<Char>(value_ & 0xffffu), inserter);
 				else {
-					static const Char crlf[] = {text::CARRIAGE_RETURN, text::LINE_FEED};
-					return String(crlf, crlf + 2);
+					text::utf::encode(text::CARRIAGE_RETURN, inserter);
+					text::utf::encode(text::LINE_FEED, inserter);
 				}
+				return s;
 			}
 			/// Returns @c true if the given newline value is a literal.
 			bool isLiteral() const BOOST_NOEXCEPT {
