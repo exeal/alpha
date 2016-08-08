@@ -12,6 +12,8 @@
 #include <ascension/corelib/future/type-traits.hpp>	// std.integral_constant
 #include <boost/mpl/identity.hpp>
 #include <boost/optional.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
 #include <boost/range/iterator.hpp>
 #include <array>
 #include <ios>	// std.ios_base.failure
@@ -62,9 +64,9 @@ namespace ascension {
 		const CodePoint INVALID_CODE_POINT = 0xfffffffful;
 		/// Set of newline characters.
 		/// @see kernel#Newline
-		const std::array<Char, 5> NEWLINE_CHARACTERS = {
+		const std::array<Char, 5> NEWLINE_CHARACTERS = {{
 			LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR
-		};
+		}};
 
 		namespace detail {
 			template<typename Iterator> class IteratorValue {
