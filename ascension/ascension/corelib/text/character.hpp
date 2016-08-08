@@ -83,11 +83,11 @@ namespace ascension {
 		 * @tparam CodeUnitSequence The type represents a code unit sequence
 		 */
 		template<typename CodeUnitSequence> struct CodeUnitSizeOf
-			: std::integral_constant<std::size_t, sizeof(detail::IteratorValue<CodeUnitSequence>::type)> {};
+			: std::integral_constant<std::size_t, sizeof(typename detail::IteratorValue<CodeUnitSequence>::type)> {};
 		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T>>
-			: std::integral_constant<std::size_t, sizeof(T::value_type)> {};
+			: std::integral_constant<std::size_t, sizeof(typename T::value_type)> {};
 		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T>>
-			: std::integral_constant<std::size_t, sizeof(T::value_type)> {};
+			: std::integral_constant<std::size_t, sizeof(typename T::value_type)> {};
 		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U>>
 			: std::integral_constant<std::size_t, sizeof(T)> {};
 
