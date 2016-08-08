@@ -661,7 +661,7 @@ namespace ascension {
 		template<typename OutputIterator>
 		inline void Encoder::availableEncodings(OutputIterator out) {
 			for(std::size_t i = 0, c = registry().size(); i < c; ++i, ++out)
-				*out = std::make_pair<std::size_t, const EncodingProperties*>(i, registry()[i]);
+				*out = std::make_pair(i, registry()[i]);
 		}
 
 		/// Returns the miscellaneous flags.
