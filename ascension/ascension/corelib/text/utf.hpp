@@ -62,7 +62,63 @@ namespace ascension {
 				0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,	// 0xE0
 				0x40, 0x40, 0x40, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00	// 0xF0
 			};
-	
+		}
+
+		namespace utf {
+			/// @defgroup utf8_trivials UTF-8 Trivial Functions
+			/// @{
+			/**
+			 * Returns @c true if the given code unit is UTF-8 valid byte (which can be any
+			 * component of valid UTF-8 byte sequence).
+			 * @param byte The code unit to test
+			 * @return true if @a byte is valid byte
+			 */
+			inline bool isValidByte(std::uint8_t byte) {
+//				return byte < 0xc0 || (byte > 0xc1 && byte < 0xf5);
+				return detail::UTF8_CODE_UNIT_VALUES[byte] != 0x00;
+			}
+
+			/**
+			 * Returns @c true if the given code unit is UTF-8 single byte (which encodes a code
+			 * point by itself).
+			 * @param byte The code unit to test
+			 * @return true if @a byte is single byte
+			 */
+			inline bool isSingleByte(std::uint8_t byte) {
+//				return (byte & 0x80) == 0;
+				return detail::UTF8_CODE_UNIT_VALUES[byte] == 0x10;
+			}
+
+			/**
+			 * Returns @c true if the given code unit is UTF-8 leading byte.
+			 * @param byte The code unit to test
+			 * @return true if @a byte is leading byte
+			 */
+			inline bool isLeadingByte(std::uint8_t byte) BOOST_NOEXCEPT {
+				return (detail::UTF8_CODE_UNIT_VALUES[byte] & 0xf0) != 0;
+			}
+
+			/**
+			 * Returns @c true if the given code unit may be UTF-8 trailing byte.
+			 * @param byte The code unit to test
+			 * @return true if @a byte may be trailing byte
+			 */
+			inline bool maybeTrailingByte(std::uint8_t byte) {
+//				return (byte & 0xc0) == 0x80;
+				return (detail::UTF8_CODE_UNIT_VALUES[byte] & 0x0f) == 0x01;
+			}
+
+			inline std::size_t length(std::uint8_t leadingByte) {
+				return detail::UTF8_CODE_UNIT_VALUES[leadingByte] >> 4;
+			}
+
+			inline std::size_t numberOfTrailingBytes(std::uint8_t leadingByte) {
+				return length(leadingByte) - 1;
+			}
+			/// @}
+		}
+
+		namespace detail {
 			inline CodePoint decodeUTF8(const std::uint8_t bytes[], std::size_t nbytes, bool checkMalformedInput) {
 				// this function never checks bytes[0] value
 				switch(nbytes) {
@@ -203,58 +259,6 @@ namespace ascension {
 					throw InvalidScalarValueException(c);
 				else
 					return 1;
-			}
-			/// @}
-
-			/// @defgroup utf8_trivials UTF-8 Trivial Functions
-			/// @{
-			/**
-			 * Returns @c true if the given code unit is UTF-8 valid byte (which can be any
-			 * component of valid UTF-8 byte sequence).
-			 * @param byte The code unit to test
-			 * @return true if @a byte is valid byte
-			 */
-			inline bool isValidByte(std::uint8_t byte) {
-//				return byte < 0xc0 || (byte > 0xc1 && byte < 0xf5);
-				return detail::UTF8_CODE_UNIT_VALUES[byte] != 0x00;
-			}
-
-			/**
-			 * Returns @c true if the given code unit is UTF-8 single byte (which encodes a code
-			 * point by itself).
-			 * @param byte The code unit to test
-			 * @return true if @a byte is single byte
-			 */
-			inline bool isSingleByte(std::uint8_t byte) {
-//				return (byte & 0x80) == 0;
-				return detail::UTF8_CODE_UNIT_VALUES[byte] == 0x10;
-			}
-
-			/**
-			 * Returns @c true if the given code unit is UTF-8 leading byte.
-			 * @param byte The code unit to test
-			 * @return true if @a byte is leading byte
-			 */
-			inline bool isLeadingByte(std::uint8_t byte) BOOST_NOEXCEPT {
-				return (detail::UTF8_CODE_UNIT_VALUES[byte] & 0xf0) != 0;
-			}
-
-			/**
-			 * Returns @c true if the given code unit may be UTF-8 trailing byte.
-			 * @param byte The code unit to test
-			 * @return true if @a byte may be trailing byte
-			 */
-			inline bool maybeTrailingByte(std::uint8_t byte) {
-//				return (byte & 0xc0) == 0x80;
-				return (detail::UTF8_CODE_UNIT_VALUES[byte] & 0x0f) == 0x01;
-			}
-
-			inline std::size_t length(std::uint8_t leadingByte) {
-				return detail::UTF8_CODE_UNIT_VALUES[leadingByte] >> 4;
-			}
-
-			inline std::size_t numberOfTrailingBytes(std::uint8_t leadingByte) {
-				return length(leadingByte) - 1;
 			}
 			/// @}
 
