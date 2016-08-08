@@ -32,11 +32,13 @@ namespace ascension {
 //	typedef unsigned long ulong;	///< A short synonym for @c unsigned @c long.
 
 	// character and string
-#ifdef ASCENSION_USE_INTRINSIC_WCHAR_T
-	typedef wchar_t Char;					///< Type for characters as UTF-16 code unit.
-#else
-	typedef std::uint16_t Char;				///< Type for characters as UTF-16 code unit.
+	typedef std::conditional<
+#ifndef ASCENSION_USE_INTRINSIC_WCHAR_T
+		false &&
 #endif
+		sizeof(wchar_t) == 2,
+		wchar_t, std::uint16_t
+	>::type Char;	///< Type for characters as UTF-16 code unit.
 	typedef std::uint32_t CodePoint;		///< Unicode code point.
 	typedef std::basic_string<Char> String;	///< Type for strings as UTF-16.
 	static_assert(sizeof(Char) == 2, "");
