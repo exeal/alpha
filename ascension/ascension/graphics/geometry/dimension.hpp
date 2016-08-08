@@ -96,10 +96,17 @@ namespace ascension {
 			private:
 				using BasicDimensionBase<Coordinate>::dx_;
 				using BasicDimensionBase<Coordinate>::dy_;
+#if !BOOST_COMP_MSVC
+				friend Coordinate& dx<Coordinate>(BasicDimension<Coordinate>&);
+				friend Coordinate dx<Coordinate>(const BasicDimension<Coordinate>&);
+				friend Coordinate& dy<Coordinate>(BasicDimension<Coordinate>&);
+				friend Coordinate dy<Coordinate>(const BasicDimension<Coordinate>&);
+#else
 				template<typename T> friend Coordinate& dx(BasicDimension<T>&);
 				template<typename T> friend Coordinate dx(const BasicDimension<T>&);
 				template<typename T> friend Coordinate& dy(BasicDimension<T>&);
 				template<typename T> friend Coordinate dy(const BasicDimension<T>&);
+#endif
 			};
 			/// @}
 
