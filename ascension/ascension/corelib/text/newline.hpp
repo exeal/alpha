@@ -90,6 +90,7 @@ namespace ascension {
 		 */
 		template<typename ForwardIterator>
 		inline Index calculateNumberOfLines(ForwardIterator first, ForwardIterator last, Index emptyCase = 1) {
+			static_assert(CodeUnitSizeOf<ForwardIterator>::value == 2, "ForwardIterator should addresses UTF-16 character sequence.");
 			if(first == last)
 				return emptyCase;
 			Index lines = 1;
@@ -130,6 +131,7 @@ namespace ascension {
 		 */
 		template<typename ForwardIterator>
 		inline boost::optional<Newline> eatNewline(ForwardIterator first, ForwardIterator last) {
+			static_assert(CodeUnitSizeOf<ForwardIterator>::value == 2, "ForwardIterator should addresses UTF-16 character sequence.");
 			switch(*first) {
 				case LINE_FEED:
 					return boost::make_optional(Newline::LINE_FEED);
