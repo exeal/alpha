@@ -270,8 +270,8 @@ namespace ascension {
 				static std::unique_ptr<std::locale> japanese, swedish;
 				if(!localeInitialized) {
 					localeInitialized = true;
-					static const std::array<const char*, 3> JAPANESE_NAMES = {"ja_JP", "ja", "JP"};
-					static const std::array<const char*, 3> SWEDISH_NAMES = {"sv_SE", "sv", "SE"};
+					static const std::array<const char*, 3> JAPANESE_NAMES = {{"ja_JP", "ja", "JP"}};
+					static const std::array<const char*, 3> SWEDISH_NAMES = {{"sv_SE", "sv", "SE"}};
 					try {
 						BOOST_FOREACH(const char* name, JAPANESE_NAMES) {
 							if(japanese.get() != nullptr)

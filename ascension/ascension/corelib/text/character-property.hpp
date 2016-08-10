@@ -14,7 +14,8 @@
 #endif
 #include <ascension/corelib/text/identifier-syntax.hpp>
 #include <algorithm>	// std.binary_search, std.lower_bound, std.upper_bound
-#include <locale>		// std.locale, std.tolower
+#include <cctype>		// std.to_lower
+#include <locale>		// std.locale
 #include <string>		// std.char_traits
 #include <boost/range/algorithm/binary_search.hpp>
 
@@ -55,6 +56,8 @@ namespace ascension {
 				 */
 				template<typename CharType1, typename CharType2>
 				static int compare(const CharType1* p1, const CharType2* p2) {
+					static_assert(sizeof(CharType1) <= sizeof(int), "");
+					static_assert(sizeof(CharType2) <= sizeof(int), "");
 					while(*p1 != 0 && *p2 != 0) {
 						if(*p1 == '_' || *p1 == '-' || *p1 == ' ') {
 							++p1;
@@ -63,12 +66,11 @@ namespace ascension {
 							++p2;
 							continue;
 						}
-						const int c1 =
-							std::char_traits<CharType1>::to_int_type(
-								std::tolower(*p1, std::locale::classic()));
-						const int c2 =
-							std::char_traits<CharType2>::to_int_type(
-								std::tolower(*p2, std::locale::classic()));
+
+						static const auto lowestCode = std::numeric_limits<unsigned char>::lowest();
+						static const auto maximumCode = std::numeric_limits<unsigned char>::max();
+						const int c1 = (*p1 >= lowestCode && *p1 <= maximumCode) ? std::tolower(*p1) : *p1;
+						const int c2 = (*p2 >= lowestCode && *p2 <= maximumCode) ? std::tolower(*p2) : *p2;
 						if(c1 != c2)
 							return c1 - c2;
 						else
