@@ -41,7 +41,7 @@ namespace ascension {
 			 */
 			GraphemeBreakIterator(
 				BaseIterator base, const std::locale& locale = std::locale::classic())
-				: BreakIteratorImpl(base, locale) {}
+				: BreakIteratorImpl<GraphemeBreakIterator<BaseIterator>, GraphemeBreakIteratorBase, BaseIterator>(base, locale) {}
 		};
 	}
 } // namespace ascension.text
