@@ -11,6 +11,7 @@
 #include <ascension/corelib/text/utf.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/iterator_traits.hpp>
+#include <boost/mpl/int.hpp>
 #include <array>
 #include <utility>	// std.advance
 
@@ -86,8 +87,7 @@ namespace ascension {
 				BaseIterator tell() const {return base_;}
 
 			private:
-				template<std::size_t codeUnitSize> void decrement();
-				template<> void decrement<1>() {
+				void decrement(boost::mpl::int_<1>) {
 					BaseIterator i(base_);
 					--i;
 					std::size_t numberOfReadBytes = 1;
@@ -113,7 +113,7 @@ namespace ascension {
 					} else
 						base_ = i;
 				}
-				template<> void decrement<2>() {
+				void decrement(boost::mpl::int_<2>) {
 					if(replacesMalformedInput()) {
 						if(surrogates::isLowSurrogate(*--base_) && base_ != first()) {
 							BaseIterator i(base_);
@@ -130,7 +130,7 @@ namespace ascension {
 					}
 					extractedBytes_ = 0;
 				}
-				template<> void decrement<4>() {
+				void decrement(boost::mpl::int_<4>) {
 					if(replacesMalformedInput())
 						--base_;
 					else {
@@ -159,7 +159,7 @@ namespace ascension {
 				void decrement() {
 					if(base_ == first_)
 						throw IllegalStateException("The iterator is first.");
-					decrement<CodeUnitSizeOf<BaseIterator>::value>();
+					decrement(boost::mpl::int_<CodeUnitSizeOf<BaseIterator>::value>());
 				}
 				typename boost::iterators::iterator_value<CharacterDecodeIterator>::type dereference() const {
 					if(extractedBytes_ == 0) {
