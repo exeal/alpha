@@ -1216,9 +1216,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\scope-guard.hpp">
       <Filter>ascension\Header Files\corelib\detail</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\detail\shared-library.hpp">
-      <Filter>ascension\Header Files\corelib\detail</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\text-area-mouse-input-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
