@@ -5,21 +5,13 @@
  */
 
 #ifndef ASCENSION_NO_REGEX
-#include <ascension/corelib/detail/shared-library.hpp>	// detail.SharedLibrary
 #include <ascension/corelib/regex.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
 #ifndef ASCENSION_NO_MIGEMO
 #	include <ascension/corelib/encoder.hpp>
+#	include <boost/dll/shared_library.hpp>
 #	include "../third-party/migemo.h"
-	ASCENSION_DEFINE_SHARED_LIB_ENTRIES(CMigemo, 7);
-	ASCENSION_SHARED_LIB_ENTRY(CMigemo, 0, "migemo_open", migemo*(*signature)(char*));
-	ASCENSION_SHARED_LIB_ENTRY(CMigemo, 1, "migemo_close", void(*signature)(migemo*));
-	ASCENSION_SHARED_LIB_ENTRY(CMigemo, 2, "migemo_query", unsigned char*(*signature)(migemo*, unsigned char*));
-	ASCENSION_SHARED_LIB_ENTRY(CMigemo, 3, "migemo_release", void(*signature)(migemo*, unsigned char*));
-	ASCENSION_SHARED_LIB_ENTRY(CMigemo, 4, "migemo_load", int(*signature)(migemo*, int, char*));
-	ASCENSION_SHARED_LIB_ENTRY(CMigemo, 5, "migemo_is_enable", int(*signature)(migemo*));
-	ASCENSION_SHARED_LIB_ENTRY(CMigemo, 6, "migemo_set_operator", int(*signature)(migemo*, int, unsigned char*));
 #endif // !ASCENSION_NO_MIGEMO
 
 
@@ -253,7 +245,7 @@ namespace ascension {
 #ifndef ASCENSION_NO_MIGEMO
 		namespace {
 			/// Wrapper for C/Migemo.
-			class Migemo : protected ascension::detail::SharedLibrary<CMigemo> {
+			class Migemo {
 			public:
 				/**
 				 * Constructor.
@@ -262,50 +254,33 @@ namespace ascension {
 				 * @throw std#runtime_error The runtime can't load
 				 * @throw std#invalid_argument @a dictionaryPathName is empty
 				 */
-				Migemo(const std::string& runtimeFileName, const std::string& dictionaryPathName) :
-						ascension::detail::SharedLibrary<CMigemo>(runtimeFileName.c_str()),
-						instance_(), lastNativePattern_(nullptr), lastPattern_(nullptr) {
+				Migemo(const boost::filesystem::path& runtimeFileName, const boost::filesystem::path& dictionaryPathName) : library_(runtimeFileName),
+						migemoQuery_(library_.get<unsigned char*(migemo*, const unsigned char*)>("migemo_query")),
+						migemoRelease_(library_.get<void(migemo*, unsigned char*)>("migemo_release")) {
 					if(dictionaryPathName.empty())
 						throw std::invalid_argument("Dictionary path name is empty.");
-					CMigemo::Procedure<0>::signature migemoOpen = get<0>();
-					CMigemo::Procedure<1>::signature migemoClose = get<1>();
-					CMigemo::Procedure<4>::signature migemoLoad = get<4>();
-					CMigemo::Procedure<6>::signature migemoSetOperator = get<6>();
-					if((migemoOpen != nullptr) && (migemoQuery_ = get<2>())
-							&& (migemoRelease_ = get<3>()) && (migemoLoad != nullptr)
-							&& (migemoSetOperator = nullptr)) {
-						instance_.reset(migemoOpen(0), migemoClose);
-						if(instance_.get() != nullptr) {
-							// load dictionaries
-							std::size_t directoryLength = dictionaryPathName.length();
-							if(dictionaryPathName[directoryLength - 1] != '/'
-									&& dictionaryPathName[directoryLength - 1] != '\\')
-								++directoryLength;
-							std::unique_ptr<char[]> pathName(new char[directoryLength + 32]);
-							std::strcpy(pathName.get(), dictionaryPathName.c_str());
-							if(directoryLength != dictionaryPathName.length())
-								std::strcat(pathName.get(), "/");
-							std::strcpy(pathName.get() + directoryLength, "migemo-dict");
-							migemoLoad(instance_.get(), MIGEMO_DICTID_MIGEMO, pathName.get());
-							std::strcpy(pathName.get() + directoryLength, "roma2hira.dat");
-							migemoLoad(instance_.get(), MIGEMO_DICTID_ROMA2HIRA, pathName.get());
-							std::strcpy(pathName.get() + directoryLength, "hira2kata.dat");
-							migemoLoad(instance_.get(), MIGEMO_DICTID_HIRA2KATA, pathName.get());
-							std::strcpy(pathName.get() + directoryLength, "han2zen.dat");
-							migemoLoad(instance_.get(), MIGEMO_DICTID_HAN2ZEN, pathName.get());
-							// define some operators
-							migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_OR,
-								const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("|")));
-							migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_NEST_IN,
-								const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("(")));
-							migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_NEST_OUT,
-								const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(")")));
-							migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_SELECT_IN,
-								const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("[")));
-							migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_SELECT_OUT,
-								const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("]")));
-						}
-					}
+					auto migemoOpen(library_.get<migemo*(const char*)>("migemo_open"));
+					auto migemoClose(library_.get<void(migemo*)>("migemo_close"));
+					auto migemoLoad(library_.get<int(migemo*, int, const char*)>("migemo_load"));
+					auto migemoSetOperator(library_.get<int(migemo*, int, const unsigned char*)>("migemo_set_operator"));
+
+					instance_.reset(migemoOpen(0), migemoClose);
+					if(instance_.get() == nullptr)
+						throw std::runtime_error("migemo_open returned null.");
+
+					// load dictionaries
+					migemoLoad(instance_.get(), MIGEMO_DICTID_MIGEMO, (dictionaryPathName / "migemo-dict").string().c_str());
+					migemoLoad(instance_.get(), MIGEMO_DICTID_ROMA2HIRA, (dictionaryPathName / "roma2hira.dat").string().c_str());
+					migemoLoad(instance_.get(), MIGEMO_DICTID_HIRA2KATA, (dictionaryPathName / "hira2kata.dat").string().c_str());
+					migemoLoad(instance_.get(), MIGEMO_DICTID_HAN2ZEN, (dictionaryPathName / "han2zen.dat").string().c_str());
+
+					// define some operators
+					static const unsigned char OPERATORS[] = {'|', '\0', '(', '\0', ')', '\0', '[', '\0', ']', '\0'};
+					migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_OR, OPERATORS + 0);
+					migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_NEST_IN, OPERATORS + 2);
+					migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_NEST_OUT, OPERATORS + 4);
+					migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_SELECT_IN, OPERATORS + 6);
+					migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_SELECT_OUT, OPERATORS + 8);
 				}
 				/// @see #query(const StringPiece&, std#size_t&)
 				std::shared_ptr<const unsigned char> query(const unsigned char* text) {
@@ -313,8 +288,7 @@ namespace ascension {
 						throw NullPointerException("text");
 					else if(!isEnable())
 						throw IllegalStateException("not enable");
-					std::shared_ptr<unsigned char> nativePattern(
-						migemoQuery_(instance_.get(), const_cast<unsigned char*>(text)), std::bind(migemoRelease_, instance_.get(), std::placeholders::_1));
+					std::shared_ptr<unsigned char> nativePattern(migemoQuery_(instance_.get(), text), std::bind(migemoRelease_, instance_.get(), std::placeholders::_1));
 					if(nativePattern.get() == nullptr)
 						throw std::runtime_error("migemo_query returned null.");
 					return lastNativePattern_ = nativePattern;
@@ -367,14 +341,15 @@ namespace ascension {
 				bool isEnable() const {
 					if(instance_ == nullptr)
 						return false;
-					else if(CMigemo::Procedure<5>::signature migemoIsEnable = get<5>())
+					else if(auto migemoIsEnable = library_.get<int(migemo*)>("migemo_is_enable"))
 						return migemoIsEnable(instance_.get()) != 0;
 					return false;
 				}
 			private:
+				boost::dll::shared_library library_;
 				std::shared_ptr<migemo> instance_;
-				CMigemo::Procedure<2>::signature migemoQuery_;
-				CMigemo::Procedure<3>::signature migemoRelease_;
+				std::function<unsigned char*(migemo*, const unsigned char*)> migemoQuery_;
+				std::function<void(migemo*, unsigned char*)> migemoRelease_;
 				std::shared_ptr<const unsigned char> lastNativePattern_;
 				String lastPattern_;
 			};

@@ -394,7 +394,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\named-argument-exists.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\named-arguments-single-type.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\scope-guard.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\detail\shared-library.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\scoped-enum-emulation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\type-traits.hpp" />

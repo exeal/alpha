@@ -9,7 +9,6 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
-#include <ascension/corelib/detail/shared-library.hpp>
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
@@ -42,6 +41,7 @@
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <boost/core/null_deleter.hpp>
+#include <boost/dll/shared_library.hpp>
 #include <boost/flyweight.hpp>
 #include <boost/flyweight/key_value.hpp>
 #include <boost/foreach.hpp>
@@ -143,29 +143,59 @@ namespace ascension {
 					int cotfRecords;
 				};
 #endif // not usp10-1.6
-				ASCENSION_DEFINE_SHARED_LIB_ENTRIES(Uniscribe16, 4);
-				ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 0, "ScriptItemizeOpenType",
-					HRESULT(WINAPI* signature)(
-						const WCHAR*, int, int, const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*,
-						OPENTYPE_TAG*, int*));
-				ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 1, "ScriptPlaceOpenType",
-					HRESULT(WINAPI* signature)(
+				class Uniscribe16 {
+				public:
+					Uniscribe16() BOOST_NOEXCEPT : itemizeOpenType_(nullptr), placeOpenType_(nullptr), shapeOpenType_(nullptr), substituteSingleGlyph_(nullptr) {
+						try {
+							library_.load("usp10.dll", boost::dll::load_mode::search_system_folders);
+							itemizeOpenType_ = library_.get<ItemizeOpenTypeSignature>("ScriptItemizeOpenType");
+							placeOpenType_ = library_.get<PlaceOpenTypeSignature>("ScriptPlaceOpenType");
+							shapeOpenType_ = library_.get<ShapeOpenTypeSignature>("ScriptShapeOpenType");
+							substituteSingleGlyph_ = library_.get<SubstituteSingleGlyphSignature>("ScriptSubstituteSingleGlyph");
+						} catch(...) {
+							library_.unload();
+						}
+					}
+					static Uniscribe16& instance() BOOST_NOEXCEPT {
+						static Uniscribe16 singleton;
+						return singleton;
+					}
+					HRESULT itemize(const WCHAR* text, int length, int estimatedNumberOfItems,
+							const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) BOOST_NOEXCEPT {
+						if(supportsOpenType() && scriptTags != nullptr)
+							return (*itemizeOpenType_)(text, length, estimatedNumberOfItems, &control, &initialState, items, scriptTags, &numberOfItems);
+						else
+							return ::ScriptItemize(text, length, estimatedNumberOfItems, &control, &initialState, items, &numberOfItems);
+					}
+					HRESULT place();
+					HRESULT shape();
+					HRESULT substituteSingleGlyph();
+					bool supportsOpenType() const BOOST_NOEXCEPT {
+						return library_.is_loaded();
+					}
+
+				private:
+					typedef HRESULT(WINAPI ItemizeOpenTypeSignature)(
+						const WCHAR*, int, int, const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*);
+					typedef HRESULT(WINAPI PlaceOpenTypeSignature)(
 						HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, int*,
 						TEXTRANGE_PROPERTIES**, int, const WCHAR*, WORD*, SCRIPT_CHARPROP*, int, const WORD*,
-						const SCRIPT_GLYPHPROP*, int, int*, GOFFSET*, ABC*));
-				ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 2, "ScriptShapeOpenType",
-					HRESULT(WINAPI* signature)(
+						const SCRIPT_GLYPHPROP*, int, int*, GOFFSET*, ABC*);
+					typedef HRESULT(WINAPI ShapeOpenTypeSignature)(
 						HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, int*,
 						TEXTRANGE_PROPERTIES**, int, const WCHAR*, int, int, WORD*, SCRIPT_CHARPROP*, WORD*,
-						SCRIPT_GLYPHPROP*, int*));
+						SCRIPT_GLYPHPROP*, int*);
 //#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-				ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 3, "ScriptSubstituteSingleGlyph",
-					HRESULT(WINAPI *signature)(
+					typedef HRESULT(WINAPI SubstituteSingleGlyphSignature)(
 						HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, OPENTYPE_TAG, LONG,
-						WORD, WORD*));
+						WORD, WORD*);
 //#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-				std::unique_ptr<ascension::detail::SharedLibrary<Uniscribe16>> uspLib(
-					new ascension::detail::SharedLibrary<Uniscribe16>("usp10.dll"));
+					boost::dll::shared_library library_;
+					ItemizeOpenTypeSignature* itemizeOpenType_;
+					PlaceOpenTypeSignature* placeOpenType_;
+					ShapeOpenTypeSignature* shapeOpenType_;
+					SubstituteSingleGlyphSignature* substituteSingleGlyph_;
+				};
 			} // namespace @0
 
 			// file-local free functions //////////////////////////////////////////////////////////////////////////////
@@ -455,7 +485,7 @@ namespace ascension {
 			}
 
 			bool supportsOpenTypeFeatures() BOOST_NOEXCEPT {
-				return uspLib->get<0>() != nullptr;
+				return Uniscribe16::instance().supportsOpenType();
 			}
 
 
@@ -1156,16 +1186,6 @@ namespace ascension {
 				}
 
 				namespace {
-					inline HRESULT callScriptItemize(const WCHAR* text, int length, int estimatedNumberOfItems,
-							const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) BOOST_NOEXCEPT {
-						static HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
-							const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
-						if(scriptItemizeOpenType != nullptr && scriptTags != nullptr)
-							return (*scriptItemizeOpenType)(text, length, estimatedNumberOfItems, &control, &initialState, items, scriptTags, &numberOfItems);
-						else
-							return ::ScriptItemize(text, length, estimatedNumberOfItems, &control, &initialState, items, &numberOfItems);
-					}
-
 					std::shared_ptr<const Font> selectFont(const StringPiece& textString, const FontCollection& fontCollection, const ActualFontSpecification& specification) {
 						const auto& families = boost::fusion::at_key<presentation::styles::FontFamily>(specification);
 						const auto& pointSize = boost::fusion::at_key<presentation::styles::FontSize>(specification);
@@ -2295,12 +2315,10 @@ namespace ascension {
 					AutoArray<SCRIPT_ITEM, 128> scriptRuns;
 					AutoArray<OPENTYPE_TAG, scriptRuns.STATIC_CAPACITY> scriptTags;
 					int estimatedNumberOfScriptRuns = std::max(static_cast<int>(textString.length()) / 4, 2), numberOfScriptRuns;
-					HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
-						const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
 					while(true) {
 						scriptRuns.reallocate(estimatedNumberOfScriptRuns);
 						scriptTags.reallocate(estimatedNumberOfScriptRuns);
-						hr = callScriptItemize(std::begin(textString), static_cast<int>(textString.length()),
+						hr = Uniscribe16::instance().itemize(std::begin(textString), static_cast<int>(textString.length()),
 							estimatedNumberOfScriptRuns, control, initialState, scriptRuns.get(), scriptTags.get(), numberOfScriptRuns);
 						if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
 							break;
@@ -2312,7 +2330,7 @@ namespace ascension {
 //							scriptRuns[i].a.s.fDigitSubstitute = initialState.fDigitSubstitute;
 //						}
 //					}
-					if(scriptItemizeOpenType == nullptr)
+					if(!Uniscribe16::instance().supportsOpenType())
 						std::fill_n(scriptTags.get(), numberOfScriptRuns, SCRIPT_TAG_UNKNOWN);
 
 					// 2. generate raw glyph vectors and computed styled text runs
