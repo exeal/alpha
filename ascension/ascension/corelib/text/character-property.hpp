@@ -500,7 +500,7 @@ namespace ascension {
 			}
 
 			/// Specialization to implement Alphabetic property.
-			template<> inline bool BinaryProperty::is<BinaryProperty::ALPHABETIC>(CodePoint c) {
+			template<> inline bool BinaryProperty::is<BinaryProperty::ALPHABETIC>(CodePoint c) BOOST_NOEXCEPT {
 				// Alphabetic :=
 				//   Lu + Ll + Lt + Lm + Lo + Nl + Other_Alphabetic
 				const int gc = GeneralCategory::of(c);
@@ -513,7 +513,7 @@ namespace ascension {
 			}
 
 			/// Specialization to implement Default_Ignorable_Code_Point property.
-			template<> inline bool BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(CodePoint c) {
+			template<> inline bool BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(CodePoint c) BOOST_NOEXCEPT {
 				// Default_Ignorable_Code_Point :=
 				//   Other_Default_Ignorable_Code_Point
 				//   + Cf (Format characters)
@@ -530,7 +530,7 @@ namespace ascension {
 			}
 
 			/// Specialization to implement Grapheme_Extend property.
-			template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(CodePoint c) {
+			template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(CodePoint c) BOOST_NOEXCEPT {
 				// Grapheme_Extend :=
 				//   Me + Mn + Other_Grapheme_Extend
 				const int gc = GeneralCategory::of(c);
@@ -540,7 +540,7 @@ namespace ascension {
 			}
 
 			/// Specialization to implement Grapheme_Base property.
-			template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_BASE>(CodePoint c) {
+			template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_BASE>(CodePoint c) BOOST_NOEXCEPT {
 				// Grapheme_Base :=
 				//   [0..10FFFF] - Cc - Cf - Cs - Co - Cn - Zl - Zp - Grapheme_Extend
 				const int gc = GeneralCategory::of(c);
@@ -551,7 +551,7 @@ namespace ascension {
 			}
 
 			/// Specialization to implement ID_Start property.
-			template<> inline bool BinaryProperty::is<BinaryProperty::ID_START>(CodePoint c) {
+			template<> inline bool BinaryProperty::is<BinaryProperty::ID_START>(CodePoint c) BOOST_NOEXCEPT {
 				// ID_Start :=
 				//     Lu + Ll + Lt + Lm + Lo + Nl
 				//   + Other_ID_Start
@@ -564,7 +564,7 @@ namespace ascension {
 			}
 
 			/// Specialization to implement ID_Continue property.
-			template<> inline bool BinaryProperty::is<BinaryProperty::ID_CONTINUE>(CodePoint c) {
+			template<> inline bool BinaryProperty::is<BinaryProperty::ID_CONTINUE>(CodePoint c) BOOST_NOEXCEPT {
 				// ID_Continue :=
 				//     ID_Start
 				//   + Mn + Mc + Nd + Pc
@@ -583,21 +583,21 @@ namespace ascension {
 			}
 
 			/// Specialization to implement Lowercase property.
-			template<> inline bool BinaryProperty::is<BinaryProperty::LOWERCASE>(CodePoint c) {
+			template<> inline bool BinaryProperty::is<BinaryProperty::LOWERCASE>(CodePoint c) BOOST_NOEXCEPT {
 				// Lowercase :=
 				//   Ll + Other_Lowercase
 				return GeneralCategory::of(c) == GeneralCategory::LOWERCASE_LETTER || is<OTHER_LOWERCASE>(c);
 			}
 
 			/// Specialization to implement Math property.
-			template<> inline bool BinaryProperty::is<BinaryProperty::MATH>(CodePoint c) {
+			template<> inline bool BinaryProperty::is<BinaryProperty::MATH>(CodePoint c) BOOST_NOEXCEPT {
 				// Math :=
 				//   Sm + Other_Math
 				return GeneralCategory::of(c) == GeneralCategory::MATH_SYMBOL || is<OTHER_MATH>(c);
 			}
 
 			/// Specialization to implement Uppercase property.
-			template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint c) {
+			template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint c) BOOST_NOEXCEPT {
 				// Uppercase :=
 				//   Lu + Other_Uppercase
 				return GeneralCategory::of(c) == GeneralCategory::UPPERCASE_LETTER || is<OTHER_UPPERCASE>(c);
