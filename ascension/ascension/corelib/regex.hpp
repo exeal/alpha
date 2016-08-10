@@ -360,7 +360,7 @@ namespace ascension {
 			 * @return This matcher
 			 */
 			Matcher& usePattern(const Pattern& newPattern) {
-				pattern_ = &pattern;
+				pattern_ = &newPattern;
 				Base::impl().reset();
 				return *this;
 			}
