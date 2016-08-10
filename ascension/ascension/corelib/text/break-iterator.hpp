@@ -49,11 +49,11 @@ namespace ascension {
 		public:
 			/// Returns the base iterator.
 			BaseIterator& base() BOOST_NOEXCEPT {
-				return Base::base<BaseIterator>();
+				return Base::template base<BaseIterator>();
 			}
 			/// Returns the base iterator.
 			const BaseIterator& base() const BOOST_NOEXCEPT {
-				return Base::base<const BaseIterator>();
+				return Base::template base<const BaseIterator>();
 			}
 			/**
 			 * Checks the specified position is grapheme cluster boundary
