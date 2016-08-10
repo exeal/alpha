@@ -505,7 +505,7 @@ namespace ascension {
 			namespace {
 				template<typename InputIterator>
 				inline InputIterator findPropertyValue(InputIterator first, InputIterator last) {
-					static const std::array<char, 2> EQ_OPS = {'=', ':'};
+					static const std::array<char, 2> EQ_OPS = {{'=', ':'}};
 					InputIterator value(std::find_first_of(first, last, std::begin(EQ_OPS), std::end(EQ_OPS)));
 					if(value == last)
 						return first;
