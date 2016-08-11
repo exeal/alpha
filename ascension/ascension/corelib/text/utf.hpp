@@ -162,7 +162,7 @@ namespace ascension {
 					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 1>::type* = nullptr) {
 				assert(first != last);
 				InputIterator p(first);	// for throw
-				std::uint8_t bytes[4] = {*first};
+				std::uint8_t bytes[4] = {static_cast<std::uint8_t>(*first)};
 				std::size_t nbytes = utf::length(bytes[0]);
 				for(std::size_t i = 1; i < nbytes; ++i) {
 					if(++first == last) {
