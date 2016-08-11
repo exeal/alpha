@@ -546,22 +546,20 @@ namespace ascension {
 			// documentation is regex.cpp
 			String replaceAll(const String& replacement) {
 				reset();
-				std::basic_ostringstream<Char> s;
-				std::ostream_iterator<Char, Char> os(s);
+				String s;
 				while(find())
-					appendReplacement(os, replacement);
-				appendTail(os);
-				return s.str();
+					appendReplacement(std::back_inserter(s), replacement);
+				appendTail(std::back_inserter(s));
+				return s;
 			}
 			// documentation is regex.cpp
 			String replaceFirst(const String& replacement) {
 				reset();
-				std::basic_ostringstream<Char> s;
-				std::ostream_iterator<Char, Char> os(s);
+				String s;
 				if(find())
-					appendReplacement(os, replacement);
-				appendTail(os);
-				return s.str();
+					appendReplacement(std::back_inserter(s), replacement);
+				appendTail(std::back_inserter(s));
+				return s;
 			}
 
 			/// Ends the active in-place replacement context.
