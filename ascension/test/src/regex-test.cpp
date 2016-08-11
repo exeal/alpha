@@ -3,15 +3,18 @@
 
 #include <ascension/corelib/regex.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
+#include "from-latin1.hpp"
 
 BOOST_AUTO_TEST_CASE(ucs4_match_test) {
-	BOOST_CHECK(ascension::regex::Pattern::matches(L".", L"\xD800\xDC00"));
+	const ascension::Char pattern[] = {'.', '\0'};
+	const ascension::Char input[] = {0xd800u, 0xdc00u, '\0'};
+	BOOST_CHECK(ascension::regex::Pattern::matches(pattern, input));
 }
 
 BOOST_AUTO_TEST_CASE(transparent_bounds_test) {
 	// see Jeffrey E.F. Friedl's "Mastering Regular Expressions 3rd edition", page 388, 389
-	auto pattern(ascension::regex::Pattern::compile(L"\\bcar\\b"));
-	ascension::String text(L"Madagascar is best seen by car or bike.");
+	auto pattern(ascension::regex::Pattern::compile(fromLatin1("\\bcar\\b")));
+	ascension::String text(fromLatin1("Madagascar is best seen by car or bike."));
 	const ascension::text::StringCharacterIterator e(text, text.end());
 	auto match(pattern->matcher(ascension::text::StringCharacterIterator(text), e));
 	match->region(ascension::text::StringCharacterIterator(text, text.begin() + 7), e);
@@ -25,15 +28,15 @@ BOOST_AUTO_TEST_CASE(transparent_bounds_test) {
 }
 
 BOOST_AUTO_TEST_CASE(zero_width_test) {
-	ascension::String input(L"abcde");
-	auto pattern(ascension::regex::Pattern::compile(L"x?"));
+	ascension::String input(fromLatin1("abcde"));
+	auto pattern(ascension::regex::Pattern::compile(fromLatin1("x?")));
 	auto match(pattern->matcher(ascension::text::StringCharacterIterator(input), ascension::text::StringCharacterIterator(input, input.end())));
-	BOOST_TEST(match->replaceAll(L"!") == L"!a!b!c!d!e!");
+	BOOST_TEST(match->replaceAll(fromLatin1("!")) == fromLatin1("!a!b!c!d!e!"));
 
 	std::basic_ostringstream<ascension::Char> oss;
 	std::ostream_iterator<ascension::Char, ascension::Char> out(oss);
 	while(match->find())
-		match->appendReplacement(out, L"!");
+		match->appendReplacement(out, fromLatin1("!"));
 	match->appendTail(out);
 //	checkEqualStrings(oss.str(), L"!a!b!c!d!e!");
 }

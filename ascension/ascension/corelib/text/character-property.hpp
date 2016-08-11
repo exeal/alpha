@@ -69,8 +69,8 @@ namespace ascension {
 
 						static const auto lowestCode = std::numeric_limits<unsigned char>::lowest();
 						static const auto maximumCode = std::numeric_limits<unsigned char>::max();
-						const int c1 = std::char_traits<CharType1>::to_int_type((*p1 >= lowestCode && *p1 <= maximumCode) ? std::tolower(*p1) : *p1);
-						const int c2 = std::char_traits<CharType2>::to_int_type((*p2 >= lowestCode && *p2 <= maximumCode) ? std::tolower(*p2) : *p2);
+						const int c1 = (*p1 >= lowestCode && *p1 <= maximumCode) ? std::tolower(*p1) : std::char_traits<CharType1>::to_int_type(*p1);
+						const int c2 = (*p2 >= lowestCode && *p2 <= maximumCode) ? std::tolower(*p2) : std::char_traits<CharType2>::to_int_type(*p2);
 						if(c1 != c2)
 							return c1 - c2;
 						else
