@@ -38,10 +38,7 @@ namespace boost {
 BOOST_AUTO_TEST_SUITE(construction)
 	BOOST_AUTO_TEST_CASE(default_constructor_test) {
 		ascension::NumericRange<int> nr;
-		BOOST_TEST(boost::empty(nr));
-
 		ascension::NumericRange<double> nr2;
-		BOOST_TEST(boost::empty(nr2));
 	}
 
 	BOOST_AUTO_TEST_CASE(constructor_with_values_test) {
