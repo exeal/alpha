@@ -248,7 +248,7 @@ namespace ascension {
 					else {
 						--base_;
 						extract();
-						positionInCache_ = --cache_.end();
+						positionInCache_ = std::prev(cache_.end());
 						while(positionInCache_ != cache_.begin() && *positionInCache_ == 0)
 							--positionInCache_;
 					}
