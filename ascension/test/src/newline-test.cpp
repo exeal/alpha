@@ -3,6 +3,7 @@
 
 #include <ascension/corelib/text/newline.hpp>
 #include <boost/range/iterator.hpp>
+#include "from-latin1.hpp"
 
 namespace ascension {
 	namespace text {
@@ -30,21 +31,12 @@ BOOST_AUTO_TEST_CASE(assignment_test) {
 }
 
 BOOST_AUTO_TEST_CASE(stringfy_test) {
+	BOOST_TEST(ascension::text::Newline::LINE_FEED.asString() == fromLatin1("\n"));
+	BOOST_TEST(ascension::text::Newline::CARRIAGE_RETURN.asString() == fromLatin1("\r"));
+	BOOST_TEST(ascension::text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED.asString() == fromLatin1("\r\n"));
+
 	ascension::String s;
 	auto inserter(std::back_inserter(s));
-	ascension::text::utf::encode('\n', inserter);
-	BOOST_TEST(ascension::text::Newline::LINE_FEED.asString() == s);
-
-	s.clear();
-	ascension::text::utf::encode('\r', inserter);
-	BOOST_TEST(ascension::text::Newline::CARRIAGE_RETURN.asString() == s);
-
-	s.clear();
-	ascension::text::utf::encode('\r', inserter);
-	ascension::text::utf::encode('\n', inserter);
-	BOOST_TEST(ascension::text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED.asString() == s);
-
-	s.clear();
 	ascension::text::utf::encode(0x0085u, inserter);
 	BOOST_TEST(ascension::text::Newline::NEXT_LINE.asString() == s);
 
@@ -76,20 +68,15 @@ BOOST_AUTO_TEST_CASE(line_counting_test) {
 
 	BOOST_TEST(ascension::text::calculateNumberOfLines(ascension::String(), 0) == static_cast<ascension::Index>(0));
 
-	const ascension::Char xyzzy[] = {'x', 'y', 'z', 'z', 'y'};
-	BOOST_TEST(ascension::text::calculateNumberOfLines(boost::make_iterator_range(xyzzy)) == static_cast<ascension::Index>(1));
+	BOOST_TEST(ascension::text::calculateNumberOfLines(fromLatin1("xyzzy")) == static_cast<ascension::Index>(1));
 
-	const ascension::Char _n[] = {'\n'};
-	BOOST_TEST(ascension::text::calculateNumberOfLines(boost::make_iterator_range(_n)) == static_cast<ascension::Index>(2));
+	BOOST_TEST(ascension::text::calculateNumberOfLines(fromLatin1("\n")) == static_cast<ascension::Index>(2));
 
-	const ascension::Char _r_n[] = {'\r', '\n'};
-	BOOST_TEST(ascension::text::calculateNumberOfLines(boost::make_iterator_range(_r_n)) == static_cast<ascension::Index>(2));
+	BOOST_TEST(ascension::text::calculateNumberOfLines(fromLatin1("\r\n")) == static_cast<ascension::Index>(2));
 
-	const ascension::Char _n_r[] = {'\n', '\r'};
-	BOOST_TEST(ascension::text::calculateNumberOfLines(boost::make_iterator_range(_n_r)) == static_cast<ascension::Index>(3));
+	BOOST_TEST(ascension::text::calculateNumberOfLines(fromLatin1("\n\r")) == static_cast<ascension::Index>(3));
 
-	const ascension::Char firstSecondThird[] = {'1', '\n', '2', '\n', '3'};
-	BOOST_TEST(ascension::text::calculateNumberOfLines(boost::make_iterator_range(firstSecondThird)) == static_cast<ascension::Index>(3));
+	BOOST_TEST(ascension::text::calculateNumberOfLines(fromLatin1("1\n2\n3")) == static_cast<ascension::Index>(3));
 
 	const ascension::Char firstNextLineSecond[] = {'1', 0x0085u, '2'};
 	BOOST_TEST(ascension::text::calculateNumberOfLines(boost::make_iterator_range(firstNextLineSecond)) == static_cast<ascension::Index>(2));
@@ -102,21 +89,17 @@ BOOST_AUTO_TEST_CASE(line_counting_test) {
 }
 
 BOOST_AUTO_TEST_CASE(scan_test) {
-	const ascension::Char xyzzy[] = {'x', 'y', 'z', 'z', 'y'};
-	BOOST_TEST((ascension::text::eatNewline(boost::make_iterator_range(xyzzy)) == boost::none));
+	BOOST_TEST((ascension::text::eatNewline(fromLatin1("xyzzy")) == boost::none));
 
-	const ascension::Char _n[] = {'\n'};
-	auto newline(ascension::text::eatNewline(boost::make_iterator_range(_n)));
+	auto newline(ascension::text::eatNewline(fromLatin1("\n")));
 	BOOST_REQUIRE(newline != boost::none);
 	BOOST_TEST(boost::get(newline) == ascension::text::Newline::LINE_FEED);
 
-	const ascension::Char _r_n[] = {'\r', '\n'};
-	newline = ascension::text::eatNewline(boost::make_iterator_range(_r_n));
+	newline = ascension::text::eatNewline(fromLatin1("\r\n"));
 	BOOST_REQUIRE(newline != boost::none);
 	BOOST_TEST(boost::get(newline) == ascension::text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED);
 
-	const ascension::Char _n_r[] = {'\n', '\r'};
-	newline = ascension::text::eatNewline(boost::make_iterator_range(_n_r));
+	newline = ascension::text::eatNewline(fromLatin1("\n\r"));
 	BOOST_REQUIRE(newline != boost::none);
 	BOOST_TEST(boost::get(newline) == ascension::text::Newline::LINE_FEED);
 }
