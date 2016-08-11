@@ -18,12 +18,14 @@ BOOST_AUTO_TEST_CASE(transparent_bounds_test) {
 	const ascension::text::StringCharacterIterator e(text, text.end());
 	auto match(pattern->matcher(ascension::text::StringCharacterIterator(text), e));
 	match->region(ascension::text::StringCharacterIterator(text, text.begin() + 7), e);
-	match->find();
+	bool found = match->find();
+	BOOST_REQUIRE(found);
 	BOOST_TEST(match->start().tell() - text.data() == 7);
 
 	match->useTransparentBounds(true);
 	match->region(ascension::text::StringCharacterIterator(text, text.begin() + 7), e);
-	match->find();
+	found = match->find();
+	BOOST_REQUIRE(found);
 	BOOST_TEST(match->start().tell() - text.data() == 27);
 }
 
@@ -33,10 +35,9 @@ BOOST_AUTO_TEST_CASE(zero_width_test) {
 	auto match(pattern->matcher(ascension::text::StringCharacterIterator(input), ascension::text::StringCharacterIterator(input, input.end())));
 	BOOST_TEST(match->replaceAll(fromLatin1("!")) == fromLatin1("!a!b!c!d!e!"));
 
-	std::basic_ostringstream<ascension::Char> oss;
-	std::ostream_iterator<ascension::Char, ascension::Char> out(oss);
+	ascension::String s;
 	while(match->find())
-		match->appendReplacement(out, fromLatin1("!"));
-	match->appendTail(out);
-//	checkEqualStrings(oss.str(), L"!a!b!c!d!e!");
+		match->appendReplacement(std::back_inserter(s), fromLatin1("!"));
+	match->appendTail(std::back_inserter(s));
+	BOOST_TEST(s == fromLatin1("!a!b!c!d!e!"));
 }
