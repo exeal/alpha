@@ -9,12 +9,18 @@ set(Ascension_SOURCE_DIR ../src)
 # using Boost
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
+link_directories(${Boost_LIBRARIES})
 
 add_definitions(-DASCENSION_TEST)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	add_definitions(-std=c++11 -stdlib=libc++)
 elseif(MSVC)
 	add_definitions(/D_CRT_SECURE_NO_WARNINGS /D_SCL_SECURE_NO_WARNINGS /DNOMINMAX /EHac /GS /MTd /nologo /RTCcus /W4 /wd4127 /wd4510 /wd4512 /wd4706 /Zc:forScope /Zc:wchar_t)
+endif()
+
+set(boost_uses_auto_link FALSE)
+if(MSVC)
+	set(boost_uses_auto_link TRUE)
 endif()
 
 # corelib
@@ -33,6 +39,13 @@ add_executable(
 	${Ascension_SOURCE_DIR}/corelib/text/character-property.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/grapheme-break-iterator.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/identifier-syntax.cpp)
+if(NOT boost_uses_auto_link)
+	target_link_libraries(
+		regex-test
+		libboost_filesystem-mt.a
+		libboost_regex-mt.a
+		libboost_system-mt.a)
+endif()
 add_test(
 	NAME regex
 	COMMAND $<TARGET_FILE:regex-test>
