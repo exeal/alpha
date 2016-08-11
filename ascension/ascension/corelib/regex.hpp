@@ -166,7 +166,7 @@ namespace ascension {
 				};
 			public:
 				// original interface
-				RegexTraits() : collator_(&std::use_facet<std::collate<char_type>>(locale_)) {}
+				RegexTraits();
 				static bool unixLineMode, usesExtendedProperties;
 				// minimal requirements for traits
 				typedef CodePoint char_type;
@@ -187,7 +187,9 @@ namespace ascension {
 						std::end(text::NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? text::LINE_SEPARATOR : c;
 				}
 				char_type translate_nocase(char_type c) const;
-				string_type transform(const char_type* p1, const char_type* p2) const {return collator_->transform(p1, p2);}
+				string_type transform(const char_type* p1, const char_type* p2) const {
+					return (collator_ != nullptr) ? collator_->transform(p1, p2) : string_type(p1, p2);
+				}
 				string_type transform_primary(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
 				char_class_type lookup_classname(const char_type* p1, const char_type* p2) const;
 				string_type lookup_collatename(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
@@ -206,11 +208,7 @@ namespace ascension {
 						return -1;
 					}
 				}
-				locale_type imbue(locale_type l) {
-					locale_type temp = locale_;
-					collator_ = &std::use_facet<std::collate<char_type>>(locale_ = l);
-					return temp;
-				}
+				locale_type imbue(locale_type l);
 				locale_type getloc() const {return locale_;}
 				std::string error_string(boost::regex_constants::error_type) const {return "Unknown error";}
 			private:

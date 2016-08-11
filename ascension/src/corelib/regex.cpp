@@ -424,6 +424,11 @@ namespace ascension {
 			bool RegexTraits::usesExtendedProperties = false;
 			std::map<const char*, int, text::ucd::PropertyNameComparer> RegexTraits::names_;
 
+			RegexTraits::RegexTraits() : collator_(nullptr) {
+				if(std::has_facet<std::collate<char_type>>(locale_))
+					collator_ = &std::use_facet<std::collate<char_type>>(locale_);
+			}
+
 			void RegexTraits::buildNames() {
 				// POSIX
 				names_["alpha"] = text::ucd::BinaryProperty::ALPHABETIC;
@@ -443,6 +448,13 @@ namespace ascension {
 				names_["ANY"] = GC_ANY;
 				names_["ASSIGNED"] = GC_ASSIGNED;
 				names_["ASCII"] = GC_ASCII;
+			}
+
+			RegexTraits::locale_type RegexTraits::imbue(locale_type l) {
+				locale_type temp = locale_;
+				locale_ = l;
+				collator_ = std::has_facet<std::collate<char_type>>(locale_) ? &std::use_facet<std::collate<char_type>>(locale_) : nullptr;
+				return temp;
 			}
 
 			bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
