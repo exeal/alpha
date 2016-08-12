@@ -639,7 +639,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\regex.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\string-piece.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\type-list.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\ustring.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\caret.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp" />

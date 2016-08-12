@@ -8,11 +8,12 @@
  */
 
 #include <ascension/corelib/text/utf.hpp>
-#include <ascension/corelib/ustring.hpp>	// umemchr, umemcmp, ustrchr
 #include <ascension/rules/hash-table.hpp>
 #include <ascension/rules/uri-detector.hpp>
 #include <boost/foreach.hpp>
 #include <boost/numeric/interval.hpp>
+#include <boost/range/algorithm/equal.hpp>
+#include <boost/range/algorithm/find.hpp>
 #include <locale>
 
 namespace ascension {
@@ -30,14 +31,14 @@ namespace ascension {
 		   
 			// sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
 			inline StringPiece::const_iterator handleSubDelims(const StringPiece& s) {
-				static const StringPiece::value_type SUB_DELIMS[] = {'!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '=', 0};
-				return (s.cbegin() < s.cend() && ustrchr(SUB_DELIMS, s.front()) != nullptr) ? s.cbegin() + 1 : nullptr;
+				static const StringPiece::value_type SUB_DELIMS[] = {'!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '='};
+				return (s.cbegin() < s.cend() && boost::find(SUB_DELIMS, s.front()) != s.cend()) ? s.cbegin() + 1 : nullptr;
 			}
 		
 			// gen-delims = ":" / "/" / "?" / "#" / "[" / "]" / "@"
 			inline StringPiece::const_iterator handleGenDelims(const StringPiece& s) {
-				static const StringPiece::value_type GEN_DELIMS[] = {':', '/', '?', '#', '[', ']', '@', 0};
-				return (s.cbegin() < s.cend() && ustrchr(GEN_DELIMS, s.front()) != nullptr) ? s.cbegin() + 1: nullptr;
+				static const StringPiece::value_type GEN_DELIMS[] = {':', '/', '?', '#', '[', ']', '@'};
+				return (s.cbegin() < s.cend() && boost::find(GEN_DELIMS, s.front()) != s.cend()) ? s.cbegin() + 1: nullptr;
 			}
 		
 			// reserved = gen-delims / sub-delims
@@ -47,8 +48,8 @@ namespace ascension {
 		
 			// unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
 			inline StringPiece::const_iterator handleUnreserved(const StringPiece& s) {
-				static const StringPiece::value_type UNRESERVED_LEFTOVERS[] = {'-', '.', '_', '~', 0};
-				return (s.cbegin() < s.cend() && (std::isalnum(s.front(), cl) || ustrchr(UNRESERVED_LEFTOVERS, s.front()) != nullptr)) ? s.cbegin() + 1 : nullptr;
+				static const StringPiece::value_type UNRESERVED_LEFTOVERS[] = {'-', '.', '_', '~'};
+				return (s.cbegin() < s.cend() && (std::isalnum(s.front(), cl) || boost::find(UNRESERVED_LEFTOVERS, s.front()) != s.cend())) ? s.cbegin() + 1 : nullptr;
 			}
 		
 			// pct-encoded = "%" HEXDIG HEXDIG
@@ -172,7 +173,7 @@ namespace ascension {
 		
 			// ls32 = ( h16 ":" h16 ) / IPv4address
 			inline StringPiece::const_iterator handleLs32(const StringPiece& s) {
-				const Char* p;
+				StringPiece::const_iterator p;
 				return ((nullptr != (p = handleH16(s)) && p + 2 < s.cend() && *++p == ':' && nullptr != (p = handleH16(s.substr(p - s.cbegin()))))
 					|| (nullptr != (p = handleIPv4address(s)))) ? p : nullptr;
 			}
@@ -327,7 +328,7 @@ namespace ascension {
 			// iuserinfo = *( iunreserved / pct-encoded / sub-delims / ":" )
 			StringPiece::const_iterator ASCENSION_FASTCALL handleUserinfo(const StringPiece& s) {	// [nullable]
 				auto p(s.cbegin());
-				for(const Char* eop; p < s.cend(); ) {
+				for(StringPiece::const_iterator eop; p < s.cend(); ) {
 					if(nullptr != (eop = handleUnreserved(s.substr(p - s.cbegin())))
 							|| nullptr != (eop = handlePctEncoded(s.substr(p - s.cbegin())))
 							|| nullptr != (eop = handleSubDelims(s.substr(p - s.cbegin()))))
@@ -362,9 +363,9 @@ namespace ascension {
 		
 			// ihier-part = ("//" iauthority ipath-abempty) / ipath-absolute / ipath-rootless / ipath-empty
 			StringPiece::const_iterator ASCENSION_FASTCALL handleHierPart(const StringPiece& s) {
-				static const StringPiece::value_type DOUBLE_SLASH[] = {'/', '/', 0};
-				const Char* eop;
-				(s.length() > 2 && umemcmp(s.cbegin(), DOUBLE_SLASH, 2) == 0
+				static const StringPiece::value_type DOUBLE_SLASH[] = {'/', '/'};
+				StringPiece::const_iterator eop;
+				(s.length() > 2 && boost::equal(s.substr(0, 2), DOUBLE_SLASH)
 					&& nullptr != (eop = handleAuthority(s.substr(2))) && nullptr != (eop = handlePathAbempty(s.substr(eop - s.cbegin()))))
 					|| nullptr != (eop = handlePathAbsolute(s))
 					|| nullptr != (eop = handlePathRootless(s))
@@ -375,7 +376,7 @@ namespace ascension {
 			// iquery = *( ipchar / iprivate / "/" / "?" )
 			StringPiece::const_iterator ASCENSION_FASTCALL handleQuery(const StringPiece& s) {	// [nullable]
 				auto p(s.cbegin());
-				for(const Char* eop; p < s.cend(); ) {
+				for(StringPiece::const_iterator eop; p < s.cend(); ) {
 					if(nullptr != (eop = handlePchar(s.substr(p - s.cbegin()))) || nullptr != (eop = handlePrivate(s.substr(p - s.cbegin()))))
 						p = eop;
 					else if(*p == '/' || *p == '?')
@@ -389,7 +390,7 @@ namespace ascension {
 			// ifragment = *( ipchar / "/" / "?" )
 			StringPiece::const_iterator ASCENSION_FASTCALL handleFragment(const StringPiece& s) {	// [nullable]
 				auto p(s.cbegin());
-				for(const Char* eop; p < s.cend(); ) {
+				for(StringPiece::const_iterator eop; p < s.cend(); ) {
 					if(nullptr != (eop = handlePchar(s.substr(p - s.cbegin()))))
 						p = eop;
 					else if(*p == '/' || *p == '?')
@@ -472,20 +473,23 @@ namespace ascension {
 				return text.cbegin();
 		
 			// check scheme
-			const Char* endOfScheme;
+			StringPiece::const_iterator endOfScheme;
 			if(validSchemes_ != nullptr) {
-				endOfScheme = umemchr(text.cbegin() + 1, ':', std::min(text.length() - 1, validSchemes_->maximumLength()));
+				auto s(text.substr(1));
+				if(s.length() > validSchemes_->maximumLength())
+					s.remove_suffix(s.length() - validSchemes_->maximumLength());
+				endOfScheme = boost::find(s, ':');
 				if(!validSchemes_->matches(makeStringPiece(text.cbegin(), endOfScheme)))
 					endOfScheme = nullptr;
 			} else {
-				endOfScheme = umemchr(text.cbegin() + 1, ':', text.length() - 1);
+				endOfScheme = boost::find(text.substr(1), ':');
 				if(handleScheme(makeStringPiece(text.cbegin(), endOfScheme)) != endOfScheme)
 					endOfScheme = nullptr;
 			}
-			if(endOfScheme == nullptr)
+			if(endOfScheme == text.cend())
 				return text.cbegin();
 			else if(endOfScheme == text.cend() - 1)	// terminated with <ipath-empty>
-				return end(text);
+				return text.cend();
 			if(const auto e = handleIRI(text))
 				return e;
 			return text.cbegin();
@@ -504,13 +508,13 @@ namespace ascension {
 				return StringPiece();
 		
 			// search scheme
-			const Char* nextColon = umemchr(text.cbegin(), ':', text.length());
-			if(nextColon == nullptr)
+			auto nextColon = boost::find(text, ':');
+			if(nextColon == text.cend())
 				return false;
 			for(StringPiece::const_iterator p(text.cbegin()); ; ) {
 				if(handleScheme(makeStringPiece(p, nextColon)) == nextColon) {
 					if(validSchemes_ == nullptr || validSchemes_->matches(makeStringPiece(p, nextColon))) {
-						if(const Char* const e = handleIRI(text.substr(p - text.cbegin())))
+						if(const auto e = handleIRI(text.substr(p - text.cbegin())))
 							return makeStringPiece(p, e);
 					}
 					p = nextColon;
@@ -518,7 +522,7 @@ namespace ascension {
 					++p;
 				if(p == nextColon) {
 					p = nextColon;
-					nextColon = umemchr(p, ':', end(text) - p);
+					nextColon = boost::find(boost::make_iterator_range(p, text.cend()), ':');
 					if(nextColon == nullptr)
 						break;
 				}
@@ -537,7 +541,7 @@ namespace ascension {
 		URIDetector& URIDetector::setValidSchemes(const std::set<String>& schemes, bool caseSensitive /* = false */) {
 			// validation
 			BOOST_FOREACH(const String& s, schemes) {
-				const Char* const p = s.data();
+				const auto p = s.data();
 				if(handleScheme(StringPiece(p, s.length())) != p + s.length())
 					throw std::invalid_argument("schemes");
 			}
