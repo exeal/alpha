@@ -8,7 +8,6 @@
 
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
-#include <ascension/corelib/ustring.hpp>	// umemcmp
 #include <ascension/rules/transition-rules.hpp>
 
 
@@ -61,7 +60,7 @@ namespace ascension {
 			else if(line.length() - offsetInLine < pattern_.length())
 				return 0;
 			else if(caseSensitive_)
-				return (umemcmp(pattern_.data(), line.data() + offsetInLine, pattern_.length()) == 0) ? pattern_.length() : 0;
+				return std::equal(pattern_.cbegin(), pattern_.cend(), line.data() + offsetInLine) ? pattern_.length() : 0;
 			return (text::CaseFolder::compare(text::StringCharacterIterator(pattern_),
 				text::StringCharacterIterator(line, std::begin(line) + offsetInLine)) == 0) ? pattern_.length() : 0;
 		}

@@ -6,7 +6,6 @@
  * @date 2014-01-13 separated from rules.cpp
  */
 
-#include <ascension/corelib/ustring.hpp>	// umemchr, umemcmp, ustrchr
 #include <ascension/rules/hash-table.hpp>
 #include <ascension/rules/token-rules.hpp>
 #include <boost/numeric/interval.hpp>
@@ -69,7 +68,7 @@ namespace ascension {
 			// match the start sequence
 			if(start[0] != startSequence_[0]
 					|| static_cast<std::size_t>(text.cend() - start) < startSequence_.length() + endSequence_.length()
-					|| (startSequence_.length() > 1 && umemcmp(start + 1, startSequence_.data() + 1, startSequence_.length() - 1) != 0))
+					|| (startSequence_.length() > 1 && !std::equal(start + 1, start + startSequence_.length(), startSequence_.cbegin() + 1)))
 				return boost::none;
 			StringPiece::const_iterator end(text.cend());
 			if(!endSequence_.empty()) {
@@ -77,7 +76,7 @@ namespace ascension {
 				for(StringPiece::const_iterator p(start + startSequence_.length()); p <= text.cend() - endSequence_.length(); ++p) {
 					if(escapeCharacter_ != text::NONCHARACTER && *p == escapeCharacter_)
 						++p;
-					else if(*p == endSequence_[0] && umemcmp(p + 1, endSequence_.data() + 1, endSequence_.length() - 1) == 0) {
+					else if(*p == endSequence_[0] && std::equal(p + 1, p + endSequence_.length(), endSequence_.cbegin() + 1)) {
 						end = p + endSequence_.length();
 						break;
 					}

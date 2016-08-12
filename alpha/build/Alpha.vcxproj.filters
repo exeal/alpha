@@ -715,9 +715,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\type-list.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\ustring.hpp">
-      <Filter>ascension\Header Files\corelib</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\caret.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>

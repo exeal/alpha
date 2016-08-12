@@ -11,10 +11,10 @@
 #ifndef ASCENSION_HASH_TABLE_HPP
 #define ASCENSION_HASH_TABLE_HPP
 #include <ascension/corelib/text/case-folder.hpp>
-#include <ascension/corelib/ustring.hpp>	// umemcmp
 #include <boost/core/noncopyable.hpp>
 #include <boost/functional/hash/hash.hpp>
 #include <boost/range/iterator.hpp>
+#include <boost/range/algorithm/equal.hpp>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -72,14 +72,14 @@ namespace ascension {
 							return false;
 						const std::size_t h = hashCode(textString);
 						for(const std::unique_ptr<Entry>* entry = &entries_[h % entries_.size()]; *entry != nullptr; entry = &(*entry)->next) {
-							if((*entry)->data.length() == textString.length() && umemcmp((*entry)->data.data(), textString.cbegin(), (*entry)->data.length()) == 0)
+							if((*entry)->data.length() == textString.length() && boost::equal((*entry)->data, textString))
 								return true;
 						}
 					} else {
 						const String folded(text::CaseFolder::fold(textString));
 						const std::size_t h = hashCode(folded);
 						for(const std::unique_ptr<Entry>* entry = &entries_[h % entries_.size()]; *entry != nullptr; entry = &(*entry)->next) {
-							if((*entry)->data.length() == folded.length() && umemcmp((*entry)->data.data(), folded.data(), folded.length()) == 0)
+							if((*entry)->data.length() == folded.length() && boost::equal((*entry)->data, folded))
 								return true;
 						}
 					}
