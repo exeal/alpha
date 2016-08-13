@@ -395,9 +395,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\current-line-highlighter.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\rules\transition-rules.cpp">
-      <Filter>ascension\Source Files\rules</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
@@ -1099,9 +1096,6 @@
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-token-scanner.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\rules\transition-rules.hpp">
-      <Filter>ascension\Header Files\rules</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-partitioner.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
@@ -1421,6 +1415,9 @@
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\rules\regex-transition-rule.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\transition-rule.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
   </ItemGroup>

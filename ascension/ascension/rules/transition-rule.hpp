@@ -49,7 +49,8 @@ namespace ascension {
 			 * @param contentType The content type of the transition source
 			 * @param destination The content type of the transition destination
 			 */
-			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) BOOST_NOEXCEPT;
+			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) BOOST_NOEXCEPT
+				: contentType_(contentType), destination_(destination) {}
 		private:
 			const kernel::ContentType contentType_, destination_;
 		};

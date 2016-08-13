@@ -254,7 +254,6 @@
       </ShowIncludes>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\rules\token-scanner.cpp" />
-    <ClCompile Include="..\..\ascension\src\rules\transition-rules.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\uri-detector.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\command.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\input-sequence-checker.cpp" />
@@ -540,7 +539,7 @@
     <ClInclude Include="..\..\ascension\ascension\rules\token-rules.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token-scanner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\rules\transition-rules.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\transition-rule.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\uri-detector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\input-sequence-checker.hpp" />

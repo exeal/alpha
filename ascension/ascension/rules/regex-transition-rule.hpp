@@ -1,5 +1,5 @@
 /**
- * @file regex-transition-rules.hpp
+ * @file regex-transition-rule.hpp
  * @author exeal
  * @date 2004-2006 was Lexer.h
  * @date 2006-2014 was rules.hpp
@@ -12,7 +12,7 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_REGEX
 #ifndef ASCENSION_NO_REGEX
 #include <ascension/corelib/regex.hpp>
-#include <ascension/rules/transition-rules.hpp>
+#include <ascension/rules/transition-rule.hpp>
 
 namespace ascension {
 	namespace rules {
@@ -32,4 +32,4 @@ namespace ascension {
 } // namespace ascension.rules
 
 #endif // !ASCENSION_NO_REGEX
-#endif // !ASCENSION_REGEX_TRANSITION_RULES_HPP
+#endif // !ASCENSION_REGEX_TRANSITION_RULE_HPP
