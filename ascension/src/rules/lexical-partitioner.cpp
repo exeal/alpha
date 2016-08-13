@@ -12,7 +12,7 @@
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/log.hpp>
 #include <ascension/rules/lexical-partitioner.hpp>
-#include <ascension/rules/transition-rules.hpp>
+#include <ascension/rules/transition-rule.hpp>
 #include <boost/foreach.hpp>
 
 

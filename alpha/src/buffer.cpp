@@ -13,7 +13,7 @@
 #include "../resource/messages.h"
 #include <ascension/kernel/point.hpp>
 #include <ascension/rules/lexical-partitioner.hpp>
-#include <ascension/rules/transition-rules.hpp>
+#include <ascension/rules/transition-rule.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/python/stl_iterator.hpp>
 #include <shlwapi.h>				// PathXxxx, StrXxxx, ...
