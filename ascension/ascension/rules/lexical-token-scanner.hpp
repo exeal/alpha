@@ -16,8 +16,8 @@
 
 namespace ascension {
 	namespace rules {
-		class Rule;
-		class WordRule;
+		class TokenRule;
+		class WordTokenRule;
 
 		/**
 		 * A generic scanner which is programable with a sequence of rules.
@@ -31,8 +31,8 @@ namespace ascension {
 			// constructors
 			explicit LexicalTokenScanner(kernel::ContentType contentType) BOOST_NOEXCEPT;
 			// attributes
-			void addRule(std::unique_ptr<const Rule> rule);
-			void addWordRule(std::unique_ptr<const WordRule> rule);
+			void addRule(std::unique_ptr<const TokenRule> rule);
+			void addWordRule(std::unique_ptr<const WordTokenRule> rule);
 			// TokenScanner
 			bool hasNext() const BOOST_NOEXCEPT override;
 			const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT override;
@@ -42,8 +42,8 @@ namespace ascension {
 
 		private:
 			kernel::ContentType contentType_;
-			std::forward_list<std::unique_ptr<const Rule>> rules_;
-			std::forward_list<std::unique_ptr<const WordRule>> wordRules_;
+			std::forward_list<std::unique_ptr<const TokenRule>> rules_;
+			std::forward_list<std::unique_ptr<const WordTokenRule>> wordRules_;
 			kernel::DocumentCharacterIterator current_;
 		};
 	}

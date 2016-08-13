@@ -252,10 +252,7 @@
     <ClCompile Include="..\..\ascension\src\rules\regex-token-rule.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\regex-transition-rule.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\region-token-rule.cpp" />
-    <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp">
-      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </ShowIncludes>
-    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\token-rule.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\token-scanner.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\uri-detector.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\uri-token-rule.cpp" />
@@ -544,7 +541,7 @@
     <ClInclude Include="..\..\ascension\ascension\rules\regex-token-rule.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\regex-transition-rule.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\region-token-rule.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\rules\token-rules.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\token-rule.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token-scanner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\transition-rule.hpp" />

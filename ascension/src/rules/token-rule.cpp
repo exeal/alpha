@@ -6,7 +6,7 @@
  * @date 2014-01-13 separated from rules.cpp
  */
 
-#include <ascension/rules/token-rules.hpp>
+#include <ascension/rules/token-rule.hpp>
 
 namespace ascension {
 	namespace rules {
