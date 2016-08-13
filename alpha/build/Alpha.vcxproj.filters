@@ -395,9 +395,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\current-line-highlighter.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp">
-      <Filter>ascension\Source Files\rules</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\cursor-windows.cpp">
       <Filter>ascension\Source Files\viewer\widgetapi</Filter>
     </ClCompile>
@@ -624,6 +621,9 @@
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\rules\word-set-token-rule.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\token-rule.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1117,9 +1117,6 @@
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-partition-presentation-reconstructor.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\rules\token-rules.hpp">
-      <Filter>ascension\Header Files\rules</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\rules\hash-table.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
@@ -1451,6 +1448,9 @@
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\rules\word-token-rule.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\token-rule.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
   </ItemGroup>

@@ -7,13 +7,14 @@
  * @date 2014-11-16 Separated from scanner.cpp
  */
 
+#include <ascension/corelib/text/identifier-syntax.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/rules/lexical-token-scanner.hpp>
 #include <ascension/rules/token.hpp>
-#include <ascension/rules/token-rules.hpp>
+#include <ascension/rules/token-rule.hpp>
+#include <ascension/rules/word-token-rule.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/find.hpp>
-
 
 namespace ascension {
 	namespace rules {		
@@ -31,12 +32,12 @@ namespace ascension {
 		 * @throw std#invalid_argument @a rule is already registered
 		 * @throw BadScannerStateException The scanner is running
 		 */
-		void LexicalTokenScanner::addRule(std::unique_ptr<const Rule> rule) {
+		void LexicalTokenScanner::addRule(std::unique_ptr<const TokenRule> rule) {
 			if(rule.get() == nullptr)
 				throw NullPointerException("rule");
 			else if(hasNext())
 				throw BadScannerStateException();
-			else if(boost::range::find(rules_, rule) != boost::end(rules_))
+			else if(boost::find(rules_, rule) != boost::end(rules_))
 				throw std::invalid_argument("The rule is already registered.");
 			rules_.push_front(std::move(rule));
 		}
@@ -48,7 +49,7 @@ namespace ascension {
 		 * @throw std#invalid_argument @a rule is already registered
 		 * @throw BadScannerStateException The scanner is running
 		 */
-		void LexicalTokenScanner::addWordRule(std::unique_ptr<const WordRule> rule) {
+		void LexicalTokenScanner::addWordRule(std::unique_ptr<const WordTokenRule> rule) {
 			if(rule.get() == nullptr)
 				throw NullPointerException("rule");
 			else if(hasNext())
@@ -81,7 +82,7 @@ namespace ascension {
 						break;
 				}
 				const StringPiece::const_iterator p(line.cbegin() + kernel::offsetInLine(current_.tell()));
-				BOOST_FOREACH(const std::unique_ptr<const Rule>& rule, rules_) {
+				BOOST_FOREACH(const std::unique_ptr<const TokenRule>& rule, rules_) {
 					const boost::optional<StringPiece::const_iterator> endOfToken(rule->parse(line, p, ids));
 					if(endOfToken != boost::none) {
 						const kernel::Position beginningOfToken(current_.tell());
@@ -92,7 +93,7 @@ namespace ascension {
 				const StringPiece::const_iterator endOfWord(ids.eatIdentifier(p, line.cend()));
 				if(endOfWord > p) {
 					if(!wordRules_.empty()) {
-						BOOST_FOREACH(const std::unique_ptr<const WordRule>& wordRule, wordRules_) {
+						BOOST_FOREACH(const std::unique_ptr<const WordTokenRule>& wordRule, wordRules_) {
 							if(wordRule->parse(line, makeStringPiece(p, endOfWord), ids)) {
 								const kernel::Position beginningOfToken(current_.tell());
 								current_.seek(kernel::Position(kernel::line(beginningOfToken), endOfWord - line.cbegin()));
