@@ -248,13 +248,18 @@
     <ClCompile Include="..\..\ascension\src\rules\lexical-partitioner.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\lexical-token-scanner.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\literal-transition-rule.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\number-token-rule.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\regex-token-rule.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\regex-transition-rule.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\region-token-rule.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp">
       <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </ShowIncludes>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\rules\token-scanner.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\uri-detector.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\uri-token-rule.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\word-set-token-rule.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\command.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\input-sequence-checker.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\kill-ring.cpp" />
@@ -535,12 +540,18 @@
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-partitioner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-token-scanner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\literal-transition-rule.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\number-token-rule.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\regex-token-rule.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\regex-transition-rule.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\region-token-rule.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token-rules.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token-scanner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\transition-rule.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\uri-detector.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\uri-token-rule.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\word-set-token-rule.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\word-token-rule.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\input-sequence-checker.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\kill-ring.hpp" />

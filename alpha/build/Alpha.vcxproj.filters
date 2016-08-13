@@ -611,6 +611,21 @@
     <ClCompile Include="..\..\ascension\src\rules\literal-transition-rule.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\number-token-rule.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\regex-token-rule.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\region-token-rule.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\uri-token-rule.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\word-set-token-rule.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1418,6 +1433,24 @@
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\rules\transition-rule.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\number-token-rule.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\regex-token-rule.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\region-token-rule.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\uri-token-rule.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\word-set-token-rule.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\word-token-rule.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
   </ItemGroup>
