@@ -1,15 +1,15 @@
 /**
- * @file transition-rules.hpp
+ * @file transition-rule.hpp
  * @author exeal
  * @date 2004-2006 was Lexer.h
  * @date 2006-2014 was rules.hpp
  * @date 2014-11-16 Separated from rules.hpp
+ * @date 2016-08-13 Renamed from transition-rules.hpp.
  */
 
-#ifndef ASCENSION_TRANSITION_RULES_HPP
-#define ASCENSION_TRANSITION_RULES_HPP
-#include <ascension/config.hpp>	// ASCENSION_NO_REGEX
-#include <ascension/corelib/regex.hpp>
+#ifndef ASCENSION_TRANSITION_RULE_HPP
+#define ASCENSION_TRANSITION_RULE_HPP
+#include <ascension/corelib/string-piece.hpp>
 #include <ascension/kernel/partition.hpp>
 #include <memory>
 
@@ -21,7 +21,8 @@ namespace ascension {
 		 */
 		class TransitionRule {
 		public:
-			virtual ~TransitionRule() BOOST_NOEXCEPT;
+			/// Destructor.
+			virtual ~TransitionRule() BOOST_NOEXCEPT {}
 			/**
 			 * Creates and returns a copy of the object.
 			 * @return A copy of the object
@@ -43,38 +44,16 @@ namespace ascension {
 			virtual Index matches(const StringPiece& line, Index offsetInLine) const = 0;
 
 		protected:
+			/**
+			 * Creates a @c TransitionRule instance.
+			 * @param contentType The content type of the transition source
+			 * @param destination The content type of the transition destination
+			 */
 			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) BOOST_NOEXCEPT;
 		private:
 			const kernel::ContentType contentType_, destination_;
 		};
-
-		/// Implementation of @c TransitionRule uses literal string match.
-		class LiteralTransitionRule : public TransitionRule {
-		public:
-			LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
-				const String& pattern, Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
-			std::unique_ptr<TransitionRule> clone() const override;
-			Index matches(const StringPiece& line, Index offsetInLine) const override;
-		private:
-			const String pattern_;
-			const Char escapeCharacter_;
-			const bool caseSensitive_;
-		};
-		
-#ifndef ASCENSION_NO_REGEX
-		/// Implementation of @c TransitionRule uses regular expression match.
-		class RegexTransitionRule : public TransitionRule {
-		public:
-			RegexTransitionRule(kernel::ContentType contentType,
-				kernel::ContentType destination, std::unique_ptr<const regex::Pattern> pattern);
-			RegexTransitionRule(const RegexTransitionRule& other);
-			std::unique_ptr<TransitionRule> clone() const override;
-			Index matches(const StringPiece& line, Index offsetInLine) const override;
-		private:
-			std::unique_ptr<const regex::Pattern> pattern_;
-		};
-#endif // !ASCENSION_NO_REGEX
 	}
 } // namespace ascension.rules
 
-#endif // !ASCENSION_TRANSITION_RULES_HPP
+#endif // !ASCENSION_TRANSITION_RULE_HPP

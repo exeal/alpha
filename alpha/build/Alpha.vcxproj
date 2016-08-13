@@ -247,6 +247,8 @@
     <ClCompile Include="..\..\ascension\src\rules\lexical-partition-presentation-reconstructor.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\lexical-partitioner.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\lexical-token-scanner.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\literal-transition-rule.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\regex-transition-rule.cpp" />
     <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp">
       <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </ShowIncludes>
@@ -533,6 +535,8 @@
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-partition-presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-partitioner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\lexical-token-scanner.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\literal-transition-rule.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules\regex-transition-rule.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token-rules.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token-scanner.hpp" />
     <ClInclude Include="..\..\ascension\ascension\rules\token.hpp" />
