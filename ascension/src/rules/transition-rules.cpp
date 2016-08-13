@@ -52,7 +52,7 @@ namespace ascension {
 		}
 		
 		/// @see TransitionRule#matches
-		Index LiteralTransitionRule::matches(const String& line, Index offsetInLine) const {
+		Index LiteralTransitionRule::matches(const StringPiece& line, Index offsetInLine) const {
 			if(escapeCharacter_ != text::NONCHARACTER && offsetInLine > 0 && line[offsetInLine - 1] == escapeCharacter_)
 				return 0;
 			else if(pattern_.empty() && offsetInLine == line.length())	// matches EOL
@@ -92,9 +92,9 @@ namespace ascension {
 		}
 		
 		/// @see TransitionRule#matches
-		Index RegexTransitionRule::matches(const String& line, Index offsetInLine) const {
+		Index RegexTransitionRule::matches(const StringPiece& line, Index offsetInLine) const {
 			try {
-				typedef text::utf::CharacterDecodeIterator<String::const_iterator> I;
+				typedef text::utf::CharacterDecodeIterator<StringPiece::const_iterator> I;
 				std::unique_ptr<regex::Matcher<I>> matcher(pattern_->matcher(I(std::begin(line), std::end(line)), I(std::begin(line), std::end(line), std::end(line))));
 				matcher->region(I(std::begin(line), std::end(line), std::begin(line) + offsetInLine), matcher->regionEnd());
 				matcher->useAnchoringBounds(false).useTransparentBounds(true);

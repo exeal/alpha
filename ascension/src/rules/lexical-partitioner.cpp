@@ -263,7 +263,7 @@ namespace ascension {
 		 * @return The length of the pattern matched or 0 if the all rules did not matched
 		 */
 		inline Index LexicalPartitioner::tryTransition(
-				const String& line, Index offsetInLine, kernel::ContentType contentType, kernel::ContentType& destination) const BOOST_NOEXCEPT {
+				const StringPiece& line, Index offsetInLine, kernel::ContentType contentType, kernel::ContentType& destination) const BOOST_NOEXCEPT {
 			BOOST_FOREACH(const std::unique_ptr<const TransitionRule>& rule, rules_) {
 				if(rule->contentType() == contentType) {
 					if(const Index c = rule->matches(line, offsetInLine)) {

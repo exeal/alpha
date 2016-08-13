@@ -55,7 +55,7 @@ namespace ascension {
 			void erasePartitions(const kernel::Position& first, const kernel::Position& last);
 			ascension::detail::GapVector<Partition*>::const_iterator partitionAt(const kernel::Position& at) const BOOST_NOEXCEPT;
 			kernel::ContentType transitionStateAt(const kernel::Position& at) const BOOST_NOEXCEPT;
-			Index tryTransition(const String& line, Index offsetInLine,
+			Index tryTransition(const StringPiece& line, Index offsetInLine,
 				kernel::ContentType contentType, kernel::ContentType& destination) const BOOST_NOEXCEPT;
 			void verify() const;
 			// DocumentPartitioner

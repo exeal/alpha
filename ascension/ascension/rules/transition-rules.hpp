@@ -40,7 +40,7 @@ namespace ascension {
 			 *         width text, returns 1
 			 * @todo This documentation is confusable.
 			 */
-			virtual Index matches(const String& line, Index offsetInLine) const = 0;
+			virtual Index matches(const StringPiece& line, Index offsetInLine) const = 0;
 
 		protected:
 			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) BOOST_NOEXCEPT;
@@ -54,7 +54,7 @@ namespace ascension {
 			LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
 				const String& pattern, Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
 			std::unique_ptr<TransitionRule> clone() const override;
-			Index matches(const String& line, Index offsetInLine) const override;
+			Index matches(const StringPiece& line, Index offsetInLine) const override;
 		private:
 			const String pattern_;
 			const Char escapeCharacter_;
@@ -69,7 +69,7 @@ namespace ascension {
 				kernel::ContentType destination, std::unique_ptr<const regex::Pattern> pattern);
 			RegexTransitionRule(const RegexTransitionRule& other);
 			std::unique_ptr<TransitionRule> clone() const override;
-			Index matches(const String& line, Index offsetInLine) const override;
+			Index matches(const StringPiece& line, Index offsetInLine) const override;
 		private:
 			std::unique_ptr<const regex::Pattern> pattern_;
 		};
