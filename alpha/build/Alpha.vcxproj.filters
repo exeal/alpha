@@ -608,6 +608,12 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\newline.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\regex-transition-rule.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\literal-transition-rule.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1410,6 +1416,12 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\named-arguments-single-type.hpp">
       <Filter>ascension\Header Files\corelib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\literal-transition-rule.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules\regex-transition-rule.hpp">
+      <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
