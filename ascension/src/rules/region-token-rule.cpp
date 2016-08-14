@@ -15,7 +15,7 @@ namespace ascension {
 		 * Creates a @c RegionTokenRule instance.
 		 * @param identifier The identifier of the token which will be returned by the rule
 		 * @param startSequence The pattern's start sequence
-		 * @param endSequence The pattern's end sequence. if empty, token will end at end of line
+		 * @param endSequence The pattern's end sequence. If empty, token will end at end of line
 		 * @param escapeCharacter The character which a character will be ignored
 		 * @param caseSensitive Set @c false to enable caseless match
 		 * @throw std#invalid_argument @a startSequence is empty
@@ -29,27 +29,31 @@ namespace ascension {
 		
 		/// @see Rule#parse
 		boost::optional<StringPiece::const_iterator> RegionTokenRule::parse(const StringPiece& text,
-				StringPiece::const_iterator start, const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT {
+				StringPiece::const_iterator start, const text::IdentifierSyntax&) const BOOST_NOEXCEPT {
 			assert(text.cbegin() < text.cend() && start >= text.cbegin() && start < text.cend());
+			const auto eos(text.cend());
 
 			// match the start sequence
 			if(start[0] != startSequence_[0]
-					|| static_cast<std::size_t>(text.cend() - start) < startSequence_.length() + endSequence_.length()
+					|| (escapeCharacter_ != text::NONCHARACTER && start > text.cbegin() && start[-1] == escapeCharacter_)
+					|| static_cast<std::size_t>(eos - start) < startSequence_.length() + endSequence_.length()
 					|| (startSequence_.length() > 1 && !std::equal(start + 1, start + startSequence_.length(), startSequence_.cbegin() + 1)))
 				return boost::none;
-			StringPiece::const_iterator end(text.cend());
-			if(!endSequence_.empty()) {
-				// search the end sequence
-				for(StringPiece::const_iterator p(start + startSequence_.length()); p <= text.cend() - endSequence_.length(); ++p) {
-					if(escapeCharacter_ != text::NONCHARACTER && *p == escapeCharacter_)
-						++p;
-					else if(*p == endSequence_[0] && std::equal(p + 1, p + endSequence_.length(), endSequence_.cbegin() + 1)) {
-						end = p + endSequence_.length();
-						break;
-					}
+
+			if(endSequence_.empty())
+				return eos;
+
+			// search the end sequence
+			for(auto p(start + startSequence_.length()); p <= eos - endSequence_.length(); ++p) {
+				if(escapeCharacter_ != text::NONCHARACTER && *p == escapeCharacter_)
+					++p;
+				else if(*p == endSequence_[0]) {
+					if(endSequence_.length() > 1 && !std::equal(endSequence_.cbegin() + 1, endSequence_.cend(), p + 1))
+						continue;
+					return p + endSequence_.length();
 				}
 			}
-			return end;
+			return boost::none;
 		}
 	}
 }
