@@ -10,6 +10,7 @@
 #include <ascension/rules/hash-table.hpp>
 #include <ascension/rules/word-set-token-rule.hpp>
 #include <boost/range/algorithm/find_if.hpp>
+#include <list>
 
 namespace ascension {
 	namespace rules {		

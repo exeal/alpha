@@ -6,6 +6,7 @@
  * @date 2014-01-13 separated from rules.cpp
  */
 
+#include <ascension/corelib/basic-exceptions.hpp>	// NullPointerException
 #include <ascension/rules/uri-detector.hpp>
 #include <ascension/rules/uri-token-rule.hpp>
 
@@ -25,7 +26,7 @@ namespace ascension {
 		
 		/// @see Rule#parse
 		boost::optional<StringPiece::const_iterator> URITokenRule::parse(const StringPiece& text,
-				StringPiece::const_iterator start, const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT {
+				StringPiece::const_iterator start, const text::IdentifierSyntax&) const BOOST_NOEXCEPT {
 			assert(text.cbegin() < text.cend() && start >= text.cbegin() && start < text.cend());
 
 			const StringPiece::const_iterator e(uriDetector_->detect(text.substr(start - text.cbegin())));

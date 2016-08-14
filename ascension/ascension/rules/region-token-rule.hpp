@@ -12,7 +12,7 @@
 
 namespace ascension {
 	namespace rules {
-		/***/
+		/// A concrete @c TokenRule detects regional tokens which start and end with the specified character sequences.
 		class RegionTokenRule : public TokenRule {
 		public:
 			RegionTokenRule(Token::Identifier identifier,
