@@ -81,6 +81,8 @@ namespace ascension {
 					if(!current_.hasNext())
 						break;
 				}
+
+				assert(line.cbegin() != nullptr && line.cend() != nullptr && line.cbegin() < line.cend());
 				const StringPiece::const_iterator p(line.cbegin() + kernel::offsetInLine(current_.tell()));
 				BOOST_FOREACH(const std::unique_ptr<const TokenRule>& rule, rules_) {
 					const boost::optional<StringPiece::const_iterator> endOfToken(rule->parse(line, p, ids));

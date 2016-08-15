@@ -46,6 +46,7 @@ namespace ascension {
 			 * @param start The start position of the token
 			 * @param identifierSyntax The identifier syntax
 			 * @return The end position of the found token, or @c boost::none if not found
+			 * @note @a text is neither @c null nor empty
 			 */
 			virtual boost::optional<StringPiece::const_iterator> parse(
 				const StringPiece& text, StringPiece::const_iterator start,
