@@ -18,8 +18,6 @@ namespace ascension {
 	 */
 	class Direction : private boost::equality_comparable<Direction> {
 	public:
-		static const Direction FORWARD;		///< Direction to the end.
-		static const Direction BACKWARD;	///< Direction to the start.
 		/// Copy-constructor.
 		Direction(const Direction& other) BOOST_NOEXCEPT : value_(other.value_) {}
 		/// Assignment operator.
@@ -28,12 +26,21 @@ namespace ascension {
 		}
 		/// Negation operator returns the complement of this.
 		Direction operator!() const BOOST_NOEXCEPT {
-			return (*this == FORWARD) ? BACKWARD : FORWARD;
+			return (*this == forward()) ? backward() : forward();
 		}
 		/// Equality operator.
 		bool operator==(const Direction& other) const BOOST_NOEXCEPT {
 			return value_ == other.value_;
 		}
+		/// Returns direction to the end.
+		static Direction forward() BOOST_NOEXCEPT {
+			return Direction(true);
+		}
+		/// Returns direction to the start.
+		static Direction backward() BOOST_NOEXCEPT {
+			return Direction(false);
+		}
+
 	private:
 		explicit Direction(bool value) BOOST_NOEXCEPT : value_(value) {}
 		bool value_;

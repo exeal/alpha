@@ -203,8 +203,8 @@ namespace alpha {
 
 		boost::python::class_<ascension::Direction>("Direction", boost::python::no_init)
 //			.def("__getattr__", &attrOfDirection)/*
-			.def_readonly("forward", &ascension::Direction::FORWARD)
-			.def_readonly("backward", &ascension::Direction::BACKWARD);
+			.def_readonly("forward", &ascension::Direction::forward())
+			.def_readonly("backward", &ascension::Direction::backward());
 
 		boost::python::class_<ascension::kernel::Position>("Position", boost::python::init<>())
 			.def(boost::python::init<ascension::Index, ascension::Index>())

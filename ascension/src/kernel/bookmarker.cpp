@@ -171,7 +171,7 @@ namespace ascension {
 			}
 
 			std::size_t i = static_cast<ascension::detail::GapVector<Index>::const_iterator>(find(from)) - std::begin(markedLines_);
-			if(direction == Direction::FORWARD) {
+			if(direction == Direction::forward()) {
 				if(i == markedLines_.size()) {
 					if(!wrapAround)
 						return boost::none;

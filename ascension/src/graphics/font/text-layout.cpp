@@ -349,13 +349,13 @@ namespace ascension {
 
 							// find 'start-edge'
 							detail::InlineProgressionDimensionRangeIterator i(
-								runs, direction, effectiveCharacterRange, Direction::FORWARD, lineStartEdge(line));
+								runs, direction, effectiveCharacterRange, Direction::forward(), lineStartEdge(line));
 							assert(i != detail::InlineProgressionDimensionRangeIterator());
 							start = std::min(*boost::const_begin(*i), start);
 
 							// find 'end-edge'
 							i = detail::InlineProgressionDimensionRangeIterator(
-								runs, direction, effectiveCharacterRange, Direction::BACKWARD, lineStartEdge(line) + measure(line));
+								runs, direction, effectiveCharacterRange, Direction::backward(), lineStartEdge(line) + measure(line));
 							assert(i != detail::InlineProgressionDimensionRangeIterator());
 							end = std::max(*boost::const_end(*i), end);
 						}
@@ -680,7 +680,7 @@ namespace ascension {
 			 * @param bpd The position in block-progression-dimension in user units
 			 * @param bounds The bounds in block-progression-dimension in user units
 			 * @return The @c first member is line number. If @a bpd is outside of the line content, @c second member
-			 *         is @c Direction#FORWARD (beyond the after-edge) or @c Direction#BACKWARD (beyond the
+			 *         is @c Direction#forward() (beyond the after-edge) or @c Direction#backward() (beyond the
 			 *         before-edge), or @c boost#none otherwise
 			 * @see #baseline, #lineAt, #offset
 			 */
@@ -688,16 +688,16 @@ namespace ascension {
 				if(bounds != boost::none) {
 					const NumericRange<Scalar> orderedBounds(*bounds | adaptors::ordered());
 					if(bpd < *boost::const_begin(orderedBounds))
-						return std::make_tuple(0, Direction::BACKWARD);
+						return std::make_tuple(0, Direction::backward());
 					if(bpd >= *boost::const_end(orderedBounds))
-						return std::make_tuple(numberOfLines() - 1, Direction::FORWARD);
+						return std::make_tuple(numberOfLines() - 1, Direction::forward());
 				}
 
 				LineMetricsIterator line(*this, 0);
 
 				// beyond the before-edge ?
 				if(bpd < *boost::const_begin(line.extent() | adaptors::ordered()))
-					return std::make_tuple(line.line(), Direction::BACKWARD);
+					return std::make_tuple(line.line(), Direction::backward());
 
 				// locate the line includes 'bpd'
 				for(; line.line() < numberOfLines(); ++line) {
@@ -706,7 +706,7 @@ namespace ascension {
 				}
 
 				// beyond the after-edge
-				return std::make_tuple(numberOfLines() - 1, Direction::FORWARD);
+				return std::make_tuple(numberOfLines() - 1, Direction::forward());
 			}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -1001,7 +1001,7 @@ namespace ascension {
 			inline int TextLayout::nextTabStop(int x, Direction direction) const BOOST_NOEXCEPT {
 				assert(x >= 0);
 				const int tabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
-				return (direction == Direction::FORWARD) ? x + tabWidth - x % tabWidth : x - x % tabWidth;
+				return (direction == Direction::forward()) ? x + tabWidth - x % tabWidth : x - x % tabWidth;
 			}
 
 			/**
@@ -1015,7 +1015,7 @@ namespace ascension {
 				const LayoutSettings& c = lip_.layoutSettings();
 				const int tabWidth = lip_.textMetrics().averageCharacterWidth() * c.tabWidth;
 				if(lineTerminatorOrientation(style(), lip_.presentation().defaultTextLineStyle()) == LEFT_TO_RIGHT)
-					return nextTabStop(x, right ? Direction::FORWARD : Direction::BACKWARD);
+					return nextTabStop(x, right ? Direction::forward() : Direction::backward());
 				else
 					return right ? x + (x - longestLineWidth()) % tabWidth : x - (tabWidth - (x - longestLineWidth()) % tabWidth);
 			}

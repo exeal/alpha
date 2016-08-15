@@ -115,8 +115,9 @@ namespace ascension {
 		 * @param position The original position
 		 * @param change The content of the document change
 		 * @param gravity The gravity which determines the direction to which the position should move if a text was
-		 *                inserted at the position. If @c FORWARD is specified, the position will move to the start of
-		 *                the inserted text (no movement occur). Otherwise, move to the end of the inserted text
+		 *                inserted at the position. If @c Direction#forward() is specified, the position will move to
+		 *                the start of the inserted text (no movement occur). Otherwise, move to the end of the
+		 *                inserted text
 		 * @return The result position
 		 */
 		Position positions::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) BOOST_NOEXCEPT {
@@ -140,7 +141,7 @@ namespace ascension {
 			}
 			if(!boost::empty(change.insertedRegion())) {	// insertion
 				if(newPosition == *boost::const_begin(change.insertedRegion())) {
-					if(gravity == Direction::FORWARD)
+					if(gravity == Direction::forward())
 						newPosition = *boost::const_end(change.insertedRegion());
 				} else if(newPosition > *boost::const_begin(change.insertedRegion())) {
 					if(line(*boost::const_begin(change.insertedRegion())) == line(newPosition))

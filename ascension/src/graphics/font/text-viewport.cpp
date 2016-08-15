@@ -956,7 +956,7 @@ namespace ascension {
 									offsetInVisualLine = bpdToEat - boost::size(layout->extent(boost::irange<Index>(0, line.subline = locatedLine.first)));
 									return;
 								}
-								assert(boost::get(locatedLine.second) == Direction::FORWARD);
+								assert(boost::get(locatedLine.second) == Direction::forward());
 								bpdToEat -= boost::size(layout->extent());
 							} else {
 								if(defaultLineExtent > bpdToEat) {	// found in this line

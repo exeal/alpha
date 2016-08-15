@@ -93,7 +93,7 @@ namespace ascension {
 					isHorizontal(layout.writingMode().blockFlowDirection) ?
 						geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
 				if(layout.lineAt(kernel::offsetInLine(np)) != visualLine.subline)
-					np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
+					np = nextCharacter(p.document(), np, Direction::backward(), GRAPHEME_CLUSTER);
 				return detail::VisualDestinationProxyMaker::make(np, true);
 			}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
@@ -242,7 +242,7 @@ namespace ascension {
 					isHorizontal(layout->writingMode().blockFlowDirection) ?
 						geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
 				if(layout->lineAt(kernel::offsetInLine(np)) != visualLine.subline)
-					np = nextCharacter(document(p), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
+					np = nextCharacter(document(p), np, Direction::backward(), GRAPHEME_CLUSTER);
 
 				return detail::VisualDestinationProxyMaker::make(np, true);
 			}
@@ -375,9 +375,9 @@ namespace ascension {
 					const PointProxy& p, graphics::PhysicalDirection direction, Index marks /* = 1 */) {
 				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
 					case BEFORE:
-						return nextBookmark(p, Direction::BACKWARD, marks);
+						return nextBookmark(p, Direction::backward(), marks);
 					case AFTER:
-						return nextBookmark(p, Direction::FORWARD, marks);
+						return nextBookmark(p, Direction::forward(), marks);
 					case START:
 					case END:
 						return boost::none;
@@ -399,13 +399,13 @@ namespace ascension {
 					const PointProxy& p, PhysicalDirection direction, CharacterUnit unit, Index characters /* = 1 */) {
 				switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
 					case BEFORE:
-						return nextVisualLine(p, Direction::BACKWARD, characters);
+						return nextVisualLine(p, Direction::backward(), characters);
 					case AFTER:
-						return nextVisualLine(p, Direction::FORWARD, characters);
+						return nextVisualLine(p, Direction::forward(), characters);
 					case START:
-						return detail::VisualDestinationProxyMaker::make(nextCharacter(p, Direction::BACKWARD, unit, characters), false);
+						return detail::VisualDestinationProxyMaker::make(nextCharacter(p, Direction::backward(), unit, characters), false);
 					case END:
-						return detail::VisualDestinationProxyMaker::make(nextCharacter(p, Direction::FORWARD, unit, characters), false);
+						return detail::VisualDestinationProxyMaker::make(nextCharacter(p, Direction::forward(), unit, characters), false);
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
@@ -427,9 +427,9 @@ namespace ascension {
 					case AFTER:
 						return boost::none;
 					case START:
-						return nextWord(p, Direction::BACKWARD, words);
+						return nextWord(p, Direction::backward(), words);
 					case END:
-						return nextWord(p, Direction::FORWARD, words);
+						return nextWord(p, Direction::forward(), words);
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
@@ -449,9 +449,9 @@ namespace ascension {
 					case AFTER:
 						return boost::none;
 					case START:
-						return nextWordEnd(p, Direction::BACKWARD, words);
+						return nextWordEnd(p, Direction::backward(), words);
 					case END:
-						return nextWordEnd(p, Direction::FORWARD, words);
+						return nextWordEnd(p, Direction::forward(), words);
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}

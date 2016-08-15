@@ -43,7 +43,7 @@ namespace ascension {
 			 *         document
 			 */
 			boost::optional<Position> backwardBookmark(const PointProxy& p, Index marks /* = 1 */) {
-				const auto temp(document(p).bookmarker().next(line(shrinkToAccessibleRegion(p)), Direction::BACKWARD, true, marks));
+				const auto temp(document(p).bookmarker().next(line(shrinkToAccessibleRegion(p)), Direction::backward(), true, marks));
 				return (temp != boost::none) ? boost::make_optional(Position::bol(boost::get(temp))) : boost::none;
 			}
 
@@ -55,7 +55,7 @@ namespace ascension {
 			 * @return The position of the previous character
 			 */
 			Position backwardCharacter(const PointProxy& p, locations::CharacterUnit unit, Index characters /* = 1 */) {
-				return nextCharacter(document(p), position(p), Direction::BACKWARD, unit, characters);
+				return nextCharacter(document(p), position(p), Direction::backward(), unit, characters);
 			}
 
 			/**
@@ -161,7 +161,7 @@ namespace ascension {
 			 *         document
 			 */
 			boost::optional<Position> forwardBookmark(const PointProxy& p, Index marks /* = 1 */) {
-				const auto temp(document(p).bookmarker().next(line(shrinkToAccessibleRegion(p)), Direction::FORWARD, true, marks));
+				const auto temp(document(p).bookmarker().next(line(shrinkToAccessibleRegion(p)), Direction::forward(), true, marks));
 				return (temp != boost::none) ? boost::make_optional(Position::bol(boost::get(temp))) : boost::none;
 			}
 
@@ -173,7 +173,7 @@ namespace ascension {
 			 * @return The position of the next character
 			 */
 			Position forwardCharacter(const PointProxy& p, CharacterUnit unit, Index characters /* = 1 */) {
-				return nextCharacter(document(p), position(p), Direction::FORWARD, unit, characters);
+				return nextCharacter(document(p), position(p), Direction::forward(), unit, characters);
 			}
 
 			/**
@@ -269,7 +269,7 @@ namespace ascension {
 				if(offset == 0)
 					return position(p);
 				else if(characterUnit == UTF16_CODE_UNIT) {
-					if(direction == Direction::FORWARD) {
+					if(direction == Direction::forward()) {
 						const Position e(*boost::const_end(document(p).accessibleRegion()));
 						if(position(p) >= e)
 							return e;
@@ -293,7 +293,7 @@ namespace ascension {
 				} else if(characterUnit == UTF32_CODE_UNIT) {
 					// TODO: there is more efficient implementation.
 					DocumentCharacterIterator i(document(p), position(p));
-					if(direction == Direction::FORWARD)
+					if(direction == Direction::forward())
 						while(offset-- > 0) ++i;	// TODO: Use std.advance instead.
 					else
 						while(offset-- > 0) --i;	// TODO: Use std.advance instead.
@@ -301,7 +301,7 @@ namespace ascension {
 				} else if(characterUnit == locations::GRAPHEME_CLUSTER) {
 					text::GraphemeBreakIterator<DocumentCharacterIterator> i(
 						DocumentCharacterIterator(document(p), document(p).accessibleRegion(), position(p)));
-					i.next((direction == Direction::FORWARD) ? offset : -static_cast<SignedIndex>(offset));
+					i.next((direction == Direction::forward()) ? offset : -static_cast<SignedIndex>(offset));
 					return i.base().tell();
 				} else if(characterUnit == locations::GLYPH_CLUSTER) {
 					// TODO: not implemented.
@@ -321,7 +321,7 @@ namespace ascension {
 			 */
 			Position nextLine(const PointProxy& p, Direction direction, Index lines /* = 1 */) {
 				Position result(shrinkToAccessibleRegion(p));
-				if(direction == Direction::FORWARD) {
+				if(direction == Direction::forward()) {
 					const Position eob(*boost::const_end(document(p).accessibleRegion()));
 					result.line = (line(result) + lines < line(eob)) ? line(result) + lines : line(eob);
 					if(line(result) == line(eob) && offsetInLine(result) > offsetInLine(eob))
@@ -347,7 +347,7 @@ namespace ascension {
 				text::WordBreakIterator<DocumentCharacterIterator> i(
 					DocumentCharacterIterator(document(p), document(p).accessibleRegion(), shrinkToAccessibleRegion(p)),
 					text::WordBreakIteratorBase::START_OF_SEGMENT, detail::identifierSyntax(p));
-				if(direction == Direction::FORWARD)
+				if(direction == Direction::forward())
 					i += words;
 				else
 					i -= words;
@@ -366,7 +366,7 @@ namespace ascension {
 				text::WordBreakIterator<DocumentCharacterIterator> i(
 					DocumentCharacterIterator(document(p), document(p).accessibleRegion(), shrinkToAccessibleRegion(p)),
 					text::WordBreakIteratorBase::END_OF_SEGMENT, detail::identifierSyntax(p));
-				if(direction == Direction::FORWARD)
+				if(direction == Direction::forward())
 					i += words;
 				else
 					i -= words;

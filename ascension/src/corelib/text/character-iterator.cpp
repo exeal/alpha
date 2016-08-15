@@ -7,20 +7,10 @@
  * @date 2014-2015
  */
 
-#include <ascension/direction.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
 
-
 namespace ascension {
-	// Direction //////////////////////////////////////////////////////////////////////////////////////
-
-	// oh, why are these here???
-	const Direction Direction::FORWARD(true);
-	const Direction Direction::BACKWARD(false);
-
 	namespace text {
-		// CharacterIterator //////////////////////////////////////////////////////////////////////////////
-		
 		/**
 		 * @class ascension::text::CharacterIterator
 		 * Abstract class defines an interface for bidirectional iteration on text.

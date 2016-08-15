@@ -80,7 +80,7 @@ namespace ascension {
 
 		// builds BM shift table for forward/backward search
 		inline void LiteralPattern::makeShiftTable(Direction direction) BOOST_NOEXCEPT {
-			if(direction == Direction::FORWARD) {
+			if(direction == Direction::forward()) {
 				if(lastOccurences_[0] == std::numeric_limits<std::ptrdiff_t>::min()) {
 					lastOccurences_.fill(collationElements_.size());
 //					std::fill(lastOccurences_, ASCENSION_ENDOF(lastOccurences_), last_ - first_);
@@ -114,7 +114,7 @@ namespace ascension {
 			// TODO: this implementation is just scrath.
 			text::detail::CharacterIterator t(target);
 			const std::vector<int>::const_iterator b(collationElements_.cbegin()), e(collationElements_.cend());
-			if(direction == Direction::FORWARD) {
+			if(direction == Direction::forward()) {
 				std::advance(t, collationElements_.size() - 1);
 				for(std::vector<int>::const_iterator pattern; t.hasNext(); std::advance(t,
 						std::max<Index>(lastOccurences_[caseSensitive_ ? *t : text::CaseFolder::fold(*t)], e - pattern))) {
@@ -239,7 +239,7 @@ namespace ascension {
 		bool TextSearcher::match(const kernel::Document& document, const kernel::Region& target) const {
 			bool matched = false;
 			const kernel::DocumentCharacterIterator b(document, *boost::const_begin(target)), e(document, *boost::const_end(target));
-			compilePattern((options_.type == LITERAL && literalPattern_.get() != nullptr) ? literalPattern_->getDirection() : FORWARD);
+			compilePattern((options_.type == LITERAL && literalPattern_.get() != nullptr) ? literalPattern_->getDirection() : Direction::forward());
 			switch(options_.type) {
 				case LITERAL:
 					matched = literalPattern_->matches(DocumentCharacterIterator(document, target)) && checkBoundary(b, e);
@@ -267,7 +267,7 @@ namespace ascension {
 				// remember the result for efficiency
 				lastResult_.updateDocumentRevision(document);
 				lastResult_.matchedRegion = target;
-				lastResult_.direction = FORWARD;
+				lastResult_.direction = Direction::forward();
 			}
 			return matched;
 		}
@@ -423,7 +423,7 @@ namespace ascension {
 				kernel::DocumentCharacterIterator matchedFirst, matchedLast;
 				kernel::Point endOfScope(document, *boost::const_end(scope));
 				for(kernel::DocumentCharacterIterator i(document, scope); i.hasNext(); ) {
-					if(!literalPattern_->search(i, Direction::FORWARD, matchedFirst, matchedLast))
+					if(!literalPattern_->search(i, Direction::forward(), matchedFirst, matchedLast))
 						break;
 					else if(!checkBoundary(matchedFirst, matchedLast, wholeMatch_)) {
 						++i;
@@ -595,8 +595,8 @@ namespace ascension {
 			if(type() == LITERAL) {
 				kernel::DocumentCharacterIterator matchedFirst, matchedLast;
 				for(kernel::DocumentCharacterIterator i(document, scope, from);
-						(direction == Direction::FORWARD) ? i.hasNext() : i.hasPrevious();
-						(direction == Direction::FORWARD) ? ++i : --i) {
+						(direction == Direction::forward()) ? i.hasNext() : i.hasPrevious();
+						(direction == Direction::forward()) ? ++i : --i) {
 					if(!literalPattern_->search(i, direction, matchedFirst, matchedLast))
 						break;	// not found
 					else if(checkBoundary(matchedFirst, matchedLast, wholeMatch_)) {
@@ -623,7 +623,7 @@ namespace ascension {
 
 				const bool maybeContinuous = lastResult_.matched()
 					&& direction == lastResult_.direction && lastResult_.checkDocumentRevision(document);
-				if(direction == Direction::FORWARD) {
+				if(direction == Direction::forward()) {
 					const kernel::DocumentCharacterIterator eob(document, *boost::const_end(scope));
 					if(!maybeContinuous || from != *boost::const_end(*lastResult_.matchedRegion))
 						regexMatcher_->region(kernel::DocumentCharacterIterator(document, from), eob);
@@ -1009,7 +1009,7 @@ namespace ascension {
 			kernel::Region matchedRegion, scope(document_->accessibleRegion());
 /*			if(statusHistory_.size() > 1 && lastStatus.matchedRegion.isEmpty()) {
 				// handle the previous zero-width match
-				if(lastStatus.direction == FORWARD) {
+				if(lastStatus.direction == Direction::forward()) {
 					DocumentCharacterIterator temp(*document_, scope.first);
 					temp.next();
 					scope.first = temp.tell();
@@ -1024,7 +1024,7 @@ namespace ascension {
 			try {
 #endif // !ASCENSION_NO_REGEX
 				matched_ = searcher_->search(*document_,
-					(lastStatus.direction == Direction::FORWARD) ? *boost::const_end(lastStatus.matchedRegion) : *boost::const_begin(lastStatus.matchedRegion),
+					(lastStatus.direction == Direction::forward()) ? *boost::const_end(lastStatus.matchedRegion) : *boost::const_begin(lastStatus.matchedRegion),
 					scope, lastStatus.direction, matchedRegion);
 #ifndef ASCENSION_NO_REGEX
 			} catch(boost::regex_error&) {

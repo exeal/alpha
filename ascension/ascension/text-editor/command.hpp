@@ -103,8 +103,8 @@ namespace ascension {
 			};
 			/**
 			 * Deletes the forward/backward N character(s). If the incremental search is active,
-			 * deletes the entire pattern (direction is @c FORWARD) or the last N character(s)
-			 * (direction is @c BACKWARD).
+			 * deletes the entire pattern (direction is @c Direction#forward()) or the last N character(s)
+			 * (direction is @c Direction#backward()).
 			 * @see WordDeletionCommand
 			 */
 			class CharacterDeletionCommand : public Command {

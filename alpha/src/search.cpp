@@ -103,10 +103,10 @@ bool SearchDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 
 	switch(id) {
 	case IDC_BTN_FINDNEXT:		// "Find Forward"
-		this->search(activePattern(), a::Direction::FORWARD, false);
+		this->search(activePattern(), a::Direction::forward(), false);
 		return true;
 	case IDC_BTN_FINDPREVIOUS:	// "Find Backward"
-		this->search(activePattern(), a::Direction::BACKWARD, false);
+		this->search(activePattern(), a::Direction::backward(), false);
 		return true;
 	case IDC_BTN_MARKALL:		// "Mark All"
 		bookmarkMatchLines(manah::toBoolean(isButtonChecked(IDC_RADIO_SELECTION)) ?

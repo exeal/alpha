@@ -76,7 +76,7 @@ namespace ascension {
 							viewer::document(*textViewer_)->insertUndoBoundary();
 							kernel::erase(*viewer::document(*textViewer_),
 								kernel::Region(
-									kernel::locations::nextCharacter(*caret, Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT),
+									kernel::locations::nextCharacter(*caret, Direction::backward(), kernel::locations::UTF32_CODE_UNIT),
 									viewer::insertionPosition(*caret)));
 							viewer::document(*textViewer_)->insertUndoBoundary();
 							complete();
@@ -150,7 +150,7 @@ namespace ascension {
 					close();
 				completionSession_->replacementRegion = kernel::Region(
 					*boost::const_begin(completionSession_->replacementRegion),
-					kernel::positions::updatePosition(*boost::const_end(completionSession_->replacementRegion), change, Direction::FORWARD));
+					kernel::positions::updatePosition(*boost::const_end(completionSession_->replacementRegion), change, Direction::forward()));
 				if(!boost::empty(change.insertedRegion()) && !encompasses(replacementRegion, change.insertedRegion()))
 					close();
 
