@@ -140,7 +140,7 @@ namespace ascension {
 					const auto abstractDirection = presentation::mapDirection<presentation::FlowRelativeDirection>(renderer->writingModes(), direction);
 					const Direction logicalDirection =
 						(abstractDirection == presentation::FlowRelativeDirection::AFTER || abstractDirection == presentation::FlowRelativeDirection::END) ?
-							Direction::FORWARD : Direction::BACKWARD;
+							Direction::forward() : Direction::backward();
 					switch(boost::native_value(abstractDirection)) {
 						case presentation::FlowRelativeDirection::BEFORE:
 						case presentation::FlowRelativeDirection::AFTER:
@@ -204,9 +204,9 @@ namespace ascension {
 				case VK_F16:
 #endif
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
-						texteditor::commands::CharacterDeletionCommand(*this, Direction::BACKWARD)();
+						texteditor::commands::CharacterDeletionCommand(*this, Direction::backward())();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						texteditor::commands::WordDeletionCommand(*this, Direction::BACKWARD)();
+						texteditor::commands::WordDeletionCommand(*this, Direction::backward())();
 					else if(!input.hasModifierOtherThan(std::make_tuple(widgetapi::event::SHIFT_DOWN, widgetapi::event::ALT_DOWN)) && input.hasModifier(widgetapi::event::ALT_DOWN))
 						texteditor::commands::UndoCommand(*this, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					break;
@@ -245,9 +245,9 @@ namespace ascension {
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
 						texteditor::commands::NewlineCommand(*this)();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						texteditor::commands::NewlineCommand(*this, Direction::BACKWARD)();
+						texteditor::commands::NewlineCommand(*this, Direction::backward())();
 					else if(input.modifiers() == widgetapi::event::KeyboardModifiers(std::make_tuple(widgetapi::event::CONTROL_DOWN, widgetapi::event::SHIFT_DOWN)))
-						texteditor::commands::NewlineCommand(*this, Direction::FORWARD)();	
+						texteditor::commands::NewlineCommand(*this, Direction::forward())();	
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Escape:
@@ -268,7 +268,7 @@ namespace ascension {
 #endif
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
 						texteditor::commands::makeCaretMovementCommand(
-							*this, &locations::nextPage, Direction::BACKWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+							*this, &locations::nextPage, Direction::backward(), input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
 						try {
 							textArea()->viewport()->scrollBlockFlowPage(+1);
@@ -285,7 +285,7 @@ namespace ascension {
 #endif
 					if(!input.hasModifierOtherThan(widgetapi::event::SHIFT_DOWN))
 						texteditor::commands::makeCaretMovementCommand(
-							*this, &locations::nextPage, Direction::FORWARD, input.hasModifier(widgetapi::event::SHIFT_DOWN))();
+							*this, &locations::nextPage, Direction::forward(), input.hasModifier(widgetapi::event::SHIFT_DOWN))();
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN) {
 						try {
 							textArea()->viewport()->scrollBlockFlowPage(-1);
@@ -386,11 +386,11 @@ namespace ascension {
 				case VK_DELETE:
 #endif
 					if(input.modifiers() == widgetapi::event::KeyboardModifiers())
-						texteditor::commands::CharacterDeletionCommand(*this, Direction::FORWARD)();
+						texteditor::commands::CharacterDeletionCommand(*this, Direction::forward())();
 					else if(input.modifiers() == widgetapi::event::SHIFT_DOWN)
 						cutSelection(*textArea()->caret(), true);
 					else if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						texteditor::commands::WordDeletionCommand(*this, Direction::FORWARD)();
+						texteditor::commands::WordDeletionCommand(*this, Direction::forward())();
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_A:
@@ -420,7 +420,7 @@ namespace ascension {
 				case 'H':
 #endif
 					if(input.modifiers() == widgetapi::event::CONTROL_DOWN)
-						texteditor::commands::CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;	// ^H -> Backspace
+						texteditor::commands::CharacterDeletionCommand(*this, Direction::backward())(), true;	// ^H -> Backspace
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_I:

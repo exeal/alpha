@@ -16,9 +16,9 @@ namespace ascension {
 		 * @param document The document to which the point attaches
 		 * @post &amp;#document() == &amp;document
 		 * @post #adaptsToDocument() == true
-		 * @post #gravity() == Direction#FORWARD
+		 * @post #gravity() == Direction#forward()
 		 */
-		AbstractPoint::AbstractPoint(Document& document) : document_(&document), adapting_(true), gravity_(Direction::FORWARD) {
+		AbstractPoint::AbstractPoint(Document& document) : document_(&document), adapting_(true), gravity_(Direction::forward()) {
 			static_cast<detail::PointCollection<AbstractPoint>*>(document_)->addNewPoint(*this);
 		}
 

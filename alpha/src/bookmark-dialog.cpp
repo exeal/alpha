@@ -99,7 +99,7 @@ void BookmarksDialog::updateList() {
 			const length_t bottomLine = kernel::line(buffer.accessibleRegion().second);
 			length_t line = 0;
 
-			while((line = buffer.bookmarker().next(line, Direction::FORWARD)) != INVALID_INDEX) {
+			while((line = buffer.bookmarker().next(line, Direction::forward())) != INVALID_INDEX) {
 				if(line >= topLine && line <= bottomLine) {
 					String s(buffer.line(line).substr(0, 100));
 					++item;
@@ -122,7 +122,7 @@ void BookmarksDialog::updateList() {
 		const length_t bottomLine = kernel::line(activeBuffer.accessibleRegion().second);
 		length_t line = 0;
 
-		while((line = activeBuffer.bookmarker().next(line, Direction::FORWARD)) != INVALID_INDEX) {
+		while((line = activeBuffer.bookmarker().next(line, Direction::forward())) != INVALID_INDEX) {
 			if(line >= topLine && line <= bottomLine) {
 				String s = activeBuffer.line(line).substr(0, 100);
 				++item;

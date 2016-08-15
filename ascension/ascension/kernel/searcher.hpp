@@ -224,7 +224,7 @@ namespace ascension {
 				boost::optional<kernel::Region> matchedRegion;
 				Direction direction;
 				std::size_t documentRevisionNumber;
-				LastResult() BOOST_NOEXCEPT : document(nullptr), direction(Direction::FORWARD) {}
+				LastResult() BOOST_NOEXCEPT : document(nullptr), direction(Direction::forward()) {}
 				~LastResult() BOOST_NOEXCEPT {reset();}
 				bool checkDocumentRevision(const kernel::Document& current) const BOOST_NOEXCEPT;
 				bool matched() const BOOST_NOEXCEPT {return matchedRegion;}
@@ -373,7 +373,7 @@ namespace ascension {
 		 * Searches in the specified character sequence.
 		 * @tparam CharacterIterator The type of @a target, which satisfies @c text#detail#CharacterIteratorConcepts
 		 * @param target The target character sequence
-		 * @param direction The direction to search. If this is @c Direction#FORWARD, the method finds the first
+		 * @param direction The direction to search. If this is @c Direction#forward(), the method finds the first
 		 *                  occurence of the pattern in @a target. Otherwise finds the last one
 		 * @param[out] matchedFirst 
 		 * @param[out] matchedLast 

@@ -428,7 +428,7 @@ namespace ascension {
 				caret.adaptToDocument(false);
 				const auto p(insertionPosition(caret));
 				kernel::Position e((keepNewline && kernel::locations::isEndOfLine(caret)) ?
-					p : kernel::locations::nextCharacter(caret, Direction::FORWARD, kernel::locations::GRAPHEME_CLUSTER));
+					p : kernel::locations::nextCharacter(caret, Direction::forward(), kernel::locations::GRAPHEME_CLUSTER));
 				if(e != p) {
 					try {
 						caret.document().replace(kernel::Region(p, e), text, &e);

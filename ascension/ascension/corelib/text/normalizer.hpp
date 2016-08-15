@@ -64,7 +64,7 @@ namespace ascension {
 				if(!hasPrevious())
 					throw NoSuchElementException("The iterator is the first");
 				else if(indexInBuffer_ == 0)
-					nextClosure(Direction::BACKWARD, false);
+					nextClosure(Direction::backward(), false);
 				else
 					--indexInBuffer_;
 			}
@@ -83,7 +83,7 @@ namespace ascension {
 				if(!hasNext())
 					throw NoSuchElementException("The iterator is the last.");
 				else if(++indexInBuffer_ == normalizedBuffer_.length())
-					nextClosure(Direction::FORWARD, false);
+					nextClosure(Direction::forward(), false);
 			}
 		private:
 			Form form_;
@@ -109,7 +109,7 @@ namespace ascension {
 		 */
 		template<typename CharacterIterator>
 		inline Normalizer::Normalizer(const CharacterIterator& text, Form form) : form_(form), characterIterator_(text) {
-			nextClosure(Direction::FORWARD, true);
+			nextClosure(Direction::forward(), true);
 		}
 
 		/**

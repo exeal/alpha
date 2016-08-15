@@ -99,7 +99,7 @@ namespace ascension {
 				kernel::Region matchedRegion;
 				while(s->search(*document,
 						std::max<kernel::Position>(*boost::const_begin(viewer.textArea()->caret()->selectedRegion()), *boost::const_begin(document->accessibleRegion())),
-						scope, Direction::FORWARD, matchedRegion)) {
+						scope, Direction::forward(), matchedRegion)) {
 					bookmarker.mark(kernel::line(*boost::const_begin(matchedRegion)));
 					scope = kernel::Region(kernel::Position::bol(kernel::line(*boost::const_begin(matchedRegion)) + 1), *boost::const_end(scope));
 					++numberOfMarkedLines_;
@@ -151,7 +151,7 @@ namespace ascension {
 					if(procedure == &kernel::locations::nextLine) {
 						if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
 							if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI())
-								return cpui->nextProposal((direction == Direction::FORWARD) ? +n : -n), true;
+								return cpui->nextProposal((direction == Direction::forward()) ? +n : -n), true;
 						}
 					}
 					return false;
@@ -161,9 +161,9 @@ namespace ascension {
 						if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
 							if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI()) {
 								if(procedure == &viewer::locations::nextPage)
-									return cpui->nextPage((direction == Direction::FORWARD) ? +n : -n), true;
+									return cpui->nextPage((direction == Direction::forward()) ? +n : -n), true;
 								else
-									return cpui->nextProposal((direction == Direction::FORWARD) ? +n : -n), true;
+									return cpui->nextProposal((direction == Direction::forward()) ? +n : -n), true;
 							}
 						}
 					}
@@ -177,7 +177,7 @@ namespace ascension {
 				inline bool moveToBoundOfSelection(viewer::Caret& caret, kernel::Position(*procedure)(const kernel::locations::PointProxy&, Direction direction, kernel::locations::CharacterUnit, Index), Direction direction) {
 					if(procedure == &kernel::locations::nextCharacter) {
 						const auto selection(caret.selectedRegion());
-						const kernel::Position destination((direction == Direction::FORWARD) ? *boost::const_end(selection) : *boost::const_begin(selection));
+						const kernel::Position destination((direction == Direction::forward()) ? *boost::const_end(selection) : *boost::const_begin(selection));
 						return caret.moveTo(graphics::font::TextHit<kernel::Position>::leading(destination)), true;
 					}
 					return false;
@@ -189,7 +189,7 @@ namespace ascension {
 				inline void scrollTextViewer(viewer::TextViewer& target, viewer::VisualDestinationProxy(*procedure)(const viewer::VisualPoint&, Direction, Index), Direction direction, long n) {
 					// TODO: consider the numeric prefix.
 					if(procedure == &viewer::locations::nextPage) {
-						graphics::font::TextViewport::SignedScrollOffset offset = (direction == Direction::FORWARD) ? n : -n;
+						graphics::font::TextViewport::SignedScrollOffset offset = (direction == Direction::forward()) ? n : -n;
 						if(offset != 0) {
 							presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::SignedScrollOffset> delta;
 							delta.bpd() = offset;
@@ -351,7 +351,7 @@ namespace ascension {
 				if(n == 0)
 					return true;
 				viewer::TextViewer& textViewer = target();
-				if(/*caret.isAutoCompletionRunning() &&*/ direction_ == Direction::FORWARD)
+				if(/*caret.isAutoCompletionRunning() &&*/ direction_ == Direction::forward())
 					viewer::utils::closeCompletionProposalsPopup(textViewer);
 
 				const auto document(viewer::document(textViewer));
@@ -359,7 +359,7 @@ namespace ascension {
 				if(Session* const session = document->session())
 					isearch = &session->incrementalSearcher();
 				if(isearch != nullptr && isearch->isRunning()) {
-					if(direction_ == Direction::FORWARD)	// delete the entire pattern
+					if(direction_ == Direction::forward())	// delete the entire pattern
 						isearch->reset();
 					else {	// delete the last N characters (undo)
 						if(!isearch->canUndo())
@@ -383,15 +383,15 @@ namespace ascension {
 					} else {
 						viewer::AutoFreeze af((!viewer::isSelectionEmpty(*caret) || n > 1) ? &textViewer : nullptr);
 						kernel::Region region(caret->selectedRegion());
-						if(direction_ == Direction::FORWARD)
+						if(direction_ == Direction::forward())
 							region = kernel::Region(
 								*boost::const_begin(region),
 								kernel::locations::nextCharacter(caret->end(),
-									Direction::FORWARD, kernel::locations::GRAPHEME_CLUSTER, viewer::isSelectionEmpty(*caret) ? n : (n - 1)));
+									Direction::forward(), kernel::locations::GRAPHEME_CLUSTER, viewer::isSelectionEmpty(*caret) ? n : (n - 1)));
 						else
 							region = kernel::Region(
 								kernel::locations::nextCharacter(caret->beginning(),
-									Direction::BACKWARD, kernel::locations::UTF32_CODE_UNIT, viewer::isSelectionEmpty(*caret) ? n : (n - 1)),
+									Direction::backward(), kernel::locations::UTF32_CODE_UNIT, viewer::isSelectionEmpty(*caret) ? n : (n - 1)),
 								*boost::const_end(region));
 						try {
 							kernel::erase(*document, region);
@@ -477,7 +477,7 @@ namespace ascension {
 					return false;
 	
 				const auto p(viewer::insertionPosition(*viewer::document(target()),
-					viewer::locations::nextVisualLine(*caret, fromPreviousLine_ ? Direction::BACKWARD : Direction::FORWARD)));
+					viewer::locations::nextVisualLine(*caret, fromPreviousLine_ ? Direction::backward() : Direction::forward())));
 				const String& lineString = viewer::document(target())->lineString(kernel::line(*caret) + (fromPreviousLine_ ? -1 : 1));
 				if(kernel::offsetInLine(p) >= lineString.length())
 					return false;
@@ -661,7 +661,7 @@ namespace ascension {
 						kernel::Region matchedRegion(caret->selectedRegion());
 						bool foundOnce = false;
 						for(NumericPrefix n(numericPrefix()); n > 0; --n) {	// search N times
-							if(!s->search(*document, (direction_ == Direction::FORWARD) ?
+							if(!s->search(*document, (direction_ == Direction::forward()) ?
 									std::max<kernel::Position>(*boost::const_end(matchedRegion), *boost::const_begin(scope))
 									: std::min<kernel::Position>(*boost::const_begin(matchedRegion), *boost::const_end(scope)), scope, direction_, matchedRegion))
 								break;
@@ -844,9 +844,9 @@ namespace ascension {
 			 * Constructor.
 			 * @param viewer The target text viewer
 			 * @param direction Set @c boost#none to break current line at the caret position. Otherwise, this command
-			 *                  inserts newline(s) at the beginning of the next (@c Direction#FORWARD) or the previous
-			 *                  (@c Direction#BACKWARD) line. In this case, the command ends the active mode and
-			 *                  inserts newline character(s)
+			 *                  inserts newline(s) at the beginning of the next (@c Direction#forward()) or the
+			 *                  previous (@c Direction#backward()) line. In this case, the command ends the active mode
+			 *                  and inserts newline character(s)
 			 */
 			NewlineCommand::NewlineCommand(viewer::TextViewer& viewer, boost::optional<Direction> direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
 			}
@@ -879,7 +879,7 @@ namespace ascension {
 
 				if(direction_ != boost::none) {
 					viewer::TextHit h(caret->hit());	// initial value is no matter...
-					if(*direction_ == Direction::FORWARD)
+					if(*direction_ == Direction::forward())
 						h = viewer::locations::endOfVisualLine(*caret);
 					else if(kernel::line(*caret) != kernel::line(*boost::const_begin(document->region()))) {
 						const Index line = kernel::line(*caret) - 1;
@@ -1330,18 +1330,18 @@ namespace ascension {
 				abortIncrementalSearch(*document);
 
 				const auto caret(target().textArea()->caret());
-				if(/*caret.isAutoCompletionRunning() &&*/ direction_ == Direction::FORWARD)
+				if(/*caret.isAutoCompletionRunning() &&*/ direction_ == Direction::forward())
 					viewer::utils::closeCompletionProposalsPopup(target());
 
-				const kernel::Position from((direction_ == Direction::FORWARD) ?
+				const kernel::Position from((direction_ == Direction::forward()) ?
 					*boost::const_begin(caret->selectedRegion()) : *boost::const_end(caret->selectedRegion()));
 				text::WordBreakIterator<kernel::DocumentCharacterIterator> to(
 					kernel::DocumentCharacterIterator(*document,
-						(direction_ == Direction::FORWARD) ? *boost::const_end(caret->selectedRegion()) : *boost::const_begin(caret->selectedRegion())),
+						(direction_ == Direction::forward()) ? *boost::const_end(caret->selectedRegion()) : *boost::const_begin(caret->selectedRegion())),
 					text::WordBreakIteratorBase::START_OF_SEGMENT,
 						document->contentTypeInformation().getIdentifierSyntax(contentType(*caret)));
 				for(kernel::Position p(to.base().tell()); n > 0; --n) {
-					if(p == ((direction_ == Direction::FORWARD) ? ++to : --to).base().tell())
+					if(p == ((direction_ == Direction::forward()) ? ++to : --to).base().tell())
 						break;
 					p = to.base().tell();
 				}

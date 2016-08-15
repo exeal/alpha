@@ -120,7 +120,7 @@ namespace alpha {
 		const Glib::RefPtr<Application> app(Application::instance());
 		ui::StatusBar& statusBar = app->window().statusBar();
 		const ascension::searcher::IncrementalSearcher& isearch = BufferList::instance().editorSession().incrementalSearcher();
-		const bool forward = isearch.direction() == ascension::Direction::FORWARD;
+		const bool forward = isearch.direction() == ascension::Direction::forward();
 		Glib::ustring message;
 		bool messageIsFormat = true;
 

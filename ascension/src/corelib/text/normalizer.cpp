@@ -370,7 +370,7 @@ namespace ascension {
 		/// Normalizes the next or previous closure for the following iteration.
 		void Normalizer::nextClosure(Direction direction, bool initialize) {
 			detail::CharacterIterator next;
-			if(direction == Direction::FORWARD) {
+			if(direction == Direction::forward()) {
 				if(!initialize) {
 					do {
 						++characterIterator_;
@@ -399,7 +399,7 @@ namespace ascension {
 				}
 			}
 			normalizedBuffer_ = internalNormalize(characterIterator_, next, form_);
-			indexInBuffer_ = (direction == Direction::FORWARD) ? 0 : normalizedBuffer_.length() - 1;
+			indexInBuffer_ = (direction == Direction::forward()) ? 0 : normalizedBuffer_.length() - 1;
 		}
 
 

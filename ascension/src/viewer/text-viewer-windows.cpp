@@ -775,7 +775,7 @@ void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>::Type&, bool
 		PasteCommand(*this, false)();
 		break;
 	case WM_CLEAR:	// "Delete"
-		CharacterDeletionCommand(*this, Direction::FORWARD)();
+		CharacterDeletionCommand(*this, Direction::forward())();
 		break;
 	case WM_SELECTALL:	// "Select All"
 		EntireDocumentSelectionCreationCommand(*this)();
@@ -1056,7 +1056,7 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			if(::GetKeyState(VK_SHIFT) < 0)
 				cutSelection(caret(), true);
 			else
-				CharacterDeletionCommand(*this, Direction::FORWARD)();
+				CharacterDeletionCommand(*this, Direction::forward())();
 			consumed = true;
 			return 0L;
 		case WM_COPY:

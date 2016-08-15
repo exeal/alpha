@@ -594,7 +594,7 @@ namespace ascension {
 				const auto renderer(p.textArea().textRenderer());
 				const graphics::font::TextLayout* layout = renderer->layouts().at(line);
 				Index subline = (layout != nullptr) ? layout->lineAt(inlineHit) : 0;
-				if(direction == Direction::FORWARD) {
+				if(direction == Direction::forward()) {
 					if(line == p.document().numberOfLines() - 1 && (layout == nullptr || subline == layout->numberOfLines() - 1))
 						return detail::VisualDestinationProxyMaker::make(hit, true);
 				} else {
@@ -603,7 +603,7 @@ namespace ascension {
 				}
 				graphics::font::VisualLine visualLine(line, subline);
 				renderer->layouts().offsetVisualLine(visualLine,
-					(direction == Direction::FORWARD) ? static_cast<SignedIndex>(lines) : -static_cast<SignedIndex>(lines));
+					(direction == Direction::forward()) ? static_cast<SignedIndex>(lines) : -static_cast<SignedIndex>(lines));
 				if(p.positionInVisualLine_ == boost::none)
 					const_cast<viewer::VisualPoint&>(p).rememberPositionInVisualLine();
 				line = visualLine.line;
@@ -613,7 +613,7 @@ namespace ascension {
 							presentation::_ipd = *p.positionInVisualLine_ - graphics::font::lineStartEdge(*layout, p.textArea().viewport()->contentMeasure()),
 							presentation::_bpd = graphics::font::TextLayout::LineMetricsIterator(*layout, visualLine.subline).baselineOffset()));
 //					if(layout->lineAt(inlineHit) != visualLine.subline)
-//						np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
+//						np = nextCharacter(p.document(), np, Direction::backward(), GRAPHEME_CLUSTER);
 				}
 
 				const kernel::Position temp(line, inlineHit.characterIndex());

@@ -47,13 +47,13 @@ namespace ascension {
 					Direction scanningDirection() const BOOST_NOEXCEPT {
 						int temp = (currentRun_ <= lastRun_) ? 0 : 1;
 						temp += (layoutDirection_ == presentation::LEFT_TO_RIGHT) ? 0 : 1;
-						return (temp % 2 == 0) ? Direction::FORWARD : Direction::BACKWARD;
+						return (temp % 2 == 0) ? Direction::forward() : Direction::backward();
 					}
 				private:
 					static presentation::ReadingDirection computeScanningReadingDirection(
 							presentation::ReadingDirection layoutDirection, const Direction& scanningDirection) {
 						presentation::ReadingDirection computed = layoutDirection;
-						if(scanningDirection == Direction::BACKWARD)
+						if(scanningDirection == Direction::backward())
 							computed = !computed;
 						return computed;
 					}

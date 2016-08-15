@@ -67,7 +67,7 @@ namespace ascension {
 					const Direction sd = scanningDirection();
 					const presentation::ReadingDirection srd = computeScanningReadingDirection(layoutDirection_, sd);
 					while(nextRun != lastRun_) {
-						if(sd == Direction::FORWARD) {
+						if(sd == Direction::forward()) {
 							if(initializing && overlaps(boost::make_iterator_range((*nextRun)->characterRange()), boost::make_iterator_range(effectiveCharacterRange())))
 								break;
 							nextIpd += boost::size(allocationMeasure(**nextRun));
