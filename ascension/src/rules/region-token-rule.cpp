@@ -20,9 +20,12 @@ namespace ascension {
 		 * @param caseSensitive Set @c false to enable caseless match
 		 * @throw std#invalid_argument @a startSequence is empty
 		 */
-		RegionTokenRule::RegionTokenRule(Token::Identifier identifier, const String& startSequence, const String& endSequence,
-				Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */) : TokenRule(identifier),
-				startSequence_(startSequence), endSequence_(endSequence), escapeCharacter_(escapeCharacter), caseSensitive_(caseSensitive) {
+		RegionTokenRule::RegionTokenRule(Token::Identifier identifier,
+				const StringPiece& startSequence, const StringPiece& endSequence,
+				boost::optional<Char> escapeCharacter /* = boost::none */, bool caseSensitive /* = true */) :
+				TokenRule(identifier),
+				startSequence_(startSequence.to_string()), endSequence_(endSequence.to_string()),
+				escapeCharacter_(escapeCharacter), caseSensitive_(caseSensitive) {
 			if(startSequence.empty())
 				throw std::invalid_argument("The start sequence is empty.");
 		}
@@ -35,7 +38,7 @@ namespace ascension {
 
 			// match the start sequence
 			if(start[0] != startSequence_[0]
-					|| (escapeCharacter_ != text::NONCHARACTER && start > text.cbegin() && start[-1] == escapeCharacter_)
+					|| (escapeCharacter_ != boost::none && start > text.cbegin() && start[-1] == boost::get(escapeCharacter_))
 					|| static_cast<std::size_t>(eos - start) < startSequence_.length() + endSequence_.length()
 					|| (startSequence_.length() > 1 && !std::equal(start + 1, start + startSequence_.length(), startSequence_.cbegin() + 1)))
 				return boost::none;
@@ -45,7 +48,7 @@ namespace ascension {
 
 			// search the end sequence
 			for(auto p(start + startSequence_.length()); p <= eos - endSequence_.length(); ++p) {
-				if(escapeCharacter_ != text::NONCHARACTER && *p == escapeCharacter_)
+				if(escapeCharacter_ != boost::none && *p == boost::get(escapeCharacter_))
 					++p;
 				else if(*p == endSequence_[0]) {
 					if(endSequence_.length() > 1 && !std::equal(endSequence_.cbegin() + 1, endSequence_.cend(), p + 1))

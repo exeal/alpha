@@ -7,7 +7,6 @@
 
 #ifndef ASCENSION_REGION_TOKEN_RULE_HPP
 #define ASCENSION_REGION_TOKEN_RULE_HPP
-#include <ascension/corelib/text/character.hpp>
 #include <ascension/rules/token-rule.hpp>
 
 namespace ascension {
@@ -16,15 +15,15 @@ namespace ascension {
 		class RegionTokenRule : public TokenRule {
 		public:
 			RegionTokenRule(Token::Identifier identifier,
-				const String& startSequence, const String& endSequence,
-				Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
+				const StringPiece& startSequence, const StringPiece& endSequence,
+				boost::optional<Char> escapeCharacter = boost::none, bool caseSensitive = true);
 			boost::optional<StringPiece::const_iterator> parse(
 				const StringPiece& text, StringPiece::const_iterator start,
 				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;
 
 		private:
 			const String startSequence_, endSequence_;
-			const Char escapeCharacter_;
+			const boost::optional<Char> escapeCharacter_;
 			const bool caseSensitive_;
 		};
 	}
