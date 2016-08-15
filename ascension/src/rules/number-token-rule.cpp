@@ -74,6 +74,8 @@ namespace ascension {
 						if(++e == text.cend())
 							return boost::none;
 					}
+					if(!boost::numeric::in(*e, DIGITS))
+						return boost::none;
 					e = std::find_if(++e, text.cend(), isNotDigit);
 				}
 			}
