@@ -23,6 +23,15 @@ if(MSVC)
 	set(boost_uses_auto_link TRUE)
 endif()
 
+# (toplevel)
+add_executable(
+	direction-test
+	src/direction-test.cpp)
+add_test(
+	NAME direction
+	COMMAND $<TARGET_FILE:direction-test>
+	CONFIGURATIONS Debug)
+
 # corelib
 add_executable(
 	numeric-range-test
