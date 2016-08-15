@@ -28,6 +28,7 @@ namespace ascension {
 			 */
 			virtual bool parse(const StringPiece& text, const StringPiece& word,
 				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT = 0;
+
 		protected:
 			explicit WordTokenRule(Token::Identifier tokenID) : TokenRuleBase(tokenID) {}
 		};
