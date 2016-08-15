@@ -126,3 +126,23 @@ add_test(
 	NAME flow_relative_directions
 	COMMAND $<TARGET_FILE:flow-relative-directional-test>
 	CONFIGURATIONS Debug)
+
+# rules
+add_executable(
+	token-rules-test
+	src/token-rules-test.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoder.cpp
+	${Ascension_SOURCE_DIR}/corelib/regex.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/character-property.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/identifier-syntax.cpp
+	${Ascension_SOURCE_DIR}/rules/number-token-rule.cpp
+	${Ascension_SOURCE_DIR}/rules/regex-token-rule.cpp
+	${Ascension_SOURCE_DIR}/rules/region-token-rule.cpp
+	${Ascension_SOURCE_DIR}/rules/token-rule.cpp
+	${Ascension_SOURCE_DIR}/rules/uri-detector.cpp
+	${Ascension_SOURCE_DIR}/rules/uri-token-rule.cpp
+	${Ascension_SOURCE_DIR}/rules/word-set-token-rule.cpp)
+add_test(
+	NAME token_rules
+	COMMAND $<TARGET_FILE:token-rules-test>
+	CONFIGURATIONS Debug)
