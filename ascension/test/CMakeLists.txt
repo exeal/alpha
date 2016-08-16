@@ -127,6 +127,24 @@ add_test(
 	COMMAND $<TARGET_FILE:geometry-test>
 	CONFIGURATIONS Debug)
 
+# kernel
+add_executable(
+	document-test
+	src/document-test.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/character-property.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/identifier-syntax.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/newline.cpp
+	${Ascension_SOURCE_DIR}/kernel/abstract-point.cpp
+	${Ascension_SOURCE_DIR}/kernel/bookmarker.cpp
+	${Ascension_SOURCE_DIR}/kernel/document.cpp
+	${Ascension_SOURCE_DIR}/kernel/point.cpp
+	${Ascension_SOURCE_DIR}/kernel/stream.cpp
+	${Ascension_SOURCE_DIR}/kernel/undo.cpp)
+add_test(
+	NAME document
+	COMMAND $<TARGET_FILE:document-test>
+	CONFIGURATIONS Debug)
+
 # presentation
 add_executable(
 	flow-relative-directional-test
