@@ -96,7 +96,7 @@ namespace ascension {
 			void advance(typename boost::iterators::iterator_difference<Self>::type n) {
 				const auto nextOpportunity(std::next(p_, n));
 				if(nextOpportunity > p_) {
-					if(p_ <= target()->gapFirst_ && nextOpportunity > target()->gapFirst_)
+					if(p_ <= target()->gapFirst_ && nextOpportunity >= target()->gapFirst_)
 						return std::advance(p_, n += target()->gap());
 				} else if(nextOpportunity < p_) {
 					if(p_ >= target()->gapLast_ && nextOpportunity < target()->gapLast_)
