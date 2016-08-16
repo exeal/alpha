@@ -494,28 +494,28 @@ namespace ascension {
 			 * Inserts an element to the specified position in the container.
 			 * @param position The element before which the content will be inserted
 			 * @param value The element value to insert
+			 * @return An iterator pointing to the inserted value
 			 */
 			iterator insert(const_iterator position, const_reference value) {
-				const auto offset(std::distance(cbegin(), position));
 				makeGapAt(position.before());
-				*(gapFirst_++) = value;
 				if(gapFirst_ == gapLast_)
 					reallocate(capacity() * 2);
-				return std::next(begin(), offset);
+				*(gapFirst_++) = value;
+				return iterator(*this, std::prev(gapFirst_));
 			}
 
 			/**
 			 * Inserts an element to the specified position in the container.
 			 * @param position The element before which the content will be inserted
 			 * @param value The element value to insert
+			 * @return An iterator pointing to the inserted value
 			 */
 			iterator insert(const_iterator position, value_type&& value) {
-				const auto offset(std::distance(cbegin(), position));
 				makeGapAt(position.before());
-				*(gapFirst_++) = std::move(value);
 				if(gapFirst_ == gapLast_)
 					reallocate(capacity() * 2);
-				return std::next(begin(), offset);
+				*(gapFirst_++) = std::move(value);
+				return iterator(*this, std::prev(gapFirst_));
 			}
 
 			/**
