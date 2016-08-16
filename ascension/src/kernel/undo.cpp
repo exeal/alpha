@@ -644,7 +644,9 @@ namespace ascension {
 							endOfInsertedString.line = kernel::line(beginning) + allocatedLines.size();
 							endOfInsertedString.offsetInLine = lastAllocatedLine.text().length();
 							const Line& lastLine = *lines_[kernel::line(end)];
-							lastAllocatedLine.text_.append(lastLine.text(), offsetInLine(end), lastLine.text().length() - offsetInLine(end));
+							const auto n = lastLine.text().length() - offsetInLine(end);
+							lastAllocatedLine.text_.append(lastLine.text(), offsetInLine(end), n);
+							insertedStringLength += n;
 							lastAllocatedLine.newline_ = lastLine.newline();
 						} catch(...) {
 							BOOST_FOREACH(Line* line, allocatedLines)
