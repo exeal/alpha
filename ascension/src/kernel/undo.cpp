@@ -220,7 +220,7 @@ namespace ascension {
 			virtual ~UndoManager() BOOST_NOEXCEPT {clear();}
 			// attributes
 			std::size_t numberOfRedoableChanges() const BOOST_NOEXCEPT {
-				return redoableChanges_.size() + ((pendingAtomicChange_.get() != nullptr) ? 1 : 0);
+				return redoableChanges_.size();
 			}
 			std::size_t numberOfUndoableChanges() const BOOST_NOEXCEPT {
 				return undoableChanges_.size() + ((pendingAtomicChange_.get() != nullptr) ? 1 : 0);
