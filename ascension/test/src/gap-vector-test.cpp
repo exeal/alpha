@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE(iterators_test) {
 }
 
 BOOST_AUTO_TEST_SUITE(modifications)
-	BOOST_AUTO_TEST_CASE(insert_test) {
+	BOOST_AUTO_TEST_CASE(insert_test1) {
 		ascension::detail::GapVector<char> gv;
 		char c = 'A';
 		auto i(gv.insert(gv.begin(), c));
@@ -203,6 +203,18 @@ BOOST_AUTO_TEST_SUITE(modifications)
 		i = gv.insert(std::prev(gv.end(), 1), s.cbegin(), s.cend());
 		BOOST_TEST(to_string(gv) == "BADEFGDHIJD");
 		BOOST_TEST(i == std::prev(gv.end(), 4));
+	}
+
+	BOOST_AUTO_TEST_CASE(insert_test2) {
+		auto gv(make_random_gap_vector());
+		std::vector<int> v(gv.cbegin(), gv.cend());
+		BOOST_REQUIRE_EQUAL_COLLECTIONS(gv.cbegin(), gv.cend(), v.cbegin(), v.cend());
+
+		gv.insert(gv.begin() + 2, 111);
+		v.insert(v.begin() + 2, 111);
+		BOOST_REQUIRE(gv.size() == v.size());
+		for(std::size_t i = 0; i < v.size(); ++i)
+			BOOST_TEST(*(gv.cbegin() + i) == v[i]);
 	}
 
 	BOOST_AUTO_TEST_CASE(erase_test) {
