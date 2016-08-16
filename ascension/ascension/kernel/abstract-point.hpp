@@ -7,6 +7,7 @@
 
 #ifndef ASCENSION_ABSTRACT_POINT_HPP
 #define ASCENSION_ABSTRACT_POINT_HPP
+#include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/signals.hpp>
 #include <ascension/direction.hpp>
 
