@@ -59,11 +59,13 @@ namespace ascension {
 			class InsertionChange : public AtomicChange, public FastArenaObject<InsertionChange> {
 			public:
 				InsertionChange(const Position& position, const String& text) : position_(position), text_(text) {}
-				bool appendChange(AtomicChange&, const Document&) BOOST_NOEXCEPT {return false;}
-				bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || encompasses(document.region(), position_);}
-				void perform(Document& document, Result& result);
+				bool appendChange(AtomicChange&, const Document&) override BOOST_NOEXCEPT {return false;}
+				bool canPerform(const Document& document) const override BOOST_NOEXCEPT {
+					return !document.isNarrowed() || encompasses(document.region(), position_);
+				}
+				void perform(Document& document, Result& result) override;
 			private:
-				const TypeTag& type() const BOOST_NOEXCEPT {return type_;}
+				const TypeTag& type() const override BOOST_NOEXCEPT {return type_;}
 			private:
 				const Position position_;
 				const String text_;
@@ -74,11 +76,13 @@ namespace ascension {
 			class DeletionChange : public AtomicChange, public FastArenaObject<DeletionChange> {
 			public:
 				explicit DeletionChange(const Region& region) BOOST_NOEXCEPT : region_(region), revisions_(1) {}
-				bool appendChange(AtomicChange& postChange, const Document&) BOOST_NOEXCEPT;
-				bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || encompasses(document.region(), region_);}
-				void perform(Document& document, Result& result);
+				bool appendChange(AtomicChange& postChange, const Document&) override BOOST_NOEXCEPT;
+				bool canPerform(const Document& document) const override BOOST_NOEXCEPT {
+					return !document.isNarrowed() || encompasses(document.region(), region_);
+				}
+				void perform(Document& document, Result& result) override;
 			private:
-				const TypeTag& type() const BOOST_NOEXCEPT {return type_;}
+				const TypeTag& type() const override BOOST_NOEXCEPT {return type_;}
 			private:
 				Region region_;
 				std::size_t revisions_;
@@ -89,11 +93,13 @@ namespace ascension {
 			class ReplacementChange : public AtomicChange, public FastArenaObject<ReplacementChange> {
 			public:
 				explicit ReplacementChange(const Region& region, const String& text) : region_(region), text_(text) {}
-				bool appendChange(AtomicChange&, const Document&) BOOST_NOEXCEPT {return false;}
-				bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || encompasses(document.region(), region_);}
-				void perform(Document& document, Result& result);
+				bool appendChange(AtomicChange&, const Document&) override BOOST_NOEXCEPT {return false;}
+				bool canPerform(const Document& document) const override BOOST_NOEXCEPT {
+					return !document.isNarrowed() || encompasses(document.region(), region_);
+				}
+				void perform(Document& document, Result& result) override;
 			private:
-				const TypeTag& type() const BOOST_NOEXCEPT {return type_;}
+				const TypeTag& type() const override BOOST_NOEXCEPT {return type_;}
 			private:
 				const Region region_;
 				const String text_;
@@ -104,9 +110,11 @@ namespace ascension {
 			class CompoundChange : public UndoableChange {
 			public:
 				~CompoundChange() BOOST_NOEXCEPT;
-				bool appendChange(AtomicChange& postChange, const Document& document);
-				bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !changes_.empty() && changes_.back()->canPerform(document);}
-				void perform(Document& document, Result& result);
+				bool appendChange(AtomicChange& postChange, const Document& document) override;
+				bool canPerform(const Document& document) const override BOOST_NOEXCEPT {
+					return !changes_.empty() && changes_.back()->canPerform(document);
+				}
+				void perform(Document& document, Result& result) override;
 			private:
 				std::vector<AtomicChange*> changes_;
 			};
@@ -326,7 +334,7 @@ namespace ascension {
 			if(result.completed)
 				redoableChanges_.pop();
 			if(rollbackingChange_ != nullptr)
-				undoableChanges_.push(move(rollbackingChange_));	// move the rollbcked change(s) into the undo stack
+				undoableChanges_.push(std::move(rollbackingChange_));	// move the rollbcked change(s) into the undo stack
 			rollbackingChange_.reset();
 			currentCompoundChange_ = nullptr;
 			rollbacking_ = false;
@@ -345,7 +353,7 @@ namespace ascension {
 			if(result.completed)
 				undoableChanges_.pop();
 			if(rollbackingChange_ != nullptr)
-				redoableChanges_.push(move(rollbackingChange_));	// move the rollbacked change(s) into the redo stack
+				redoableChanges_.push(std::move(rollbackingChange_));	// move the rollbacked change(s) into the redo stack
 			rollbackingChange_.reset();
 			currentCompoundChange_ = nullptr;
 			rollbacking_ = false;
@@ -408,8 +416,8 @@ namespace ascension {
 
 		/**
 		 * Marks a boundary between units of undo.
-		 * An undo call will stop at this point. However, see the documentation of @c Document. This method
-		 * does not throw @c DocumentCantChangeException.
+		 * An undo call will stop at this point. However, see the documentation of @c Document. This method does not
+		 * throw @c DocumentCantChangeException.
 		 * @throw ReadOnlyDocumentException The document is read only
 		 * @throw IllegalStateException The method was called in @c{IDocumentListener}s' notification
 		 */
@@ -440,10 +448,10 @@ namespace ascension {
 		}
 
 		/**
-		 * Sets whether the document records or not the changes for undo/redo. Recording in a newly created
-		 * document is enabled to start with.
-		 * @param record If set to @c true, this method enables the recording and subsequent changes can be
-		 * undone. If set to @c false, discards the undo/redo information and disables the recording
+		 * Sets whether the document records or not the changes for undo/redo. Recording in a newly created document is
+		 * enabled to start with.
+		 * @param record If set to @c true, this method enables the recording and subsequent changes can be undone. If
+		 *               set to @c false, discards the undo/redo information and disables the recording
 		 * @see #isRecordingChanges, #undo, #redo
 		 */
 		void Document::recordChanges(bool record) BOOST_NOEXCEPT {
@@ -537,6 +545,7 @@ namespace ascension {
 		 * @param text The text string for replacement. If this is @c null or empty, no text is inserted
 		 * @param[out] eos The position of the end of the inserted text. Can be @c null if not needed
 		 * @throw ReadOnlyDocumentException The document is read only
+		 * @throw BadRegionException @a region intersects with outside of the document
 		 * @throw DocumentAccessViolationException @a region intersects the inaccesible region
 		 * @throw IllegalStateException The method was called in @c{IDocumentListener}s' notification
 		 * @throw IDocumentInput#ChangeRejectedException The input of the document rejected this change
@@ -599,7 +608,7 @@ namespace ascension {
 							const Line& line = *lines_[p.line];
 							const bool last = p.line == end.line;
 							const Index e = !last ? line.text().length() : offsetInLine(end);
-							if(recordingChanges_) {
+							if(isRecordingChanges()) {
 								erasedString.sputn(line.text().data() + offsetInLine(p), static_cast<std::streamsize>(e - offsetInLine(p)));
 								if(!last) {
 									const String eol(line.newline().asString());
