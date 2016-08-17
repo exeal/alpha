@@ -59,13 +59,13 @@ namespace ascension {
 			class InsertionChange : public AtomicChange, public FastArenaObject<InsertionChange> {
 			public:
 				InsertionChange(const Position& position, const String& text) : position_(position), text_(text) {}
-				bool appendChange(AtomicChange&, const Document&) override BOOST_NOEXCEPT {return false;}
-				bool canPerform(const Document& document) const override BOOST_NOEXCEPT {
+				bool appendChange(AtomicChange&, const Document&) BOOST_NOEXCEPT override {return false;}
+				bool canPerform(const Document& document) const BOOST_NOEXCEPT override {
 					return !document.isNarrowed() || encompasses(document.region(), position_);
 				}
 				void perform(Document& document, Result& result) override;
 			private:
-				const TypeTag& type() const override BOOST_NOEXCEPT {return type_;}
+				const TypeTag& type() const BOOST_NOEXCEPT override {return type_;}
 			private:
 				const Position position_;
 				const String text_;
@@ -76,13 +76,13 @@ namespace ascension {
 			class DeletionChange : public AtomicChange, public FastArenaObject<DeletionChange> {
 			public:
 				explicit DeletionChange(const Region& region) BOOST_NOEXCEPT : region_(region), revisions_(1) {}
-				bool appendChange(AtomicChange& postChange, const Document&) override BOOST_NOEXCEPT;
-				bool canPerform(const Document& document) const override BOOST_NOEXCEPT {
+				bool appendChange(AtomicChange& postChange, const Document&) BOOST_NOEXCEPT override;
+				bool canPerform(const Document& document) const BOOST_NOEXCEPT override {
 					return !document.isNarrowed() || encompasses(document.region(), region_);
 				}
 				void perform(Document& document, Result& result) override;
 			private:
-				const TypeTag& type() const override BOOST_NOEXCEPT {return type_;}
+				const TypeTag& type() const BOOST_NOEXCEPT override {return type_;}
 			private:
 				Region region_;
 				std::size_t revisions_;
@@ -93,13 +93,13 @@ namespace ascension {
 			class ReplacementChange : public AtomicChange, public FastArenaObject<ReplacementChange> {
 			public:
 				explicit ReplacementChange(const Region& region, const String& text) : region_(region), text_(text) {}
-				bool appendChange(AtomicChange&, const Document&) override BOOST_NOEXCEPT {return false;}
-				bool canPerform(const Document& document) const override BOOST_NOEXCEPT {
+				bool appendChange(AtomicChange&, const Document&) BOOST_NOEXCEPT override {return false;}
+				bool canPerform(const Document& document) const BOOST_NOEXCEPT override {
 					return !document.isNarrowed() || encompasses(document.region(), region_);
 				}
 				void perform(Document& document, Result& result) override;
 			private:
-				const TypeTag& type() const override BOOST_NOEXCEPT {return type_;}
+				const TypeTag& type() const BOOST_NOEXCEPT override {return type_;}
 			private:
 				const Region region_;
 				const String text_;
@@ -111,7 +111,7 @@ namespace ascension {
 			public:
 				~CompoundChange() BOOST_NOEXCEPT;
 				bool appendChange(AtomicChange& postChange, const Document& document) override;
-				bool canPerform(const Document& document) const override BOOST_NOEXCEPT {
+				bool canPerform(const Document& document) const BOOST_NOEXCEPT override {
 					return !changes_.empty() && changes_.back()->canPerform(document);
 				}
 				void perform(Document& document, Result& result) override;
@@ -136,7 +136,7 @@ namespace ascension {
 			}
 
 			/// @internal Implements @c UndoableChange#appendChange.
-			inline bool DeletionChange::appendChange(AtomicChange& postChange, const Document&) {
+			inline bool DeletionChange::appendChange(AtomicChange& postChange, const Document&) BOOST_NOEXCEPT {
 				if(&postChange.type() != &type_)
 					return false;
 				const Position& bottom = *boost::const_end(region_);
@@ -317,7 +317,7 @@ namespace ascension {
 		}
 
 		// stops the current compound chaining
-		inline void Document::UndoManager::insertBoundary() {
+		inline void Document::UndoManager::insertBoundary() BOOST_NOEXCEPT {
 			if(compoundChangeDepth_ == 0)
 				commitPendingChange(false);
 		}

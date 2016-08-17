@@ -317,9 +317,9 @@ namespace ascension {
 		 */
 
 #ifndef BOOST_NO_CXX11_UNIFIED_INITIALIZATION_SYNTAX
-		const DocumentPropertyKey Document::TITLE_PROPERTY;
-#else
 		const DocumentPropertyKey Document::TITLE_PROPERTY{};
+#else
+		const DocumentPropertyKey Document::TITLE_PROPERTY;
 #endif
 
 		/**
