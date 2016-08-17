@@ -125,7 +125,7 @@ namespace ascension {
 		 * @param from The position before the point moved. This value may equal to the current position
 		 * @see #aboutToMove, #moveTo, viewer#VisualPoint#moved
 		 */
-		void Point::moved(const Position& from) {
+		void Point::moved(const Position& from) BOOST_NOEXCEPT {
 		}
 
 		/**
