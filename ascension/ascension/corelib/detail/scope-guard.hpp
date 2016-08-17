@@ -59,7 +59,7 @@ namespace ascension {
 				if(target_ != nullptr)
 					(target_->*lockMethod_)();
 			}
-			void unlock() override {
+			void unlock() BOOST_NOEXCEPT override {
 				if(target_ != nullptr)
 					(target_->*unlockMethod_)();
 			}
@@ -77,7 +77,7 @@ namespace ascension {
 				if(target_ != nullptr)
 					lockFunction_(*target_);
 			}
-			void unlock() override {
+			void unlock() BOOST_NOEXCEPT override {
 				if(target_ != nullptr)
 					unlockFunction_(*target_);
 			}
@@ -97,12 +97,12 @@ namespace ascension {
 			template<typename Target, typename LockFunction, typename UnlockFunction>
 			Mutex(Target* target, LockFunction lockFunction, UnlockFunction unlockFunction,
 					typename std::enable_if<!std::is_member_function_pointer<LockFunction>::value || !std::is_member_function_pointer<UnlockFunction>::value>::type* = nullptr)
-					: locker_(new LockerWithFreeFunctions<Target, LockFfunction, UnlockFunction>(target, lockFunction, unlockFunction)) {
+					: locker_(new LockerWithFreeFunctions<Target, LockFunction, UnlockFunction>(target, lockFunction, unlockFunction)) {
 			}
 			void lock() {
 				locker_->lock();
 			}
-			void unlock() {
+			void unlock() BOOST_NOEXCEPT {
 				locker_->unlock();
 			}
 		private:
@@ -112,13 +112,13 @@ namespace ascension {
 		template<typename Lockable, void (Lockable::*lockMethod)(void), void (Lockable::*unlockMethod)(void)>
 		class MutexWithClass : public LockerWithClass<Lockable, decltype(lockMethod), decltype(unlockMethod)> {
 		public:
-			MutexWithClass(Lockable* lockable) : LockerWithClass(lockable, lockMethod, unlockMethod) {}
+			MutexWithClass(Lockable* lockable) : LockerWithClass<Lockable, decltype(lockMethod), decltype(unlockMethod)>(lockable, lockMethod, unlockMethod) {}
 		};
 
 		template<typename Lockable, void (*lockMethod)(Lockable&), void (*unlockMethod)(Lockable&)>
 		class MutexWithFreeFunctions : public LockerWithFreeFunctions<Lockable, decltype(lockMethod), decltype(unlockMethod)> {
 		public:
-			MutexWithFreeFunctions(Lockable* lockable) : LockerWithFreeFunctions(lockable, lockMethod, unlockMethod) {}
+			MutexWithFreeFunctions(Lockable* lockable) : LockerWithFreeFunctions<Lockable, decltype(lockMethod), decltype(unlockMethod)>(lockable, lockMethod, unlockMethod) {}
 		};
 	}
 }
