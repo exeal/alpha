@@ -96,7 +96,7 @@ namespace ascension {
 			 * @param requested The requested position in the document
 			 */
 			explicit BadPositionException(const Position& requested) : std::invalid_argument(
-				static_cast<std::ostringstream&>(std::ostringstream() << "the position " << requested
+				static_cast<std::ostringstream&&>(std::ostringstream() << "the position " << requested
 				<< " is outside of the document.").str()), requestedPosition_(requested) {}
 			/**
 			 * Constructor.
