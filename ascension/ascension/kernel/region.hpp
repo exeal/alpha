@@ -19,7 +19,7 @@ namespace ascension {
 				RegionIterator, const Position, boost::incrementable_traversal_tag, const Position&/*, void */
 			> {
 				typedef boost::iterator_facade<
-					RegionIterator, const Position&, boost::incrementable_traversal_tag, const Position&/*, void */
+					RegionIterator, const Position, boost::incrementable_traversal_tag, const Position&/*, void */
 				> Super;
 			public:
 				typedef Super::value_type value_type;
