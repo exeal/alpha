@@ -139,7 +139,7 @@ namespace ascension {
 			 * @param requested The requested region in the document
 			 */
 			explicit BadRegionException(const Region& requested) : std::invalid_argument(
-				static_cast<std::ostringstream&>(std::ostringstream() << "the region " << requested
+				static_cast<std::ostringstream&&>(std::ostringstream() << "the region " << requested
 				<< ") intersects with the outside of the document.").str()), requestedRegion_(requested) {}
 			/**
 			 * Constructor.
