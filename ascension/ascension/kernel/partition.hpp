@@ -129,10 +129,10 @@ namespace ascension {
 		public:
 			NullPartitioner() BOOST_NOEXCEPT;
 		private:
-			void documentAboutToBeChanged() override BOOST_NOEXCEPT;
-			void documentChanged(const DocumentChange& change) override BOOST_NOEXCEPT;
-			void doGetPartition(const Position& at, DocumentPartition& partition) const override BOOST_NOEXCEPT;
-			void doInstall() override BOOST_NOEXCEPT;
+			void documentAboutToBeChanged() BOOST_NOEXCEPT override;
+			void documentChanged(const DocumentChange& change) BOOST_NOEXCEPT override;
+			void doGetPartition(const Position& at, DocumentPartition& partition) const BOOST_NOEXCEPT override;
+			void doInstall() BOOST_NOEXCEPT override;
 		private:
 			DocumentPartition p_;
 			mutable bool changed_;
