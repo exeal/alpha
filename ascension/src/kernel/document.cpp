@@ -662,9 +662,9 @@ namespace ascension {
 		void Document::setProperty(const DocumentPropertyKey& key, const String& property) {
 			std::map<const DocumentPropertyKey*, std::unique_ptr<String>>::iterator i(properties_.find(&key));
 			if(i == std::end(properties_))
-				properties_.insert(std::make_pair(&key, new String(property)));
+				properties_.insert(std::make_pair(&key, std::unique_ptr<String>(new String(property))));
 			else
-				i->second->assign(property);
+				std::get<1>(*i)->assign(property);
 			propertyChangedSignal_(*this, key);
 		}
 
