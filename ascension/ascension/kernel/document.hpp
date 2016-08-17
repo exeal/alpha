@@ -233,7 +233,7 @@ namespace ascension {
 			void initialize();
 			void partitioningChanged(const Region& changedRegion) BOOST_NOEXCEPT;
 			// detail.SessionElement
-			void setSession(texteditor::Session& session) override BOOST_NOEXCEPT {session_ = &session;}
+			void setSession(texteditor::Session& session) BOOST_NOEXCEPT override {session_ = &session;}
 			// detail.PointCollection<AbstractPoint>
 			void addNewPoint(AbstractPoint& point) override {points_.insert(&point);}
 			void removePoint(AbstractPoint& point) override {points_.erase(&point);}
