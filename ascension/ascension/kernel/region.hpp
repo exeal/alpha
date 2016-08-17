@@ -100,7 +100,7 @@ namespace ascension {
 				return boost::irange(line(*boost::const_begin(*this)), line(*boost::const_end(*this)) + 1);
 			}
 			/// Returns the result of @c Region(Position::zero()).
-			static BOOST_CONSTEXPR Region zero() BOOST_NOEXCEPT {
+			static Region zero() BOOST_NOEXCEPT {
 				return makeEmpty(Position::zero());
 			}
 		};
