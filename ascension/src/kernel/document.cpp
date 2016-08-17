@@ -52,7 +52,7 @@ namespace ascension {
 		 * @throw ... Any exceptions out.operator bool, out.write and out.flush throw
 		 * @see Newline#asString, Document#insert
 		 */
-		std::basic_ostream<Char>& kernel::writeDocumentToStream(std::basic_ostream<Char>& out,
+		std::basic_ostream<Char>& writeDocumentToStream(std::basic_ostream<Char>& out,
 				const Document& document, const Region& region, const text::Newline& newline /* = text::Newline::USE_INTRINSIC_VALUE */) {
 			const Position& beginning = *boost::const_begin(region);
 			const Position end(std::min(*boost::const_end(region), *boost::const_end(document.region())));
@@ -316,7 +316,11 @@ namespace ascension {
 		 * @see #isReadOnly, #readOnlySignChangedSignal, #setReadOnly
 		 */
 
+#ifndef BOOST_NO_CXX11_UNIFIED_INITIALIZATION_SYNTAX
 		const DocumentPropertyKey Document::TITLE_PROPERTY;
+#else
+		const DocumentPropertyKey Document::TITLE_PROPERTY{};
+#endif
 
 		/**
 		 * Returns the accessible region of the document. The returned region is normalized.
