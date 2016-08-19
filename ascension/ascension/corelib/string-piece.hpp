@@ -9,7 +9,7 @@
 
 #ifndef ASCENSION_STRING_PIECE_HPP
 #define ASCENSION_STRING_PIECE_HPP
-#include <ascension/corelib/basic-types.hpp>	// Char
+#include <ascension/corelib/text/character.hpp>	// Char
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 #	include <ascension/corelib/range.hpp>
 #	include <stdexcept>							// std.out_of_range

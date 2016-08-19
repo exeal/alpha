@@ -7,8 +7,8 @@
 
 #ifndef ASCENSION_CONTENT_ASSIST_HPP
 #define ASCENSION_CONTENT_ASSIST_HPP
-
 #include <ascension/platforms.hpp>
+#include <ascension/corelib/text/code-point.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/partition.hpp>	// kernel.ContentType
 #include <memory>	// std.shared_ptr

@@ -10,6 +10,7 @@
 #ifndef ASCENSION_LOCATIONS_HPP
 #define ASCENSION_LOCATIONS_HPP
 #include <ascension/direction.hpp>
+#include <ascension/corelib/text/code-point.hpp>
 #include <ascension/kernel/position.hpp>
 #include <utility>	// std.pair
 

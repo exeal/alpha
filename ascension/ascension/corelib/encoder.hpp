@@ -9,6 +9,7 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_*_ENCODINGS
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/string-piece.hpp>
+#include <ascension/corelib/text/code-point.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/core/noncopyable.hpp>
 #include <array>
