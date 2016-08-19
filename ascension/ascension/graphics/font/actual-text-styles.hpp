@@ -217,7 +217,7 @@ namespace boost {
 namespace std {
 	/// Specialization of @c std#hash class template for @c ActualBorderSide.
 	template<>
-	class hash<ascension::graphics::font::ActualBorderSide> :
+	struct hash<ascension::graphics::font::ActualBorderSide> :
 		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::ActualBorderSide&)> {
 	public:
 		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
@@ -227,7 +227,7 @@ namespace std {
 
 	/// Specialization of @c std#hash class template for @c ActualFontSpecification.
 	template<>
-	class hash<ascension::graphics::font::ActualFontSpecification> :
+	struct hash<ascension::graphics::font::ActualFontSpecification> :
 		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::ActualFontSpecification&)> {
 	public:
 		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
@@ -237,7 +237,7 @@ namespace std {
 
 	/// Specialization of @c std#hash class template for @c ActualTextDecoration.
 	template<>
-	class hash<ascension::graphics::font::ActualTextDecoration> :
+	struct hash<ascension::graphics::font::ActualTextDecoration> :
 		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::ActualTextDecoration&)> {
 	public:
 		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
@@ -247,7 +247,7 @@ namespace std {
 
 	/// Specialization of @c std#hash class template for @c ActualTextEmphasis.
 	template<>
-	class hash<ascension::graphics::font::ActualTextEmphasis> :
+	struct hash<ascension::graphics::font::ActualTextEmphasis> :
 		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::ActualTextEmphasis&)> {
 	public:
 		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {

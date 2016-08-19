@@ -321,7 +321,7 @@ namespace std {
 
 	/// Specialization of @c std#hash class template for @c FlowRelativeFourSides.
 	template<typename T>
-	class hash<ascension::presentation::FlowRelativeFourSides<T>> :
+	struct hash<ascension::presentation::FlowRelativeFourSides<T>> :
 		public std::function<std::hash<void*>::result_type(const ascension::presentation::FlowRelativeFourSides<T>&)> {
 	public:
 		std::size_t operator()(const ascension::presentation::FlowRelativeFourSides<T>& key) const BOOST_NOEXCEPT {
