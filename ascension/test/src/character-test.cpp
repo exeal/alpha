@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE character_test
 #include <boost/test/included/unit_test.hpp>
 
-#include <ascension/corelib/text/character.hpp>
+#include <ascension/corelib/text/code-point.hpp>
 #include "unicode-surrogates.hpp"
 
 BOOST_AUTO_TEST_CASE(surrogate_category_test) {

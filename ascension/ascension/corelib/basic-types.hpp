@@ -11,11 +11,7 @@
 #define ASCENSION_BASIC_TYPES_HPP
 #include <ascension/platforms.hpp>	// ASCENSION_USE_INTRINSIC_WCHAR_T
 #include <boost/config.hpp>	// BOOST_NOEXCEPT
-#include <cstdint>
-#include <string>
-#ifdef ASCENSION_TEST
-#	include <iomanip>
-#endif // !ASCENSION_TEST
+#include <cstddef>
 
 /// Version of Ascension library
 #define ASCENSION_LIBRARY_VERSION 0x0080	// 0.8.0
@@ -30,19 +26,6 @@ namespace ascension {
 //	typedef unsigned short ushort;	///< A short synonym for @c unsigned @c short.
 //	typedef unsigned int uint;		///< A short synonym for @c unsigned @c int.
 //	typedef unsigned long ulong;	///< A short synonym for @c unsigned @c long.
-
-	// character and string
-	typedef std::conditional<
-#ifndef ASCENSION_USE_INTRINSIC_WCHAR_T
-		false &&
-#endif
-		sizeof(wchar_t) == 2,
-		wchar_t, std::uint16_t
-	>::type Char;	///< Type for characters as UTF-16 code unit.
-	typedef std::uint32_t CodePoint;		///< Unicode code point.
-	typedef std::basic_string<Char> String;	///< Type for strings as UTF-16.
-	static_assert(sizeof(Char) == 2, "");
-	static_assert(sizeof(CodePoint) == 4, "");
 
 	typedef std::size_t Index;			///< Length of string or index.
 	typedef std::ptrdiff_t SignedIndex;	///< Signed @c Index.
@@ -75,21 +58,5 @@ namespace ascension {
 	}
 
 } // namespace ascension
-
-#ifdef ASCENSION_TEST
-namespace std {
-	template<typename CharType, typename CharTraits>
-	inline basic_ostream<CharType, CharTraits>& operator<<(basic_ostream<CharType, CharTraits>& out, const ascension::String& value) {
-		out << std::setfill(out.widen('0'));
-		for(ascension::String::const_iterator i(begin(value)), e(end(value)); i != e; ++i) {
-			if(*i < 0x80)
-				out << *i;
-			else
-				out << std::setw(4) << static_cast<std::uint16_t>(*i);
-		}
-		return out;
-	}
-}
-#endif // ASCENSION_TEST
 
 #endif // !ASCENSION_BASIC_TYPES_HPP

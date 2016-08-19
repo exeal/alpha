@@ -10,9 +10,8 @@
 
 #ifndef ASCENSION_STYLES_TEXT_DECOR_HPP
 #define ASCENSION_STYLES_TEXT_DECOR_HPP
-
-#include <ascension/corelib/basic-types.hpp>		// CodePoint
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
+#include <ascension/corelib/text/code-point.hpp>
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/styles/background.hpp>	// Border
 #include <ascension/presentation/styles/color.hpp>

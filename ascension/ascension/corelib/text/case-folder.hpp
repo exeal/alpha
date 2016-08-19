@@ -8,6 +8,7 @@
 
 #ifndef ASCENSION_CASE_FOLDER_HPP
 #define ASCENSION_CASE_FOLDER_HPP
+#include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// utf.CharacterDecodeIterator, utf.checkedEncode
 #include <boost/range/begin.hpp>

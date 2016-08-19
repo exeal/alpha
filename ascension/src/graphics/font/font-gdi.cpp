@@ -28,10 +28,6 @@
 #	pragma comment(lib, "usp10.lib")
 #endif // ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE)
 
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-#	include <ascension/corelib/text/character.hpp>	// text.isValidCodePoint
-#endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-
 namespace ascension {
 	namespace graphics {
 		namespace {

@@ -8,6 +8,7 @@
 #ifndef ASCENSION_GRAPHICS_COLOR_HPP
 #define ASCENSION_GRAPHICS_COLOR_HPP
 #include <ascension/platforms.hpp>
+#include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <gdkmm/rgba.h>					// Gdk.RGBA

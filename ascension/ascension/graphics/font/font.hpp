@@ -9,6 +9,7 @@
 #define ASCENSION_FONT_HPP
 #include <ascension/config.hpp>
 #include <ascension/corelib/string-piece.hpp>
+#include <ascension/corelib/text/code-point.hpp>
 #include <ascension/graphics/font/glyph-code.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/geometry/affine-transform.hpp>

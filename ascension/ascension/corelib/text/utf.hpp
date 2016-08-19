@@ -15,8 +15,8 @@
 #ifndef ASCENSION_UTF_HPP
 #define ASCENSION_UTF_HPP
 #include <ascension/corelib/basic-exceptions.hpp>
-#include <ascension/corelib/text/character.hpp>	// CodePoint, surrogates.*
-#include <cassert>								// assert
+#include <ascension/corelib/text/code-point.hpp>
+#include <cassert>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.
@@ -295,7 +295,7 @@ namespace ascension {
 			inline CodePoint decodeFirst(InputIterator first, InputIterator last,
 					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 2>::type* = nullptr) {
 				assert(first != last);
-				const std::uint16_t high = *first;
+				const auto high = *first;
 				if(surrogates::isHighSurrogate(high))
 					return (++first != last) ? surrogates::decode(high, *first) : high;
 				return high;
@@ -403,7 +403,7 @@ namespace ascension {
 					BidirectionalIterator first, BidirectionalIterator last,
 					typename std::enable_if<CodeUnitSizeOf<BidirectionalIterator>::value == 2>::type* = nullptr) {
 				assert(first != last);
-				const std::uint16_t low = *--last;
+				const auto low = *--last;
 				if(surrogates::isLowSurrogate(low))
 					return (--last != first) ? surrogates::decode(*last, low) : low;
 				return low;

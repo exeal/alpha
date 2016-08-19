@@ -414,6 +414,8 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character-property.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\code-point.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\code-unit-size-of.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\collator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\detail\break-iterator-facade.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\detail\break-iterator-scan-base.hpp" />

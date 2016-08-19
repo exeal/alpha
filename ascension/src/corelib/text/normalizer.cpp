@@ -6,6 +6,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_*
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
+#include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/corelib/text/normalizer.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>

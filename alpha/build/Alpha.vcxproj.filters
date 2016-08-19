@@ -1453,6 +1453,12 @@
     <ClInclude Include="..\..\ascension\ascension\rules\token-rule.hpp">
       <Filter>ascension\Header Files\rules</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\code-point.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\code-unit-size-of.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
