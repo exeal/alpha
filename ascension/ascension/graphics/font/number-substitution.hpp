@@ -98,7 +98,7 @@ namespace ascension {
 namespace std {
 	/// Specialization of @c std#hash class template for @c NumberSubstitution.
 	template<>
-	class hash<ascension::graphics::font::NumberSubstitution> :
+	struct hash<ascension::graphics::font::NumberSubstitution> :
 		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::NumberSubstitution&)> {
 	public:
 		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {

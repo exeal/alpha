@@ -501,7 +501,7 @@ namespace ascension {
 namespace std {
 	/// Specialization of @c std#hash class template for @c TextIndent.
 	template<typename LengthType, typename BooleanType>
-	class hash<ascension::presentation::styles::BasicTextIndent<LengthType, BooleanType>> :
+	struct hash<ascension::presentation::styles::BasicTextIndent<LengthType, BooleanType>> :
 		public std::function<std::hash<void*>::result_type(const ascension::presentation::styles::BasicTextIndent<LengthType, BooleanType>&)> {
 	public:
 		std::size_t operator()(const ascension::presentation::styles::BasicTextIndent<LengthType, BooleanType>& key) const BOOST_NOEXCEPT {

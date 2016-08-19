@@ -173,7 +173,7 @@ namespace ascension {
 namespace std {
 	/// Specialization of @c std#hash class template for @c FontProperties.
 	template<>
-	class hash<ascension::graphics::font::FontProperties> :
+	struct hash<ascension::graphics::font::FontProperties> :
 		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::FontProperties&)> {
 	public:
 		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {

@@ -211,7 +211,7 @@ namespace ascension {
 namespace std {
 	/// Specialization of @c std#hash class template for @c WritingMode.
 	template<>
-	class hash<ascension::presentation::WritingMode> : public std::function<std::hash<void*>::result_type(const ascension::presentation::WritingMode&)> {
+	struct hash<ascension::presentation::WritingMode> : public std::function<std::hash<void*>::result_type(const ascension::presentation::WritingMode&)> {
 	public:
 		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
 			return boost::hash<argument_type>()(key);

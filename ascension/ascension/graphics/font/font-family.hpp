@@ -149,7 +149,7 @@ namespace ascension {
 namespace std {
 	/// Specialization of @c std#hash class template for @c FontFamily.
 	template<>
-	class hash<ascension::graphics::font::FontFamily> : public std::hash<ascension::String> {
+	struct hash<ascension::graphics::font::FontFamily> : public std::hash<ascension::String> {
 	public:
 		typedef ascension::graphics::font::FontFamily argument_type;
 		result_type operator()(const argument_type& key) const {

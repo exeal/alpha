@@ -184,7 +184,7 @@ namespace ascension {
 namespace std {
 	/// Specialization of @c std#hash class template for @c Color.
 	template<>
-	class hash<ascension::graphics::Color> : public std::function<std::hash<void*>::result_type(const ascension::graphics::Color&)> {
+	struct hash<ascension::graphics::Color> : public std::function<std::hash<void*>::result_type(const ascension::graphics::Color&)> {
 	public:
 		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
 			return boost::hash<argument_type>()(key);
