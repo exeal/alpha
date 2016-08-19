@@ -25,7 +25,7 @@ namespace ascension {
 		
 		/// @see Rule#parse
 		boost::optional<StringPiece::const_iterator> RegexTokenRule::parse(const StringPiece& text,
-				StringPiece::const_iterator start, const text::IdentifierSyntax& identifierSyntax) const {
+				StringPiece::const_iterator start, const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT {
 			assert(text.cbegin() < text.cend() && start >= text.cbegin() && start < text.cend());
 
 			const auto b(text::utf::makeCharacterDecodeIterator(text.cbegin(), text.cend()));
