@@ -23,15 +23,15 @@
 #if ASCENSION_OS_POSIX
 #	include <sys/stat.h>	// for POSIX environment
 #endif
+#include <boost/core/noncopyable.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
 #include <iosfwd>
 #include <list>
 #include <map>
 #include <memory>
 #include <set>
 #include <utility>
-#include <boost/core/noncopyable.hpp>
-#include <boost/range/begin.hpp>
-#include <boost/range/end.hpp>
 
 namespace ascension {
 	namespace text {
@@ -174,8 +174,12 @@ namespace ascension {
 			/// @name Manipulations
 			/// @{
 			bool isChanging() const BOOST_NOEXCEPT;
-			void replace(const Region& region, const StringPiece& text, Position* eos = nullptr);
-			void replace(const Region& region, std::basic_istream<Char>& in, Position* eos = nullptr);
+			Position replace(const Region& region, const StringPiece& text);
+			template<typename InputIterator>
+			Position replace(const Region& region, InputIterator first, InputIterator last);
+			template<typename SinglePassReadableRange>
+			Position replace(const Region& region, const SinglePassReadableRange& text,
+				typename std::enable_if<!std::is_same<SinglePassReadableRange, String>::value>::type* = nullptr);
 			virtual void resetContent();
 			/// @}
 
@@ -297,8 +301,12 @@ namespace ascension {
 		/// @{
 		void erase(Document& document, const Region& region);
 		template<typename SinglePassReadableRange> void erase(Document& document, const SinglePassReadableRange& range);
-		void insert(Document& document, const Position& at, const StringPiece& text, Position* endOfInsertedString = nullptr);
-		void insert(Document& document, const Position& at, std::basic_istream<Char>& in, Position* endOfInsertedString = nullptr);
+		Position insert(Document& document, const Position& at, const StringPiece& text);
+		template<typename InputIterator>
+		Position insert(Document& document, const Position& at, InputIterator first, InputIterator last);
+		template<typename SinglePassReadableRange>
+		Position insert(Document& document, const Position& at, const SinglePassReadableRange& input,
+			typename std::enable_if<!std::is_same<SinglePassReadableRange, String>::value>::type* = nullptr);
 		/// @}
 
 		/// @defgroup other_free_functions_related_to_document Other Free Functions Related to Document
@@ -320,29 +328,41 @@ namespace ascension {
 		} // namespace positions
 
 
-		// inline implementation //////////////////////////////////////////////////////////////////
+		// inline implementation //////////////////////////////////////////////////////////////////////////////////////
 
-		/// Calls @c Document#replace.
+		/// Equivalent to @c document.replace(region, String()).
 		inline void erase(Document& document, const Region& region) {
-			return document.replace(region, String(), nullptr);
+			document.replace(region, StringPiece());
 		}
 
-		/// Calls @c Document#replace.
+		/// @overload
 		template<typename SinglePassReadableRange>
 		inline void erase(Document& document, const SinglePassReadableRange& range) {
 			return erase(document, Region::fromRange(range));
 		}
 
-		/// Calls @c Document#replace.
-		inline void insert(Document& document, const Position& at,
-				const StringPiece& text, Position* endOfInsertedString /* = nullptr */) {
-			return document.replace(Region::makeEmpty(at), text, endOfInsertedString);
+		/// Equivalent to @c document.replace(Region::makeEmpty(at), text).
+		inline Position insert(Document& document, const Position& at, const StringPiece& text) {
+			return document.replace(Region::makeEmpty(at), text);
 		}
 
-		/// Calls @c Document#replace.
-		inline void insert(Document& document, const Position& at,
-				std::basic_istream<Char>& in, Position* endOfInsertedString /* = nullptr */) {
-			return document.replace(Region::makeEmpty(at), in, endOfInsertedString);
+		/**
+		 * @overload.
+		 * @tparam InputIterator UTF-16 character sequence type
+		 */
+		template<typename InputIterator>
+		inline Position insert(Document& document, const Position& at, InputIterator first, InputIterator last) {
+			return document.replace(Region::makeEmpty(at), first, last);
+		}
+
+		/**
+		 * @overload.
+		 * @tparam SinglePassReadableRange UTF-16 character sequence type
+		 */
+		template<typename SinglePassReadableRange>
+		inline Position insert(Document& document, const Position& at, const SinglePassReadableRange& text,
+				typename std::enable_if<!std::is_same<SinglePassReadableRange, String>::value>::type* /* = nullptr */) {
+			return document.replace(Region::makeEmpty(at), text);
 		}
 
 		/// Returns @c true if the given position is outside of the document.
@@ -350,6 +370,38 @@ namespace ascension {
 				const Document& document, const Position& position) BOOST_NOEXCEPT {
 			return line(position) >= document.numberOfLines()
 				|| offsetInLine(position) > document.lineLength(line(position));
+		}
+
+		/**
+		 * @overload
+		 * @tparam InputIterator UTF-16 character sequence type
+		 * @see fileio#insertFileContents
+		 */
+		template<typename InputIterator>
+		inline Position Document::replace(const Region& region, InputIterator first, InputIterator last) {
+			if(first == last)
+				return replace(region, StringPiece());
+			// TODO: This implementation is provisional and not exception-safe.
+			static const std::size_t BUFFER_SIZE = 0x8000;
+			Char buffer[BUFFER_SIZE];
+			Position eos;
+			for(Region r(region); first != last; r = Region::makeEmpty(eos)) {
+				std::size_t i;
+				for(i = 0; i < BUFFER_SIZE && first != last; ++i, ++first)
+					buffer[i] = *first;
+				eos = replace(r, StringPiece(buffer, i));
+			}
+			return eos;
+		}
+
+		/**
+		 * @overload
+		 * @tparam SinglePassReadableRange UTF-16 character sequence type
+		 */
+		template<typename SinglePassReadableRange>
+		inline Position Document::replace(const Region& region, const SinglePassReadableRange& text,
+				typename std::enable_if<!std::is_same<SinglePassReadableRange, String>::value>::type* /* = nullptr */) {
+			return replace(region, boost::const_begin(text), boost::const_end(text));
 		}
 
 		/** 

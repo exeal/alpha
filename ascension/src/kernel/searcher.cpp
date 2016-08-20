@@ -462,7 +462,7 @@ namespace ascension {
 						if(!boost::empty(matchedRegion) || !replacement.empty()) {
 							kernel::Position e;
 							try {
-								document.replace(matchedRegion, replacement, &e);
+								e = document.replace(matchedRegion, replacement);
 							} catch(const kernel::DocumentInput::ChangeRejectedException&) {
 								throw ReplacementInterruptedException<kernel::DocumentInput::ChangeRejectedException>(numberOfReplacements);
 							} catch(const std::bad_alloc&) {

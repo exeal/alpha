@@ -52,8 +52,7 @@ BOOST_AUTO_TEST_SUITE(modifications)
 	BOOST_AUTO_TEST_CASE(insertion_test) {
 		ascension::kernel::Document d;
 
-		ascension::kernel::Position e;
-		ascension::kernel::insert(d, ascension::kernel::Position::zero(), fromLatin1("first"), &e);
+		auto e(ascension::kernel::insert(d, ascension::kernel::Position::zero(), fromLatin1("first")));
 		BOOST_TEST(e == ascension::kernel::Position(0u, 5u));
 		BOOST_TEST(d.isModified());
 		BOOST_TEST(d.accessibleRegion().equal(ascension::kernel::Region::makeSingleLine(0u, boost::irange(0u, 5u))));
@@ -68,7 +67,7 @@ BOOST_AUTO_TEST_SUITE(modifications)
 		BOOST_TEST(d.numberOfUndoableChanges() == 1u);
 		BOOST_TEST(d.numberOfRedoableChanges() == 0u);
 
-		ascension::kernel::insert(d, e, fromLatin1(" line"), &e);
+		e = ascension::kernel::insert(d, e, fromLatin1(" line"));
 		BOOST_TEST(e == ascension::kernel::Position(0u, 10u));
 		BOOST_TEST(d.accessibleRegion().equal(ascension::kernel::Region::makeSingleLine(0u, boost::irange(0u, 10u))));
 		BOOST_TEST(d.length() == 10u);
@@ -79,7 +78,7 @@ BOOST_AUTO_TEST_SUITE(modifications)
 		BOOST_TEST(d.numberOfUndoableChanges() == 1u);
 		BOOST_TEST(d.numberOfRedoableChanges() == 0u);
 
-		ascension::kernel::insert(d, ascension::kernel::Position::zero(), fromLatin1("This is "), &e);
+		e = ascension::kernel::insert(d, ascension::kernel::Position::zero(), fromLatin1("This is "));
 		BOOST_TEST(e == ascension::kernel::Position(0u, 8u));
 		BOOST_TEST(d.length() == 18u);
 		BOOST_TEST(d.lineString(0u) == fromLatin1("This is first line"));
@@ -93,7 +92,7 @@ BOOST_AUTO_TEST_SUITE(modifications)
 		BOOST_TEST(d.numberOfLines() == 1u);
 		BOOST_TEST(d.region().equal(ascension::kernel::Region::makeSingleLine(0u, boost::irange(0u, 22u))));
 
-		ascension::kernel::insert(d, ascension::kernel::Position(0, 18u), fromLatin1("line.\nHere is the second "), &e);
+		e = ascension::kernel::insert(d, ascension::kernel::Position(0, 18u), fromLatin1("line.\nHere is the second "));
 		BOOST_TEST(e == ascension::kernel::Position(1u, 19u));
 		BOOST_TEST(d.length() == 24u + 23u);
 		BOOST_REQUIRE(d.numberOfLines() == 2u);
@@ -102,7 +101,7 @@ BOOST_AUTO_TEST_SUITE(modifications)
 		BOOST_TEST(*boost::const_begin(d.region()) == ascension::kernel::Position::zero());
 		BOOST_TEST(*boost::const_end(d.region()) == ascension::kernel::Position(1u, 23u));
 
-		ascension::kernel::insert(d, ascension::kernel::Position(1u, 23u), fromLatin1("\r\n"), &e);
+		e = ascension::kernel::insert(d, ascension::kernel::Position(1u, 23u), fromLatin1("\r\n"));
 		BOOST_TEST(e == ascension::kernel::Position::bol(2u));
 		BOOST_REQUIRE(d.numberOfLines() == 3u);
 		BOOST_TEST(d.lineLength(2u) == 0u);

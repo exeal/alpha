@@ -363,9 +363,9 @@ namespace ascension {
 
 			/// @defgroup Free Functions Related to Document and File Path Name
 			/// @{
-			std::pair<std::string, bool> insertFileContents(Document& document,
-				const Position& at, const boost::filesystem::path& fileName, const std::string& encoding,
-				encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString = nullptr);
+			std::tuple<std::string, bool, Position> insertFileContents(
+				Document& document, const Position& at, const boost::filesystem::path& fileName,
+				const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy);
 			void writeRegion(const Document& document, const Region& region,
 				const boost::filesystem::path& fileName, const WritingFormat& format, bool append = false);
 			/// @}
