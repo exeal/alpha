@@ -127,7 +127,7 @@ namespace ascension {
 			/// @internal Implements @c UndoableChange#perform.
 			inline void InsertionChange::perform(Document& document, Result& result) {
 				try {
-					insert(document, position_, text_, &result.endOfChange);
+					result.endOfChange = insert(document, position_, text_);
 				} catch(DocumentAccessViolationException&) {
 					result.reset();	// the position was inaccessible
 				}	// std.bad_alloc is ignored...
@@ -165,7 +165,7 @@ namespace ascension {
 			/// @internal Implements @c UndoableChange#perform.
 			inline void ReplacementChange::perform(Document& document, Result& result) {
 				try {
-					document.replace(region_, text_, &result.endOfChange);
+					result.endOfChange = document.replace(region_, text_);
 				} catch(DocumentAccessViolationException&) {
 					result.reset();	// the region was inaccessible
 				}	// std.bad_alloc is ignored...
@@ -543,7 +543,7 @@ namespace ascension {
 		 * @c DocumentListener#documentAboutToBeChanged and @c DocumentListener#documentChanged.
 		 * @param region The region to erase. If this is empty, no text is erased
 		 * @param text The text string for replacement. If this is @c null or empty, no text is inserted
-		 * @param[out] eos The position of the end of the inserted text. Can be @c null if not needed
+		 * @return The position of the end of the inserted text
 		 * @throw ReadOnlyDocumentException The document is read only
 		 * @throw BadRegionException @a region intersects with outside of the document
 		 * @throw DocumentAccessViolationException @a region intersects the inaccesible region
@@ -551,7 +551,7 @@ namespace ascension {
 		 * @throw IDocumentInput#ChangeRejectedException The input of the document rejected this change
 		 * @throw std#bad_alloc The internal memory allocation failed
 		 */
-		void Document::replace(const Region& region, const StringPiece& text, Position* eos /* = nullptr */) {
+		Position Document::replace(const Region& region, const StringPiece& text) {
 			if(changing_)
 				throw IllegalStateException("called in IDocumentListeners' notification.");
 			else if(isReadOnly())
@@ -563,7 +563,7 @@ namespace ascension {
 			else if(isNarrowed() && !encompasses(accessibleRegion(), region))
 				throw DocumentAccessViolationException();
 			else if(boost::empty(region) && (text.cbegin() == nullptr || text.empty()))
-				return;	// nothing to do
+				return *boost::const_begin(region);	// nothing to do
 			ASCENSION_PREPARE_FIRST_CHANGE(rollbacking_);
 
 			// preprocess. these can't throw
@@ -722,25 +722,7 @@ namespace ascension {
 			if(!rollbacking_ && !modified)
 				modificationSignChangedSignal_(*this);
 
-			if(eos != nullptr)
-				*eos = endOfInsertedString;
-		}
-
-		/**
-		 * @see fileio#insertFileContents
-		 */
-		void Document::replace(const Region& region, std::basic_istream<Char>& in, Position* endOfInsertedString /* = nullptr */) {
-			// TODO: this implementation is provisional and not exception-safe.
-			Position e;
-			std::array<Char, 0x8000> buffer;
-			for(Region r(region); in; r = Region::makeEmpty(e)) {
-				in.read(buffer.data(), buffer.size());
-				if(in.gcount() == 0)
-					break;
-				replace(r, StringPiece(buffer.data(), static_cast<StringPiece::size_type>(in.gcount())), &e);
-			}
-			if(endOfInsertedString != 0)
-				*endOfInsertedString = e;
+			return endOfInsertedString;
 		}
 
 		/**

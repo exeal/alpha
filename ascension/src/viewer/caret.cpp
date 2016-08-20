@@ -431,7 +431,7 @@ namespace ascension {
 					p : kernel::locations::nextCharacter(caret, Direction::forward(), kernel::locations::GRAPHEME_CLUSTER));
 				if(e != p) {
 					try {
-						caret.document().replace(kernel::Region(p, e), text, &e);
+						e = caret.document().replace(kernel::Region(p, e), text);
 					} catch(...) {
 						caret.adaptToDocument(adapts);
 						throw;
@@ -632,7 +632,7 @@ namespace ascension {
 			kernel::Position e;
 			prechangeDocument();
 			if(!isSelectionRectangle() && !rectangleInsertion)
-				document().replace(selectedRegion(), text, &e);
+				e = document().replace(selectedRegion(), text);
 			else {
 				// TODO: not implemented.
 				return;

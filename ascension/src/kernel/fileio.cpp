@@ -397,16 +397,16 @@ namespace ascension {
 			 * @throw MalformedInputException
 			 * @throw ... Any exceptions @c TextFileStreamBuffer#TextFileStreamBuffer and @c kernel#insert throw
 			 */
-			std::pair<std::string, bool> fileio::insertFileContents(Document& document,
-					const Position& at, const boost::filesystem::path& fileName, const std::string& encoding,
-					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString /* = nullptr */) {
+			std::tuple<std::string, bool, Position> fileio::insertFileContents(
+					Document& document, const Position& at, const boost::filesystem::path& fileName,
+					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy) {
 				TextFileStreamBuffer sb(fileName, std::ios_base::in, encoding, encodingSubstitutionPolicy, false);
-				std::basic_istream<Char> in(&sb);
-				in.exceptions(std::ios_base::badbit);
-				insert(document, at, in, endOfInsertedString);
-				const std::pair<std::string, bool> result(std::make_pair(sb.encoding(), sb.unicodeByteOrderMark()));
+				std::istreambuf_iterator<Char> i(&sb);
+				const auto eos(insert(document, at, i, std::istreambuf_iterator<Char>()));
+				const auto realEncoding(sb.encoding());
+				const auto unicodeByteOrderMark(sb.unicodeByteOrderMark());
 				sb.close();
-				return result;
+				return std::make_tuple(realEncoding, unicodeByteOrderMark, eos);
 			}
 
 			/**
@@ -1278,18 +1278,17 @@ private:
 				timeStampDirector_ = nullptr;
 
 				// read from the file
-				std::pair<std::string, bool> resultEncoding;
 				const bool recorded = document().isRecordingChanges();
 				document_.recordChanges(false);
 				try {
-					resultEncoding = insertFileContents(document_, *boost::const_begin(document().region()), fileName(), encoding, encodingSubstitutionPolicy);
+					std::tie(encoding_, unicodeByteOrderMark_, std::ignore) =
+						insertFileContents(document_, *boost::const_begin(document().region()), fileName(), encoding, encodingSubstitutionPolicy);
 				} catch(...) {
 					document_.resetContent();
 					document_.recordChanges(recorded);
 					throw;
 				}
 				document_.recordChanges(recorded);
-				unicodeByteOrderMark_ = resultEncoding.second;
 
 				// set the new properties of the document
 				savedDocumentRevision_ = document().revisionNumber();
@@ -1315,7 +1314,6 @@ private:
 				}
 #	endif
 #endif
-				encoding_ = resultEncoding.first;
 				newline_ = document().lineContent(0).newline();	// use the newline of the first line
 				listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileEncodingChanged, *this);
 				listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);

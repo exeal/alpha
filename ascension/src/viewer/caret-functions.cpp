@@ -515,7 +515,7 @@ namespace ascension {
 			writeDocumentToStream(ss, document, kernel::Region(pos[0], pos[1]), text::Newline::USE_INTRINSIC_VALUE);
 			kernel::Position e;
 			try {
-				document.replace(kernel::Region(pos[0], pos[3]), ss.str(), &e);
+				e = document.replace(kernel::Region(pos[0], pos[3]), ss.str());
 			} catch(const kernel::DocumentAccessViolationException&) {
 				return false;
 			}
