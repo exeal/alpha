@@ -79,7 +79,21 @@ namespace ascension {
 					/// Returns the platform-native value.
 					Native native() const BOOST_NOEXCEPT;
 
+					using std::bitset<NUMBER_OF_KEYBOARD_MODIFIERS>::operator==;
+					using std::bitset<NUMBER_OF_KEYBOARD_MODIFIERS>::operator!=;
+					using std::bitset<NUMBER_OF_KEYBOARD_MODIFIERS>::operator&=;
+					using std::bitset<NUMBER_OF_KEYBOARD_MODIFIERS>::operator|=;
+					using std::bitset<NUMBER_OF_KEYBOARD_MODIFIERS>::operator^=;
+
 				private:
+					bool operator==(KeyboardModifier) const;
+					bool operator!=(KeyboardModifier) const;
+					KeyboardModifiers& operator&=(KeyboardModifier);
+					KeyboardModifiers& operator|=(KeyboardModifier);
+					KeyboardModifiers& operator^=(KeyboardModifier);
+					KeyboardModifiers operator&(KeyboardModifier) const;
+					KeyboardModifiers operator|(KeyboardModifier) const;
+					KeyboardModifiers operator^(KeyboardModifier) const;
 					template<typename Sequence, std::size_t N>
 					void _set(const Sequence& sequence, std::integral_constant<std::size_t, N>, typename std::enable_if<N != 0>::type* = nullptr) {
 						set(std::get<N>(sequence));
