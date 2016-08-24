@@ -61,6 +61,7 @@ namespace ascension {
 			 * Creates a region with the specified range.
 			 * @tparam SinglePassReadableRange The type of @a range
 			 * @param range Any range
+			 * @return `Region(*boost::const_begin(range), *boost::const_end(range))`
 			 */
 			template<typename SinglePassReadableRange>
 			static Region fromRange(const SinglePassReadableRange& range) {
@@ -71,6 +72,7 @@ namespace ascension {
 			 * Creates a region with the specified two positions.
 			 * @tparam Positions The type of @a positions
 			 * @param positions An array, tuple, ... whose size is 2
+			 * @return `Region(std::get&lt;0&gt;(positions), std::get&lt;1&gt;(positions))`
 			 */
 			template<typename Positions>
 			static Region fromTuple(const Positions& positions) {
@@ -80,6 +82,7 @@ namespace ascension {
 			/**
 			 * Creates an empty region with the specified position.
 			 * @param position The position
+			 * @return `Region(position, position)`
 			 */
 			static Region makeEmpty(const Position& position) BOOST_NOEXCEPT {
 				return Region(position, position);
