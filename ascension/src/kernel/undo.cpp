@@ -14,12 +14,21 @@
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/find_first_of.hpp>
 #include <stack>
+#include <tuple>
 #include <vector>
 
 
 namespace ascension {
 	namespace kernel {
 		namespace {
+			// MEMO: merge table
+			//             post-change
+			// pre-change  insert  delete  replace
+			// ----------  ------------------------
+			// insert      yes     no      no
+			// delete      no      yes     no
+			// replace     yes     no      no
+
 			class AtomicChange;
 
 			/// @internal An abstract edit operation.
@@ -39,10 +48,10 @@ namespace ascension {
 			public:
 				/// Destructor.
 				virtual ~UndoableChange() BOOST_NOEXCEPT {}
-				/// Appends @a postChange to this change and returns @c true, or returns @c false.
-				virtual bool appendChange(AtomicChange& postChange, const Document& document) = 0;
 				/// Returns @c true if the change can perform.
 				virtual bool canPerform(const Document& document) const = 0;
+				/// Tries to append @a postChange to this change and returns @c true, or returns @c false.
+				virtual bool merge(std::unique_ptr<AtomicChange>& postChange, const Document& document) = 0;
 				/// Performs the change. This method may fail.
 				virtual void perform(Document& document, Result& result) = 0;
 			};
@@ -50,138 +59,181 @@ namespace ascension {
 			/// @internal Base interface of @c InsertionChange and @c DeletionChange.
 			class AtomicChange : public UndoableChange {
 			public:
-				struct TypeTag {};	// ugly dynamic type system for performance reason
 				virtual ~AtomicChange() BOOST_NOEXCEPT {}
-				virtual const TypeTag& type() const BOOST_NOEXCEPT = 0;
+				bool merge(std::unique_ptr<AtomicChange>& postChange, const Document& document) override {
+					if(doMerge(postChange, document))
+						return ++revisions_, true;
+					return false;
+				}
+				void perform(Document& document, Result& result) override {
+					std::tie(result.completed, result.endOfChange) = doPerform(document);
+					result.numberOfRevisions = revisions_;
+				}
+				virtual Position begin() const BOOST_NOEXCEPT = 0;
+				virtual boost::optional<Position> end() const BOOST_NOEXCEPT = 0;
+				virtual const String* text() const BOOST_NOEXCEPT = 0;
+			protected:
+				AtomicChange() : revisions_(1) {}
+				virtual bool doMerge(std::unique_ptr<AtomicChange>& postChange, const Document& document) = 0;
+				virtual std::pair<bool, Position> doPerform(Document& document) = 0;
+			private:
+				std::size_t revisions_;
 			};
 
 			/// @internal An atomic insertion change
 			class InsertionChange : public AtomicChange, public FastArenaObject<InsertionChange> {
 			public:
 				InsertionChange(const Position& position, const String& text) : position_(position), text_(text) {}
-				bool appendChange(AtomicChange&, const Document&) BOOST_NOEXCEPT override {return false;}
 				bool canPerform(const Document& document) const BOOST_NOEXCEPT override {
 					return !document.isNarrowed() || encompasses(document.region(), position_);
 				}
-				void perform(Document& document, Result& result) override;
 			private:
-				const TypeTag& type() const BOOST_NOEXCEPT override {return type_;}
+				Position begin() const BOOST_NOEXCEPT override {return position_;}
+				bool doMerge(std::unique_ptr<AtomicChange>& postChange, const Document& document) override;
+				std::pair<bool, Position> doPerform(Document& document) override;
+				boost::optional<Position> end() const BOOST_NOEXCEPT override {return boost::none;}
+				const String* text() const BOOST_NOEXCEPT override {return &text_;}
 			private:
-				const Position position_;
-				const String text_;
-				static const TypeTag type_;
+				Position position_;
+				String text_;
 			};
 
 			/// @internal An atomic deletion change.
 			class DeletionChange : public AtomicChange, public FastArenaObject<DeletionChange> {
 			public:
-				explicit DeletionChange(const Region& region) BOOST_NOEXCEPT : region_(region), revisions_(1) {}
-				bool appendChange(AtomicChange& postChange, const Document&) BOOST_NOEXCEPT override;
+				explicit DeletionChange(const Region& region) BOOST_NOEXCEPT : region_(region) {}
 				bool canPerform(const Document& document) const BOOST_NOEXCEPT override {
 					return !document.isNarrowed() || encompasses(document.region(), region_);
 				}
-				void perform(Document& document, Result& result) override;
 			private:
-				const TypeTag& type() const BOOST_NOEXCEPT override {return type_;}
+				Position begin() const BOOST_NOEXCEPT override {return *boost::const_begin(region_);}
+				bool doMerge(std::unique_ptr<AtomicChange>& postChange, const Document& document) override;
+				std::pair<bool, Position> doPerform(Document& document) override;
+				boost::optional<Position> end() const BOOST_NOEXCEPT override {return *boost::const_end(region_);}
+				const String* text() const BOOST_NOEXCEPT override {return nullptr;}
 			private:
 				Region region_;
-				std::size_t revisions_;
-				static const TypeTag type_;
 			};
 
 			/// @internal An atomic replacement change.
 			class ReplacementChange : public AtomicChange, public FastArenaObject<ReplacementChange> {
 			public:
 				explicit ReplacementChange(const Region& region, const String& text) : region_(region), text_(text) {}
-				bool appendChange(AtomicChange&, const Document&) BOOST_NOEXCEPT override {return false;}
 				bool canPerform(const Document& document) const BOOST_NOEXCEPT override {
 					return !document.isNarrowed() || encompasses(document.region(), region_);
 				}
-				void perform(Document& document, Result& result) override;
 			private:
-				const TypeTag& type() const BOOST_NOEXCEPT override {return type_;}
+				Position begin() const BOOST_NOEXCEPT override {return *boost::const_begin(region_);}
+				bool doMerge(std::unique_ptr<AtomicChange>& postChange, const Document& document) override;
+				std::pair<bool, Position> doPerform(Document& document) override;
+				boost::optional<Position> end() const BOOST_NOEXCEPT override {return *boost::const_end(region_);}
+				const String* text() const BOOST_NOEXCEPT override {return &text_;}
 			private:
-				const Region region_;
+				Region region_;
 				const String text_;
-				static const TypeTag type_;
 			};
 
 			/// @internal A compound change
 			class CompoundChange : public UndoableChange {
 			public:
 				~CompoundChange() BOOST_NOEXCEPT;
-				bool appendChange(AtomicChange& postChange, const Document& document) override;
 				bool canPerform(const Document& document) const BOOST_NOEXCEPT override {
 					return !changes_.empty() && changes_.back()->canPerform(document);
 				}
+				bool merge(std::unique_ptr<AtomicChange>& postChange, const Document& document) override;
 				void perform(Document& document, Result& result) override;
 			private:
-				std::vector<AtomicChange*> changes_;
+				std::vector<std::unique_ptr<AtomicChange>> changes_;
 			};
 
-			// static members initialization (inherent parens? see "Exceptional C++ Style" item 29)
-			const AtomicChange::TypeTag InsertionChange::type_((AtomicChange::TypeTag()));
-			const AtomicChange::TypeTag DeletionChange::type_((AtomicChange::TypeTag()));
-			const AtomicChange::TypeTag ReplacementChange::type_((AtomicChange::TypeTag()));
-
-			/// @internal Implements @c UndoableChange#perform.
-			inline void InsertionChange::perform(Document& document, Result& result) {
-				try {
-					result.endOfChange = insert(document, position_, text_);
-				} catch(DocumentAccessViolationException&) {
-					result.reset();	// the position was inaccessible
-				}	// std.bad_alloc is ignored...
-				result.completed = true;
-				result.numberOfRevisions = 1;
+			/// @internal Implements @c AtomicChange#doMerge.
+			inline bool InsertionChange::doMerge(std::unique_ptr<AtomicChange>& postChange, const Document&) BOOST_NOEXCEPT {
+				if(postChange->end() != boost::none)
+					return false;
+				const auto postPosition(postChange->begin());
+				if(line(postPosition) != line(position_) || offsetInLine(postPosition) > offsetInLine(position_))
+					return false;
+				else if(offsetInLine(postPosition) == offsetInLine(position_))
+					text_ += *postChange->text();
+				else {
+					const String* const postString = postChange->text();
+					if((boost::find_first_of(*postString, text::NEWLINE_CHARACTERS) != boost::const_end(*postString))
+							|| (offsetInLine(postPosition) + postString->length() != offsetInLine(position_)))
+						return false;
+					position_ = postPosition;
+					text_ = *postString + text_;
+				}
+				postChange.reset();
+				return true;
 			}
 
-			/// @internal Implements @c UndoableChange#appendChange.
-			inline bool DeletionChange::appendChange(AtomicChange& postChange, const Document&) BOOST_NOEXCEPT {
-				if(&postChange.type() != &type_)
+			/// @internal Implements @c AtomicChange#doPerform.
+			inline std::pair<bool, Position> InsertionChange::doPerform(Document& document) {
+				try {
+					return std::make_pair(true, insert(document, position_, text_));
+				} catch(DocumentAccessViolationException&) {
+					return std::make_pair(false, position_);	// the position was inaccessible
+				}	// std.bad_alloc is ignored...
+			}
+
+			/// @internal Implements @c AtomicChange#doMerge.
+			inline bool DeletionChange::doMerge(std::unique_ptr<AtomicChange>& postChange, const Document&) BOOST_NOEXCEPT {
+				if(postChange->text() != nullptr)
 					return false;
-				const Position& bottom = *boost::const_end(region_);
-				if(offsetInLine(bottom) == 0 || bottom != *boost::const_begin(static_cast<DeletionChange&>(postChange).region_))
+				const Region postChangeRegion(postChange->begin(), boost::get(postChange->end()));
+				if(boost::size(postChangeRegion.lines()) > 1
+//						|| offsetInLine(*boost::const_end(region_)) == 0
+						|| *boost::const_begin(postChangeRegion) != *boost::const_end(region_))
 					return false;
 				else {
-					region_ = Region(*boost::const_begin(region_), *boost::const_end(static_cast<DeletionChange&>(postChange).region_));
-					delete &postChange;
-					++revisions_;
+					region_ = Region(*boost::const_begin(region_), *boost::const_end(postChangeRegion));
+					postChange.reset();
 					return true;
 				}
 			}
 
-			/// @internal Implements @c UndoableChange#perform.
-			inline void DeletionChange::perform(Document& document, Result& result) {
+			/// @internal Implements @c AtomicChange#doPerform.
+			inline std::pair<bool, Position> DeletionChange::doPerform(Document& document) {
 				try {
 					erase(document, region_);
 				} catch(DocumentAccessViolationException&) {
-					result.reset();	// the region was inaccessible
+					return std::make_pair(false, *boost::const_end(region_));	// the region was inaccessible
 				}	// std.bad_alloc is ignored...
-				result.completed = true;
-				result.numberOfRevisions = revisions_;
-				result.endOfChange = *boost::const_begin(region_);
+				return std::make_pair(true, *boost::const_begin(region_));
 			}
 
-			/// @internal Implements @c UndoableChange#perform.
-			inline void ReplacementChange::perform(Document& document, Result& result) {
+			/// @internal Implements @c AtomicChange#doMerge.
+			inline bool ReplacementChange::doMerge(std::unique_ptr<AtomicChange>& postChange, const Document&) BOOST_NOEXCEPT {
+				if(postChange->text() != nullptr)
+					return false;
+				const Region postChangeRegion(postChange->begin(), boost::get(postChange->end()));
+				if(boost::size(postChangeRegion.lines()) > 1
+//						|| offsetInLine(*boost::const_end(region_)) == 0
+						|| *boost::const_begin(postChangeRegion) != *boost::const_end(region_))
+					return false;
+				region_ = Region(*boost::const_begin(region_), *boost::const_end(postChangeRegion));
+				postChange.reset();
+				return true;
+			}
+
+			/// @internal Implements @c AtomicChange#doPerform.
+			inline std::pair<bool, Position> ReplacementChange::doPerform(Document& document) {
 				try {
-					result.endOfChange = document.replace(region_, text_);
+					return std::make_pair(true, document.replace(region_, text_));
 				} catch(DocumentAccessViolationException&) {
-					result.reset();	// the region was inaccessible
+					return std::make_pair(false, *boost::const_end(region_));	// the region was inaccessible
 				}	// std.bad_alloc is ignored...
-				result.completed = true;
-				result.numberOfRevisions = 1;
 			}
 
 			CompoundChange::~CompoundChange() BOOST_NOEXCEPT {
-				BOOST_FOREACH(AtomicChange* change, changes_)
-					delete change;
+//				BOOST_FOREACH(AtomicChange* change, changes_)
+//					delete change;
 			}
 
-			/// @internal Implements @c UndoableChange#appendChange.
-			inline bool CompoundChange::appendChange(AtomicChange& postChange, const Document& document) {
-				if(changes_.empty() || !changes_.back()->appendChange(postChange, document))
-					changes_.push_back(&postChange);
+			/// @internal Implements @c UndoableChange#merge.
+			inline bool CompoundChange::merge(std::unique_ptr<AtomicChange>& postChange, const Document& document) {
+				if(changes_.empty() || !changes_.back()->merge(postChange, document))
+					changes_.push_back(std::move(postChange));
 				return true;
 			}
 
@@ -190,8 +242,8 @@ namespace ascension {
 				assert(!changes_.empty());
 				result.reset();
 				Result delta;
-				std::vector<AtomicChange*>::iterator i(std::end(changes_)), e(std::begin(changes_));
-				for(--i; ; --i) {
+				const auto e(std::begin(changes_));
+				for(auto i(std::prev(std::end(changes_))); ; --i) {
 					(*i)->perform(document, delta);
 					result.numberOfRevisions += delta.numberOfRevisions;
 					if(!delta.completed) {
@@ -230,16 +282,16 @@ namespace ascension {
 			void redo(UndoableChange::Result& result);
 			void undo(UndoableChange::Result& result);
 			// recordings
-			void addUndoableChange(AtomicChange& c);
-			void beginCompoundChange() BOOST_NOEXCEPT {++compoundChangeDepth_;}
+			void addUndoableChange(std::unique_ptr<AtomicChange> c);
+			void beginCompoundChange() BOOST_NOEXCEPT;
 			void clear() BOOST_NOEXCEPT;
 			void endCompoundChange() BOOST_NOEXCEPT;
 			void insertBoundary() BOOST_NOEXCEPT;
 		private:
-			void commitPendingChange(bool beginCompound);
+			void commitPendingChange();
 			Document& document_;
 			std::stack<std::unique_ptr<UndoableChange>> undoableChanges_, redoableChanges_;
-			std::unique_ptr<AtomicChange> pendingAtomicChange_;
+			std::unique_ptr<AtomicChange> pendingAtomicChange_;	// automatic composition is applied to only this
 			std::size_t compoundChangeDepth_;
 			bool rollbacking_;
 			std::unique_ptr<CompoundChange> rollbackingChange_;
@@ -252,17 +304,28 @@ namespace ascension {
 		}
 
 		// pushes the operation into the undo stack
-		void Document::UndoManager::addUndoableChange(AtomicChange& c) {
+		void Document::UndoManager::addUndoableChange(std::unique_ptr<AtomicChange> c) {
 			if(!rollbacking_) {
-				if(currentCompoundChange_ != nullptr)
-					currentCompoundChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
-				else if(pendingAtomicChange_.get() != nullptr) {
-					if(!pendingAtomicChange_->appendChange(c, document_)) {
-						commitPendingChange(true);
-						currentCompoundChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
+				if(isStackingCompoundOperation()) {
+					if(currentCompoundChange_ == nullptr) {
+						commitPendingChange();
+						std::unique_ptr<CompoundChange> newCompound(new CompoundChange());
+						currentCompoundChange_ = newCompound.get();
+						undoableChanges_.push(std::move(newCompound));
 					}
-				} else
-					pendingAtomicChange_.reset(&c);
+					currentCompoundChange_->merge(c, document_);	// CompoundChange.merge always returns true
+				} else {
+					bool merged = false;
+					if(pendingAtomicChange_.get() != nullptr) {
+						merged = pendingAtomicChange_->merge(c, document_);
+						if(!merged)
+							commitPendingChange();
+					}
+					if(!merged) {
+						assert(pendingAtomicChange_.get() == nullptr);
+						pendingAtomicChange_ = std::move(c);
+					}
+				}
 
 				// make the redo stack empty
 				while(!redoableChanges_.empty())
@@ -271,8 +334,14 @@ namespace ascension {
 				// delay pushing to the stack when rollbacking
 				if(rollbackingChange_.get() == nullptr)
 					rollbackingChange_.reset(new CompoundChange());
-				rollbackingChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
+				rollbackingChange_->merge(c, document_);	// CompoundChange.merge always returns true
 			}
+		}
+
+		inline void Document::UndoManager::beginCompoundChange() BOOST_NOEXCEPT {
+			if(compoundChangeDepth_ == 0)
+				insertBoundary();
+			++compoundChangeDepth_;
 		}
 
 		// clears the stacks
@@ -287,22 +356,13 @@ namespace ascension {
 		}
 
 		// commits the pending undoable change
-		inline void Document::UndoManager::commitPendingChange(bool beginCompound) {
+		inline void Document::UndoManager::commitPendingChange() {
 			if(pendingAtomicChange_.get() != nullptr) {
-				if(beginCompound) {
-					std::unique_ptr<CompoundChange> newCompound(new CompoundChange());
-					newCompound->appendChange(*pendingAtomicChange_.get(), document_);
-					undoableChanges_.push(std::move(newCompound));
-					pendingAtomicChange_.release();
-					currentCompoundChange_ = static_cast<CompoundChange*>(undoableChanges_.top().get());	// safe down cast
-				} else {
-					if(currentCompoundChange_ == nullptr
-							|| !currentCompoundChange_->appendChange(*pendingAtomicChange_.get(), document_)) {
-						undoableChanges_.push(std::move(pendingAtomicChange_));
-						currentCompoundChange_ = nullptr;
-					}
-					pendingAtomicChange_.reset();
+				if(currentCompoundChange_ == nullptr || !currentCompoundChange_->merge(pendingAtomicChange_, document_)) {
+					undoableChanges_.push(std::move(pendingAtomicChange_));
+					currentCompoundChange_ = nullptr;
 				}
+				assert(pendingAtomicChange_.get() == nullptr);
 			}
 		}
 
@@ -313,18 +373,21 @@ namespace ascension {
 				// and redo() reset the counter to zero.
 				//		throw IllegalStateException("there is no compound change in this document.");
 				return;
-			--compoundChangeDepth_;
+			if(--compoundChangeDepth_ == 0) {
+				assert(pendingAtomicChange_.get() == nullptr);
+				currentCompoundChange_ = nullptr;
+			}
 		}
 
 		// stops the current compound chaining
 		inline void Document::UndoManager::insertBoundary() BOOST_NOEXCEPT {
-			if(compoundChangeDepth_ == 0)
-				commitPendingChange(false);
+			if(!isStackingCompoundOperation())
+				commitPendingChange();
 		}
 
 		// redoes one change
 		void Document::UndoManager::redo(UndoableChange::Result& result) {
-			commitPendingChange(false);
+			commitPendingChange();
 			if(redoableChanges_.empty()) {
 				result.reset();
 				return;
@@ -343,7 +406,7 @@ namespace ascension {
 
 		// undoes one change
 		void Document::UndoManager::undo(UndoableChange::Result& result) {
-			commitPendingChange(false);
+			commitPendingChange();
 			if(undoableChanges_.empty()) {
 				result.reset();
 				return;
@@ -705,12 +768,14 @@ namespace ascension {
 			}
 
 			if(isRecordingChanges()) {
+				std::unique_ptr<AtomicChange> c;
 				if(boost::empty(region))
-					undoManager_->addUndoableChange(*(new DeletionChange(Region(beginning, endOfInsertedString))));
+					c.reset(new DeletionChange(Region(beginning, endOfInsertedString)));
 				else if(text.cbegin() == nullptr || text.empty())
-					undoManager_->addUndoableChange(*(new InsertionChange(beginning, erasedString.str())));
+					c.reset(new InsertionChange(beginning, erasedString.str()));
 				else
-					undoManager_->addUndoableChange(*(new ReplacementChange(Region(beginning, endOfInsertedString), erasedString.str())));
+					c.reset(new ReplacementChange(Region(beginning, endOfInsertedString), erasedString.str()));
+				undoManager_->addUndoableChange(std::move(c));
 			}
 			const bool modified = isModified();
 			++revisionNumber_;
