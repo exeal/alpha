@@ -129,6 +129,14 @@ add_test(
 
 # kernel
 add_executable(
+	position-region-test
+	src/position-region-test.cpp)
+add_test(
+	NAME position_region
+	COMMAND $<TARGET_FILE:position-region-test>
+	CONFIGURATIONS Debug)
+
+add_executable(
 	document-test
 	src/document-test.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/character-property.cpp
