@@ -90,11 +90,15 @@ namespace ascension {
 		 * @param document The document
 		 * @param at The position
 		 * @param fromAccessibleStart
-		 * @throw BadPositionException @a at is outside of the document
+		 * @throw BadPositionException @a at is outside of @a document
+		 * @throw DocumentAccessViolationException @a fromAccessibleStart is @c true and @a at is before the accessible
+		 *                                         region of @a document
 		 */
 		Index positions::absoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
 			if(at > *boost::const_end(document.region()))
 				throw BadPositionException(at);
+			else if(fromAccessibleStart && at < *boost::const_begin(document.accessibleRegion()))
+				throw DocumentAccessViolationException();
 			Index offset = 0;
 			const Position start(*boost::const_begin(fromAccessibleStart ? document.accessibleRegion() : document.region()));
 			for(Index i = line(start); ; ++i) {
