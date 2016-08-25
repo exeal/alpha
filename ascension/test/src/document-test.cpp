@@ -459,3 +459,49 @@ BOOST_AUTO_TEST_CASE(reset_test) {
 	BOOST_REQUIRE(d.isReadOnly());
 	BOOST_REQUIRE(d.revisionNumber() > 0u);
 }
+
+BOOST_AUTO_TEST_CASE(positions_api_test) {
+	k::Document d;
+	k::insert(d, k::Position::zero(), fromLatin1(
+		"abc\n"
+		"d[e\r\n"
+		"f]g\n"
+		"hij"
+	));
+	d.narrowToRegion(k::Region(k::Position(1u, 1u), k::Position(2u, 2u)));
+	const k::Position before(0u, 2u), middle(2u, 0u), after(3u, 1u), outside(9u, 9u);
+
+	// absoluteOffset
+	BOOST_TEST(k::positions::absoluteOffset(d, before, false) == 2u);
+	BOOST_CHECK_THROW(k::positions::absoluteOffset(d, before, true), k::DocumentAccessViolationException);
+	BOOST_TEST(k::positions::absoluteOffset(d, after, false) == 13u);
+	BOOST_TEST(k::positions::absoluteOffset(d, after, true) == 8u);
+	BOOST_CHECK_THROW(k::positions::absoluteOffset(d, outside, false), k::BadPositionException);
+
+	// isOutsideOfDocumentRegion
+	BOOST_TEST(!k::positions::isOutsideOfDocumentRegion(d, *boost::const_begin(d.region())));
+	BOOST_TEST(!k::positions::isOutsideOfDocumentRegion(d, before));
+	BOOST_TEST(!k::positions::isOutsideOfDocumentRegion(d, after));
+	BOOST_TEST(!k::positions::isOutsideOfDocumentRegion(d, *boost::const_end(d.region())));
+	BOOST_TEST( k::positions::isOutsideOfDocumentRegion(d, outside));
+
+	// shrinkToAccessibleRegion(Position)
+	BOOST_TEST(k::positions::shrinkToAccessibleRegion(d, before) == *boost::const_begin(d.accessibleRegion()));
+	BOOST_TEST(k::positions::shrinkToAccessibleRegion(d, middle) == middle);
+	BOOST_TEST(k::positions::shrinkToAccessibleRegion(d, after) == *boost::const_end(d.accessibleRegion()));
+	BOOST_TEST(k::positions::shrinkToAccessibleRegion(d, outside) == *boost::const_end(d.accessibleRegion()));
+
+	// shrinkToAccessibleRegion(Region)
+	BOOST_TEST((k::positions::shrinkToAccessibleRegion(d, k::Region(before, after)) == d.accessibleRegion()));
+	BOOST_TEST((k::positions::shrinkToAccessibleRegion(d, k::Region(middle, outside)) == k::Region(middle, *boost::const_end(d.accessibleRegion()))));
+
+	// shrinkToDocumentRegion(Position)
+	BOOST_TEST(k::positions::shrinkToDocumentRegion(d, before) == before);
+	BOOST_TEST(k::positions::shrinkToDocumentRegion(d, middle) == middle);
+	BOOST_TEST(k::positions::shrinkToDocumentRegion(d, after) == after);
+	BOOST_TEST(k::positions::shrinkToDocumentRegion(d, outside) == *boost::const_end(d.region()));
+
+	// shrinkToDocumentRegion(Region)
+	BOOST_TEST((k::positions::shrinkToDocumentRegion(d, k::Region(before, after)) == k::Region(before, after)));
+	BOOST_TEST((k::positions::shrinkToDocumentRegion(d, k::Region(middle, outside)) == k::Region(middle, *boost::const_end(d.region()))));
+}
