@@ -48,7 +48,7 @@ namespace ascension {
 
 		/// Deletes all bookmarks.
 		void Bookmarker::clear() BOOST_NOEXCEPT {
-			if(!markedLines_.empty()) {
+			if(!boost::empty(markedLines_)) {
 				markedLines_.clear();
 				listeners_.notify(&BookmarkListener::bookmarkCleared);
 			}
@@ -65,22 +65,21 @@ namespace ascension {
 			if(&document_ != &document || markedLines_.empty())
 				return;
 			if(boost::size(change.erasedRegion().lines()) > 1) {
-				// remove the marks on the deleted lines
-				const Index lines = boost::size(change.erasedRegion().lines()) - 1;
-				const auto e(std::end(markedLines_));
-				auto top(find(line(*boost::const_begin(change.erasedRegion()))));
-				if(top != e) {
-					if(*top == line(*boost::const_begin(change.erasedRegion())))
-						++top;
-					auto bottom(find(line(*boost::const_end(change.erasedRegion()))));
-					if(bottom != e && *bottom == line(*boost::const_end(change.erasedRegion())))
-						++bottom;
-					// slide the following lines before removing
-					if(bottom != e) {
-						for(auto i(bottom); i != e; ++i)
-							*i -= lines;	// ??? C4267@MSVC9
-					}
-					markedLines_.erase(top, bottom);	// GapVector<>.erase does not return an iterator
+				const auto& region = change.erasedRegion();
+				Index firstLine = line(*boost::const_begin(region));
+				if(offsetInLine(*boost::const_begin(region)) > 0)
+					++firstLine;
+				const auto firstMarkedLine(boost::lower_bound(markedLines_, firstLine));
+				const auto e(boost::const_end(markedLines_));
+				if(firstMarkedLine != e) {
+					const Index lastLine = line(*boost::const_end(region)) + 1;
+					const auto lastMarkedLine(boost::lower_bound(markedLines_, lastLine));
+					// slide the marks on lines after the erased
+					const auto nlines = boost::size(change.erasedRegion().lines()) - 1;
+					for(auto i(lastMarkedLine); i != e; ++i)
+						*i -= nlines;
+					// remove the marks on erased lines
+					markedLines_.erase(firstMarkedLine, lastMarkedLine);
 				}
 			}
 			if(boost::size(change.insertedRegion().lines()) > 1) {
@@ -151,8 +150,9 @@ namespace ascension {
 		 * @param wrapAround Set @c true to enable "wrapping around". If set, this method starts again from the end (in
 		 *                   forward case) or beginning (in backward case) of the document when the reached the end or
 		 *                   beginning of the document
-		 * @param marks 
-		 * @return The next bookmarked line or @c boost#none if not found
+		 * @param marks The number of marks to scan
+		 * @return The next bookmarked line or @c boost#none if not found. If @a marks is zero, this method returns
+		 *         @a from if @a from is bookmarked, or @c boost#none otherwise
 		 * @throw BadPositionException @a line is outside of the document
 		 * @see #begin, #end
 		 */
@@ -160,35 +160,38 @@ namespace ascension {
 			// this code is tested by 'test/document-test.cpp'
 			if(from >= document_.numberOfLines())
 				throw BadPositionException(Position::bol(from));
-			else if(marks == 0 || markedLines_.empty())
+			else if(boost::empty(markedLines_))
 				return boost::none;
-			else if(marks > markedLines_.size()) {
+			else if(marks == 0u)
+				return isMarked(from) ? boost::make_optional(from) : boost::none;
+
+			else if(marks > numberOfMarks()) {
 				if(!wrapAround)
 					return boost::none;
-				marks = marks % markedLines_.size();
-				if(marks == 0)
-					marks = markedLines_.size();
+				marks = marks % numberOfMarks();
+				if(marks == 0u)
+					marks = numberOfMarks();
 			}
 
 			std::size_t i = static_cast<ascension::detail::GapVector<Index>::const_iterator>(find(from)) - std::begin(markedLines_);
 			if(direction == Direction::forward()) {
-				if(i == markedLines_.size()) {
+				if(i == numberOfMarks()) {
 					if(!wrapAround)
 						return boost::none;
 					i = 0;
 					--marks;
 				} else if(markedLines_[i] != from)
 					--marks;
-				if((i += marks) >= markedLines_.size()) {
+				if((i += marks) >= numberOfMarks()) {
 					if(wrapAround)
-						i -= markedLines_.size();
+						i -= numberOfMarks();
 					else
 						return boost::none;
 				}
 			} else {
 				if(i < marks) {
 					if(wrapAround)
-						i += markedLines_.size();
+						i += numberOfMarks();
 					else
 						return boost::none;
 				}
@@ -199,7 +202,7 @@ namespace ascension {
 
 		/// Returns the number of the lines bookmarked.
 		std::size_t Bookmarker::numberOfMarks() const BOOST_NOEXCEPT {
-			return markedLines_.size();
+			return boost::size(markedLines_);
 		}
 
 		/**
