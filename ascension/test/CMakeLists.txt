@@ -135,7 +135,6 @@ add_test(
 	NAME position_region
 	COMMAND $<TARGET_FILE:position-region-test>
 	CONFIGURATIONS Debug)
-
 add_executable(
 	document-test
 	src/document-test.cpp
@@ -151,6 +150,21 @@ add_executable(
 add_test(
 	NAME document
 	COMMAND $<TARGET_FILE:document-test>
+	CONFIGURATIONS Debug)
+add_executable(
+	bookmarker-test
+	src/bookmarker-test.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/character-property.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/identifier-syntax.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/newline.cpp
+	${Ascension_SOURCE_DIR}/kernel/abstract-point.cpp
+	${Ascension_SOURCE_DIR}/kernel/bookmarker.cpp
+	${Ascension_SOURCE_DIR}/kernel/document.cpp
+	${Ascension_SOURCE_DIR}/kernel/point.cpp
+	${Ascension_SOURCE_DIR}/kernel/undo.cpp)
+add_test(
+	NAME bookmarker
+	COMMAND $<TARGET_FILE:bookmarker-test>
 	CONFIGURATIONS Debug)
 
 # presentation
