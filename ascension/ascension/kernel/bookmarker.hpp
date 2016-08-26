@@ -27,8 +27,8 @@ namespace ascension {
 		class BookmarkListener {
 		private:
 			/**
-			 * The bookmark on @a line was set or removed. Note that this is not called when the bookmarks were changed
-			 * by the document's change.
+			 * The bookmark on @a line was set or removed.
+			 * @note This is not called when the bookmarks were changed by the document's change.
 			 * @param line The line number
 			 */
 			virtual void bookmarkChanged(Index line) = 0;
@@ -88,8 +88,8 @@ namespace ascension {
 		private:
 			ascension::detail::GapVector<Index>::iterator find(Index line) const BOOST_NOEXCEPT;
 			// DocumentListener
-			void documentAboutToBeChanged(const Document& document);
-			void documentChanged(const Document& document, const DocumentChange& change);
+			void documentAboutToBeChanged(const Document& document) override;
+			void documentChanged(const Document& document, const DocumentChange& change) override;
 		private:
 			explicit Bookmarker(Document& document) BOOST_NOEXCEPT;
 			Document& document_;
