@@ -9,7 +9,7 @@
 
 #ifndef ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
 #define ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
-#include <ascension/corelib/text/character-iterator.hpp>	// text.CharacterIterator
+#include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/kernel/region.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/utility/value_init.hpp>
@@ -53,9 +53,9 @@ namespace ascension {
 		private:
 			// boost.iterator_facade
 			friend class boost::iterators::iterator_core_access;
-			CodePoint dereference() const;
+			CodePoint dereference() const BOOST_NOEXCEPT;
 			void decrement();
-			bool equal(const DocumentCharacterIterator& other) const;
+			bool equal(const DocumentCharacterIterator& other) const BOOST_NOEXCEPT;
 			void increment();
 		private:
 			const Document* document_;
