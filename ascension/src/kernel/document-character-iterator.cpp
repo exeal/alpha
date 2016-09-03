@@ -204,7 +204,43 @@ namespace ascension {
 			if(*boost::const_begin(newRegion) > e || *boost::const_end(newRegion) > e)
 				throw BadRegionException(newRegion);
 			if(!encompasses(region_ = newRegion, tell()))
-				seek(tell());
+				position_ = clamp(tell(), region());
+		}
+
+		/**
+		 * Returns @c DocumentCharacterIterator which addresses the beginning of the given document.
+		 * @param document The document
+		 * @return A @c DocumentCharacterIterator object
+		 */
+		DocumentCharacterIterator begin(const Document& document) BOOST_NOEXCEPT {
+			return DocumentCharacterIterator(document, *boost::const_begin(document.region()));
+		}
+
+		/**
+		 * Returns @c DocumentCharacterIterator which addresses the beginning of the given document.
+		 * @param document The document
+		 * @return A @c DocumentCharacterIterator object
+		 */
+		DocumentCharacterIterator cbegin(const Document& document) BOOST_NOEXCEPT {
+			return DocumentCharacterIterator(document, *boost::const_begin(document.region()));
+		}
+
+		/**
+		 * Returns @c DocumentCharacterIterator which addresses the beginning of the given document.
+		 * @param document The document
+		 * @return A @c DocumentCharacterIterator object
+		 */
+		DocumentCharacterIterator cend(const Document& document) BOOST_NOEXCEPT {
+			return DocumentCharacterIterator(document, *boost::const_end(document.region()));
+		}
+
+		/**
+		 * Returns @c DocumentCharacterIterator which addresses the beginning of the given document.
+		 * @param document The document
+		 * @return A @c DocumentCharacterIterator object
+		 */
+		DocumentCharacterIterator end(const Document& document) BOOST_NOEXCEPT {
+			return DocumentCharacterIterator(document, *boost::const_end(document.region()));
 		}
 	}
 }

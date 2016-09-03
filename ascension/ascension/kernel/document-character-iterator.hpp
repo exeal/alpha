@@ -64,6 +64,14 @@ namespace ascension {
 			boost::value_initialized<std::ptrdiff_t> offset_;
 		};
 
+		/// @defgroup document_character_iterator_factories DocumentCharacterIterator Factory Functions
+		/// @{
+		DocumentCharacterIterator begin(const Document& document) BOOST_NOEXCEPT;
+		DocumentCharacterIterator cbegin(const Document& document) BOOST_NOEXCEPT;
+		DocumentCharacterIterator cend(const Document& document) BOOST_NOEXCEPT;
+		DocumentCharacterIterator end(const Document& document) BOOST_NOEXCEPT;
+		/// @}
+
 		
 		/// Returns the document.
 		inline const Document& DocumentCharacterIterator::document() const BOOST_NOEXCEPT {
