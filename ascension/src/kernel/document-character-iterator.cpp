@@ -17,13 +17,7 @@ namespace ascension {
 		 * @class ascension::kernel::DocumentCharacterIterator
 		 * Bidirectional iterator scans characters in the specified document.
 		 *
-		 * @c #current implementation of this class returns a character at which the iterator addresses. A returned
-		 * character is as a UTF-32 code unit (not UTF-16). In the following cases, returns a special value depending
-		 * on the context:
-		 *
-		 * - @c CharacterIterator#DONE at the end of the region of the iterator
-		 * - @c LINE_SEPARATOR at the end of the line
-		 * - a raw code unit value at any unpaired surrogate
+		 * This class satisfies @c text#CharacterIterator concept.
 		 *
 		 * This class can't detect any change of the document. When the document changed, the existing iterators may be
 		 * invalid.
@@ -31,15 +25,22 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		
-		/// Default constructor makes an invalid iterator object.
+		/**
+		 * Default constructor makes an invalid iterator object.
+		 * @post *this == DocumentCharacterIterator()
+		 */
 		DocumentCharacterIterator::DocumentCharacterIterator() BOOST_NOEXCEPT : document_(nullptr) {
 		}
 
 		/**
-		 * Constructor. The iteration region is the accessible area of the document.
+		 * Constructor. The iteration area is the @c #region of the document.
 		 * @param document The document to iterate
 		 * @param position The position at which the iteration starts
-		 * @throw BadPositionException @a position is outside of the accessible area of the document
+		 * @throw BadPositionException @a position is outside of the @c #region of the @a document
+		 * @post &amp;document() == &document
+		 * @post region() == document.region()
+		 * @post tell() == position
+		 * @post offset() == 0
 		 */
 		DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Position& position)
 				: document_(&document), region_(document.region()), position_(position) {
@@ -48,10 +49,14 @@ namespace ascension {
 		}
 
 		/**
-		 * Constructor. The iteration is started at @a region.beginning().
+		 * Constructor. The iteration is started at `*boost#const_begin(region)`.
 		 * @param document The document to iterate
 		 * @param region The region to iterate
 		 * @throw BadRegionException @a region intersects outside of the document
+		 * @post &amp;document() == &document
+		 * @post region() == region
+		 * @post tell() == *boost::const_begin(region)
+		 * @post offset() == 0
 		 */
 		DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region)
 				: document_(&document), region_(region), position_(*boost::const_begin(region)) {
@@ -66,6 +71,10 @@ namespace ascension {
 		 * @param position The position at which the iteration starts
 		 * @throw BadRegionException @a region intersects outside of the document
 		 * @throw BadPositionException @a position is outside of @a region
+		 * @post &amp;document() == &document
+		 * @post region() == region
+		 * @post tell() == position
+		 * @post offset() == 0
 		 */
 		DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region, const Position& position)
 				: document_(&document), region_(region), position_(position) {
@@ -75,16 +84,30 @@ namespace ascension {
 				throw BadPositionException(position_);
 		}
 
-		/// Copy-constructor.
+		/**
+		 * Copy-constructor.
+		 * @param other The source object
+		 * @post &amp;document() == &other.document()
+		 * @post region() == other.region()
+		 * @post tell() == other.tell()
+		 * @post offset() == 0
+		 */
 		DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIterator& other) BOOST_NOEXCEPT
 				: document_(other.document_), region_(other.region_), position_(other.position_) {
 		}
 
+		/**
+		 * Implements @c #operator--.
+		 * Moves to the backward character in UTF-32 code units. This method treats any eol as one character.
+		 * @throw NoSuchElementException @c #hasPrevious returned @c false
+		 */
 		void DocumentCharacterIterator::decrement() {
 			if(!hasPrevious())
-//				throw NoSuchElementException("the iterator is at the first.");
+#if 1
+				throw NoSuchElementException("the iterator is at the first.");
+#else
 				return;
-
+#endif
 			if(offsetInLine(*this) == 0) {
 				--position_.line;
 				position_.offsetInLine = lineString().length();
@@ -97,31 +120,48 @@ namespace ascension {
 			--offset_;
 		}
 
+		/**
+		 * Implements @c #operator*.
+		 * Returns a code point (not a UTF-16 code unit value) of the character addressed by this iterator.
+		 * @return A code point of the current character
+		 * @retval text#LINE_SEPARATOR The iterator is invalid or at the end of the line
+		 * @retval text#INVALID_CODE_POINT The iterator is at the end of the @c #region
+		 * @note This returns a raw unit value at any unpaired surrogate
+		 */
 		CodePoint DocumentCharacterIterator::dereference() const BOOST_NOEXCEPT {
-			assert(document_ != nullptr && tell() != *boost::const_end(region()));
+			if(document_ == nullptr || tell() == *boost::const_end(region()))
+				return text::INVALID_CODE_POINT;
 			const String& s = lineString();
 			if(kernel::offsetInLine(tell()) == s.length())
 				return text::LINE_SEPARATOR;
 			else
 				return text::utf::decodeFirst(std::begin(s) + kernel::offsetInLine(tell()), std::end(s));
 		}
-#if 0
-		/// @see text#CharacterIterator#doLess
-		bool DocumentCharacterIterator::doLess(const CharacterIterator& other) const {
-			return tell() < static_cast<const DocumentCharacterIterator&>(other).tell();
-		}
-#endif
-		bool DocumentCharacterIterator::equal(const DocumentCharacterIterator& other) const {
+
+		/**
+		 * Implements @c #operator== and @c #operator!=.
+		 * @return @c true if:
+		 * - Both the two iterators are invalid, or
+		 * - The two iterators refers to the same document and at the same position.
+		 */
+		bool DocumentCharacterIterator::equal(const DocumentCharacterIterator& other) const BOOST_NOEXCEPT {
 			if(document_ != other.document_)
 				return false;
 			return document_ == nullptr || tell() == other.tell();
 		}
 
+		/**
+		 * Implements @c #operator++.
+		 * Moves to the forward character in UTF-32 code units. This method treats any eol as one character.
+		 * @throw NoSuchElementException @c #hasNext returned @c false
+		 */
 		void DocumentCharacterIterator::increment() {
 			if(!hasNext())
-//				throw NoSuchElementException("the iterator is at the last.");
+#if 1
+				throw NoSuchElementException("the iterator is at the last.");
+#else
 				return;
-
+#endif
 			const String& s = lineString();
 			if(kernel::offsetInLine(tell()) == s.length()) {
 				++position_.line;
@@ -140,11 +180,15 @@ namespace ascension {
 		
 		/**
 		 * Moves to the specified position.
-		 * @param to The position. If this is outside of the iteration region, the start/end of the region will be used
+		 * @param to The destination position
 		 * @return This iterator
+		 * @throw BadPositionException @a to is outside of the @c #region
+		 * @note The offset is not change.
 		 */
 		DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
-			position_ = clamp(to, region());
+			if(!encompasses(region(), to))
+				throw BadPositionException(to);
+			position_ = to;
 			return *this;
 		}
 
@@ -152,6 +196,8 @@ namespace ascension {
 		 * Sets the region of the iterator. The current position will adjusted.
 		 * @param newRegion The new region to set
 		 * @throw BadRegionException @a newRegion intersects outside of the document
+		 * @note The offset is not change.
+		 * @post encompasses(region(), tell())
 		 */
 		void DocumentCharacterIterator::setRegion(const Region& newRegion) {
 			const Position e(*boost::const_end(document_->region()));
