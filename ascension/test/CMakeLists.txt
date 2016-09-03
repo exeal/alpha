@@ -166,6 +166,22 @@ add_test(
 	NAME bookmarker
 	COMMAND $<TARGET_FILE:bookmarker-test>
 	CONFIGURATIONS Debug)
+add_executable(
+	document-character-iterator-test
+	src/document-character-iterator-test.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/character-property.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/identifier-syntax.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/newline.cpp
+	${Ascension_SOURCE_DIR}/kernel/abstract-point.cpp
+	${Ascension_SOURCE_DIR}/kernel/bookmarker.cpp
+	${Ascension_SOURCE_DIR}/kernel/document.cpp
+	${Ascension_SOURCE_DIR}/kernel/document-character-iterator.cpp
+	${Ascension_SOURCE_DIR}/kernel/point.cpp
+	${Ascension_SOURCE_DIR}/kernel/undo.cpp)
+add_test(
+	NAME document_character_iterator
+	COMMAND $<TARGET_FILE:document-character-iterator-test>
+	CONFIGURATIONS Debug)
 
 # presentation
 add_executable(
