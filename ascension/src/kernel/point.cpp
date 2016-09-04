@@ -10,6 +10,7 @@
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/point.hpp>
+#include <boost/core/ignore_unused.hpp>
 
 
 namespace ascension {
@@ -99,6 +100,7 @@ namespace ascension {
 		 * @see #moved, #moveTo, viewer#VisualPoint#aboutToMove
 		 */
 		void Point::aboutToMove(Position& to) {
+			boost::ignore_unused(to);
 		}
 
 		/// @see AbstractPoint#contentReset
@@ -126,6 +128,7 @@ namespace ascension {
 		 * @see #aboutToMove, #moveTo, viewer#VisualPoint#moved
 		 */
 		void Point::moved(const Position& from) BOOST_NOEXCEPT {
+			boost::ignore_unused(from);
 		}
 
 		/**
