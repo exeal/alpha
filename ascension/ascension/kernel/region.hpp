@@ -44,7 +44,8 @@ namespace ascension {
 		 * @c Region satisfies Single Pass Range concept.
 		 * @note This class is not intended to be subclassed by clients.
 		 */
-		class Region : public boost::iterator_range<detail::RegionIterator>, public FastArenaObject<Region> {
+		class Region : public boost::iterator_range<detail::RegionIterator>,
+				public FastArenaObject<Region>, private boost::equality_comparable<Region> {
 			typedef detail::RegionIterator Iterator;
 			typedef boost::iterator_range<Iterator> Super;
 
@@ -57,6 +58,10 @@ namespace ascension {
 			 * @param p2 An another position
 			 */
 			Region(const Position& p1, const Position& p2) BOOST_NOEXCEPT : Super(Iterator(std::min(p1, p2)), Iterator(std::max(p1, p2))) {}
+			/// Equality operator.
+			bool operator==(const Region& other) const BOOST_NOEXCEPT {
+				return *boost::const_begin(*this) == *boost::const_begin(other) && *boost::const_end(*this) == *boost::const_end(other);
+			}
 			/**
 			 * Creates a region with the specified range.
 			 * @tparam SinglePassReadableRange The type of @a range
@@ -179,7 +184,7 @@ namespace boost {
 		}
 	}
 
-	using ::boost::range::equal;
+	using range::equal;
 }
 
 #endif // !ASCENSION_REGION_HPP
