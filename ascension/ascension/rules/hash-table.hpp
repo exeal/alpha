@@ -56,7 +56,7 @@ namespace ascension {
 				template<typename SinglePassReadableRange>
 				static inline std::uint32_t hashCode(const SinglePassReadableRange& characterSequence) {
 					static_assert(
-						text::CodeUnitSizeOf<boost::range_iterator<const SinglePassReadableRange>::type>::value == 2,
+						text::CodeUnitSizeOf<typename boost::range_iterator<const SinglePassReadableRange>::type>::value == 2,
 						"characterSequence should be 16-bit character sequence.");
 					return boost::hash_range(boost::begin(characterSequence), boost::end(characterSequence));
 				}
