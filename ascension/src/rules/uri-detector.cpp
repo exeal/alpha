@@ -14,7 +14,6 @@
 #include <boost/numeric/interval.hpp>
 #include <boost/range/algorithm/equal.hpp>
 #include <boost/range/algorithm/find.hpp>
-#include <locale>
 
 namespace ascension {
 	namespace rules {
@@ -23,11 +22,22 @@ namespace ascension {
 			// Each procedures take two parameter represent the parsed character sequence. These must be
 			// first != null, last != null and first <= last. Return value is the end of parsed sequence.
 			// "[nullable]" indicates that the procedure can return empty read sequence.
-		
-			// (from RFC2234)
-			// ALPHA =  %x41-5A / %x61-7A ; A-Z / a-z
-			// DIGIT =  %x30-39           ; 0-9
-			const std::locale& cl = std::locale::classic();
+
+			// ALPHA = %x41-5A / %x61-7A ; A-Z / a-z (RFC 2234)
+			template<typename Character> inline bool isALPHA(Character c) BOOST_NOEXCEPT {
+				return boost::numeric::in(c, boost::numeric::interval<Char>('A', 'Z'))
+					|| boost::numeric::in(c, boost::numeric::interval<Char>('a', 'z'));
+			}
+
+			// DIGIT = %x30-39 ; 0-9 (RFC 2234)
+			template<typename Character> inline bool isDIGIT(Character c) BOOST_NOEXCEPT {
+				return boost::numeric::in(c, boost::numeric::interval<Char>('0', '9'));
+			}
+
+			// HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F" (RFC 2234)
+			template<typename Character> inline bool isHEXDIG(Character c) BOOST_NOEXCEPT {
+				return isDIGIT(c) || boost::numeric::in(c, boost::numeric::interval<Char>('A', 'F'));
+			}
 		   
 			// sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
 			inline StringPiece::const_iterator handleSubDelims(const StringPiece& s) {
@@ -49,12 +59,12 @@ namespace ascension {
 			// unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
 			inline StringPiece::const_iterator handleUnreserved(const StringPiece& s) {
 				static const StringPiece::value_type UNRESERVED_LEFTOVERS[] = {'-', '.', '_', '~'};
-				return (s.cbegin() < s.cend() && (std::isalnum(s.front(), cl) || boost::find(UNRESERVED_LEFTOVERS, s.front()) != s.cend())) ? s.cbegin() + 1 : nullptr;
+				return (s.cbegin() < s.cend() && (isALPHA(s.front()) || isDIGIT(s.front()) || boost::find(UNRESERVED_LEFTOVERS, s.front()) != s.cend())) ? s.cbegin() + 1 : nullptr;
 			}
 		
 			// pct-encoded = "%" HEXDIG HEXDIG
 			inline StringPiece::const_iterator handlePctEncoded(const StringPiece& s) {
-				return (s.length() >= 3 && s[0] == '%' && std::isxdigit(s[1], cl) && std::isxdigit(s[2], cl)) ? s.cbegin() + 3 : nullptr;
+				return (s.length() >= 3 && s[0] == '%' && isHEXDIG(s[1]) && isHEXDIG(s[2])) ? s.cbegin() + 3 : nullptr;
 			}
 		
 			// IPv6address =                            6( h16 ":" ) ls32
@@ -72,8 +82,8 @@ namespace ascension {
 			StringPiece::const_iterator ASCENSION_FASTCALL handleIPvFuture(const StringPiece& s) {
 				if(s.length() >= 4 && s.front() == 'v') {
 					auto p(std::next(s.cbegin()));
-					if(std::isxdigit(*p, cl)) {
-						while(std::isxdigit(*p, cl)) {
+					if(isHEXDIG(*p)) {
+						while(isHEXDIG(*p)) {
 							if(++p == s.cend())
 								return nullptr;
 						}
@@ -109,7 +119,7 @@ namespace ascension {
 			// port = *DIGIT
 			inline StringPiece::const_iterator handlePort(const StringPiece& s) {	// [nullable]
 				auto p(s.cbegin());
-				while(p < s.cend() && std::isdigit(p, cl))
+				while(p < s.cend() && isDIGIT(*p))
 					++p;
 				return p;
 			}
@@ -125,12 +135,12 @@ namespace ascension {
 						return std::next(s.cbegin());
 					else if(s.front() == '1') {
 						auto p(s.cbegin());
-						return (++p < s.cend() && std::isdigit(*p, cl) && ++p < s.cend() && std::isdigit(*p, cl)) ? ++p : p;
+						return (++p < s.cend() && isDIGIT(*p) && ++p < s.cend() && isDIGIT(*p)) ? ++p : p;
 					} else if(s.front() == '2') {
 						auto p(std::next(s.cbegin()));
 						if(p < s.cend()) {
 							if(boost::numeric::in(*p, boost::numeric::interval<Char>('0', '4'))) {
-								if(std::isdigit(*++p, cl))
+								if(isDIGIT(*++p))
 									++p;
 							} else if(*p == '5') {
 								if(boost::numeric::in(*p, boost::numeric::interval<Char>('0', '5')))
@@ -140,7 +150,7 @@ namespace ascension {
 						return p;
 					} else if(boost::numeric::in(s.front(), boost::numeric::interval<Char>('3', '9'))) {
 						auto p(s.cbegin());
-						return (++p < s.cend() && std::isdigit(*p, cl)) ? ++p : p;
+						return (++p < s.cend() && isDIGIT(*p)) ? ++p : p;
 					}
 				}
 				return nullptr;
@@ -161,10 +171,10 @@ namespace ascension {
 		
 			// h16 = 1*4HEXDIG
 			StringPiece::const_iterator ASCENSION_FASTCALL handleH16(const StringPiece& s) {
-				if(s.cbegin() < s.cend() && std::isxdigit(s.front(), cl)) {
+				if(s.cbegin() < s.cend() && isHEXDIG(s.front())) {
 					auto p(std::next(s.cbegin()));
 					const auto e(std::min(p + 3, s.cend()));
-					while(p < e && std::isxdigit(*p, cl))
+					while(p < e && isHEXDIG(*p))
 						++p;
 					return p;
 				}
@@ -180,9 +190,9 @@ namespace ascension {
 		
 			// scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
 			StringPiece::const_iterator ASCENSION_FASTCALL handleScheme(const StringPiece& s) {
-				if(std::isalpha(s.front(), cl)) {
+				if(isALPHA(s.front())) {
 					for(auto p(std::next(s.cbegin())); p != s.cend(); ++p) {
-						if(!std::isalnum(*p, cl) && *p != '+' && *p != '-' && *p != '.')
+						if(!isALPHA(*p) && !isDIGIT(*p) && *p != '+' && *p != '-' && *p != '.')
 							return p;
 					}
 					return s.cend();
@@ -216,7 +226,8 @@ namespace ascension {
 							|| boost::numeric::in(s.front(), boost::numeric::interval<Char>(0xfdf0u, 0xffefu)))
 						return std::next(s.cbegin());
 					const CodePoint c = text::utf::decodeFirst(s);
-					if(c >= 0x10000u && c < 0xf0000u && (c & 0xffffu) >= 0x0000u && (c & 0xffffu) <= 0xfffdu) {
+					static_assert(std::is_unsigned<CodePoint>::value, "");
+					if(c >= 0x10000u && c < 0xf0000u && (c & 0xffffu) <= 0xfffdu) {
 						if((c & 0xf0000u) != 0xe || (c & 0xffffu) >= 0x1000u)
 							return std::next(s.cbegin(), 2);
 					}
@@ -510,7 +521,7 @@ namespace ascension {
 			// search scheme
 			auto nextColon = boost::find(text, ':');
 			if(nextColon == text.cend())
-				return false;
+				return StringPiece();
 			for(StringPiece::const_iterator p(text.cbegin()); ; ) {
 				if(handleScheme(makeStringPiece(p, nextColon)) == nextColon) {
 					if(validSchemes_ == nullptr || validSchemes_->matches(makeStringPiece(p, nextColon))) {
