@@ -23,20 +23,23 @@ namespace ascension {
 			// first != null, last != null and first <= last. Return value is the end of parsed sequence.
 			// "[nullable]" indicates that the procedure can return empty read sequence.
 
+			inline bool inRange(CodePoint c, CodePoint lo, CodePoint hi) BOOST_NOEXCEPT {
+				return boost::numeric::in(c, boost::numeric::interval<CodePoint>(lo, hi));
+			}
+
 			// ALPHA = %x41-5A / %x61-7A ; A-Z / a-z (RFC 2234)
-			template<typename Character> inline bool isALPHA(Character c) BOOST_NOEXCEPT {
-				return boost::numeric::in(c, boost::numeric::interval<Char>('A', 'Z'))
-					|| boost::numeric::in(c, boost::numeric::interval<Char>('a', 'z'));
+			inline bool isALPHA(CodePoint c) BOOST_NOEXCEPT {
+				return inRange(c, 'A', 'Z') || inRange(c, 'a', 'z');
 			}
 
 			// DIGIT = %x30-39 ; 0-9 (RFC 2234)
-			template<typename Character> inline bool isDIGIT(Character c) BOOST_NOEXCEPT {
-				return boost::numeric::in(c, boost::numeric::interval<Char>('0', '9'));
+			inline bool isDIGIT(CodePoint c) BOOST_NOEXCEPT {
+				return inRange(c, '0', '9');
 			}
 
 			// HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F" (RFC 2234)
-			template<typename Character> inline bool isHEXDIG(Character c) BOOST_NOEXCEPT {
-				return isDIGIT(c) || boost::numeric::in(c, boost::numeric::interval<Char>('A', 'F'));
+			inline bool isHEXDIG(CodePoint c) BOOST_NOEXCEPT {
+				return isDIGIT(c) || inRange(c, 'A', 'F');
 			}
 		   
 			// sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
@@ -139,16 +142,16 @@ namespace ascension {
 					} else if(s.front() == '2') {
 						auto p(std::next(s.cbegin()));
 						if(p < s.cend()) {
-							if(boost::numeric::in(*p, boost::numeric::interval<Char>('0', '4'))) {
+							if(inRange(*p, '0', '4')) {
 								if(isDIGIT(*++p))
 									++p;
 							} else if(*p == '5') {
-								if(boost::numeric::in(*p, boost::numeric::interval<Char>('0', '5')))
+								if(inRange(*p, '0', '5'))
 									++p;
 							}
 						}
 						return p;
-					} else if(boost::numeric::in(s.front(), boost::numeric::interval<Char>('3', '9'))) {
+					} else if(inRange(s.front(), '3', '9')) {
 						auto p(s.cbegin());
 						return (++p < s.cend() && isDIGIT(*p)) ? ++p : p;
 					}
@@ -203,11 +206,10 @@ namespace ascension {
 			// iprivate = %xE000-F8FF / %xF0000-FFFFD / %x100000-10FFFD
 			inline StringPiece::const_iterator handlePrivate(const StringPiece& s) {
 				if(s.cbegin() < s.cend()) {
-					if(boost::numeric::in(s.front(), boost::numeric::interval<Char>(0xe000u, 0xf8ffu)))
+					if(inRange(s.front(), 0xe000u, 0xf8ffu))
 						return std::next(s.cbegin());
 					const CodePoint c = text::utf::decodeFirst(s);
-					if(boost::numeric::in(c, boost::numeric::interval<CodePoint>(0xf0000u, 0xffffdu))
-							|| boost::numeric::in(c, boost::numeric::interval<CodePoint>(0x100000u, 0x10fffdu)))
+					if(inRange(c, 0xf0000u, 0xffffdu) || inRange(c, 0x100000u, 0x10fffdu))
 						return std::next(s.cbegin(), 2);
 				}
 				return nullptr;
@@ -221,9 +223,7 @@ namespace ascension {
 			//         / %xD0000-DFFFD / %xE1000-EFFFD
 			inline StringPiece::const_iterator handleUcschar(const StringPiece& s) {
 				if(s.cbegin() < s.cend()) {
-					if(boost::numeric::in(s.front(), boost::numeric::interval<Char>(0x00a0u, 0xd7ffu))
-							|| boost::numeric::in(s.front(), boost::numeric::interval<Char>(0xf900u, 0xfdcfu))
-							|| boost::numeric::in(s.front(), boost::numeric::interval<Char>(0xfdf0u, 0xffefu)))
+					if(inRange(s.front(), 0x00a0u, 0xd7ffu) || inRange(s.front(), 0xf900u, 0xfdcfu) || inRange(s.front(), 0xfdf0u, 0xffefu))
 						return std::next(s.cbegin());
 					const CodePoint c = text::utf::decodeFirst(s);
 					static_assert(std::is_unsigned<CodePoint>::value, "");
