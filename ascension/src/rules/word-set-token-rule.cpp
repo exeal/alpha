@@ -66,7 +66,7 @@ namespace ascension {
 		
 		/// @see Rule#parse
 		bool WordSetTokenRule::parse(const StringPiece& text,
-				const StringPiece& word, const text::IdentifierSyntax& identifierSyntax) const {
+				const StringPiece& word, const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT {
 			assert(text.cbegin() < text.cend() && word.cbegin() < word.cend() && word >= text.cbegin() && word < text.cend());
 			return words_->matches(word);
 		}
