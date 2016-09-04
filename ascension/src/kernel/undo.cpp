@@ -89,7 +89,7 @@ namespace ascension {
 				}
 			private:
 				Position begin() const BOOST_NOEXCEPT override {return position_;}
-				bool doMerge(std::unique_ptr<AtomicChange>& postChange, const Document& document) override;
+				bool doMerge(std::unique_ptr<AtomicChange>& postChange, const Document& document) BOOST_NOEXCEPT override;
 				std::pair<bool, Position> doPerform(Document& document) override;
 				boost::optional<Position> end() const BOOST_NOEXCEPT override {return boost::none;}
 				const String* text() const BOOST_NOEXCEPT override {return &text_;}
@@ -107,7 +107,7 @@ namespace ascension {
 				}
 			private:
 				Position begin() const BOOST_NOEXCEPT override {return *boost::const_begin(region_);}
-				bool doMerge(std::unique_ptr<AtomicChange>& postChange, const Document& document) override;
+				bool doMerge(std::unique_ptr<AtomicChange>& postChange, const Document& document) BOOST_NOEXCEPT override;
 				std::pair<bool, Position> doPerform(Document& document) override;
 				boost::optional<Position> end() const BOOST_NOEXCEPT override {return *boost::const_end(region_);}
 				const String* text() const BOOST_NOEXCEPT override {return nullptr;}
@@ -124,7 +124,7 @@ namespace ascension {
 				}
 			private:
 				Position begin() const BOOST_NOEXCEPT override {return *boost::const_begin(region_);}
-				bool doMerge(std::unique_ptr<AtomicChange>& postChange, const Document& document) override;
+				bool doMerge(std::unique_ptr<AtomicChange>& postChange, const Document& document) BOOST_NOEXCEPT override;
 				std::pair<bool, Position> doPerform(Document& document) override;
 				boost::optional<Position> end() const BOOST_NOEXCEPT override {return *boost::const_end(region_);}
 				const String* text() const BOOST_NOEXCEPT override {return &text_;}
