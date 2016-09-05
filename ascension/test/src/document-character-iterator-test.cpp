@@ -4,6 +4,7 @@
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include "from-latin1.hpp"
+#include "unicode-string-sample.hpp"
 
 namespace k = ascension::kernel;
 
@@ -166,6 +167,30 @@ BOOST_AUTO_TEST_CASE(iteration_test) {
 	BOOST_CHECK_THROW(std::advance(i2, 100), ascension::NoSuchElementException);
 	BOOST_TEST(i2.tell() == *boost::const_end(region));
 	BOOST_TEST(*i2 == ascension::text::INVALID_CODE_POINT);
+}
+
+BOOST_AUTO_TEST_CASE(surrogate_test) {
+	k::Document d;
+	auto e(k::insert(d, k::Position::zero(), std::begin(SPOT16_IN_UTF16), std::end(SPOT16_IN_UTF16)));
+	e = k::insert(d, k::Position::zero(), std::begin(SPOT16_IN_UTF16), std::end(SPOT16_IN_UTF16));
+	e = k::insert(d, k::Position::zero(), std::begin(SPOT16_IN_UTF16), std::end(SPOT16_IN_UTF16));
+	k::DocumentCharacterIterator i(d, k::Region::makeSingleLine(0u, boost::irange(1u, 5u)), k::Position(0u, 2u));
+
+	BOOST_TEST(*i == *SPOT16);
+
+	++i;
+	BOOST_TEST(i.tell() == k::Position(0u, 4u));
+	BOOST_TEST(*i == SPOT16_IN_UTF16[0]);
+	++i;
+	BOOST_TEST(i.tell() == k::Position(0u, 5u));
+
+	--i;
+	BOOST_TEST(i.tell() == k::Position(0u, 4u));
+	--i;
+	BOOST_TEST(i.tell() == k::Position(0u, 2u));
+	--i;
+	BOOST_TEST(i.tell() == k::Position(0u, 1u));
+	BOOST_TEST(*i == SPOT16_IN_UTF16[1]);
 }
 
 BOOST_AUTO_TEST_CASE(copy_construction_test) {
