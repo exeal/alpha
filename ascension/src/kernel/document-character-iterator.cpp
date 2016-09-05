@@ -111,10 +111,9 @@ namespace ascension {
 			if(offsetInLine(*this) == 0) {
 				--position_.line;
 				position_.offsetInLine = lineString().length();
-			} else if(--position_.offsetInLine > 0) {
+			} else if(--position_.offsetInLine > 0 && hasPrevious()) {
 				const String& s = lineString();
-				if(text::surrogates::isLowSurrogate(s[kernel::offsetInLine(tell())])
-						&& text::surrogates::isHighSurrogate(s[kernel::offsetInLine(tell()) - 1]))
+				if(text::surrogates::isLowSurrogate(s[offsetInLine(tell())]) && text::surrogates::isHighSurrogate(s[offsetInLine(tell()) - 1]))
 					--position_.offsetInLine;
 			}
 			--offset_;
@@ -125,7 +124,7 @@ namespace ascension {
 		 * Returns a code point (not a UTF-16 code unit value) of the character addressed by this iterator.
 		 * @return A code point of the current character
 		 * @retval text#LINE_SEPARATOR The iterator is invalid or at the end of the line
-		 * @retval text#INVALID_CODE_POINT The iterator is at the end of the @c #region
+		 * @retval text#INVALID_CODE_POINT The iterator is invalid or at the end of the @c #region
 		 * @note This returns a raw unit value at any unpaired surrogate
 		 */
 		CodePoint DocumentCharacterIterator::dereference() const BOOST_NOEXCEPT {
@@ -134,8 +133,14 @@ namespace ascension {
 			const String& s = lineString();
 			if(kernel::offsetInLine(tell()) == s.length())
 				return text::LINE_SEPARATOR;
-			else
-				return text::utf::decodeFirst(std::begin(s) + kernel::offsetInLine(tell()), std::end(s));
+			else {
+				const auto p(std::begin(s) + offsetInLine(tell()));
+				if(line(tell()) == line(*boost::const_end(region()))) {
+					if(offsetInLine(tell()) + 1 == offsetInLine(*boost::const_end(region())))
+						return text::utf::decodeFirst(p, std::next(p));
+				}
+				return text::utf::decodeFirst(p, std::end(s));
+			}
 		}
 
 		/**
@@ -163,12 +168,13 @@ namespace ascension {
 				return;
 #endif
 			const String& s = lineString();
-			if(kernel::offsetInLine(tell()) == s.length()) {
+			if(offsetInLine(tell()) == s.length()) {
 				++position_.line;
 				position_.offsetInLine = 0;
 			} else if(++position_.offsetInLine < s.length()
-					&& text::surrogates::isLowSurrogate(s[kernel::offsetInLine(tell())])
-					&& text::surrogates::isHighSurrogate(s[kernel::offsetInLine(tell()) - 1]))
+					&& hasNext()
+					&& text::surrogates::isLowSurrogate(s[offsetInLine(tell())])
+					&& text::surrogates::isHighSurrogate(s[offsetInLine(tell()) - 1]))
 				++position_.offsetInLine;
 			++offset_;
 		}
