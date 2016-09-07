@@ -38,25 +38,11 @@ namespace ascension {
 			/// Describes a position in the document.
 			typedef std::pair<const Document&, Position> PointProxy;
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			boost::optional<Position> backwardBookmark(const PointProxy& p, Index marks = 1);
-			Position backwardCharacter(const PointProxy& p, CharacterUnit unit, Index characters = 1);
-			Position backwardLine(const PointProxy& p, Index lines = 1);
-			Position backwardWord(const PointProxy& p, Index words = 1);
-			Position backwardWordEnd(const PointProxy& p, Index words = 1);
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
 			Position beginningOfDocument(const PointProxy& p);
 			Position beginningOfLine(const PointProxy& p);
 			CodePoint characterAt(const PointProxy& p, bool useLineFeed = false);
 			Position endOfDocument(const PointProxy& p);
 			Position endOfLine(const PointProxy& p);
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			boost::optional<Position> forwardBookmark(const PointProxy& p, Index marks = 1);
-			Position forwardCharacter(const PointProxy& p, CharacterUnit unit, Index characters = 1);
-			Position forwardLine(const PointProxy& p, Index lines = 1);
-			Position forwardWord(const PointProxy& p, Index words = 1);
-			Position forwardWordEnd(const PointProxy& p, Index words = 1);
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
 			bool isBeginningOfDocument(const PointProxy& p);
 			bool isBeginningOfLine(const PointProxy& p);
 			bool isEndOfDocument(const PointProxy& p);
