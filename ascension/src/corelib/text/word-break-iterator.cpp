@@ -179,7 +179,8 @@ namespace ascension {
 				nextClass = ucd::NOT_PROPERTY, nextNextClass = ucd::NOT_PROPERTY, prevPrevClass = ucd::NOT_PROPERTY;
 			while(true) {
 				// 1 ‚ÂŽŸ (B) ‚ð’²‚×‚é
-				assert(characterIterator_.hasPrevious());
+				if(!characterIterator_.hasPrevious())	// (WB1) ?
+					break;
 				if(next == boost::none) {
 					next = characterIterator_;
 					previousBase(boost::get(next));
