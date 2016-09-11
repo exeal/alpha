@@ -183,6 +183,27 @@ add_test(
 	COMMAND $<TARGET_FILE:document-character-iterator-test>
 	CONFIGURATIONS Debug)
 
+# kernel.locations
+add_test(
+	NAME locations
+	COMMAND $<TARGET_FILE:locations-test>
+	CONFIGURATIONS Debug)
+add_executable(
+	locations-test
+	src/locations-test.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/character-property.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/grapheme-break-iterator.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/identifier-syntax.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/newline.cpp
+	${Ascension_SOURCE_DIR}/corelib/text/word-break-iterator.cpp
+	${Ascension_SOURCE_DIR}/kernel/abstract-point.cpp
+	${Ascension_SOURCE_DIR}/kernel/bookmarker.cpp
+	${Ascension_SOURCE_DIR}/kernel/document.cpp
+	${Ascension_SOURCE_DIR}/kernel/document-character-iterator.cpp
+	${Ascension_SOURCE_DIR}/kernel/locations.cpp
+	${Ascension_SOURCE_DIR}/kernel/point.cpp
+	${Ascension_SOURCE_DIR}/kernel/undo.cpp)
+
 # presentation
 add_executable(
 	flow-relative-directional-test
