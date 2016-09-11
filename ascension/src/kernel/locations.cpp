@@ -33,10 +33,15 @@ namespace ascension {
 				inline Position shrinkToAccessibleRegion(const T& p) BOOST_NOEXCEPT {
 					return positions::shrinkToAccessibleRegion(document(p), position(p));
 				}
+				template<typename T>
+				inline void throwIfOutsideOfDocument(const T& p) BOOST_NOEXCEPT {
+					if(positions::isOutsideOfDocumentRegion(document(p), position(p)))
+						throw BadPositionException(position(p));
+				}
 			}
 
 			/**
-			 * Returns the beginning of the document.
+			 * Returns the beginning of the accessible region of the document.
 			 * @param p The base point
 			 * @return The destination
 			 */
@@ -48,9 +53,11 @@ namespace ascension {
 			 * Returns the beginning of the current line.
 			 * @param p The base point
 			 * @return The destination
+			 * @throw BadPositionException @a p is outside of the document
 			 */
 			Position beginningOfLine(const PointProxy& p) {
-				return Position::bol(shrinkToAccessibleRegion(p));
+				throwIfOutsideOfDocument(p);
+				return positions::shrinkToAccessibleRegion(document(p), Position::bol(position(p)));
 			}
 
 			/**
@@ -80,32 +87,54 @@ namespace ascension {
 			 * Returns the end of the current line.
 			 * @param p The base point
 			 * @return The destination
+			 * @throw BadPositionException @a p is outside of the document
 			 */
 			Position endOfLine(const PointProxy& p) {
-				const Position temp(shrinkToAccessibleRegion(p));
-				return std::min(Position(line(temp), document(p).lineLength(line(temp))), *boost::const_end(document(p).accessibleRegion()));
+				throwIfOutsideOfDocument(p);
+				const auto ln = line(position(p));
+				return positions::shrinkToAccessibleRegion(document(p), Position(ln, document(p).lineLength(ln)));
 			}
 
-			/// Returns @c true if the given point @a p is the beginning of the document.
+			/**
+			 * Returns @c true if the given point is the beginning of the accessible region of the document.
+			 * @param p The point to check
+			 * @return true if @a is the beginning of the accessible region of the document
+			 * @throw BadPositionException @a p is outside of the document
+			 */
 			bool isBeginningOfDocument(const PointProxy& p) {
-				return position(p) == *boost::const_begin(document(p).accessibleRegion());
+				throwIfOutsideOfDocument(p);
+				return position(p) == beginningOfDocument(p);
 			}
 
-			/// Returns @c true if the given point @a p is the beginning of the line.
+			/**
+			 * Returns @c true if the given point is the beginning of the line.
+			 * @param p The point to check
+			 * @return true if @a is the beginning of the line
+			 * @throw BadPositionException @a p is outside of the document
+			 */
 			bool isBeginningOfLine(const PointProxy& p) {
-				return offsetInLine(position(p)) == 0
-					|| (document(p).isNarrowed() && position(p) == *boost::const_begin(document(p).accessibleRegion()));
+				return position(p) == beginningOfLine(p);	// this may throw BadPositionException
 			}
 
-			/// Returns @c true if the given point @a p is the end of the document.
+			/**
+			 * Returns @c true if the given point is the end of the accessible region of the document.
+			 * @param p The point to check
+			 * @return true if @a is the end of the accessible region of the document
+			 * @throw BadPositionException @a p is outside of the document
+			 */
 			bool isEndOfDocument(const PointProxy& p) {
-				return position(p) == *boost::const_end(document(p).accessibleRegion());
+				throwIfOutsideOfDocument(p);
+				return position(p) == endOfDocument(p);
 			}
 
-			/// Returns @c true if the given point @a p is the end of the line.
+			/**
+			 * Returns @c true if the given point is the end of the line.
+			 * @param p The point to check
+			 * @return true if @a is the end of the line
+			 * @throw BadPositionException @a p is outside of the document
+			 */
 			bool isEndOfLine(const PointProxy& p) {
-				return offsetInLine(position(p)) == document(p).lineLength(line(position(p)))
-					|| position(p) == *boost::const_end(document(p).accessibleRegion());
+				return position(p) == endOfLine(p);	// this may throw BadPositionException
 			}
 
 			/**
@@ -113,12 +142,23 @@ namespace ascension {
 			 * @param p The base point
 			 * @param direction The direction
 			 * @param marks The number of motions
-			 * @return The beginning of the forward/backward bookmarked line, or @c boost#none if there is no bookmark
-			 *         in the document
+			 * @return The beginning of the forward/backward bookmarked line
+			 * @retval boost#none The found bookmark was outside of the accessible region of the document, or there is
+			 *                    no bookmark in the document
+			 * @throw BadPositionException @a p is outside of the document
 			 */
 			boost::optional<Position> nextBookmark(const PointProxy& p, Direction direction, Index marks /* = 1 */) {
-				const auto temp(document(p).bookmarker().next(line(shrinkToAccessibleRegion(p)), direction, true, marks));
-				return (temp != boost::none) ? boost::make_optional(Position::bol(boost::get(temp))) : boost::none;
+				throwIfOutsideOfDocument(p);
+				const auto temp(document(p).bookmarker().next(line(position(p)), direction, true, marks));
+				if(temp != boost::none) {
+					const auto bookmark = boost::get(temp);
+					const auto accessibleRegion(document(p).accessibleRegion());
+					if(bookmark == line(*boost::const_begin(accessibleRegion)))
+						return boost::make_optional(*boost::const_begin(accessibleRegion));
+					else if(bookmark > line(*boost::const_begin(accessibleRegion)) && bookmark <= line(*boost::const_end(accessibleRegion)))
+						return boost::make_optional(Position::bol(bookmark));
+				}
+				return boost::none;
 			}
 
 			/**
@@ -184,22 +224,37 @@ namespace ascension {
 			 * @param direction The direction
 			 * @param lines The number of the lines to advance/return
 			 * @return The position of the next/previous line
+			 * @throw BadPositionException @a p is outside of the document
 			 * @see viewer#locations#nextVisualLine
 			 */
 			Position nextLine(const PointProxy& p, Direction direction, Index lines /* = 1 */) {
-				Position result(shrinkToAccessibleRegion(p));
+				throwIfOutsideOfDocument(p);
+				auto result(position(p));
 				if(direction == Direction::forward()) {
-					const Position eob(*boost::const_end(document(p).accessibleRegion()));
+					const auto eob(endOfDocument(p));
 					result.line = (line(result) + lines < line(eob)) ? line(result) + lines : line(eob);
 					if(line(result) == line(eob) && offsetInLine(result) > offsetInLine(eob))
 						--result.line;
 				} else {
-					const Position bob(*boost::const_begin(document(p).accessibleRegion()));
+					const auto bob(beginningOfDocument(p));
 					result.line = (line(result) > line(bob) + lines) ? line(result) - lines : line(bob);
 					if(line(result) == line(bob) && offsetInLine(result) < offsetInLine(bob))
 						++result.line;
 				}
 				return result;
+			}
+
+			namespace {
+				inline Position nextWord(const PointProxy& p, Direction direction, Index words, text::WordBreakIteratorBase::Component component) {
+					text::WordBreakIterator<DocumentCharacterIterator> i(
+						DocumentCharacterIterator(document(p), document(p).accessibleRegion(), position(p)),
+						component, detail::identifierSyntax(p));	// this may throw BadPositionException
+					if(direction == Direction::forward())
+						i += words;
+					else
+						i -= words;
+					return i.base().tell();
+				}
 			}
 
 			/**
@@ -208,17 +263,11 @@ namespace ascension {
 			 * @param direction The direction
 			 * @param words The number of words to traverse
 			 * @return The destination
+			 * @throw BadPositionException @a p is outside of the document
 			 * @see viewer#locations#nextWordEnd, viewer#locations#nextWordInPhysicalDirection
 			 */
 			Position nextWord(const PointProxy& p, Direction direction, Index words /* = 1 */) {
-				text::WordBreakIterator<DocumentCharacterIterator> i(
-					DocumentCharacterIterator(document(p), document(p).accessibleRegion(), shrinkToAccessibleRegion(p)),
-					text::WordBreakIteratorBase::START_OF_SEGMENT, detail::identifierSyntax(p));
-				if(direction == Direction::forward())
-					i += words;
-				else
-					i -= words;
-				return i.base().tell();
+				return nextWord(p, direction, words, text::WordBreakIteratorBase::START_OF_SEGMENT);
 			}
 
 			/**
@@ -227,17 +276,11 @@ namespace ascension {
 			 * @param direction The direction
 			 * @param words The number of words to traverse
 			 * @return The destination
+			 * @throw BadPositionException @a p is outside of the document
 			 * @see viewer#locations#nextWord, viewer#locations#nextWordEndInPhysicalDirection
 			 */
 			Position nextWordEnd(const PointProxy& p, Direction direction, Index words /* = 1 */) {
-				text::WordBreakIterator<DocumentCharacterIterator> i(
-					DocumentCharacterIterator(document(p), document(p).accessibleRegion(), shrinkToAccessibleRegion(p)),
-					text::WordBreakIteratorBase::END_OF_SEGMENT, detail::identifierSyntax(p));
-				if(direction == Direction::forward())
-					i += words;
-				else
-					i -= words;
-				return i.base().tell();
+				return nextWord(p, direction, words, text::WordBreakIteratorBase::END_OF_SEGMENT);
 			}
 		}
 	}
