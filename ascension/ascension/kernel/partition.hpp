@@ -8,6 +8,7 @@
 #define ASCENSION_PARTITION_HPP
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/kernel/region.hpp>
+#include <cstdint>
 
 namespace ascension {
 	namespace text {
