@@ -68,6 +68,7 @@ namespace ascension {
 		 * @param document The document to which the point attaches
 		 * @param position The initial position of the point
 		 * @throw BadPositionException @a position is outside of the document
+		 * @post position() == position
 		 */
 		Point::Point(Document& document, const Position& position /* = kernel::Position::zero() */) : AbstractPoint(document), position_(position) {
 			if(!encompasses(document.region(), position))
@@ -78,6 +79,7 @@ namespace ascension {
 		 * Copy-constructor.
 		 * @param other The source object
 		 * @throw DocumentDisposedException The document to which @a other belongs had been disposed
+		 * @post position() == other.position()
 		 */
 		Point::Point(const Point& other) : AbstractPoint(other), position_(other.position_) {
 		}
