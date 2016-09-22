@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_TEXT_FILE_DOCUMENT_INPUT_HPP
 #define ASCENSION_TEXT_FILE_DOCUMENT_INPUT_HPP
-#include <ascension/config.hpp>				// ASCENSION_NO_GREP
 #include <ascension/platforms.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-input.hpp>

@@ -34,24 +34,6 @@
 #endif	// !ASCENSION_DEFAULT_NEWLINE
 
 
-// about ascension.kernel.fileio /////////////////////////////////////////////
-
-/// @def ASCENSION_FILE_NAME_CHARACTER_TYPE
-#ifndef ASCENSION_FILE_NAME_CHARACTER_TYPE
-#	ifdef _WIN32
-#		define ASCENSION_FILE_NAME_CHARACTER_TYPE WCHAR
-#	else
-#		define ASCENSION_FILE_NAME_CHARACTER_TYPE char
-#	endif
-#endif	// !ASCENSION_FILE_NAME_CHARACTER_TYPE
-
-/**
- * @def ASCENSION_NO_GREP
- * Define the symbol if you do not use grep-related features.
- */
-//#define ASCENSION_NO_GREP
-
-
 // about ascension.text //////////////////////////////////////////////////
 
 /**
