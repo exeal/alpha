@@ -232,6 +232,8 @@
     <ClCompile Include="..\..\ascension\src\kernel\abstract-point.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\bookmarker.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\document-character-iterator.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\fileio\text-file-document-input.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\fileio\text-file-stream-buffer.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\locations.cpp" />
     <ClCompile Include="..\..\ascension\src\log.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation\hyperlink\composite-hyperlink-detector.cpp" />
@@ -377,7 +379,6 @@
     <ClCompile Include="..\..\ascension\src\encodings\vietnamese.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\document.cpp" />
-    <ClCompile Include="..\..\ascension\src\kernel\fileio.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\point.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\searcher.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\stream.cpp" />
@@ -498,6 +499,8 @@
     <ClInclude Include="..\..\ascension\ascension\kernel\document-exceptions.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-input.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\fileio\text-file-document-input.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\fileio\text-file-stream-buffer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\locations.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\region.hpp" />
     <ClInclude Include="..\..\ascension\ascension\log.hpp" />
@@ -657,7 +660,6 @@
     <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-stream.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\kernel\fileio.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\partition.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\point.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\position.hpp" />

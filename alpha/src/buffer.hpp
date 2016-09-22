@@ -7,7 +7,7 @@
 
 #ifndef ALPHA_BUFFER_HPP
 #define ALPHA_BUFFER_HPP
-#include <ascension/kernel/fileio.hpp>
+#include <ascension/kernel/fileio/text-file-document-input.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/text-editor/session.hpp>
 
