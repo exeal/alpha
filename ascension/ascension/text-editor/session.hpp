@@ -6,11 +6,11 @@
 
 #ifndef ASCENSION_SESSION_HPP
 #define ASCENSION_SESSION_HPP
-#include <ascension/config.hpp>				// ASCENSION_NO_MIGEMO
+#include <ascension/config.hpp>	// ASCENSION_NO_MIGEMO
 #include <ascension/corelib/text/character.hpp>
 #include <ascension/text-editor/kill-ring.hpp>
 #ifndef ASCENSION_NO_MIGEMO
-#	include <ascension/kernel/fileio.hpp>	// fileio.PathCharacter
+#	include <boost/filesystem/path.hpp>
 #endif // !ASCENSION_NO_MIGEMO
 #include <memory>
 #include <vector>

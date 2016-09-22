@@ -13,6 +13,7 @@
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/kernel/document.hpp>
+#include <ascension/kernel/document-input.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>

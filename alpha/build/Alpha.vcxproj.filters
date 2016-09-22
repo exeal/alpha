@@ -156,6 +156,12 @@
     <Filter Include="ascension\Header Files\corelib\text\detail">
       <UniqueIdentifier>{6ca410af-06de-4649-aee5-31734fa9d1bb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\kernel\fileio">
+      <UniqueIdentifier>{57671344-287a-4d5d-bcec-48746945be24}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\kernel\fileio">
+      <UniqueIdentifier>{046d38d5-137c-407f-93c4-3a638954bb81}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -258,9 +264,6 @@
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\kernel\document.cpp">
-      <Filter>ascension\Source Files\kernel</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ascension\src\kernel\fileio.cpp">
       <Filter>ascension\Source Files\kernel</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\kernel\point.cpp">
@@ -626,6 +629,12 @@
     <ClCompile Include="..\..\ascension\src\rules\token-rule.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\fileio\text-file-document-input.cpp">
+      <Filter>ascension\Source Files\kernel\fileio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\fileio\text-file-stream-buffer.cpp">
+      <Filter>ascension\Source Files\kernel\fileio</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -746,9 +755,6 @@
       <Filter>ascension\Header Files\kernel</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\kernel\document.hpp">
-      <Filter>ascension\Header Files\kernel</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\kernel\fileio.hpp">
       <Filter>ascension\Header Files\kernel</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\kernel\partition.hpp">
@@ -1458,6 +1464,12 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\text\code-unit-size-of.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\fileio\text-file-stream-buffer.hpp">
+      <Filter>ascension\Header Files\kernel\fileio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\fileio\text-file-document-input.hpp">
+      <Filter>ascension\Header Files\kernel\fileio</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

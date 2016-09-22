@@ -7,6 +7,7 @@
 #include <ascension/text-editor/input-sequence-checker.hpp>
 #include <ascension/text-editor/kill-ring.hpp>
 #include <ascension/text-editor/session.hpp>
+#include <ascension/kernel/document.hpp>
 #include <ascension/kernel/searcher.hpp>
 #include <boost/range/algorithm/find.hpp>
 #include <stdexcept>	// std.invalid_argument
