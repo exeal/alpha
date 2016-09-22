@@ -162,6 +162,12 @@
     <Filter Include="ascension\Source Files\kernel\fileio">
       <UniqueIdentifier>{046d38d5-137c-407f-93c4-3a638954bb81}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\corelib\encoding">
+      <UniqueIdentifier>{1c7ec551-b83f-4c59-ace5-7909caec5ab5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\corelib\encoding">
+      <UniqueIdentifier>{74dd688c-cac9-4b35-a344-37456323612a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -634,6 +640,12 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\kernel\fileio\text-file-stream-buffer.cpp">
       <Filter>ascension\Source Files\kernel\fileio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\encoding\encoding-detector.cpp">
+      <Filter>ascension\Source Files\corelib\encoding</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\encoding\encoder-factory.cpp">
+      <Filter>ascension\Source Files\corelib\encoding</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1470,6 +1482,18 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\kernel\fileio\text-file-document-input.hpp">
       <Filter>ascension\Header Files\kernel\fileio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoding\mib-enum.hpp">
+      <Filter>ascension\Header Files\corelib\encoding</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoding\encoding-detector.hpp">
+      <Filter>ascension\Header Files\corelib\encoding</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoding\encoder-implementation.hpp">
+      <Filter>ascension\Header Files\corelib\encoding</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoding\encoder-factory.hpp">
+      <Filter>ascension\Header Files\corelib\encoding</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

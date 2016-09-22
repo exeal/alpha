@@ -189,6 +189,8 @@
     <ClCompile Include="..\..\ascension\src\content-assist\default-completion-proposal.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\default-content-assistant.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\identifiers-proposal-processor.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\encoding\encoder-factory.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\encoding\encoding-detector.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\string-piece-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\character-iterator.cpp" />
@@ -398,6 +400,10 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\named-argument-exists.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\named-arguments-single-type.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\detail\scope-guard.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoding\encoder-factory.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoding\encoder-implementation.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoding\encoding-detector.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoding\mib-enum.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\scoped-enum-emulation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future\type-traits.hpp" />
