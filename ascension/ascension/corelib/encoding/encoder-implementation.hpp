@@ -8,25 +8,21 @@
 
 #ifndef ASCENSION_ENCODER_IMPLEMENTATION_HPP
 #define ASCENSION_ENCODER_IMPLEMENTATION_HPP
-#include <ascension/config.hpp>	// ASCENSION_NO_*_ENCODINGS
 #include <ascension/corelib/basic-types.hpp>
-#include <ascension/corelib/string-piece.hpp>
-#include <ascension/corelib/text/code-point.hpp>
-#include <boost/core/ignore_unused.hpp>
+#include <ascension/corelib/encoding/encoder-factory.hpp>
 #include <array>
 #include <locale>	// std.locale, std.codecvt
 #include <memory>	// std.unique_ptr
-#include <vector>
 
 namespace ascension {
 	namespace encoding {
-		template<typename T> inline Byte mask7Bit(T c) {return static_cast<Byte>(c & 0x7fu);}
-		template<typename T> inline std::uint8_t mask8Bit(T c) {return static_cast<std::uint8_t>(c & 0xffu);}
-		template<typename T> inline std::uint16_t mask16Bit(T c) {return static_cast<std::uint16_t>(c & 0xffffu);}
-		template<typename T> inline Char maskUCS2(T c) {return static_cast<Char>(c & 0xffffu);}
-
 		/// Supports implementation of encoder classes.
 		namespace implementation {
+			template<typename T> inline Byte mask7Bit(T c) {return static_cast<Byte>(c & 0x7fu);}
+			template<typename T> inline std::uint8_t mask8Bit(T c) {return static_cast<std::uint8_t>(c & 0xffu);}
+			template<typename T> inline std::uint16_t mask16Bit(T c) {return static_cast<std::uint16_t>(c & 0xffffu);}
+			template<typename T> inline Char maskUCS2(T c) {return static_cast<Char>(c & 0xffffu);}
+
 			// control codes
 			const Byte SI = 0x0f;		// SI (Shift in).
 			const Byte SO = 0x0e;		// SO (Shift out).
@@ -34,24 +30,24 @@ namespace ascension {
 			const Byte SS2_8BIT = 0x8e;	// SS2 (Single shift two).
 			const Byte SS3_8BIT = 0x8f;	// SS3 (Single shift three).
 
-			/// @c EncoderFactoryBase is a base implementation of @c EncoderFactory.
-			class EncoderFactoryBase : public EncoderFactory {
+			/// @c EncoderFactoryImpl is a base implementation of @c EncoderFactory.
+			class EncoderFactoryImpl : public EncoderFactory {
 			public:
-				virtual ~EncoderFactoryBase() BOOST_NOEXCEPT;
+				virtual ~EncoderFactoryImpl() BOOST_NOEXCEPT;
 			protected:
-				EncoderFactoryBase(const boost::string_ref& name,
-					MIBenum mib, const boost::string_ref& displayName = "",
+				EncoderFactoryImpl(const std::string& name,
+					MIBenum mib, const std::string& displayName = std::string(),
 					std::size_t maximumNativeBytes = 1, std::size_t maximumUCSLength = 1,
-					const boost::string_ref& aliases = "", Byte substitutionCharacter = 0x1a);
+					const std::string& aliases = std::string(), Byte substitutionCharacter = 0x1a);
 			protected:
 				// EncodingProperties
-				virtual std::string aliases() const BOOST_NOEXCEPT;
-				virtual std::string displayName(const std::locale& lc) const BOOST_NOEXCEPT;
-				virtual std::size_t maximumNativeBytes() const BOOST_NOEXCEPT;
-				virtual std::size_t maximumUCSLength() const BOOST_NOEXCEPT;
-				virtual MIBenum mibEnum() const BOOST_NOEXCEPT;
-				virtual std::string name() const BOOST_NOEXCEPT;
-				virtual Byte substitutionCharacter() const BOOST_NOEXCEPT;
+				virtual std::string aliases() const override BOOST_NOEXCEPT;
+				virtual std::string displayName(const std::locale& lc) const override BOOST_NOEXCEPT;
+				virtual std::size_t maximumNativeBytes() const override BOOST_NOEXCEPT;
+				virtual std::size_t maximumUCSLength() const override BOOST_NOEXCEPT;
+				virtual MIBenum mibEnum() const override BOOST_NOEXCEPT;
+				virtual std::string name() const override BOOST_NOEXCEPT;
+				virtual Byte substitutionCharacter() const override BOOST_NOEXCEPT;
 			private:
 				const std::string name_, displayName_, aliases_;
 				const std::size_t maximumNativeBytes_, maximumUCSLength_;
@@ -172,13 +168,13 @@ namespace ascension {
 
 				/// Base class of single byte charset encoder factories.
 				template<typename MappingTable>
-				class SingleByteEncoderFactory : public EncoderFactoryBase {
+				class SingleByteEncoderFactory : public EncoderFactoryImpl {
 				public:
-					SingleByteEncoderFactory(const boost::string_ref& name, MIBenum mib,
-						const boost::string_ref& displayName, const boost::string_ref& aliases, Byte substitutionCharacter);
+					SingleByteEncoderFactory(const std::string& name, MIBenum mib,
+						const std::string& displayName, const std::string& aliases, Byte substitutionCharacter);
 					virtual ~SingleByteEncoderFactory() BOOST_NOEXCEPT;
 				private:
-					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT;
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT;
 				};
 
 				/**
@@ -208,8 +204,9 @@ namespace ascension {
 				 * @param substitutionCharacter The native character returned by @c #substitutionCharacter
 				 */
 				template<typename MappingTable>
-				inline SingleByteEncoderFactory<MappingTable>::SingleByteEncoderFactory(const boost::string_ref& name, MIBenum mib,
-					const boost::string_ref& displayName, const boost::string_ref& aliases, Byte substitutionCharacter) : EncoderFactoryBase(name, mib, displayName, 1, 1, aliases, substitutionCharacter) {}
+				inline SingleByteEncoderFactory<MappingTable>::SingleByteEncoderFactory(const std::string& name,
+					MIBenum mib, const std::string& displayName, const std::string& aliases, Byte substitutionCharacter)
+					: EncoderFactoryImpl(name, mib, displayName, 1, 1, aliases, substitutionCharacter) {}
 
 				/// Destructor.
 				template<typename MappingTable>

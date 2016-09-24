@@ -85,7 +85,7 @@ namespace ascension {
 
 		public:
 			virtual ~Encoder() BOOST_NOEXCEPT;
-			Encoder& defaultInstance() BOOST_NOEXCEPT;
+			static Encoder& defaultInstance() BOOST_NOEXCEPT;
 
 			/// @name Attributes
 			/// @{

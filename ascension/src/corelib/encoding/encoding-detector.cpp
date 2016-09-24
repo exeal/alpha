@@ -7,6 +7,8 @@
  */
 
 #include <ascension/corelib/basic-exceptions.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-factory.hpp>
 #include <ascension/corelib/encoding/encoding-detector.hpp>
 #include <ascension/corelib/text/utf.hpp>	// text.isScalarValue, text.utf.encode
 #include <algorithm>
@@ -36,7 +38,7 @@ namespace ascension {
 		 * @throw NullPointerException @a bytes is @c null
 		 * @throw std#invalid_argument @a bytes is not ordered
 		 */
-		std::tuple<MIBenum, std::string, std::ptrdiff_t> EncodingDetector::detect(const boost::iterator_range<const Byte*>& bytes) const {
+		std::tuple<MIBenum, std::string, std::size_t> EncodingDetector::detect(const boost::iterator_range<const Byte*>& bytes) const {
 			if(boost::const_begin(bytes) == nullptr || boost::const_end(bytes) == nullptr)
 				throw NullPointerException("bytes");
 			else if(boost::const_begin(bytes) > boost::const_end(bytes))
@@ -102,7 +104,7 @@ namespace ascension {
 			public:
 				UniversalDetector() : EncodingDetector("UniversalAutoDetect") {}
 			private:
-				std::tuple<MIBenum, std::string, std::ptrdiff_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const override BOOST_NOEXCEPT;
+				std::tuple<MIBenum, std::string, std::size_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const override BOOST_NOEXCEPT;
 			};
 //			ASCENSION_DEFINE_ENCODING_DETECTOR(SystemLocaleBasedDetector, "SystemLocaleAutoDetect");
 //			ASCENSION_DEFINE_ENCODING_DETECTOR(UserLocaleBasedDetector, "UserLocaleAutoDetect");
@@ -115,14 +117,14 @@ namespace ascension {
 		} // namespace @0
 
 		/// @see EncodingDetector#doDetect
-		std::tuple<MIBenum, std::string, std::ptrdiff_t> UniversalDetector::doDetect(const boost::iterator_range<const Byte*>& bytes) const BOOST_NOEXCEPT {
+		std::tuple<MIBenum, std::string, std::size_t> UniversalDetector::doDetect(const boost::iterator_range<const Byte*>& bytes) const BOOST_NOEXCEPT {
 			// try all detectors
 			std::vector<std::string> names;
 			availableNames(std::back_inserter(names));
 
-			std::pair<MIBenum, std::string> result = std::make_pair(
-				Encoder::defaultInstance().properties().mibEnum(), Encoder::defaultInstance().properties().name());
-			std::ptrdiff_t bestScore = 0, score;
+			auto result(std::make_tuple(
+				Encoder::defaultInstance().properties().mibEnum(), Encoder::defaultInstance().properties().name(), static_cast<std::size_t>(0)));
+			std::size_t bestScore = 0;
 			BOOST_FOREACH(const std::string& name, names) {
 				if(const std::shared_ptr<const EncodingDetector> detector = forName(name)) {
 					if(detector.get() == this)
@@ -130,7 +132,7 @@ namespace ascension {
 					const auto detectedEncoding(detector->detect(bytes));
 					if(std::get<2>(detectedEncoding) > bestScore) {
 						result = detectedEncoding;
-						if(std::get<2>(detectedEncoding) == bytes.size())
+						if(std::get<2>(detectedEncoding) == boost::size(bytes))
 							break;
 						bestScore = std::get<2>(detectedEncoding);
 					}

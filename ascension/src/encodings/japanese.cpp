@@ -76,7 +76,9 @@
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
+#include <ascension/corelib/encoding/encoding-detector.hpp>
 #include <ascension/corelib/text/utf.hpp>
 #include <cassert>
 #include <cstring>		// std.memcpy
@@ -111,17 +113,17 @@ namespace ascension {
 					public:
 						explicit InternalEncoder(const Factory& factory) BOOST_NOEXCEPT : properties_(factory) {}
 					private:
-						Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext);
-						Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
-						const EncodingProperties& properties() const BOOST_NOEXCEPT {
+						ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
+							const Char* from, const Char* fromEnd, const Char*& fromNext) override;
+						ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+							const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
+						const EncodingProperties& properties() const override BOOST_NOEXCEPT {
 							return properties_;
 						}
-						Encoder& resetDecodingState() BOOST_NOEXCEPT {
+						Encoder& resetDecodingState() override BOOST_NOEXCEPT {
 							return decodingState_.reset(), *this;
 						}
-						Encoder& resetEncodingState() BOOST_NOEXCEPT {
+						Encoder& resetEncodingState() override BOOST_NOEXCEPT {
 							return encodingState_.reset(), *this;
 						}
 					private:
@@ -129,93 +131,93 @@ namespace ascension {
 						EncodingState encodingState_, decodingState_;
 					};
 
-					class ShiftJis : public EncoderFactoryBase {
+					class ShiftJis : public EncoderFactoryImpl {
 					public:
-						ShiftJis() BOOST_NOEXCEPT : EncoderFactoryBase("Shift_JIS", standard::SHIFT_JIS, "Japanese (Shift_JIS)", 2, 1, "MS_Kanji|csShiftJIS", 0x3f) {}
+						ShiftJis() BOOST_NOEXCEPT : EncoderFactoryImpl("Shift_JIS", standard::SHIFT_JIS, "Japanese (Shift_JIS)", 2, 1, "MS_Kanji|csShiftJIS", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new InternalEncoder<ShiftJis>(*this));
 						}
 					};
 
-					class ShiftJis2004 : public EncoderFactoryBase {
+					class ShiftJis2004 : public EncoderFactoryImpl {
 					public:
-						ShiftJis2004() BOOST_NOEXCEPT : EncoderFactoryBase("Shift_JIS-2004", MIB_OTHER, "Japanese (Shift_JIS-2004)", 2, 1, "", 0x3f) {}
+						ShiftJis2004() BOOST_NOEXCEPT : EncoderFactoryImpl("Shift_JIS-2004", MIB_OTHER, "Japanese (Shift_JIS-2004)", 2, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new InternalEncoder<ShiftJis2004>(*this));
 						}
 					};
 
-					class EucJp : public EncoderFactoryBase {
+					class EucJp : public EncoderFactoryImpl {
 					public:
-						EucJp() BOOST_NOEXCEPT : EncoderFactoryBase("EUC-JP", standard::EUC_JP, "Japanese (EUC-JP)", 3, 1, "Extended_UNIX_Code_Packed_Format_for_Japanese|csEUCPkdFmtJapanese", 0x3f) {}
+						EucJp() BOOST_NOEXCEPT : EncoderFactoryImpl("EUC-JP", standard::EUC_JP, "Japanese (EUC-JP)", 3, 1, "Extended_UNIX_Code_Packed_Format_for_Japanese|csEUCPkdFmtJapanese", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new InternalEncoder<EucJp>(*this));
 						}
 					};
 
-					class EucJis2004 : public EncoderFactoryBase {
+					class EucJis2004 : public EncoderFactoryImpl {
 					public:
-						EucJis2004() BOOST_NOEXCEPT : EncoderFactoryBase("EUC-JIS-2004", MIB_OTHER, "Japanese (EUC-JIS-2004)", 3, 1, "", 0x3f) {}
+						EucJis2004() BOOST_NOEXCEPT : EncoderFactoryImpl("EUC-JIS-2004", MIB_OTHER, "Japanese (EUC-JIS-2004)", 3, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new InternalEncoder<EucJis2004>(*this));
 						}
 					};
 
-					class Iso2022Jp : public EncoderFactoryBase {
+					class Iso2022Jp : public EncoderFactoryImpl {
 					public:
-						Iso2022Jp() BOOST_NOEXCEPT : EncoderFactoryBase("ISO-2022-JP", standard::ISO_2022_JP, "Japanese (ISO-2022-JP)", 8, 1, "csISO2022JP", 0x3f) {}
+						Iso2022Jp() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP", standard::ISO_2022_JP, "Japanese (ISO-2022-JP)", 8, 1, "csISO2022JP", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp>(*this));
 						}
 					};
 
-					class Iso2022Jp2 : public EncoderFactoryBase {
+					class Iso2022Jp2 : public EncoderFactoryImpl {
 					public:
-						Iso2022Jp2() BOOST_NOEXCEPT : EncoderFactoryBase("ISO-2022-JP-2", standard::ISO_2022_JP_2, "Japanese (ISO-2022-JP-2)", 9, 1, "csISO2022JP2", 0x3f) {}
+						Iso2022Jp2() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP-2", standard::ISO_2022_JP_2, "Japanese (ISO-2022-JP-2)", 9, 1, "csISO2022JP2", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp2>(*this));
 						}
 					};
 
-					class Iso2022Jp2004 : public EncoderFactoryBase {
+					class Iso2022Jp2004 : public EncoderFactoryImpl {
 					public:
-						Iso2022Jp2004() BOOST_NOEXCEPT : EncoderFactoryBase("ISO-2022-JP-2004", MIB_OTHER, "Japanese (ISO-2022-JP-2004)", 9, 1, "", 0x3f) {}
+						Iso2022Jp2004() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP-2004", MIB_OTHER, "Japanese (ISO-2022-JP-2004)", 9, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp2004>(*this));
 						}
 					};
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-					class Iso2022Jp1 : public EncoderFactoryBase {
+					class Iso2022Jp1 : public EncoderFactoryImpl {
 					public:
-						Iso2022Jp1() BOOST_NOEXCEPT : EncoderFactoryBase("ISO-2022-JP-1", MIB_OTHER, "Japanese (ISO-2022-JP-1)", 9, 1, "", 0x3f) {}
+						Iso2022Jp1() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP-1", MIB_OTHER, "Japanese (ISO-2022-JP-1)", 9, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp1>(*this));
 						}
 					};
 
-					class Iso2022Jp2004Strict : public EncoderFactoryBase {
+					class Iso2022Jp2004Strict : public EncoderFactoryImpl {
 					public:
-						Iso2022Jp2004Strict() BOOST_NOEXCEPT : EncoderFactoryBase("ISO-2022-JP-2004-Strict", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Strict)", 9, 1, "", 0x3f) {}
+						Iso2022Jp2004Strict() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP-2004-Strict", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Strict)", 9, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp2004Strict>(*this));
 						}
 					};
 
-					class Iso2022Jp2004Compatible : public EncoderFactoryBase {
+					class Iso2022Jp2004Compatible : public EncoderFactoryImpl {
 					public:
-						Iso2022Jp2004Compatible() BOOST_NOEXCEPT : EncoderFactoryBase("ISO-2022-JP-2004-Compatible", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Compatible)", 9, 1, "", 0x3f) {}
+						Iso2022Jp2004Compatible() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP-2004-Compatible", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Compatible)", 9, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp2004Compatible>(*this));
 						}
 					};
@@ -225,7 +227,7 @@ namespace ascension {
 					public:
 						JisAutoDetector() : EncodingDetector("JISAutoDetect") {}
 					private:
-						std::pair<MIBenum, std::string> doDetect(const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT;
+						std::tuple<MIBenum, std::string, std::size_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const override BOOST_NOEXCEPT;
 					};
 
 					struct Installer {
@@ -237,17 +239,17 @@ namespace ascension {
 								, ISO_2022_JP_1(std::make_shared<Iso2022Jp1>()), ISO_2022_JP_2004_COMPATIBLE(std::make_shared<Iso2022Jp2004Compatible>())
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 						{
-							Encoder::registerFactory(SHIFT_JIS);
-							Encoder::registerFactory(SHIFT_JIS_2004);
-							Encoder::registerFactory(EUC_JP);
-							Encoder::registerFactory(EUC_JIS_2004);
-							Encoder::registerFactory(ISO_2022_JP);
-							Encoder::registerFactory(ISO_2022_JP_2);
-							Encoder::registerFactory(ISO_2022_JP_2004);
+							EncoderRegistry::instance().registerFactory(SHIFT_JIS);
+							EncoderRegistry::instance().registerFactory(SHIFT_JIS_2004);
+							EncoderRegistry::instance().registerFactory(EUC_JP);
+							EncoderRegistry::instance().registerFactory(EUC_JIS_2004);
+							EncoderRegistry::instance().registerFactory(ISO_2022_JP);
+							EncoderRegistry::instance().registerFactory(ISO_2022_JP_2);
+							EncoderRegistry::instance().registerFactory(ISO_2022_JP_2004);
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-							Encoder::registerFactory(ISO_2022_JP_1);
-							Encoder::registerFactory(std::make_shared<const Iso2022Jp2004Strict>());
-							Encoder::registerFactory(ISO_2022_JP_2004_COMPATIBLE);
+							EncoderRegistry::instance().registerFactory(ISO_2022_JP_1);
+							EncoderRegistry::instance().registerFactory(std::make_shared<const Iso2022Jp2004Strict>());
+							EncoderRegistry::instance().registerFactory(ISO_2022_JP_2004_COMPATIBLE);
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 							EncodingDetector::registerDetector(std::make_shared<const JisAutoDetector>());
 						}
@@ -350,7 +352,7 @@ namespace ascension {
 					}
 
 					// UCS to JIS X 0213:2004
-					Encoder::Result convertUCStoX0213(const Char* first, const Char* last,
+					Encoder::ConversionResult convertUCStoX0213(const Char* first, const Char* last,
 							const Char*& next, bool eob, std::uint16_t& jis, bool& plane2) BOOST_NOEXCEPT {
 						jis = 0;
 						if(boost::binary_search(LEADING_BYTES_TO_JIS_X_0213, first[0])) {
@@ -547,7 +549,7 @@ namespace ascension {
 					}
 
 					// converts from ISO-2022-JP-X into UTF-16.
-					Encoder::Result convertISO2022JPXtoUTF16(char x, Char* to, Char* toEnd, Char*& toNext,
+					Encoder::ConversionResult convertISO2022JPXtoUTF16(char x, Char* to, Char* toEnd, Char*& toNext,
 							const Byte* from, const Byte* fromEnd, const Byte*& fromNext,
 							EncodingState& state, bool eob, Encoder::SubstitutionPolicy substitutionPolicy) {
 						// Acceptable character sets and designate sequence are following. G0, unless described:
@@ -639,7 +641,7 @@ namespace ascension {
 												case 'A':	// "$A" => GB2312
 													if(x != '2') break;
 													if(!checkedGB2312) {
-														if(nullptr != (gb2312Encoder = Encoder::forMIB(standard::GB2312)).get())
+														if(nullptr != (gb2312Encoder = EncoderRegistry::instance().forMIB(standard::GB2312)).get())
 															gb2312Encoder->setSubstitutionPolicy(substitutionPolicy);
 													}
 													if(gb2312Encoder.get() == nullptr) break;
@@ -651,7 +653,7 @@ namespace ascension {
 															case 'C':	// "$(C" => KSC5601
 																if(x != '2') break;
 																if(!checkedKSC5601) {
-																	if(nullptr != (ksc5601Encoder = Encoder::forMIB(36)).get())
+																	if(nullptr != (ksc5601Encoder = EncoderRegistry::instance().forMIB(36)).get())
 																		ksc5601Encoder->setSubstitutionPolicy(substitutionPolicy);
 																}
 																if(ksc5601Encoder.get() == nullptr) break;
@@ -703,18 +705,18 @@ namespace ascension {
 								const Byte c = *from | 0x80;
 								if(state.g2 == EncodingState::ISO_8859_1) {	// ISO-8859-1
 									if(iso88591Encoder.get() == nullptr)
-										(iso88591Encoder = Encoder::forMIB(fundamental::ISO_8859_1))->setSubstitutionPolicy(substitutionPolicy);
+										(iso88591Encoder = EncoderRegistry::instance().forMIB(fundamental::ISO_8859_1))->setSubstitutionPolicy(substitutionPolicy);
 									const Byte* next;
-									const Encoder::Result r = iso88591Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
+									const Encoder::ConversionResult r = iso88591Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
 									if(r != Encoder::COMPLETED) {
 										fromNext = from;
 										return r;
 									}
 								} else if(state.g2 == EncodingState::ISO_8859_7) {	// ISO-8859-7
 									if(iso88597Encoder.get() == nullptr)
-										(iso88597Encoder = Encoder::forMIB(standard::ISO_8859_7))->setSubstitutionPolicy(substitutionPolicy);
+										(iso88597Encoder = EncoderRegistry::instance().forMIB(standard::ISO_8859_7))->setSubstitutionPolicy(substitutionPolicy);
 									const Byte* next;
-									const Encoder::Result r = iso88597Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
+									const Encoder::ConversionResult r = iso88597Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
 									if(r != Encoder::COMPLETED) {
 										fromNext = from;
 										return r;
@@ -764,7 +766,7 @@ namespace ascension {
 								const Byte buffer[2] = {*from | 0x80, from[1] | 0x80};
 								const Byte* const bufferEnd = buffer + std::extent<decltype(buffer)>::value;
 								const Byte* next;
-								const Encoder::Result r = ((state.g0 == EncodingState::GB2312) ?
+								const Encoder::ConversionResult r = ((state.g0 == EncodingState::GB2312) ?
 									gb2312Encoder : ksc5601Encoder)->toUnicode(to, toEnd, toNext, buffer, bufferEnd, next);
 								if(r != Encoder::COMPLETED) {
 									fromNext = from;
@@ -816,7 +818,7 @@ namespace ascension {
 					}
 
 					// converts from UTF-16 into ISO-2022-JP-X.
-					Encoder::Result convertUTF16toISO2022JPX(char x, Byte* to, Byte* toEnd, Byte*& toNext,
+					Encoder::ConversionResult convertUTF16toISO2022JPX(char x, Byte* to, Byte* toEnd, Byte*& toNext,
 							const Char* from, const Char* fromEnd, const Char*& fromNext,
 							EncodingState& state, bool eob, Encoder::SubstitutionPolicy substitutionPolicy) {
 						const bool jis2004 = x == '4'
@@ -827,13 +829,13 @@ namespace ascension {
 						int charset = EncodingState::ASCII;
 						std::unique_ptr<Encoder> iso88591Encoder, iso88597Encoder, gb2312Encoder, ksc5601Encoder;
 						if(x == '2') {
-							if(nullptr != (iso88591Encoder = Encoder::forMIB(fundamental::ISO_8859_1)).get())
+							if(nullptr != (iso88591Encoder = EncoderRegistry::instance().forMIB(fundamental::ISO_8859_1)).get())
 								iso88591Encoder->setSubstitutionPolicy(substitutionPolicy);
-							if(nullptr != (iso88597Encoder = Encoder::forMIB(standard::ISO_8859_7)).get())
+							if(nullptr != (iso88597Encoder = EncoderRegistry::instance().forMIB(standard::ISO_8859_7)).get())
 								iso88597Encoder->setSubstitutionPolicy(substitutionPolicy);
-							if(nullptr != (gb2312Encoder = Encoder::forMIB(standard::GB2312)).get())
+							if(nullptr != (gb2312Encoder = EncoderRegistry::instance().forMIB(standard::GB2312)).get())
 								gb2312Encoder->setSubstitutionPolicy(substitutionPolicy);
-							if(nullptr != (ksc5601Encoder = Encoder::forMIB(36)).get())
+							if(nullptr != (ksc5601Encoder = EncoderRegistry::instance().forMIB(36)).get())
 								ksc5601Encoder->setSubstitutionPolicy(substitutionPolicy);
 						}
 
@@ -1060,7 +1062,7 @@ namespace ascension {
 
 					// Shift_JIS //////////////////////////////////////////////////////////////////////////////////////
 
-					template<> Encoder::Result InternalEncoder<ShiftJis>::doFromUnicode(
+					template<> Encoder::ConversionResult InternalEncoder<ShiftJis>::doFromUnicode(
 							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 						for(; to < toEnd && from < fromEnd; ++to, ++from) {
 							if(*from < 0x80)
@@ -1091,7 +1093,7 @@ namespace ascension {
 						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					template<> Encoder::Result InternalEncoder<ShiftJis>::doToUnicode(
+					template<> Encoder::ConversionResult InternalEncoder<ShiftJis>::doToUnicode(
 							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 						for(; to < toEnd && from < fromEnd; ++to, ++from) {
 							if(*from < 0x80)	// ascii
@@ -1118,7 +1120,7 @@ namespace ascension {
 								} else {
 									toNext = to;
 									fromNext = from;
-									return (from + 1 == fromEnd && (flags() & END_OF_BUFFER) == 0) ? COMPLETED : MALFORMED_INPUT;
+									return (from + 1 == fromEnd && options().test(END_OF_BUFFER)) ? COMPLETED : MALFORMED_INPUT;
 								}
 							}
 						}
@@ -1130,7 +1132,7 @@ namespace ascension {
 
 					// Shift_JIS-2004 /////////////////////////////////////////////////////////////////////////////////
 
-					template<> Encoder::Result InternalEncoder<ShiftJis2004>::doFromUnicode(
+					template<> Encoder::ConversionResult InternalEncoder<ShiftJis2004>::doFromUnicode(
 							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 						std::uint16_t jis;
 						bool plane2;
@@ -1139,10 +1141,10 @@ namespace ascension {
 								*to++ = mask8Bit(*from++);
 								continue;
 							}
-							switch(convertUCStoX0213(from, fromEnd, fromNext, (flags() & END_OF_BUFFER) != 0, jis, plane2)) {
+							switch(convertUCStoX0213(from, fromEnd, fromNext, options().test(END_OF_BUFFER), jis, plane2)) {
 							case COMPLETED:
 								if(fromNext == from) {
-									assert((flags() & END_OF_BUFFER) == 0);	// pending...
+									assert(!options().test(END_OF_BUFFER));	// pending...
 									toNext = to;
 									return COMPLETED;
 								}
@@ -1183,7 +1185,7 @@ namespace ascension {
 						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					template<> Encoder::Result InternalEncoder<ShiftJis2004>::doToUnicode(
+					template<> Encoder::ConversionResult InternalEncoder<ShiftJis2004>::doToUnicode(
 							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 						const Char* const beginning = to;
 						for(; to < toEnd && from < fromEnd; ++to, ++from) {
@@ -1249,7 +1251,7 @@ namespace ascension {
 
 					// EUC-JP /////////////////////////////////////////////////////////////////////////////////////////
 
-					template<> Encoder::Result InternalEncoder<EucJp>::doFromUnicode(
+					template<> Encoder::ConversionResult InternalEncoder<EucJp>::doFromUnicode(
 							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 						for(; to < toEnd && from < fromEnd; ++to, ++from) {
 							if(*from < 0x0080) {	// ASCII
@@ -1307,7 +1309,7 @@ namespace ascension {
 						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					template<> Encoder::Result InternalEncoder<EucJp>::doToUnicode(
+					template<> Encoder::ConversionResult InternalEncoder<EucJp>::doToUnicode(
 							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 						for(; to < toEnd && from < fromEnd; ++to, ++from) {
 							if(*from < 0x80)
@@ -1348,7 +1350,7 @@ namespace ascension {
 
 					// EUC-JIS-2004 ///////////////////////////////////////////////////////////////////////////////////
 
-					template<> Encoder::Result InternalEncoder<EucJis2004>::doFromUnicode(
+					template<> Encoder::ConversionResult InternalEncoder<EucJis2004>::doFromUnicode(
 							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 						std::uint16_t jis;
 						bool plane2 = false;
@@ -1360,10 +1362,10 @@ namespace ascension {
 								break;
 
 							// UCS -> JIS
-							switch(convertUCStoX0213(from, fromEnd, fromNext, (flags() & END_OF_BUFFER) != 0, jis, plane2)) {
+							switch(convertUCStoX0213(from, fromEnd, fromNext, options().test(END_OF_BUFFER), jis, plane2)) {
 							case COMPLETED:
 								if(fromNext == from) {
-									assert((flags() & END_OF_BUFFER) == 0);	// pending...
+									assert(!options().test(END_OF_BUFFER));	// pending...
 									toNext = to;
 									return COMPLETED;
 								}
@@ -1412,7 +1414,7 @@ namespace ascension {
 						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					template<> Encoder::Result InternalEncoder<EucJis2004>::doToUnicode(
+					template<> Encoder::ConversionResult InternalEncoder<EucJis2004>::doToUnicode(
 							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 						const Char* const beginning = to;
 						for(; to < toEnd && from < fromEnd; ++to, ++from) {
@@ -1482,15 +1484,15 @@ namespace ascension {
 
 
 #define ASCENSION_IMPLEMENT_ISO_2022_JP_X(x, suffix)																\
-	template<> Encoder::Result InternalEncoder<Iso2022##suffix>::doFromUnicode(										\
+	template<> Encoder::ConversionResult InternalEncoder<Iso2022##suffix>::doFromUnicode(							\
 			Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {	\
 		return convertUTF16toISO2022JPX(x, to, toEnd, toNext, from, fromEnd, fromNext,								\
-			encodingState_,	(flags() & END_OF_BUFFER) != 0, substitutionPolicy());									\
+			encodingState_,	options().test(END_OF_BUFFER), substitutionPolicy());									\
 	}																												\
-	template<> Encoder::Result InternalEncoder<Iso2022##suffix>::doToUnicode(										\
+	template<> Encoder::ConversionResult InternalEncoder<Iso2022##suffix>::doToUnicode(								\
 			Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {	\
 		return convertISO2022JPXtoUTF16(x, to, toEnd, toNext, from, fromEnd, fromNext,								\
-			decodingState_, (flags() & END_OF_BUFFER) != 0, substitutionPolicy());									\
+			decodingState_, options().test(END_OF_BUFFER), substitutionPolicy());									\
 	}
 
 
@@ -1530,18 +1532,18 @@ namespace ascension {
 
 					// JisAutoDetector ////////////////////////////////////////////////////////////////////////////////
 
-					inline std::shared_ptr<const EncodingProperties> detectShiftJis(const Byte* from, const Byte* last, std::ptrdiff_t& convertibleBytes, bool& foundKana) {
+					inline std::shared_ptr<const EncodingProperties> detectShiftJis(const boost::iterator_range<const Byte*>& bytes, std::size_t& convertibleBytes, bool& foundKana) {
 						bool jis2004 = false;
 						foundKana = false;
-						const Byte* p;
-						for(p = from; p < last; ++p) {
+						auto p(boost::const_begin(bytes));
+						for(; p < boost::const_end(bytes); ++p) {
 							if(*p == ESC)	// Shift_JIS can't have an ESC
 								break;
 							else if(*p < 0x80)	// ASCII is ok
 								continue;
 							else if(*p >= 0xa1 && *p <= 0xdf)	// JIS X 0201 kana
 								foundKana = true;
-							else if(p < last - 1) {	// 2-byte character?
+							else if(p < boost::const_end(bytes) - 1) {	// 2-byte character?
 								if(*p < 0x81 || *p > 0xfc || (*p > 0x9f && *p < 0xe0))
 									break;	// illegal lead byte
 								else if(p[1] < 0x40 || p[1] > 0xfc || p[1] == 0x7f)
@@ -1563,29 +1565,29 @@ namespace ascension {
 							} else
 								break;
 						}
-						convertibleBytes = p - from;
+						convertibleBytes = std::distance(boost::const_begin(bytes), p);
 						if(jis2004)
 							return installer.SHIFT_JIS_2004;
 						else
 							return installer.SHIFT_JIS;
 					}
 
-					inline std::shared_ptr<const EncodingProperties> detectEucJp(const Byte* from, const Byte* last, std::ptrdiff_t& convertibleBytes, bool& foundKana) {
+					inline std::shared_ptr<const EncodingProperties> detectEucJp(const boost::iterator_range<const Byte*>& bytes, std::size_t& convertibleBytes, bool& foundKana) {
 						bool jis2004 = false;
 						foundKana = false;
-						const Byte* p;
-						for(p = from; p < last; ++p) {
+						auto p(boost::const_begin(bytes));
+						for(; p < boost::const_end(bytes); ++p) {
 							if(*p == ESC)	// EUC-JP can't have an ESC
 								break;
 							else if(*p < 0x80)	// ASCII is ok
 								continue;
 							else if(*p == SS2_8BIT) {	// SS2 introduces JIS X 0201 kana
-								if(p + 1 >= last || p[1] < 0xa0 || p[1] > 0xe0)
+								if(p + 1 >= boost::const_end(bytes) || p[1] < 0xa0 || p[1] > 0xe0)
 									break;
 								foundKana = true;
 								++p;
 							} else if(*p == SS3_8BIT) {	// SS3 introduces JIS X 0212 or JIS X 0213 plane2
-								if(p + 2 >= last)
+								if(p + 2 >= boost::const_end(bytes))
 									break;
 								std::uint16_t jis = p[1] << 8 | p[2];
 								if(jis < 0x8080)
@@ -1601,8 +1603,8 @@ namespace ascension {
 									jis2004 = true;
 								} else
 									break;
-								from += 2;
-							} else if(from < last - 1) {	// 2-byte character
+								p += 2;
+							} else if(p < boost::const_end(bytes) - 1) {	// 2-byte character
 								std::uint16_t jis = *p << 8 | p[1];
 								if(jis <= 0x8080)
 									break;
@@ -1615,29 +1617,29 @@ namespace ascension {
 									} else
 										break;
 								}
-								++from;
+								++p;
 							} else
 								break;
 						}
-						convertibleBytes = p - from;
+						convertibleBytes = std::distance(boost::const_begin(bytes), p);
 						if(jis2004)
 							return installer.EUC_JIS_2004;
 						else
 							return installer.EUC_JP;
 					}
 
-					inline std::shared_ptr<const EncodingProperties> detectIso2022Jp(const Byte* from, const Byte* last, std::ptrdiff_t& convertibleBytes, bool& foundKana) {
+					inline std::shared_ptr<const EncodingProperties> detectIso2022Jp(const boost::iterator_range<const Byte*>& bytes, std::size_t& convertibleBytes, bool& foundKana) {
 						char x = '0';	// ISO-2022-JP-X
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 						bool x0208 = false;
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 						foundKana = false;
-						const Byte* p;
-						for(p = from; p < last; ++p) {
+						auto p(boost::const_begin(bytes));
+						for(; p < boost::const_end(bytes); ++p) {
 							if(*p >= 0x80)	// 8-bit
 								break;
 							else if(*p == ESC) {
-								if(p + 2 >= last)
+								if(p + 2 >= boost::const_end(bytes))
 									break;
 								if(std::memcmp(p + 1, "(J", 2) == 0 || std::memcmp(p + 1, "(I", 2) == 0) {	// JIS X 0201
 									p += 2;
@@ -1660,7 +1662,7 @@ namespace ascension {
 										break;
 									x = '2';
 									p += 2;
-								} else if(p + 3 < last) {
+								} else if(p + 3 < boost::const_end(bytes)) {
 									if(std::memcmp(p + 1, "$(D", 3) == 0) {	// JIS X 0212
 										if(x == '4'
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
@@ -1707,7 +1709,7 @@ namespace ascension {
 							}
 						}
 
-						convertibleBytes = p - from;
+						convertibleBytes = std::distance(boost::const_begin(bytes), p);
 						std::shared_ptr<const EncodingProperties> result;
 						switch(x) {
 							case '0':
@@ -1733,45 +1735,44 @@ namespace ascension {
 					}
 
 					/// @see EncodingDetector#doDetector
-					std::pair<MIBenum, std::string> JisAutoDetector::doDetect(const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT {
-						std::pair<MIBenum, std::string> result(std::make_pair(fundamental::UTF_8, "UTF-8"));
-						std::ptrdiff_t cb = 0;
+					std::tuple<MIBenum, std::string, std::size_t> JisAutoDetector::doDetect(const boost::iterator_range<const Byte*>& bytes) const BOOST_NOEXCEPT {
+						MIBenum mib = fundamental::UTF_8;
+						std::string name("UTF-8");
+						std::size_t score = 0;
 
 						// first, test Unicode
 						if(const std::shared_ptr<const EncodingDetector> unicodeDetector = EncodingDetector::forName("UnicodeAutoDetect")) {
-							result = unicodeDetector->detect(first, last, &cb);
-							if(cb == last - first) {
-								if(convertibleBytes != 0)
-									*convertibleBytes = cb;
-								return result;
-							}
+							std::tie(mib, name, score) = unicodeDetector->detect(bytes);
+							if(score == boost::size(bytes))
+								return std::make_tuple(mib, name, score);
 						}
 
 						bool foundKana;
-						std::ptrdiff_t cb2;
-						std::shared_ptr<const EncodingProperties> result2(detectShiftJis(first, last, cb2, foundKana));
-						if(cb2 > cb) {
-							result = std::make_pair(result2->mibEnum(), result2->name());
-							cb = cb2;
+						std::size_t score2;
+						std::shared_ptr<const EncodingProperties> result2(detectShiftJis(bytes, score2, foundKana));
+						if(score2 > score) {
+							mib = result2->mibEnum();
+							name = result2->name();
+							score = score2;
 						}
-						if(cb < last - first || foundKana) {
-							result2 = detectEucJp(first, last, cb2, foundKana);
-							if(cb2 > cb) {
-								result = std::make_pair(result2->mibEnum(), result2->name());
-								cb = cb2;
+						if(score < boost::size(bytes) || foundKana) {
+							result2 = detectEucJp(bytes, score2, foundKana);
+							if(score2 > score) {
+								mib = result2->mibEnum();
+								name = result2->name();
+								score = score2;
 							}
-							if(cb < last - first || foundKana) {
-								result2 = detectIso2022Jp(first, last, cb2, foundKana);
-								if(cb2 > cb) {
-									result = std::make_pair(result2->mibEnum(), result2->name());
-									cb = cb2;
+							if(score < boost::size(bytes) || foundKana) {
+								result2 = detectIso2022Jp(bytes, score2, foundKana);
+								if(score2 > score) {
+									mib = result2->mibEnum();
+									name = result2->name();
+									score = score2;
 								}
 							}
 						}
 
-						if(convertibleBytes != 0)
-							*convertibleBytes = cb;
-						return result;
+						return std::make_tuple(mib, name, score);
 					}
 				}
 			}

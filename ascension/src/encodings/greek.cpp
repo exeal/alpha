@@ -11,7 +11,8 @@
  * @date 2007-2010, 2014
  */
 
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
 
 namespace ascension {
 	namespace encoding {
@@ -21,7 +22,7 @@ namespace ascension {
 					struct Installer {
 						Installer() {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x2018, 0x2019, 0x00a3, 0x20ac, 0x20af, 0x00a6, 0x00a7, 0x00a8, 0x00a9, 0x037a, 0x00ab, 0x00ac, 0x00ad, 0xfffd, 0x2015>,
@@ -37,7 +38,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									IBMPCCompatibleCharWire<
 										CharLine<0x0391, 0x0392, 0x0393, 0x0394, 0x0395, 0x0396, 0x0397, 0x0398, 0x0399, 0x039a, 0x039b, 0x039c, 0x039d, 0x039e, 0x039f, 0x03a0>,
@@ -52,7 +53,7 @@ namespace ascension {
 								>
 							>("IBM737", MIB_OTHER, "Greek (IBM737)", "\0ibm-737|cp737|windows-737|737|ibm-737_P100-1997", 0x7f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ASCIICompatibleCharWire<
 										CharLine<0x20ac, 0x0081, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x0088, 0x2030, 0x008a, 0x2039, 0x008c, 0x008d, 0x008e, 0x008f>,
@@ -69,7 +70,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									IBMPCCompatibleCharWire<
 										CharLine<0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0x0386, 0x20ac, 0x0387, 0x00ac, 0x00a6, 0x2018, 0x2019, 0x0388, 0x2015, 0x0389>,

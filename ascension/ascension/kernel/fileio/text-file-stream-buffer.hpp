@@ -11,7 +11,7 @@
 #include <ascension/platforms.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-input.hpp>
-#include <ascension/corelib/encoder.hpp>	// encoding.Encoder.*
+#include <ascension/corelib/encoding/encoder.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/range/const_iterator.hpp>

@@ -21,7 +21,7 @@ namespace ascension {
 		class EncodingDetector : private boost::noncopyable {
 		public:
 			virtual ~EncodingDetector() BOOST_NOEXCEPT;
-			std::tuple<MIBenum, std::string, std::ptrdiff_t> detect(const boost::iterator_range<const Byte*>& bytes) const;
+			std::tuple<MIBenum, std::string, std::size_t> detect(const boost::iterator_range<const Byte*>& bytes) const;
 			const std::string& name() const BOOST_NOEXCEPT;
 
 			/// @name Factory
@@ -42,7 +42,7 @@ namespace ascension {
 			 * @param bytes The byte character sequence to test
 			 * @return See @c #detect
 			 */
-			virtual std::tuple<MIBenum, std::string, std::ptrdiff_t> doDetect(
+			virtual std::tuple<MIBenum, std::string, std::size_t> doDetect(
 				const boost::iterator_range<const Byte*>& bytes) const BOOST_NOEXCEPT = 0;
 		private:
 			static std::vector<std::shared_ptr<const EncodingDetector>>& registry();

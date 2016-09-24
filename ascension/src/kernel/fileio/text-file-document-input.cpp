@@ -6,6 +6,7 @@
  * @date 2016-09-21 Separated from fileio.cpp.
  */
 
+#include <ascension/corelib/encoding/encoder-factory.hpp>
 #include <ascension/kernel/fileio/text-file-document-input.hpp>
 #include <ascension/kernel/fileio/text-file-stream-buffer.hpp>
 #include <boost/core/null_deleter.hpp>
@@ -61,7 +62,7 @@ namespace ascension {
 				 */
 				void verifyNewline(const std::string& encoding, const text::Newline& newline) {
 					if(newline == text::Newline::NEXT_LINE || newline == text::Newline::LINE_SEPARATOR || newline == text::Newline::PARAGRAPH_SEPARATOR) {
-						std::unique_ptr<encoding::Encoder> encoder(encoding::Encoder::forName(encoding));
+						std::unique_ptr<encoding::Encoder> encoder(encoding::EncoderRegistry::instance().forName(encoding));
 						if(encoder.get() == nullptr)
 							throw encoding::UnsupportedEncodingException("the specified encoding is not supported.");
 						else if(!encoder->canEncode(newline.asString()[0]))
@@ -698,7 +699,7 @@ private:
 			 * @see #encoding
 			 */
 			TextFileDocumentInput& TextFileDocumentInput::setEncoding(const std::string& encoding) {
-				if(!encoding.empty() && !encoding::Encoder::supports(encoding))
+				if(!encoding.empty() && !encoding::EncoderRegistry::instance().supports(encoding))
 					throw encoding::UnsupportedEncodingException("encoding");
 				encoding_ = encoding;
 				listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileEncodingChanged, *this);

@@ -10,7 +10,8 @@
  */
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
 
 namespace ascension {
 	namespace encoding {
@@ -19,7 +20,7 @@ namespace ascension {
 				namespace {
 					struct Installer {
 						Installer() {
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0xfffd, 0xfffd, 0x00a3, 0xfffd, 0xfffd, 0xfffd, 0x00a7, 0xfffd, 0x00a9, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0x00ae, 0xfffd>,

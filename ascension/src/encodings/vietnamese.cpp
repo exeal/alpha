@@ -13,7 +13,8 @@
  * @date 2004-2012, 2014
  */
 
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <cassert>
 #include <cstring>	// std.memcpy
@@ -50,13 +51,13 @@ namespace ascension {
 								table_.reset(new BidirectionalMap(VISCII_BYTE_TABLE::VALUES));
 						}
 					private:
-						Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
-						Result doToUnicode(Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
-						const EncodingProperties& properties() const BOOST_NOEXCEPT;
-						Encoder& resetDecodingState() BOOST_NOEXCEPT {
+						ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) override;
+						ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
+						const EncodingProperties& properties() const override BOOST_NOEXCEPT;
+						Encoder& resetDecodingState() override BOOST_NOEXCEPT {
 							return (decodingState_ = VIETNAMESE_STATE), *this;
 						}
-						Encoder& resetEncodingState() BOOST_NOEXCEPT {
+						Encoder& resetEncodingState() override BOOST_NOEXCEPT {
 							return (encodingState_ = VIETNAMESE_STATE), *this;
 						}
 					private:
@@ -65,24 +66,24 @@ namespace ascension {
 						static std::unique_ptr<BidirectionalMap> table_;
 					};
 
-					const class VIQRFactory : public EncoderFactoryBase {
+					const class VIQRFactory : public EncoderFactoryImpl {
 					public:
-						VIQRFactory() BOOST_NOEXCEPT : EncoderFactoryBase("VIQR", standard::VIQR, "Vietnamese (VIQR)", 3, 1, "csVIQR", 0x1a) {}
+						VIQRFactory() BOOST_NOEXCEPT : EncoderFactoryImpl("VIQR", standard::VIQR, "Vietnamese (VIQR)", 3, 1, "csVIQR", 0x1a) {}
 					private:
-						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 							return std::unique_ptr<Encoder>(new VIQREncoder);
 						}
 					} VIQR;
 
 					struct Installer {
 						Installer() {
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<VISCII_BYTE_TABLE>
 							>("VISCII", standard::VISCII, "Vietnamese (VISCII)", "csVISCII", 0x1a));
 
-							Encoder::registerFactory(std::shared_ptr<const EncoderFactory>(&VIQR, boost::null_deleter()));
+							EncoderRegistry::instance().registerFactory(std::shared_ptr<const EncoderFactory>(&VIQR, boost::null_deleter()));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									CharWire<
 										CharLine<0x0000, 0x00da, 0x1ee4, 0x0003, 0x1eea, 0x1eec, 0x1eee, 0x0007, 0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f>,
@@ -107,7 +108,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									CharWire<
 										CharLine<0x0000, 0x0001, 0x0002, 0x0003, 0x009c, 0x0009, 0x0086, 0x007f, 0x0097, 0x008d, 0x008e, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f>,
@@ -130,7 +131,7 @@ namespace ascension {
 								>
 							>("IBM1164", MIB_OTHER, "Vietnamese (EBCDIC Viet Nam (IBM1130 + Euro))", "\0ibm-1164_P100-1999", 0x3f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									CharWire<
 										CharLine<0x0000, 0x0001, 0x0002, 0x0003, 0x009c, 0x0009, 0x0086, 0x007f, 0x0097, 0x008d, 0x008e, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f>,
@@ -153,7 +154,7 @@ namespace ascension {
 								>
 							>("IBM1165", MIB_OTHER, "Vietnamese (EBCDIC)", "\0ibm-1165_P101-2000", 0x3f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ASCIICompatibleCharWire<
 										CharLine<0x20ac, 0x0081, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030, 0x008a, 0x2039, 0x0152, 0x008d, 0x008e, 0x008f>,
@@ -170,7 +171,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									CharWire<
 										CharLine<0x0000, 0x0001, 0x1ea0, 0x1eac, 0x1eb6, 0x1eb8, 0x1ec6, 0x0007, 0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f>,
@@ -193,7 +194,7 @@ namespace ascension {
 								>
 							>("VPS", MIB_OTHER, "Vietnamese (VPS)", "", 0x1a));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x00a1, 0x00a2, 0x00a3, 0x20ac, 0x00a5, 0x00a6, 0x00a7, 0x0153, 0x00a9, 0x00aa, 0x00ab, 0x00ac, 0x00ad, 0x00ae, 0x00af>,
@@ -212,7 +213,7 @@ namespace ascension {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 					std::unique_ptr<sbcs::BidirectionalMap> VIQREncoder::table_;
 
-					Encoder::Result VIQREncoder::doFromUnicode(Byte* to, Byte* toEnd,
+					Encoder::ConversionResult VIQREncoder::doFromUnicode(Byte* to, Byte* toEnd,
 							Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 						static const Byte VISCII_TO_VIQR[] =
 							"\0\001A(?\003\004A(~A^~\007"		"\010\011\012\013\014\015\016\017"
@@ -285,7 +286,7 @@ namespace ascension {
 						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
+					Encoder::ConversionResult VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 							Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 						enum {NONE, BREVE, CIRCUMFLEX, HORN, ACUTE, GRAVE, HOOK_ABOVE, TILDE, DOT_BELOW, CAPITAL_D, SMALL_D, DIACRITICALS_COUNT};
 						static const Byte MNEMONIC_TABLE[0x80] = {
@@ -384,7 +385,7 @@ namespace ascension {
 								if(mnemonic != 0x80) {
 									// ... got the base character
 									if(from + 1 == fromEnd) {
-										if((flags() & END_OF_BUFFER) != 0) {
+										if(options().test(END_OF_BUFFER)) {
 											*to++ = *from++;
 											break;
 										}
@@ -402,7 +403,7 @@ namespace ascension {
 										continue;
 									}
 									if(from + 2 == fromEnd) {
-										if((flags() & END_OF_BUFFER) != 0) {
+										if(options().test(END_OF_BUFFER)) {
 											*to++ = STATE_TABLE[state2][NONE];
 											break;
 										}

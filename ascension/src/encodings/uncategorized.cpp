@@ -8,7 +8,8 @@
  */
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
 
 namespace ascension {
 	namespace encoding {
@@ -17,7 +18,7 @@ namespace ascension {
 				namespace {
 					struct Installer {
 						Installer() {
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ASCIICompatibleCharWire<
 										CharLine<0x00a0, 0x00c0, 0x00c1, 0x00c2, 0x00c3, 0x00c4, 0x00c5, 0x00c7, 0x00c8, 0x00c9, 0x00ca, 0x00cb, 0x00cc, 0x00cd, 0x00ce, 0x00cf>,
@@ -32,7 +33,7 @@ namespace ascension {
 								>
 							>("Nextstep", MIB_OTHER, "", "", 0x1a));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								// This table is from Atari ST/TT Character Encoding (http://www.kostis.net/charsets/atarist.htm)
 								// and Unicode.org (http://www.unicode.org/Public/MAPPINGS/VENDORS/MISC/ATARIST.TXT).
 								SingleByteEncoderFactory<

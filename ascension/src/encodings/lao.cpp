@@ -8,7 +8,8 @@
  * @date 2007-2010, 2014
  */
 
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
 
 namespace ascension {
 	namespace encoding {
@@ -18,7 +19,7 @@ namespace ascension {
 					struct Installer {
 						Installer() {
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									CharWire<
 										CharLine<0x0000, 0x0001, 0x0002, 0x0003, 0x009c, 0x0009, 0x0086, 0x007f, 0x0097, 0x008d, 0x008e, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f>,
@@ -41,7 +42,7 @@ namespace ascension {
 								>
 							>("IBM1132", MIB_OTHER, "Lao (EBCDIC)", "\0ibm-1132|ibm-1132_P100-1998", 0x3f));
 							
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0xfffd, 0x0e81, 0x0e82, 0x0e84, 0x0e87, 0x0e88, 0x0eaa, 0x0e8a, 0x0e8d, 0x0e94, 0x0e95, 0x0e96, 0x0e97, 0x0e99, 0x0e9a, 0x0e9b>,
@@ -56,7 +57,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x0e81, 0x0e82, 0xfffd, 0x0e84, 0xfffd, 0xfffd, 0x0e87, 0x0e88, 0xfffd, 0x0e8a, 0xfffd, 0xfffd, 0x0e8d, 0xfffd, 0xfffd>,
