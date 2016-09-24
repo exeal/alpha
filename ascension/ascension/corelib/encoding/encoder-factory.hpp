@@ -12,9 +12,8 @@
 #include <ascension/corelib/encoding/mib-enum.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/core/noncopyable.hpp>
-#include <array>
-#include <locale>	// std.locale, std.codecvt
-#include <memory>	// std.unique_ptr
+#include <locale>
+#include <memory>
 #include <vector>
 
 namespace ascension {

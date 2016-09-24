@@ -17,7 +17,8 @@
  * @date 2008-2010, 2014
  */
 
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
 
 namespace ascension {
 	namespace encoding {
@@ -27,7 +28,7 @@ namespace ascension {
 					struct Installer {
 						Installer() {
 #ifndef ASCENSION_STANDARD_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x0401, 0x0402, 0x0403, 0x0404, 0x0405, 0x0406, 0x0407, 0x0408, 0x0409, 0x040a, 0x040b, 0x040c, 0x00ad, 0x040e, 0x040f>,
@@ -41,7 +42,7 @@ namespace ascension {
 							>("ISO-8859-5", standard::ISO_8859_8, "Cyrillic (ISO 8859-5)",
 								"iso-ir-144|ISO_8859-5|cyrillic|csISOLatinCyrillic" "\0ibm-915|8859_5|cp915|915|windows-28595|ibm-915_P100-1995", 0x1a));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ASCIICompatibleCharWire<
 										CharLine<0x2500, 0x2502, 0x250c, 0x2510, 0x2514, 0x2518, 0x251c, 0x2524, 0x252c, 0x2534, 0x253c, 0x2580, 0x2584, 0x2588, 0x258c, 0x2590>,
@@ -56,7 +57,7 @@ namespace ascension {
 								>
 							>("KOI8-R", standard::KOI8_R, "Cyrillic (KOI8-R)", "csKOI8R" "\0ibm-878|koi8|windows-20866|cp878|ibm-878_P100-1996", 0x1a));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ASCIICompatibleCharWire<
 										CharLine<0x2500, 0x2502, 0x250c, 0x2510, 0x2514, 0x2518, 0x251c, 0x2524, 0x252c, 0x2534, 0x253c, 0x2580, 0x2584, 0x2588, 0x258c, 0x2590>,
@@ -73,7 +74,7 @@ namespace ascension {
 #endif // !ASCENSION_STANDARD_ENCODINGS
 
 #ifndef ASCENSION_PROPRIETARY_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									IBMPCCompatibleCharWire<
 										CharLine<0x0410, 0x0411, 0x0412, 0x0413, 0x0414, 0x0415, 0x0416, 0x0417, 0x0418, 0x0419, 0x041a, 0x041b, 0x041c, 0x041d, 0x041e, 0x041f>,
@@ -88,7 +89,7 @@ namespace ascension {
 								>
 							>("IBM808", MIB_OTHER, "Cyrillic/Russian (IBM808 (IBM866 + Euro))", "\0ibm-808|ibm-808_P100-1999", 0x7f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									IBMPCCompatibleCharWire<
 										CharLine<0x0410, 0x0411, 0x0412, 0x0413, 0x0414, 0x0415, 0x0416, 0x0417, 0x0418, 0x0419, 0x041a, 0x041b, 0x041c, 0x041d, 0x041e, 0x041f>,
@@ -103,7 +104,7 @@ namespace ascension {
 								>
 							>("IBM848", MIB_OTHER, "Cyrillic/Ukraine (IBM848 (IBM1125 + Euro))", "\0ibm-848|ibm-848_P100-1999", 0x7f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									IBMPCCompatibleCharWire<
 										CharLine<0x0410, 0x0411, 0x0412, 0x0413, 0x0414, 0x0415, 0x0416, 0x0417, 0x0418, 0x0419, 0x041a, 0x041b, 0x041c, 0x041d, 0x041e, 0x041f>,
@@ -118,7 +119,7 @@ namespace ascension {
 								>
 							>("IBM849", MIB_OTHER, "Cyrillic/Belarus (IBM849 (IBM1131 + Euro))", "\0ibm-849|ibm-849_P100-1999", 0x7f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									IBMPCCompatibleCharWire<
 										CharLine<0x0452, 0x0402, 0x0453, 0x0403, 0x0451, 0x0401, 0x0454, 0x0404, 0x0455, 0x0405, 0x0456, 0x0406, 0x0457, 0x0407, 0x0458, 0x0408>,
@@ -133,7 +134,7 @@ namespace ascension {
 								>
 							>("IBM872", MIB_OTHER, "Cyrillic (IBM872 (IBM855 + Euro))", "\0ibm-872|ibm-872_P100-1999", 0x7f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									CharWire<
 										CharLine<0x0000, 0x0001, 0x0002, 0x0003, 0x009c, 0x0009, 0x0086, 0x007f, 0x0097, 0x008d, 0x008e, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f>,
@@ -156,7 +157,7 @@ namespace ascension {
 								>
 							>("IBM1154", MIB_OTHER, "Cyrillic/Multilingual (IBM1154)", "\0ibm-1154|ibm-1154_P100-1999", 0x3f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									CharWire<
 										CharLine<0x0000, 0x0001, 0x0002, 0x0003, 0x009c, 0x0009, 0x0086, 0x007f, 0x0097, 0x008d, 0x008e, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f>,
@@ -179,7 +180,7 @@ namespace ascension {
 								>
 							>("IBM1158", MIB_OTHER, "Cyrillic/Ukraine (EBCDIC (IBM1123 + Euro))", "\0ibm-1158|ibm-1158_P100-1999", 0x3f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ASCIICompatibleCharWire<
 										CharLine<0x0402, 0x0403, 0x201a, 0x0453, 0x201e, 0x2026, 0x2020, 0x2021, 0x20ac, 0x2030, 0x0409, 0x2039, 0x040a, 0x040c, 0x040b, 0x040f>,

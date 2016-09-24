@@ -16,7 +16,8 @@
  * @see arabic.cpp, cyrillic.cpp, greek.cpp, hebrew.cpp, thai.cpp, vietnamese.cpp
  */
 
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
 
 namespace ascension {
 	namespace encoding {
@@ -26,7 +27,7 @@ namespace ascension {
 					struct Installer {
 						Installer() {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x0104, 0x02d8, 0x0141, 0x00a4, 0x013d, 0x015a, 0x00a7, 0x00a8, 0x0160, 0x015e, 0x0164, 0x0179, 0x00ad, 0x017d, 0x017b>,
@@ -39,7 +40,7 @@ namespace ascension {
 								>
 							>("ISO-8859-2", standard::ISO_8859_2, "Central (ISO 8859-2)", "iso-ir-101|ISO_8859-2|latin2|l2|csISOLatin2", 0x1a));
 							
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x0126, 0x02d8, 0x00a3, 0x00a4, 0xfffd, 0x0124, 0x00a7, 0x00a8, 0x0130, 0x015e, 0x011e, 0x0134, 0x00ad, 0xfffd, 0x017b>,
@@ -52,7 +53,7 @@ namespace ascension {
 								>
 							>("ISO-8859-3", standard::ISO_8859_3, "Southern (ISO 8859-3)", "iso-ir-109|ISO_8859-3|latin3|l3|csISOLatin3", 0x1a));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x0104, 0x0138, 0x0156, 0x00a4, 0x0128, 0x013b, 0x00a7, 0x00a8, 0x0160, 0x0112, 0x0122, 0x0166, 0x00ad, 0x017d, 0x00af>,
@@ -65,7 +66,7 @@ namespace ascension {
 								>
 							>("ISO-8859-4", standard::ISO_8859_4, "Baltic (ISO 8859-4)", "iso-ir-110|ISO_8859-4|latin4|l4|csISOLatin4", 0x1a));
 							
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x00a1, 0x00a2, 0x00a3, 0x00a4, 0x00a5, 0x00a6, 0x00a7, 0x00a8, 0x00a9, 0x00aa, 0x00ab, 0x00ac, 0x00ad, 0x00ae, 0x00af>,
@@ -78,7 +79,7 @@ namespace ascension {
 								>
 							>("ISO-8859-9", standard::ISO_8859_9, "Turkish (ISO 8859-9)", "iso-ir-148|ISO_8859-9|latin5|l5|csISOLatin5", 0x1a));
 							
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x0104, 0x0112, 0x0122, 0x012a, 0x0128, 0x0136, 0x00a7, 0x013b, 0x0110, 0x0160, 0x0166, 0x017d, 0x00ad, 0x016a, 0x014a>,
@@ -91,7 +92,7 @@ namespace ascension {
 								>
 							>("ISO-8859-10", standard::ISO_8859_10, "Northern (ISO 8859-10)", "iso-ir-157|l6|ISO_8859-10:1992|csISOLatin6|latin6", 0x1a));
 							
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x201d, 0x00a2, 0x00a3, 0x00a4, 0x201e, 0x00a6, 0x00a7, 0x00d8, 0x00a9, 0x0156, 0x00ab, 0x00ac, 0x00ad, 0x00ae, 0x00c6>,
@@ -104,7 +105,7 @@ namespace ascension {
 								>
 							>("ISO-8859-13", standard::ISO_8859_13, "Baltic (ISO 8859-13)", "", 0x1a));
 							
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x1e02, 0x1e03, 0x00a3, 0x010a, 0x010b, 0x1e0a, 0x00a7, 0x1e80, 0x00a9, 0x1e82, 0x1e0b, 0x1ef2, 0x00ad, 0x00ae, 0x0178>,
@@ -117,7 +118,7 @@ namespace ascension {
 								>
 							>("ISO-8859-14", standard::ISO_8859_14, "Celtic (ISO 8859-14)", "iso-ir-199|ISO_8859-14:1998|ISO_8859-14|latin8|iso-celtic|l8", 0x1a));
 							
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x00a1, 0x00a2, 0x00a3, 0x20ac, 0x00a5, 0x0160, 0x00a7, 0x0161, 0x00a9, 0x00aa, 0x00ab, 0x00ac, 0x00ad, 0x00ae, 0x00af>,
@@ -130,7 +131,7 @@ namespace ascension {
 								>
 							>("ISO-8859-15", standard::ISO_8859_15, "Western (ISO 8859-15)", "ISO_8859-15|Latin-9", 0x1a));
 							
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0x0104, 0x0105, 0x0141, 0x20ac, 0x201e, 0x0160, 0x00a7, 0x0161, 0x00a9, 0x0218, 0x00ab, 0x0179, 0x00ad, 0x017a, 0x017b>,

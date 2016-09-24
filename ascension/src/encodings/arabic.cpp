@@ -14,7 +14,8 @@
  * @date 2007-2009, 2014
  */
 
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
 
 
 namespace ascension {
@@ -25,7 +26,7 @@ namespace ascension {
 					struct Installer {
 						Installer() {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ISO8859CompatibleCharWire<
 										CharLine<0x00a0, 0xfffd, 0xfffd, 0xfffd, 0x00a4, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0x060c, 0x00ad, 0xfffd, 0xfffd>,
@@ -42,7 +43,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
 #ifndef ASCENSION_NO_PROPRIETARY_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									IBMPCCompatibleCharWire<
 										CharLine<0x00b0, 0x00b7, 0x2219, 0x221a, 0x2592, 0x2500, 0x2502, 0x253c, 0x2524, 0x252c, 0x251c, 0x2534, 0x2510, 0x250c, 0x2514, 0x2518>,
@@ -57,7 +58,7 @@ namespace ascension {
 								>
 							>("IBM864", proprietary::IBM864, "Arabic (IBM864)", "cp864|csIBM864\0ibm-864|ibm-864_X110-1999", 0x7f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									CharWire<
 										CharLine<0x0000, 0x0001, 0x0002, 0x0003, 0x009c, 0x0009, 0x0086, 0x007f, 0x0097, 0x008d, 0x008e, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f>,
@@ -80,7 +81,7 @@ namespace ascension {
 								>
 							>("IBM16804", MIB_OTHER, "Arabic (IBM16804 (IBM420 + Euro))", "ibm-16804|ibm-16804_X110-1999", 0x3f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ASCIICompatibleCharWire<
 										CharLine<0x20ac, 0x067e, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030, 0x0679, 0x2039, 0x0152, 0x0686, 0x0698, 0x0688>,
@@ -97,7 +98,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								sbcs::SingleByteEncoderFactory<
 									CharWire<
 										CharLine<0x0000, 0x0001, 0x0002, 0x0003, 0x009c, 0x0009, 0x0086, 0x007f, 0x0097, 0x008d, 0x008e, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f>,
@@ -120,7 +121,7 @@ namespace ascension {
 								>
 							>("IBM425", MIB_OTHER, "Arabic (IBM425)", "ibm-425|ibm-425_P101-2000", 0x3f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ASCIICompatibleCharWire<
 										CharLine<0xfe88, 0x00d7, 0x00f7, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfe71, 0x0088, 0x25a0, 0x2502, 0x2500, 0x2510, 0x250c, 0x2514, 0x2518>,
@@ -135,7 +136,7 @@ namespace ascension {
 								>
 							>("IBM1046", MIB_OTHER, "Arabic (IBM1046)", "ibm-1046|ibm-1046_X110-1999", 0x1a));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									IBMPCCompatibleCharWire<
 										CharLine<0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd>,
@@ -150,7 +151,7 @@ namespace ascension {
 								>
 							>("IBM9056", MIB_OTHER, "Arabic (IBM9056)", "ibm-9056|ibm-9056_P100-1995", 0x7f));
 
-							Encoder::registerFactory(std::make_shared<
+							EncoderRegistry::instance().registerFactory(std::make_shared<
 								SingleByteEncoderFactory<
 									ASCIICompatibleCharWire<
 										CharLine<0xfe88, 0x00d7, 0x00f7, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfe71, 0x0088, 0x25a0, 0x2502, 0x2500, 0x2510, 0x250c, 0x2514, 0x2518>,

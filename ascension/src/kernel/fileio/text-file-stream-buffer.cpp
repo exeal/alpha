@@ -6,6 +6,8 @@
  * @date 2016-09-21 Separated from fileio.cpp.
  */
 
+#include <ascension/corelib/encoding/encoder-factory.hpp>
+#include <ascension/corelib/encoding/encoding-detector.hpp>
 #include <ascension/kernel/fileio/text-file-stream-buffer.hpp>
 #if ASCENSION_OS_POSIX
 #	include <sys/mman.h>	// mmap, munmap, ...
@@ -92,17 +94,19 @@ namespace ascension {
 
 			void TextFileStreamBuffer::buildEncoder(const std::string& encoding, bool detectEncoding) {
 				assert(encoder_.get() == nullptr);
-				encoder_ = encoding::Encoder::forName(encoding);
+				encoder_ = encoding::EncoderRegistry::instance().forName(encoding);
 				if(encoder_.get() != nullptr)
 					return;
 				else if(detectEncoding) {
 					if(const std::shared_ptr<const encoding::EncodingDetector> detector = encoding::EncodingDetector::forName(encoding)) {
-						const std::pair<encoding::MIBenum, std::string> detected(detector->detect(
-							std::begin(inputMapping_.buffer), std::min(std::end(inputMapping_.buffer), std::begin(inputMapping_.buffer) + 1024 * 10), nullptr));
-						if(detected.first != encoding::MIB_OTHER)
-							encoder_ = encoding::Encoder::forMIB(detected.first);
+						const auto detected(detector->detect(
+							boost::make_iterator_range(
+								std::begin(inputMapping_.buffer),
+								std::min(std::end(inputMapping_.buffer), std::begin(inputMapping_.buffer) + 1024 * 10))));
+						if(std::get<0>(detected) != encoding::MIB_OTHER)
+							encoder_ = encoding::EncoderRegistry::instance().forMIB(std::get<0>(detected));
 						else
-							encoder_ = encoding::Encoder::forName(detected.second);
+							encoder_ = encoding::EncoderRegistry::instance().forName(std::get<1>(detected));
 						if(encoder_.get() != nullptr)
 							return;	// resolved
 					}
@@ -311,8 +315,11 @@ namespace ascension {
 					throw;
 				}
 
-				if(writeUnicodeByteOrderMark)
-					encoder_->setFlags(encoder_->flags() | encoding::Encoder::UNICODE_BYTE_ORDER_MARK);
+				if(writeUnicodeByteOrderMark) {
+					auto encodingOptions(encoder_->options());
+					encodingOptions.set(encoding::Encoder::UNICODE_BYTE_ORDER_MARK);
+					encoder_->setOptions(encodingOptions);
+				}
 				setp(ucsBuffer_.data(), ucsBuffer_.data() + ucsBuffer_.size());
 			}
 
@@ -344,12 +351,15 @@ namespace ascension {
 					Byte* toNext;
 					const Char* fromNext;
 					std::array<Byte, std::tuple_size<decltype(ucsBuffer_)>::value> nativeBuffer;
-					encoder_->setFlags(encoder_->flags() | encoding::Encoder::BEGINNING_OF_BUFFER | encoding::Encoder::END_OF_BUFFER);
+					auto encodingOptions(encoder_->options());
+					encodingOptions.set(encoding::Encoder::BEGINNING_OF_BUFFER);
+					encodingOptions.set(encoding::Encoder::END_OF_BUFFER);
+					encoder_->setOptions(encodingOptions);
 					while(true) {
 						const Char* const fromEnd = pptr();
 
 						// conversion
-						const encoding::Encoder::Result encodingResult = encoder_->fromUnicode(
+						const auto encodingResult = encoder_->fromUnicode(
 							nativeBuffer.data(), nativeBuffer.data() + nativeBuffer.size(), toNext, pbase(), fromEnd, fromNext);
 						if(encodingResult == encoding::Encoder::UNMAPPABLE_CHARACTER)
 							throw UnmappableCharacterException();
@@ -387,7 +397,9 @@ namespace ascension {
 
 				Char* toNext;
 				const Byte* fromNext;
-				encoder_->setFlags(encoder_->flags() | encoding::Encoder::BEGINNING_OF_BUFFER | encoding::Encoder::END_OF_BUFFER);
+				auto encodingOptions(encoder_->options());
+				encodingOptions.set(encoding::Encoder::BEGINNING_OF_BUFFER).set(encoding::Encoder::END_OF_BUFFER);
+				encoder_->setOptions(encodingOptions);
 				switch(encoder_->toUnicode(ucsBuffer_.data(), ucsBuffer_.data() + ucsBuffer_.size(), toNext, inputMapping_.current, std::end(inputMapping_.buffer), fromNext)) {
 					case encoding::Encoder::UNMAPPABLE_CHARACTER:
 						throw UnmappableCharacterException();
@@ -404,7 +416,7 @@ namespace ascension {
 
 			/// Returns @c true if the internal encoder has @c Encoder#UNICODE_BYTE_ORDER_MARK flag.
 			bool TextFileStreamBuffer::unicodeByteOrderMark() const BOOST_NOEXCEPT {
-				return (encoder_->flags() & encoding::Encoder::UNICODE_BYTE_ORDER_MARK) != 0;
+				return encoder_->options().test(encoding::Encoder::UNICODE_BYTE_ORDER_MARK);
 			}
 
 			namespace detail {

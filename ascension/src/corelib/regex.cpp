@@ -9,7 +9,8 @@
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
 #ifndef ASCENSION_NO_MIGEMO
-#	include <ascension/corelib/encoder.hpp>
+#	include <ascension/corelib/encoding/encoder.hpp>
+#	include <ascension/corelib/encoding/encoder-factory.hpp>
 #	include <boost/dll/shared_library.hpp>
 #	include "../third-party/migemo.h"
 #endif // !ASCENSION_NO_MIGEMO
@@ -310,7 +311,7 @@ namespace ascension {
 						throw NullPointerException("s");
 		
 					// convert the source text from UTF-16 to native Japanese encoding
-					std::unique_ptr<encoding::Encoder> encoder(encoding::Encoder::forMIB(encoding::standard::SHIFT_JIS));
+					auto encoder(encoding::EncoderRegistry::instance().forMIB(encoding::standard::SHIFT_JIS));
 					if(encoder.get() == nullptr)
 						throw encoding::UnsupportedEncodingException("Shift_JIS is not supported in this platform.");
 					else {

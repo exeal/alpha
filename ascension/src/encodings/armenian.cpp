@@ -10,7 +10,9 @@
  */
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
+#include <ascension/corelib/encoding/encoding-detector.hpp>
 #include <ascension/corelib/text/character.hpp>	// text.REPLACEMENT_CHARACTER
 #include <algorithm>	// std.binary_search
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
@@ -25,10 +27,10 @@ namespace ascension {
 		namespace implementation {
 			// registry
 			namespace {
-				template<int n> class ARMSCII : public EncoderFactoryBase {
+				template<int n> class ARMSCII : public EncoderFactoryImpl {
 				public:
 					ARMSCII() BOOST_NOEXCEPT;
-					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder(*this));
 					}
 				private:
@@ -37,11 +39,11 @@ namespace ascension {
 						explicit InternalEncoder(const EncodingProperties& properties) BOOST_NOEXCEPT : props_(properties) {
 						}
 					private:
-						Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext);
-						Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
-						const EncodingProperties& properties() const BOOST_NOEXCEPT {return props_;}
+						ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
+							const Char* from, const Char* fromEnd, const Char*& fromNext) override;
+						ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+							const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
+						const EncodingProperties& properties() const override BOOST_NOEXCEPT {return props_;}
 					private:
 						const EncodingProperties& props_;
 					};
@@ -51,7 +53,7 @@ namespace ascension {
 				public:
 					ArmenianDetector() : EncodingDetector("ARMSCIIAutoDetect") {}
 				private:
-					std::pair<MIBenum, std::string> doDetect(const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT;
+					std::tuple<MIBenum, std::string, std::size_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const override BOOST_NOEXCEPT;
 				};
 
 				const Char RP_CH_ = text::REPLACEMENT_CHARACTER;
@@ -179,10 +181,10 @@ namespace ascension {
 
 				// ARMSCII-8 //////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> ARMSCII<8>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryBase("ARMSCII-8", MIB_OTHER, "Armenian (ARMSCII-8)", 1, 2, "", 0x1a) {
+				template<> ARMSCII<8>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryImpl("ARMSCII-8", MIB_OTHER, "Armenian (ARMSCII-8)", 1, 2, "", 0x1a) {
 				}
 
-				template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
+				template<> Encoder::ConversionResult ARMSCII<8>::InternalEncoder::doFromUnicode(
 						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(*from < 0x0028) {
@@ -226,7 +228,7 @@ namespace ascension {
 					return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::Result ARMSCII<8>::InternalEncoder::doToUnicode(
+				template<> Encoder::ConversionResult ARMSCII<8>::InternalEncoder::doToUnicode(
 						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(*from < 0xa1)
@@ -251,10 +253,10 @@ namespace ascension {
 
 				// ARMSCII-7 //////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> ARMSCII<7>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryBase("ARMSCII-7", MIB_OTHER, "Armenian (ARMSCII-7)", 1, 2, "", 0x1a) {
+				template<> ARMSCII<7>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryImpl("ARMSCII-7", MIB_OTHER, "Armenian (ARMSCII-7)", 1, 2, "", 0x1a) {
 				}
 
-				template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
+				template<> Encoder::ConversionResult ARMSCII<7>::InternalEncoder::doFromUnicode(
 						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(*from < 0x0028) {
@@ -296,7 +298,7 @@ namespace ascension {
 					return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::Result ARMSCII<7>::InternalEncoder::doToUnicode(
+				template<> Encoder::ConversionResult ARMSCII<7>::InternalEncoder::doToUnicode(
 						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(*from < 0x20)
@@ -320,10 +322,10 @@ namespace ascension {
 
 				// ARMSCII-8A /////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> ARMSCII<0x8a>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryBase("ARMSCII-8A", MIB_OTHER, "Armenian (ARMSCII-8A)", 1, 2, "", 0x1a) {
+				template<> ARMSCII<0x8a>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryImpl("ARMSCII-8A", MIB_OTHER, "Armenian (ARMSCII-8A)", 1, 2, "", 0x1a) {
 				}
 
-				template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doFromUnicode(
+				template<> Encoder::ConversionResult ARMSCII<0x8a>::InternalEncoder::doFromUnicode(
 						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(*from < 0x80) {
@@ -365,7 +367,7 @@ namespace ascension {
 					return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doToUnicode(
+				template<> Encoder::ConversionResult ARMSCII<0x8a>::InternalEncoder::doToUnicode(
 						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(*from < 0x20)
@@ -397,10 +399,10 @@ namespace ascension {
 							, ARMSCII_7(std::make_shared<ARMSCII<7>>()), ARMSCII_8A(std::make_shared<ARMSCII<0x8a>>())
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 					{
-						Encoder::registerFactory(ARMSCII_8);
+						EncoderRegistry::instance().registerFactory(ARMSCII_8);
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-						Encoder::registerFactory(ARMSCII_7);
-						Encoder::registerFactory(ARMSCII_8A);
+						EncoderRegistry::instance().registerFactory(ARMSCII_7);
+						EncoderRegistry::instance().registerFactory(ARMSCII_8A);
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 						EncodingDetector::registerDetector(std::make_shared<ArmenianDetector>());
 					}
@@ -415,30 +417,27 @@ namespace ascension {
 				// ArmenianDetector ///////////////////////////////////////////////////////////////////////////////////
 
 				/// @see EncodingDetector#doDetect
-				std::pair<MIBenum, std::string> ArmenianDetector::doDetect(const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT {
+				std::tuple<MIBenum, std::string, std::size_t> ArmenianDetector::doDetect(const boost::iterator_range<const Byte*>& bytes) const BOOST_NOEXCEPT {
 					// first, check if Unicode
 					if(const std::shared_ptr<const EncodingDetector> unicodeDetector = forName("UnicodeAutoDetect")) {
-						std::ptrdiff_t temp;
-						std::pair<MIBenum, std::string> result(unicodeDetector->detect(first, last, &temp));
-						if(temp == last - first) {
-							if(convertibleBytes != 0)
-								*convertibleBytes = temp;
+						auto result(unicodeDetector->detect(bytes));
+						if(std::get<2>(result) == boost::size(bytes))
 							return result;
-						}
 					}
 
 					std::shared_ptr<const EncodingProperties> properties;
+					auto i(boost::const_begin(bytes));
 #ifdef ASCENSION_NO_MINORITY_ENCODINGS
 					properties = installer.ARMSCII_8;
-					for(; first < last; ++first) {
-						if(*first >= 0x80 && *from < 0xa0)
+					for(; i < last; ++i) {
+						if(*i >= 0x80 && *from < 0xa0)
 							break;
 					}
 #else
 					std::bitset<3> candidates;	// 0:-7, 1:-8, 2:-8A
 					candidates.set();
-					for(; first < last; ++first) {
-						const Byte c = *first;
+					for(; i < boost::const_end(bytes); ++i) {
+						const Byte c = *i;
 						if(c >= 0x80)
 							candidates.reset(0);	// ARMSCII-7 consists of only 7-bits
 						if(c >= 0x80 && c < 0xa0)
@@ -456,7 +455,7 @@ namespace ascension {
 						properties = installer.ARMSCII_7;
 #endif // ASCENSION_NO_MINORITY_ENCODINGS
 
-					return std::make_pair(properties->mibEnum(), properties->name());
+					return std::make_tuple(properties->mibEnum(), properties->name(), std::distance(boost::const_begin(bytes), i));
 				}
 
 			} // namespace @0

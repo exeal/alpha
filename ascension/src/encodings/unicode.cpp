@@ -14,7 +14,9 @@
  * @date 2003-2012, 2014
  */
 
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
+#include <ascension/corelib/encoding/encoder-implementation.hpp>
+#include <ascension/corelib/encoding/encoding-detector.hpp>
 #include <ascension/corelib/text/utf.hpp>
 #include <algorithm>	// std.find_if
 #include <array>
@@ -32,17 +34,17 @@ namespace ascension {
 				public:
 					explicit InternalEncoder(const Factory& factory) BOOST_NOEXCEPT : properties_(factory), encodingState_(0), decodingState_(0) {}
 				private:
-					Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
-						const Char* from, const Char* fromEnd, const Char*& fromNext);
-					Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-						const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
-					const EncodingProperties& properties() const BOOST_NOEXCEPT {
+					ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
+						const Char* from, const Char* fromEnd, const Char*& fromNext) override;
+					ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext,
+						const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
+					const EncodingProperties& properties() const override BOOST_NOEXCEPT {
 						return properties_;
 					}
-					Encoder& resetDecodingState() BOOST_NOEXCEPT {
+					Encoder& resetDecodingState() override BOOST_NOEXCEPT {
 						return (decodingState_ = 0), *this;
 					}
-					Encoder& resetEncodingState() BOOST_NOEXCEPT {
+					Encoder& resetEncodingState() override BOOST_NOEXCEPT {
 						return (encodingState_ = 0), *this;
 					}
 				private:
@@ -50,68 +52,68 @@ namespace ascension {
 					Byte encodingState_, decodingState_;
 				};
 
-				class Utf8 : public EncoderFactoryBase {
+				class Utf8 : public EncoderFactoryImpl {
 				public:
-					Utf8() : EncoderFactoryBase("UTF-8", fundamental::UTF_8, "Unicode (UTF-8)", 4) {}
+					Utf8() : EncoderFactoryImpl("UTF-8", fundamental::UTF_8, "Unicode (UTF-8)", 4) {}
 				private:
-					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf8>(*this));
 					}
 				};
 
-				class Utf16LittleEndian : public EncoderFactoryBase {
+				class Utf16LittleEndian : public EncoderFactoryImpl {
 				public:
-					Utf16LittleEndian() : EncoderFactoryBase("UTF-16LE", fundamental::UTF_16LE, "Unicode (UTF-16LE)", 2) {}
+					Utf16LittleEndian() : EncoderFactoryImpl("UTF-16LE", fundamental::UTF_16LE, "Unicode (UTF-16LE)", 2) {}
 				private:
-					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf16LittleEndian>(*this));
 					}
 				};
 
-				class Utf16BigEndian : public EncoderFactoryBase {
+				class Utf16BigEndian : public EncoderFactoryImpl {
 				public:
-					Utf16BigEndian() : EncoderFactoryBase("UTF-16BE", fundamental::UTF_16BE, "Unicode (UTF-16BE)", 2) {}
+					Utf16BigEndian() : EncoderFactoryImpl("UTF-16BE", fundamental::UTF_16BE, "Unicode (UTF-16BE)", 2) {}
 				private:
-					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf16BigEndian>(*this));
 					}
 				};
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-				class Utf7 : public EncoderFactoryBase {
+				class Utf7 : public EncoderFactoryImpl {
 				public:
-					Utf7() : EncoderFactoryBase("UTF-7", standard::UTF_7, "Unicode (UTF-7)", 8) {}
+					Utf7() : EncoderFactoryImpl("UTF-7", standard::UTF_7, "Unicode (UTF-7)", 8) {}
 				private:
-					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf7>(*this));
 					}
 				};
 
-				class Utf32LittleEndian : public EncoderFactoryBase {
+				class Utf32LittleEndian : public EncoderFactoryImpl {
 				public:
-					Utf32LittleEndian() : EncoderFactoryBase("UTF-32LE", standard::UTF_32LE, "Unicode (UTF-32LE)", 4) {}
+					Utf32LittleEndian() : EncoderFactoryImpl("UTF-32LE", standard::UTF_32LE, "Unicode (UTF-32LE)", 4) {}
 				private:
-					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf32LittleEndian>(*this));
 					}
 				};
 
-				class Utf32BigEndian : public EncoderFactoryBase {
+				class Utf32BigEndian : public EncoderFactoryImpl {
 				public:
-					Utf32BigEndian() : EncoderFactoryBase("UTF-32BE", standard::UTF_32BE, "Unicode (UTF-32BE)", 4) {}
+					Utf32BigEndian() : EncoderFactoryImpl("UTF-32BE", standard::UTF_32BE, "Unicode (UTF-32BE)", 4) {}
 				private:
-					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf32BigEndian>(*this));
 					}
 				};
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-				class Utf5 : public EncoderFactoryBase {
+				class Utf5 : public EncoderFactoryImpl {
 				public:
-					Utf5() : EncoderFactoryBase("UTF-5", MIB_OTHER, "Unicode (UTF-5)", 6) {}
+					Utf5() : EncoderFactoryImpl("UTF-5", MIB_OTHER, "Unicode (UTF-5)", 6) {}
 				private:
-					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf5>(*this));
 					}
 				};
@@ -121,7 +123,7 @@ namespace ascension {
 				public:
 					UnicodeDetector() : EncodingDetector("UnicodeAutoDetect") {}
 				private:
-					std::pair<MIBenum, std::string> doDetect(const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT;
+					std::tuple<MIBenum, std::string, std::size_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const override BOOST_NOEXCEPT;
 				};
 
 				struct Installer {
@@ -134,16 +136,16 @@ namespace ascension {
 							, UTF_5(std::make_shared<Utf5>())
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 					{
-						Encoder::registerFactory(UTF_8);
-						Encoder::registerFactory(UTF_16LE);
-						Encoder::registerFactory(UTF_16BE);
+						EncoderRegistry::instance().registerFactory(UTF_8);
+						EncoderRegistry::instance().registerFactory(UTF_16LE);
+						EncoderRegistry::instance().registerFactory(UTF_16BE);
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-						Encoder::registerFactory(UTF_7);
-						Encoder::registerFactory(UTF_32LE);
-						Encoder::registerFactory(UTF_32BE);
+						EncoderRegistry::instance().registerFactory(UTF_7);
+						EncoderRegistry::instance().registerFactory(UTF_32LE);
+						EncoderRegistry::instance().registerFactory(UTF_32BE);
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-						Encoder::registerFactory(UTF_5);
+						EncoderRegistry::instance().registerFactory(UTF_5);
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 						EncodingDetector::registerDetector(std::make_shared<UnicodeDetector>());
 					}
@@ -170,7 +172,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
 #define ASCENSION_ENCODE_BOM(encoding)														\
-	if((flags() & BEGINNING_OF_BUFFER) != 0 && (flags() & UNICODE_BYTE_ORDER_MARK) != 0) {	\
+	if(options().test(BEGINNING_OF_BUFFER) && options().test(UNICODE_BYTE_ORDER_MARK)) {	\
 		if(to + encoding##_BOM.size() >= toEnd)												\
 			return INSUFFICIENT_BUFFER;														\
 		std::memcpy(to, encoding##_BOM.data(), encoding##_BOM.size());						\
@@ -178,13 +180,14 @@ namespace ascension {
 	}
 
 #define ASCENSION_DECODE_BOM(encoding)															\
-	if((flags() & BEGINNING_OF_BUFFER) != 0) {													\
+	if(options().test(BEGINNING_OF_BUFFER)) {													\
+		auto o(options());																		\
 		if(fromEnd - from >= static_cast<std::ptrdiff_t>(encoding##_BOM.size())					\
 				&& std::equal(std::begin(encoding##_BOM), std::end(encoding##_BOM), from)) {	\
-			setFlags(flags() | UNICODE_BYTE_ORDER_MARK);										\
+			setOptions(o.set(UNICODE_BYTE_ORDER_MARK));											\
 			from += encoding##_BOM.size();														\
 		} else																					\
-			setFlags(flags() & ~UNICODE_BYTE_ORDER_MARK);										\
+			setOptions(o.reset(UNICODE_BYTE_ORDER_MARK));										\
 	}
 
 
@@ -228,7 +231,7 @@ namespace ascension {
 					return true;
 				}
 
-				template<> Encoder::Result InternalEncoder<Utf8>::doFromUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf8>::doFromUnicode(
 						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 					ASCENSION_ENCODE_BOM(UTF8)
 					for(; to < toEnd && from < fromEnd; ++from) {
@@ -266,7 +269,7 @@ namespace ascension {
 					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::Result InternalEncoder<Utf8>::doToUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf8>::doToUnicode(
 						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 					ASCENSION_DECODE_BOM(UTF8)
 					while(to < toEnd && from < fromEnd) {
@@ -355,7 +358,7 @@ namespace ascension {
 
 				// UTF-16LE ///////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> Encoder::Result InternalEncoder<Utf16LittleEndian>::doFromUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf16LittleEndian>::doFromUnicode(
 						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 					ASCENSION_ENCODE_BOM(UTF16LE)
 					for(; to < toEnd - 1 && from < fromEnd; ++from) {
@@ -367,7 +370,7 @@ namespace ascension {
 					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::Result InternalEncoder<Utf16LittleEndian>::doToUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf16LittleEndian>::doToUnicode(
 						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 					ASCENSION_DECODE_BOM(UTF16LE)
 					for(; to < toEnd && from < fromEnd - 1; from += 2)
@@ -383,7 +386,7 @@ namespace ascension {
 
 				// UTF-16BE ///////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> Encoder::Result InternalEncoder<Utf16BigEndian>::doFromUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf16BigEndian>::doFromUnicode(
 						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 					ASCENSION_ENCODE_BOM(UTF16BE)
 					for(; to < toEnd - 1 && from < fromEnd; ++from) {
@@ -395,7 +398,7 @@ namespace ascension {
 					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::Result InternalEncoder<Utf16BigEndian>::doToUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf16BigEndian>::doToUnicode(
 						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 					ASCENSION_DECODE_BOM(UTF16BE)
 					for(; to < toEnd && from < fromEnd - 1; from += 2)
@@ -413,7 +416,7 @@ namespace ascension {
 
 				// UTF-32LE ///////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> Encoder::Result InternalEncoder<Utf32LittleEndian>::doFromUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf32LittleEndian>::doFromUnicode(
 						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 					ASCENSION_ENCODE_BOM(UTF32LE)
 					for(; to < toEnd - 3 && from < fromEnd; ++from) {
@@ -437,7 +440,7 @@ namespace ascension {
 					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::Result InternalEncoder<Utf32LittleEndian>::doToUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf32LittleEndian>::doToUnicode(
 						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 					ASCENSION_DECODE_BOM(UTF32LE)
 					for(; to < toEnd && from < fromEnd - 3; from += 4) {
@@ -461,7 +464,7 @@ namespace ascension {
 
 				// UTF-32BE ///////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> Encoder::Result InternalEncoder<Utf32BigEndian>::doFromUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf32BigEndian>::doFromUnicode(
 						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 					ASCENSION_ENCODE_BOM(UTF32BE)
 					for(; to < toEnd - 3 && from < fromEnd; ++from) {
@@ -478,7 +481,7 @@ namespace ascension {
 					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::Result InternalEncoder<Utf32BigEndian>::doToUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf32BigEndian>::doToUnicode(
 						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 					ASCENSION_DECODE_BOM(UTF32BE)
 					for(; to < toEnd && from < fromEnd - 3; from += 4) {
@@ -502,7 +505,7 @@ namespace ascension {
 
 				// UTF-7 //////////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> Encoder::Result InternalEncoder<Utf7>::doFromUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf7>::doFromUnicode(
 						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 					static const Byte SET_D[0x80] = {
 						// 1 : in set D, 2 : '=', 3 : direct encodable but not set D, 0 : otherwise
@@ -585,14 +588,14 @@ namespace ascension {
 							from += encodables - 1;
 						}
 					}
-					if(from == fromEnd && (flags() & END_OF_BUFFER) != 0 && to != toEnd)
+					if(from == fromEnd && options().test(END_OF_BUFFER) && to != toEnd)
 						*(to++) = '-';
 					toNext = to;
 					fromNext = from;
 					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 		
-				template<> Encoder::Result InternalEncoder<Utf7>::doToUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf7>::doToUnicode(
 						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 					static const Byte SET_B[0x80] = {
 						// 1 : in set B, 2 : '+', 3 : directly appearable in BASE64, 4 : '-', 0 : otherwise
@@ -627,7 +630,7 @@ namespace ascension {
 						if(klass == 2) {
 							// '+'
 							if(from + 1 == fromEnd) {	// the input is terminated by '+'...
-								if((flags() & END_OF_BUFFER) != 0) {
+								if(options().test(END_OF_BUFFER)) {
 									toNext = to;
 									fromNext = from;
 									return COMPLETED;
@@ -783,7 +786,7 @@ namespace ascension {
 #undef D2C
 				}
 
-				template<> Encoder::Result InternalEncoder<Utf5>::doFromUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf5>::doFromUnicode(
 						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 					Byte temp[8];
 					Byte* e;
@@ -815,7 +818,7 @@ namespace ascension {
 					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::Result InternalEncoder<Utf5>::doToUnicode(
+				template<> Encoder::ConversionResult InternalEncoder<Utf5>::doToUnicode(
 						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 					const Byte* e;
 					CodePoint cp;
@@ -854,73 +857,48 @@ namespace ascension {
 				}
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
-				inline const Byte* maybeUtf8(const Byte* first, const Byte* last) BOOST_NOEXCEPT {
-					while(first < last) {
-						if(*first == 0xc0 || *first == 0xc1 || *first >= 0xf5)
+				inline std::size_t maybeUtf8(const boost::iterator_range<const Byte*>& bytes) BOOST_NOEXCEPT {
+					auto p(boost::const_begin(bytes));
+					while(p < boost::const_end(bytes)) {
+						if(*p == 0xc0 || *p == 0xc1 || *p >= 0xf5)
 							break;
-						++first;
+						++p;
 					}
-					return first;
-				}
-
-				std::size_t UnicodeDetector(const Byte* first, const Byte* last, MIBenum& mib) {
-					mib = MIB_UNKNOWN;
-					if(last - first >= static_cast<std::ptrdiff_t>(UTF8_BOM.size()) && std::equal(std::begin(UTF8_BOM), std::end(UTF8_BOM), first))
-						mib = fundamental::UTF_8;
-					else if(last - first >= static_cast<std::ptrdiff_t>(UTF16LE_BOM.size())) {
-						static_assert(std::is_same<decltype(UTF16LE_BOM), decltype(UTF16BE_BOM)>::value, "");
-						if(std::equal(std::begin(UTF16LE_BOM), std::end(UTF16LE_BOM), first))
-							mib = fundamental::UTF_16LE;
-						else if(std::equal(std::begin(UTF16BE_BOM), std::end(UTF16BE_BOM), first))
-							mib = fundamental::UTF_16BE;
-#ifndef ASCENSION_NO_STANDARD_ENCODINGS
-						if(last - first >= static_cast<std::ptrdiff_t>(UTF32LE_BOM.size())) {
-							static_assert(std::is_same<decltype(UTF32LE_BOM), decltype(UTF32BE_BOM)>::value, "");
-							if(std::equal(std::begin(UTF32LE_BOM), std::end(UTF32LE_BOM), first))
-								mib = standard::UTF_32LE;
-							else if(std::equal(std::begin(UTF32BE_BOM), std::end(UTF32BE_BOM), first))
-								mib = standard::UTF_32BE;
-						}
-#endif // !ASCENSION_NO_STANDARD_ENCODINGS
-					}
-					if(mib != MIB_UNKNOWN)
-						return last - first;
-					mib = fundamental::UTF_8;
-					return maybeUtf8(first, last) - first;
+					return p - boost::const_begin(bytes);
 				}
 
 				/// @see EncodingDetector#doDetect
-				std::pair<MIBenum, std::string> UnicodeDetector::doDetect(const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT {
+				std::tuple<MIBenum, std::string, std::size_t> UnicodeDetector::doDetect(const boost::iterator_range<const Byte*>& bytes) const BOOST_NOEXCEPT {
 					std::shared_ptr<const EncodingProperties> result;
 					// first, test Unicode byte order marks
-					if(last - first >= static_cast<std::ptrdiff_t>(UTF8_BOM.size()) && std::equal(std::begin(UTF8_BOM), std::end(UTF8_BOM), first))
+					if(boost::size(bytes) >= static_cast<std::ptrdiff_t>(UTF8_BOM.size()) && std::equal(std::begin(UTF8_BOM), std::end(UTF8_BOM), boost::const_begin(bytes)))
 						result = installer.UTF_8;
-					else if(last - first >= static_cast<std::ptrdiff_t>(UTF16LE_BOM.size())) {
+					else if(boost::size(bytes) >= static_cast<std::ptrdiff_t>(UTF16LE_BOM.size())) {
 						static_assert(std::is_same<decltype(UTF16LE_BOM), decltype(UTF16BE_BOM)>::value, "");
-						if(std::equal(std::begin(UTF16LE_BOM), std::end(UTF16LE_BOM), first))
+						if(std::equal(std::begin(UTF16LE_BOM), std::end(UTF16LE_BOM), boost::const_begin(bytes)))
 							result = installer.UTF_16LE;
-						else if(std::equal(std::begin(UTF16BE_BOM), std::end(UTF16BE_BOM), first))
+						else if(std::equal(std::begin(UTF16BE_BOM), std::end(UTF16BE_BOM), boost::const_begin(bytes)))
 							result = installer.UTF_16BE;
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-						if(last - first >= static_cast<std::ptrdiff_t>(UTF32LE_BOM.size())) {
+						if(boost::size(bytes) >= static_cast<std::ptrdiff_t>(UTF32LE_BOM.size())) {
 							static_assert(std::is_same<decltype(UTF32LE_BOM), decltype(UTF32BE_BOM)>::value, "");
-							if(std::equal(std::begin(UTF32LE_BOM), std::end(UTF32LE_BOM), first))
+							if(std::equal(std::begin(UTF32LE_BOM), std::end(UTF32LE_BOM), boost::const_begin(bytes)))
 								result = installer.UTF_32LE;
-							else if(std::equal(std::begin(UTF32BE_BOM), std::end(UTF32BE_BOM), first))
+							else if(std::equal(std::begin(UTF32BE_BOM), std::end(UTF32BE_BOM), boost::const_begin(bytes)))
 								result = installer.UTF_32BE;
 						}
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 					}
-					if(result != nullptr) {
-						if(convertibleBytes != 0)
-							*convertibleBytes = last - first;
-					} else {
+
+					std::size_t score;
+					if(result != nullptr)
+						score = boost::size(bytes);
+					else {
 						// force into UTF-8
 						result = installer.UTF_8;
-						if(convertibleBytes != 0)
-							*convertibleBytes = maybeUtf8(first, last) - first;
+						score = maybeUtf8(bytes);
 					}
-					return std::make_pair(result->mibEnum(), result->name());
+					return std::make_tuple(result->mibEnum(), result->name(), score);
 				}
 			}
 		}

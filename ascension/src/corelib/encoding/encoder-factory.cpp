@@ -5,7 +5,7 @@
  * @date 2016-09-23 Separated from encoder.cpp.
  */
 
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
 #include <ascension/corelib/encoding/encoder-factory.hpp>
 #include <ascension/corelib/encoding/encoder-implementation.hpp>
 #include <boost/foreach.hpp>
@@ -109,6 +109,12 @@ namespace ascension {
 		}
 #endif // BOOST_OS_WINDOWS
 
+		/// Returns the single instance.
+		EncoderRegistry& EncoderRegistry::instance() {
+			static EncoderRegistry singleton;
+			return singleton;
+		}
+
 		/**
 		 * Registers the new encoder factory.
 		 * @param newFactory The encoder factory
@@ -131,10 +137,10 @@ namespace ascension {
 		// US-ASCII and ISO-8859-1 ////////////////////////////////////////////////////////////////////////////////////
 
 		namespace {
-			class BasicLatinEncoderFactory : public implementation::EncoderFactoryBase {
+			class BasicLatinEncoderFactory : public implementation::EncoderFactoryImpl {
 			public:
 				BasicLatinEncoderFactory(const std::string& name, MIBenum mib, const std::string& displayName,
-					const std::string& aliases, std::uint32_t mask) : implementation::EncoderFactoryBase(name, mib, displayName, 1, 1, aliases), mask_(mask) {}
+					const std::string& aliases, std::uint32_t mask) : implementation::EncoderFactoryImpl(name, mib, displayName, 1, 1, aliases), mask_(mask) {}
 				virtual ~BasicLatinEncoderFactory() BOOST_NOEXCEPT {}
 				std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 					return std::unique_ptr<Encoder>(new InternalEncoder(mask_, *this));
@@ -183,7 +189,7 @@ namespace ascension {
 							return UNMAPPABLE_CHARACTER;
 						}
 					} else
-						*to = mask8Bit(*from);
+						*to = implementation::mask8Bit(*from);
 				}
 				toNext = to;
 				fromNext = from;

@@ -284,9 +284,6 @@
     <ClCompile Include="..\..\ascension\src\kernel\undo.cpp">
       <Filter>ascension\Source Files\kernel</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\corelib\encoder.cpp">
-      <Filter>ascension\Source Files\corelib</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\regex.cpp">
       <Filter>ascension\Source Files\corelib</Filter>
     </ClCompile>
@@ -645,6 +642,12 @@
       <Filter>ascension\Source Files\corelib\encoding</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\encoding\encoder-factory.cpp">
+      <Filter>ascension\Source Files\corelib\encoding</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\encoding\encoder.cpp">
+      <Filter>ascension\Source Files\corelib\encoding</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\encoding\encoder-implementation.cpp">
       <Filter>ascension\Source Files\corelib\encoding</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1493,6 +1496,9 @@
       <Filter>ascension\Header Files\corelib\encoding</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\encoding\encoder-factory.hpp">
+      <Filter>ascension\Header Files\corelib\encoding</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoding\encoder.hpp">
       <Filter>ascension\Header Files\corelib\encoding</Filter>
     </ClInclude>
   </ItemGroup>

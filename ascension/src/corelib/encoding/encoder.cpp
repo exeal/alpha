@@ -4,7 +4,7 @@
  * @date 2004-2014
  */
 
-#include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/encoding/encoder.hpp>
 #include <ascension/corelib/encoding/encoder-factory.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/text/utf.hpp>	// text.isScalarValue, text.utf.encode
