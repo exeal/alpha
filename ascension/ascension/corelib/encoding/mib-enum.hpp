@@ -161,8 +161,12 @@ namespace ascension {
 
 		/// Thrown if the specified encoding is not supported.
 		class UnsupportedEncodingException : public std::invalid_argument {
-		public:
-			explicit UnsupportedEncodingException(const std::string& message);
+		public:	
+			/**
+			 * Constructor.
+			 * @param message The message string
+			 */
+			explicit UnsupportedEncodingException(const std::string& message) : std::invalid_argument(message) {}
 		};
 
 		/// @defgroup mibenum_value_conversions MIBenum Value Conversions
@@ -179,9 +183,8 @@ namespace ascension {
 		/// @defgroup encoding_names Encoding Names
 		/// @{
 		/**
-		 * Compares the given two encoding (charset) names based on
-		 * <a href="http://www.unicode.org/reports/tr22/">UTS #22: CharMapML</a> 1.4 Charset Alias
-		 * Matching.
+		 * Compares the given two encoding (charset) names based on <a href="http://www.unicode.org/reports/tr22/">UTS
+		 * #22: CharMapML</a> 1.4 Charset Alias Matching.
 		 * @tparam CharacterSequence1 The type of @a first1 and @a last1
 		 * @tparam CharacterSequence2 The type of @a first2 and @a last2
 		 * @param first1 The beginning of the first character sequence
@@ -220,6 +223,18 @@ namespace ascension {
 				return 1;
 			else
 				return (first2 == last2) ? 0 : -1;
+		}
+		/**
+		 * @overload
+		 * @tparam SinglePassReadableRange1 The type of @a name1
+		 * @tparam SinglePassReadableRange2 The type of @a name2
+		 * @param name1 (See the description of iterator version)
+		 * @param name2 (See the description of iterator version)
+		 * @return (See the description of iterator version)
+		 */
+		template<typename SinglePassReadableRange1, typename SinglePassReadableRange2>
+		inline int compareEncodingNames(const SinglePassReadableRange1& name1, const SinglePassReadableRange2& name2) {
+			return compareEncodingNames(boost::const_begin(name1), boost::const_end(name1), boost::const_begin(name2), boost::const_end(name2));
 		}
 		std::string encodingNameFromUnicode(const StringPiece& source);
 		String getEncodingDisplayName(MIBenum mib);

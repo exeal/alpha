@@ -15,13 +15,6 @@
 namespace ascension {
 	namespace encoding {		
 		/**
-		 * Constructor.
-		 * @param message The message string
-		 */
-		UnsupportedEncodingException::UnsupportedEncodingException(const std::string& message) : std::invalid_argument(message) {
-		}
-		
-		/**
 		 * @class ascension::encoding::Encoder
 		 * @c Encoder class provides conversions between text encodings.
 		 *
