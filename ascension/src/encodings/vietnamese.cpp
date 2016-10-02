@@ -24,6 +24,15 @@ namespace ascension {
 		namespace implementation {
 			namespace sbcs {
 				namespace {
+					inline bool eob(const Encoder& encoder) BOOST_NOEXCEPT {
+#if 0
+						return encoder.options().test(Encoder::END_OF_BUFFER);
+#else
+						boost::ignore_unused(encoder);
+						return true;
+#endif
+					}
+
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 					typedef CharWire<
 						CharLine<0x0000, 0x0001, 0x1eb2, 0x0003, 0x0004, 0x1eb4, 0x1eaa, 0x0007, 0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f>,
@@ -46,22 +55,18 @@ namespace ascension {
 
 					class VIQREncoder : public Encoder {
 					public:
-						VIQREncoder() BOOST_NOEXCEPT : encodingState_(VIETNAMESE_STATE), decodingState_(VIETNAMESE_STATE) {
+						VIQREncoder() BOOST_NOEXCEPT {
 							if(table_.get() == nullptr)
 								table_.reset(new BidirectionalMap(VISCII_BYTE_TABLE::VALUES));
 						}
 					private:
-						ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) override;
-						ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
+						Result doFromUnicode(State& state,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) override;
+						Result doToUnicode(State& state,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
 						const EncodingProperties& properties() const override BOOST_NOEXCEPT;
-						Encoder& resetDecodingState() override BOOST_NOEXCEPT {
-							return (decodingState_ = VIETNAMESE_STATE), *this;
-						}
-						Encoder& resetEncodingState() override BOOST_NOEXCEPT {
-							return (encodingState_ = VIETNAMESE_STATE), *this;
-						}
 					private:
-						enum {LITERAL_STATE, ENGLISH_STATE, VIETNAMESE_STATE} encodingState_, decodingState_;
+						enum ConversionState {LITERAL_STATE, ENGLISH_STATE, VIETNAMESE_STATE};
 						static const Byte CLS = 0x01, COM = 0x5c;
 						static std::unique_ptr<BidirectionalMap> table_;
 					};
@@ -213,8 +218,8 @@ namespace ascension {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 					std::unique_ptr<sbcs::BidirectionalMap> VIQREncoder::table_;
 
-					Encoder::ConversionResult VIQREncoder::doFromUnicode(Byte* to, Byte* toEnd,
-							Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+					Encoder::Result VIQREncoder::doFromUnicode(State& state,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
 						static const Byte VISCII_TO_VIQR[] =
 							"\0\001A(?\003\004A(~A^~\007"		"\010\011\012\013\014\015\016\017"
 							"\020\021\022\023Y?\024\025\026"	"\030Y~\031\032\033\034Y.\037"
@@ -251,43 +256,43 @@ namespace ascension {
 							415, 417, 420, 422, 424, 426, 428, 430,	432, 434, 436, 438, 440, 442, 444, 447, 450
 						};
 
-						if(encodingState_ != VIETNAMESE_STATE) {
+						if(state.empty())
+							state = VIETNAMESE_STATE;
+						else if(boost::any_cast<ConversionState>(&state) == nullptr)
+							throw BadStateException();
+						ConversionState& conversionState = boost::any_cast<ConversionState&>(state);
+
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						if(conversionState != VIETNAMESE_STATE) {
 							// switch to Vietnamese state
-							if(to > toEnd - 2) {
-								toNext = to;
-								fromNext = from;
+							if(toNext > boost::end(to) - 2)
 								return INSUFFICIENT_BUFFER;
-							}
-							*to++ = COM;
-							*to++ = 'V';
-							encodingState_ = VIETNAMESE_STATE;
+							*toNext++ = COM;
+							*toNext++ = 'V';
+							conversionState = VIETNAMESE_STATE;
 						}
-						for(; to < toEnd && from < fromEnd; ++from) {
-							Byte viscii = table_->toByte(*from);
-							if(viscii == UNMAPPABLE_BYTE && *from != UNMAPPABLE_BYTE) {
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++fromNext) {
+							Byte viscii = table_->toByte(*fromNext);
+							if(viscii == UNMAPPABLE_BYTE && *fromNext != UNMAPPABLE_BYTE) {
 								if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 									continue;
 								else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 									viscii = properties().substitutionCharacter();
-								else {
-									toNext = to;
-									fromNext = from;
+								else
 									return UNMAPPABLE_CHARACTER;
-								}
 							}
 							const std::ptrdiff_t length = VISCII_TO_VIQR_INDICES[viscii + 1] - VISCII_TO_VIQR_INDICES[viscii];
-							if(length > toEnd - to)
+							if(length > boost::end(to) - toNext)
 								break;
-							std::memcpy(to, VISCII_TO_VIQR + VISCII_TO_VIQR_INDICES[viscii], length);
-							to += length;
+							std::memcpy(toNext, VISCII_TO_VIQR + VISCII_TO_VIQR_INDICES[viscii], length);
+							std::advance(toNext, length);
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					Encoder::ConversionResult VIQREncoder::doToUnicode(Char* to, Char* toEnd,
-							Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
+					Encoder::Result VIQREncoder::doToUnicode(State& state,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
 						enum {NONE, BREVE, CIRCUMFLEX, HORN, ACUTE, GRAVE, HOOK_ABOVE, TILDE, DOT_BELOW, CAPITAL_D, SMALL_D, DIACRITICALS_COUNT};
 						static const Byte MNEMONIC_TABLE[0x80] = {
 							NONE,	NONE,	NONE,	NONE,	NONE,		NONE,	NONE,		NONE,	// 0x00
@@ -347,84 +352,88 @@ namespace ascension {
 							{0x0079, 0x0079, 0x0079, 0x0079, 0x00fd, 0x1ef3, 0x1ef7, 0x1ef9, 0x1ef5, 0x0079, 0x0079}	// 0x19 : y
 						};
 
+						if(state.empty())
+							state = VIETNAMESE_STATE;
+						else if(boost::any_cast<ConversionState>(&state) == nullptr)
+							throw BadStateException();
+						ConversionState& conversionState = boost::any_cast<ConversionState&>(state);
+
 						bool escaped = false;
-						for(; to < toEnd && from < fromEnd; ++from) {
-							if((*from & 0x80) != 0) {
-								toNext = to;
-								fromNext = from;
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++fromNext) {
+							if((*fromNext & 0x80) != 0)
 								return UNMAPPABLE_CHARACTER;
-							} else if(*from == COM) {
+							else if(*fromNext == COM) {
 								if(escaped)
-									*to++ = L'\\';
+									*toNext++ = L'\\';
 								escaped = !escaped;
 								continue;
 							}
 							if(escaped) {
 								// try to switch the state
-								switch(*from) {
+								switch(*fromNext) {
 									case 'L':
 									case 'l':
-										decodingState_ = LITERAL_STATE;
+										conversionState = LITERAL_STATE;
 										escaped = false;
 										continue;
 									case 'M':
 									case 'm':
-										decodingState_ = ENGLISH_STATE;
+										conversionState = ENGLISH_STATE;
 										escaped = false;
 										continue;
 									case 'V':
 									case 'v':
-										decodingState_ = VIETNAMESE_STATE;
+										conversionState = VIETNAMESE_STATE;
 										escaped = false;
 										continue;
 								}
 							}
-							if(decodingState_ == VIETNAMESE_STATE || (decodingState_ == ENGLISH_STATE && escaped)) {
+							if(conversionState == VIETNAMESE_STATE || (conversionState == ENGLISH_STATE && escaped)) {
 								escaped = false;
-								Byte mnemonic = BASE_CHARACTER_TABLE[*from];
+								Byte mnemonic = BASE_CHARACTER_TABLE[*fromNext];
 								if(mnemonic != 0x80) {
 									// ... got the base character
-									if(from + 1 == fromEnd) {
-										if(options().test(END_OF_BUFFER)) {
-											*to++ = *from++;
+									if(fromNext + 1 == boost::const_end(from)) {
+										if(eob(*this)) {
+											*toNext++ = *fromNext++;
 											break;
 										}
-										toNext = to;
-										fromNext = from - (escaped ? 1 : 0);
+										if(escaped)
+											--fromNext;
 										return COMPLETED;	// more input is required
 									}
 									const Char* const state1 = STATE_TABLE[mnemonic];
-									mnemonic = MNEMONIC_TABLE[from[1]];
+									mnemonic = MNEMONIC_TABLE[fromNext[1]];
 									const Char state2 = state1[mnemonic];
 									if(state2 >= 0x20) {
-										*to++ = state2;
+										*toNext++ = state2;
 										if(state2 != state1[NONE])
-											++from;
+											++fromNext;
 										continue;
 									}
-									if(from + 2 == fromEnd) {
-										if(options().test(END_OF_BUFFER)) {
-											*to++ = STATE_TABLE[state2][NONE];
+									if(fromNext + 2 == boost::const_end(from)) {
+										if(eob(*this)) {
+											*toNext++ = STATE_TABLE[state2][NONE];
 											break;
 										}
-										toNext = to;
-										fromNext = from - (escaped ? 1 : 0);
+										if(escaped)
+											--fromNext;
 										return COMPLETED;	// more input is required
 									}
 									const Char* const state3 = STATE_TABLE[state2];
-									mnemonic = MNEMONIC_TABLE[from[2]];
+									mnemonic = MNEMONIC_TABLE[fromNext[2]];
 									const Char state4 = state3[mnemonic];
 									assert(state4 >= 0x20);
-									*to++ = state4;
-									from += (state4 != state3[NONE]) ? 2 : 1;
+									*toNext++ = state4;
+									fromNext += (state4 != state3[NONE]) ? 2 : 1;
 									continue;
 								}
 							}
-							*to++ = *from;
+							*toNext++ = *fromNext;
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
 					const EncodingProperties& VIQREncoder::properties() const BOOST_NOEXCEPT {

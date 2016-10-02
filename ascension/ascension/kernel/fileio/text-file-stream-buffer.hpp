@@ -78,6 +78,7 @@ namespace ascension {
 				off_t originalFileEnd_;
 #endif
 				std::unique_ptr<encoding::Encoder> encoder_;
+				encoding::Encoder::State encodingState_, decodingState_;
 				std::array<Char, 8192> ucsBuffer_;
 			};
 

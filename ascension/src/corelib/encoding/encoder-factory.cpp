@@ -150,10 +150,10 @@ namespace ascension {
 				public:
 					InternalEncoder(std::uint32_t mask, const EncodingProperties& properties) BOOST_NOEXCEPT : mask_(mask), props_(properties) {}
 				private:
-					ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
-						const Char* from, const Char* fromEnd, const Char*& fromNext) override;
-					ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-						const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
+					Result doFromUnicode(State& state,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) override;
+					Result doToUnicode(State& state,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
 					const EncodingProperties& properties() const override BOOST_NOEXCEPT {return props_;}
 				private:
 					const std::uint32_t mask_;
@@ -175,46 +175,40 @@ namespace ascension {
 				}
 			} unused;
 
-			Encoder::ConversionResult BasicLatinEncoderFactory::InternalEncoder::doFromUnicode(
-					Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-				for(; to < toEnd && from < fromEnd; ++to, ++from) {
-					if((*from & ~mask_) != 0) {
+			Encoder::Result BasicLatinEncoderFactory::InternalEncoder::doFromUnicode(State& state,
+					const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+				toNext = boost::begin(to);
+				fromNext = boost::const_begin(from);
+				for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+					if((*fromNext & ~mask_) != 0) {
 						if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-							--to;
+							--toNext;
 						else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-							*to = properties().substitutionCharacter();
-						else {
-							toNext = to;
-							fromNext = from;
+							*toNext = properties().substitutionCharacter();
+						else
 							return UNMAPPABLE_CHARACTER;
-						}
 					} else
-						*to = implementation::mask8Bit(*from);
+						*toNext = implementation::mask8Bit(*fromNext);
 				}
-				toNext = to;
-				fromNext = from;
-				return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+				return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 			}
 
-			Encoder::ConversionResult BasicLatinEncoderFactory::InternalEncoder::doToUnicode(
-					Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-				for(; to < toEnd && from < fromEnd; ++to, ++from) {
-					if((*from & ~mask_) != 0) {
+			Encoder::Result BasicLatinEncoderFactory::InternalEncoder::doToUnicode(State& state,
+					const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+				toNext = boost::begin(to);
+				fromNext = boost::const_begin(from);
+				for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+					if((*fromNext & ~mask_) != 0) {
 						if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-							--to;
+							--toNext;
 						else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-							*to = text::REPLACEMENT_CHARACTER;
-						else {
-							toNext = to;
-							fromNext = from;
+							*toNext = text::REPLACEMENT_CHARACTER;
+						else
 							return UNMAPPABLE_CHARACTER;
-						}
 					} else
-						*to = *from;
+						*toNext = *fromNext;
 				}
-				toNext = to;
-				fromNext = from;
-				return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+				return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 			}
 		} // namespace @0
 	}

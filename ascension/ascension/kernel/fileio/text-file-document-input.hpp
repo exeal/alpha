@@ -40,7 +40,7 @@ namespace ascension {
 			 */
 			class FilePropertyListener {
 			private:
-				/// The encoding or newline of the bound file was changed.
+				/// The encoding, newline or unicode-byte-order-mark of the bound file was changed.
 				virtual void fileEncodingChanged(const TextFileDocumentInput& textFile) = 0;
 				/// The the name of the bound file was changed.
 				virtual void fileNameChanged(const TextFileDocumentInput& textFile) = 0;
@@ -135,7 +135,7 @@ namespace ascension {
 				/// @{
 				TextFileDocumentInput& setEncoding(const std::string& encoding);
 				TextFileDocumentInput& setNewline(const text::Newline& newline);
-				bool unicodeByteOrderMark() const BOOST_NOEXCEPT;
+				TextFileDocumentInput& setUnicodeByteOrderMark(bool set) BOOST_NOEXCEPT;
 				/// @}
 
 				// DocumentInput
@@ -143,6 +143,7 @@ namespace ascension {
 				static_assert(std::is_same<DocumentInput::LocationType, boost::filesystem::path::string_type>::value, "");
 				DocumentInput::LocationType location() const override BOOST_NOEXCEPT;
 				text::Newline newline() const override BOOST_NOEXCEPT;
+				bool unicodeByteOrderMark() const override BOOST_NOEXCEPT;
 			private:
 				void documentModificationSignChanged(const Document& document);
 				bool verifyTimeStamp(bool internal, std::time_t& newTimeStamp) BOOST_NOEXCEPT;
@@ -205,8 +206,12 @@ namespace ascension {
 				return newline_;
 			}
 
-			/// Returns true if the last opened input file contained Unicode byte order mark, or wrote BOM into
-			/// the last output file.
+			/**
+			 * Implements @c DocumentInput#unicodeByteOrderMark. The default value is @c false.
+			 * @note This attribute is automatically set if the last opened input file contained Unicode byte order
+			 * mark, or wrote BOM into the last output file.
+			 * @see #setUnicodeByteOrderMark
+			 */
 			inline bool TextFileDocumentInput::unicodeByteOrderMark() const BOOST_NOEXCEPT {
 				return unicodeByteOrderMark_;
 			}
