@@ -83,7 +83,7 @@ namespace alpha {
 
 			/// @name Attributes
 			/// @{
-			boost::python::object lookupKey(const KeyStroke& key) const override BOOST_NOEXCEPT;
+			boost::python::object lookupKey(const KeyStroke& key) const BOOST_NOEXCEPT override;
 			boost::python::object lookupKey(boost::python::object key) const override;
 			const Glib::ustring& name() const BOOST_NOEXCEPT;
 			/// @}
@@ -148,7 +148,7 @@ namespace alpha {
 
 			/// @name Key Maps
 			/// @{
-			boost::python::object lookupKey(const KeyStroke& key) const override BOOST_NOEXCEPT;
+			boost::python::object lookupKey(const KeyStroke& key) const BOOST_NOEXCEPT override;
 			boost::python::object lookupKey(boost::python::object key) const override;
 			std::shared_ptr<KeyMap> mappingScheme() const BOOST_NOEXCEPT;
 			std::shared_ptr<KeyMap> modalMappingScheme() const BOOST_NOEXCEPT;

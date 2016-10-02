@@ -141,15 +141,15 @@ namespace ascension {
 				// DocumentInput
 				std::string encoding() const BOOST_NOEXCEPT override;
 				static_assert(std::is_same<DocumentInput::LocationType, boost::filesystem::path::string_type>::value, "");
-				DocumentInput::LocationType location() const override BOOST_NOEXCEPT;
-				text::Newline newline() const override BOOST_NOEXCEPT;
-				bool unicodeByteOrderMark() const override BOOST_NOEXCEPT;
+				DocumentInput::LocationType location() const BOOST_NOEXCEPT override;
+				text::Newline newline() const BOOST_NOEXCEPT override;
+				bool unicodeByteOrderMark() const BOOST_NOEXCEPT override;
 			private:
 				void documentModificationSignChanged(const Document& document);
 				bool verifyTimeStamp(bool internal, std::time_t& newTimeStamp) BOOST_NOEXCEPT;
 				// DocumentInput
-				bool isChangeable(const Document& document) const override BOOST_NOEXCEPT;
-				void postFirstDocumentChange(const Document& document) override BOOST_NOEXCEPT;
+				bool isChangeable(const Document& document) const BOOST_NOEXCEPT override;
+				void postFirstDocumentChange(const Document& document) BOOST_NOEXCEPT override;
 			private:
 				std::shared_ptr<TextFileDocumentInput> weakSelf_;	// for Document.setInput call
 				class FileLocker;

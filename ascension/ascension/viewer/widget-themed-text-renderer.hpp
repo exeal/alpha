@@ -18,15 +18,15 @@ namespace ascension {
 		public:
 			WidgetThemedTextRenderer(TextViewer& textViewer, const graphics::Dimension& initialSize);
 			// graphics.font.TextRenderer
-			presentation::BlockFlowDirection blockFlowDirection() const override BOOST_NOEXCEPT;
-			presentation::ReadingDirection inlineFlowDirection() const override BOOST_NOEXCEPT;
-			graphics::font::TextAnchor textAnchor() const override BOOST_NOEXCEPT;
-			presentation::TextOrientation textOrientation() const override BOOST_NOEXCEPT;
+			presentation::BlockFlowDirection blockFlowDirection() const BOOST_NOEXCEPT override;
+			presentation::ReadingDirection inlineFlowDirection() const BOOST_NOEXCEPT override;
+			graphics::font::TextAnchor textAnchor() const BOOST_NOEXCEPT override;
+			presentation::TextOrientation textOrientation() const BOOST_NOEXCEPT override;
 
 		protected:
 			// graphics.font.TextRenderer
-			graphics::Color actualLineBackgroundColor(const graphics::font::TextLayout& layout) const override BOOST_NOEXCEPT;
-			std::shared_ptr<const graphics::font::Font> newDefaultFont() const override BOOST_NOEXCEPT;
+			graphics::Color actualLineBackgroundColor(const graphics::font::TextLayout& layout) const BOOST_NOEXCEPT override;
+			std::shared_ptr<const graphics::font::Font> newDefaultFont() const BOOST_NOEXCEPT override;
 			// graphics.font.StandardTextRenderer
 			virtual std::tuple<
 				const presentation::ComputedTextToplevelStyle&,

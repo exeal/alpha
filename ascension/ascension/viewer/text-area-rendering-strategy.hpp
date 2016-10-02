@@ -19,9 +19,9 @@ namespace ascension {
 			explicit TextAreaRenderingStrategy(TextArea& textArea);
 
 		private:
-			const graphics::font::FontCollection& fontCollection() const override BOOST_NOEXCEPT;
-			graphics::Dimension lengthContextViewport() const override BOOST_NOEXCEPT;
-			graphics::Dimension parentContentArea() const override BOOST_NOEXCEPT;
+			const graphics::font::FontCollection& fontCollection() const BOOST_NOEXCEPT override;
+			graphics::Dimension lengthContextViewport() const BOOST_NOEXCEPT override;
+			graphics::Dimension parentContentArea() const BOOST_NOEXCEPT override;
 			std::unique_ptr<graphics::RenderingContext2D> renderingContext() const override;
 		private:
 			TextArea& textArea_;

@@ -119,7 +119,7 @@ namespace ascension {
 						Result doToUnicode(State& state,
 							const boost::iterator_range<Char*>& to, Char*& toNext,
 							const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
-						const EncodingProperties& properties() const override BOOST_NOEXCEPT {
+						const EncodingProperties& properties() const BOOST_NOEXCEPT override {
 							return properties_;
 						}
 					private:
@@ -130,7 +130,7 @@ namespace ascension {
 					public:
 						ShiftJis() BOOST_NOEXCEPT : EncoderFactoryImpl("Shift_JIS", standard::SHIFT_JIS, "Japanese (Shift_JIS)", 2, 1, "MS_Kanji|csShiftJIS", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<ShiftJis>(*this));
 						}
 					};
@@ -139,7 +139,7 @@ namespace ascension {
 					public:
 						ShiftJis2004() BOOST_NOEXCEPT : EncoderFactoryImpl("Shift_JIS-2004", MIB_OTHER, "Japanese (Shift_JIS-2004)", 2, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<ShiftJis2004>(*this));
 						}
 					};
@@ -148,7 +148,7 @@ namespace ascension {
 					public:
 						EucJp() BOOST_NOEXCEPT : EncoderFactoryImpl("EUC-JP", standard::EUC_JP, "Japanese (EUC-JP)", 3, 1, "Extended_UNIX_Code_Packed_Format_for_Japanese|csEUCPkdFmtJapanese", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<EucJp>(*this));
 						}
 					};
@@ -157,7 +157,7 @@ namespace ascension {
 					public:
 						EucJis2004() BOOST_NOEXCEPT : EncoderFactoryImpl("EUC-JIS-2004", MIB_OTHER, "Japanese (EUC-JIS-2004)", 3, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<EucJis2004>(*this));
 						}
 					};
@@ -166,7 +166,7 @@ namespace ascension {
 					public:
 						Iso2022Jp() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP", standard::ISO_2022_JP, "Japanese (ISO-2022-JP)", 8, 1, "csISO2022JP", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp>(*this));
 						}
 					};
@@ -175,7 +175,7 @@ namespace ascension {
 					public:
 						Iso2022Jp2() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP-2", standard::ISO_2022_JP_2, "Japanese (ISO-2022-JP-2)", 9, 1, "csISO2022JP2", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp2>(*this));
 						}
 					};
@@ -184,7 +184,7 @@ namespace ascension {
 					public:
 						Iso2022Jp2004() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP-2004", MIB_OTHER, "Japanese (ISO-2022-JP-2004)", 9, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp2004>(*this));
 						}
 					};
@@ -194,7 +194,7 @@ namespace ascension {
 					public:
 						Iso2022Jp1() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP-1", MIB_OTHER, "Japanese (ISO-2022-JP-1)", 9, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp1>(*this));
 						}
 					};
@@ -203,7 +203,7 @@ namespace ascension {
 					public:
 						Iso2022Jp2004Strict() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP-2004-Strict", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Strict)", 9, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp2004Strict>(*this));
 						}
 					};
@@ -212,7 +212,7 @@ namespace ascension {
 					public:
 						Iso2022Jp2004Compatible() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-JP-2004-Compatible", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Compatible)", 9, 1, "", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Jp2004Compatible>(*this));
 						}
 					};
@@ -222,7 +222,7 @@ namespace ascension {
 					public:
 						JisAutoDetector() : EncodingDetector("JISAutoDetect") {}
 					private:
-						std::tuple<MIBenum, std::string, std::size_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const override BOOST_NOEXCEPT;
+						std::tuple<MIBenum, std::string, std::size_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const BOOST_NOEXCEPT override;
 					};
 
 					struct Installer {

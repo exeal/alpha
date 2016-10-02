@@ -110,7 +110,7 @@ namespace ascension {
 #endif // BOOST_OS_WINDOWS
 
 		/// Returns the single instance.
-		EncoderRegistry& EncoderRegistry::instance() {
+		EncoderRegistry& EncoderRegistry::instance() BOOST_NOEXCEPT {
 			static EncoderRegistry singleton;
 			return singleton;
 		}
@@ -142,7 +142,7 @@ namespace ascension {
 				BasicLatinEncoderFactory(const std::string& name, MIBenum mib, const std::string& displayName,
 					const std::string& aliases, std::uint32_t mask) : implementation::EncoderFactoryImpl(name, mib, displayName, 1, 1, aliases), mask_(mask) {}
 				virtual ~BasicLatinEncoderFactory() BOOST_NOEXCEPT {}
-				std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+				std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 					return std::unique_ptr<Encoder>(new InternalEncoder(mask_, *this));
 				}
 			private:
@@ -154,7 +154,7 @@ namespace ascension {
 						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) override;
 					Result doToUnicode(State& state,
 						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
-					const EncodingProperties& properties() const override BOOST_NOEXCEPT {return props_;}
+					const EncodingProperties& properties() const BOOST_NOEXCEPT override {return props_;}
 				private:
 					const std::uint32_t mask_;
 					const EncodingProperties& props_;

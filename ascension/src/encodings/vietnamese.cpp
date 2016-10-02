@@ -64,7 +64,7 @@ namespace ascension {
 							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) override;
 						Result doToUnicode(State& state,
 							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
-						const EncodingProperties& properties() const override BOOST_NOEXCEPT;
+						const EncodingProperties& properties() const BOOST_NOEXCEPT override;
 					private:
 						enum ConversionState {LITERAL_STATE, ENGLISH_STATE, VIETNAMESE_STATE};
 						static const Byte CLS = 0x01, COM = 0x5c;
@@ -75,7 +75,7 @@ namespace ascension {
 					public:
 						VIQRFactory() BOOST_NOEXCEPT : EncoderFactoryImpl("VIQR", standard::VIQR, "Vietnamese (VIQR)", 3, 1, "csVIQR", 0x1a) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new VIQREncoder);
 						}
 					} VIQR;
