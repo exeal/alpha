@@ -41,13 +41,13 @@ namespace ascension {
 					const std::string& aliases = std::string(), Byte substitutionCharacter = 0x1a);
 			protected:
 				// EncodingProperties
-				virtual std::string aliases() const override BOOST_NOEXCEPT;
-				virtual std::string displayName(const std::locale& lc) const override BOOST_NOEXCEPT;
-				virtual std::size_t maximumNativeBytes() const override BOOST_NOEXCEPT;
-				virtual std::size_t maximumUCSLength() const override BOOST_NOEXCEPT;
-				virtual MIBenum mibEnum() const override BOOST_NOEXCEPT;
-				virtual std::string name() const override BOOST_NOEXCEPT;
-				virtual Byte substitutionCharacter() const override BOOST_NOEXCEPT;
+				virtual std::string aliases() const BOOST_NOEXCEPT override;
+				virtual std::string displayName(const std::locale& lc) const BOOST_NOEXCEPT override;
+				virtual std::size_t maximumNativeBytes() const BOOST_NOEXCEPT override;
+				virtual std::size_t maximumUCSLength() const BOOST_NOEXCEPT override;
+				virtual MIBenum mibEnum() const BOOST_NOEXCEPT override;
+				virtual std::string name() const BOOST_NOEXCEPT override;
+				virtual Byte substitutionCharacter() const BOOST_NOEXCEPT override;
 			private:
 				const std::string name_, displayName_, aliases_;
 				const std::size_t maximumNativeBytes_, maximumUCSLength_;
