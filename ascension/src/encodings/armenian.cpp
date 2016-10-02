@@ -30,7 +30,7 @@ namespace ascension {
 				template<int n> class ARMSCII : public EncoderFactoryImpl {
 				public:
 					ARMSCII() BOOST_NOEXCEPT;
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 						return std::unique_ptr<Encoder>(new InternalEncoder(*this));
 					}
 				private:
@@ -45,7 +45,7 @@ namespace ascension {
 						Result doToUnicode(State& state,
 							const boost::iterator_range<Char*>& to, Char*& toNext,
 							const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
-						const EncodingProperties& properties() const override BOOST_NOEXCEPT {return props_;}
+						const EncodingProperties& properties() const BOOST_NOEXCEPT override {return props_;}
 					private:
 						const EncodingProperties& props_;
 					};
@@ -55,7 +55,7 @@ namespace ascension {
 				public:
 					ArmenianDetector() : EncodingDetector("ARMSCIIAutoDetect") {}
 				private:
-					std::tuple<MIBenum, std::string, std::size_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const override BOOST_NOEXCEPT;
+					std::tuple<MIBenum, std::string, std::size_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const BOOST_NOEXCEPT override;
 				};
 
 				const Char RP_CH_ = text::REPLACEMENT_CHARACTER;

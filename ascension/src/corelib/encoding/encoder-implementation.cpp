@@ -127,7 +127,7 @@ namespace ascension {
 						Result doToUnicode(State& state,
 							const boost::iterator_range<Char*>& to, Char*& toNext,
 							const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
-						const EncodingProperties& properties() const override BOOST_NOEXCEPT {return props_;}
+						const EncodingProperties& properties() const BOOST_NOEXCEPT override {return props_;}
 					private:
 						const sbcs::BidirectionalMap table_;
 						const EncodingProperties& props_;

@@ -46,7 +46,7 @@ namespace ascension {
 						Result doToUnicode(State& state,
 							const boost::iterator_range<Char*>& to, Char*& toNext,
 							const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
-						const EncodingProperties& properties() const override BOOST_NOEXCEPT {
+						const EncodingProperties& properties() const BOOST_NOEXCEPT override {
 							return properties_;
 						}
 					private:
@@ -59,7 +59,7 @@ namespace ascension {
 							"KS_C_5601-1987|iso-ir-149|KS_C_5601-1989|KSC_5601|korean|csKSC56011987"
 							"\0ibm-1363|5601|cp1363|ksc|windows-949|ibm-1363_VSUB_VPUA|ms949|ibm-1363_P11B-1998|windows-949-2000", 0x3f) {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Uhc>(*this));
 						}
 					};
@@ -69,7 +69,7 @@ namespace ascension {
 						EucKr() BOOST_NOEXCEPT : EncoderFactoryImpl("EUC-KR", standard::EUC_KR, "Korean (EUC-KR)", 2, 1,
 							"csEUCKR" "\0ibm-970KS_C_5601-1987|windows-51949|ibm-eucKR|KSC_5601|5601|cp970|970|ibm-970-VPUA|ibm-970_P110_P110-2006_U2") {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<EucKr>(*this));
 						}
 					};
@@ -78,7 +78,7 @@ namespace ascension {
 					public:
 						Iso2022Kr() BOOST_NOEXCEPT : EncoderFactoryImpl("ISO-2022-KR", standard::ISO_2022_KR, "Korean (ISO-2022-KR)", 7, 1, "csISO2022KR") {}
 					private:
-						std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 							return std::unique_ptr<Encoder>(new InternalEncoder<Iso2022Kr>(*this));
 						}
 					} iso2022kr;

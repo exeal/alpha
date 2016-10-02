@@ -52,7 +52,7 @@ namespace ascension {
 					Result doToUnicode(State& state,
 						const boost::iterator_range<Char*>& to, Char*& toNext,
 						const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
-					const EncodingProperties& properties() const override BOOST_NOEXCEPT {
+					const EncodingProperties& properties() const BOOST_NOEXCEPT override {
 						return properties_;
 					}
 				private:
@@ -66,7 +66,7 @@ namespace ascension {
 					static const std::array<Byte, 3> BYTE_ORDER_MARK;
 					Utf8() : EncoderFactoryImpl("UTF-8", fundamental::UTF_8, "Unicode (UTF-8)", 4) {}
 				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf8>(*this));
 					}
 				};
@@ -84,7 +84,7 @@ namespace ascension {
 						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext);
 					Utf16() : EncoderFactoryImpl("UTF-16", fundamental::UTF_16, "Unicode (UTF-16)", 2) {}
 				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf16>(*this));
 					}
 				};
@@ -95,7 +95,7 @@ namespace ascension {
 				public:
 					Utf16BigEndian() : EncoderFactoryImpl("UTF-16BE", fundamental::UTF_16BE, "Unicode (UTF-16BE)", 2) {}
 				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf16BigEndian>(*this));
 					}
 				};
@@ -104,7 +104,7 @@ namespace ascension {
 				public:
 					Utf16LittleEndian() : EncoderFactoryImpl("UTF-16LE", fundamental::UTF_16LE, "Unicode (UTF-16LE)", 2) {}
 				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf16LittleEndian>(*this));
 					}
 				};
@@ -116,7 +116,7 @@ namespace ascension {
 					Utf7() : EncoderFactoryImpl("UTF-7", standard::UTF_7, "Unicode (UTF-7)", 8) {}
 					static bool isBase64(const Encoder::State& state);
 				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf7>(*this));
 					}
 				};
@@ -133,7 +133,7 @@ namespace ascension {
 						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext);
 					Utf32() : EncoderFactoryImpl("UTF-32", standard::UTF_32, "Unicode (UTF-32)", 4) {}
 				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf32>(*this));
 					}
 				};
@@ -144,7 +144,7 @@ namespace ascension {
 				public:
 					Utf32BigEndian() : EncoderFactoryImpl("UTF-32BE", standard::UTF_32BE, "Unicode (UTF-32BE)", 4) {}
 				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf32BigEndian>(*this));
 					}
 				};
@@ -153,7 +153,7 @@ namespace ascension {
 				public:
 					Utf32LittleEndian() : EncoderFactoryImpl("UTF-32LE", standard::UTF_32LE, "Unicode (UTF-32LE)", 4) {}
 				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf32LittleEndian>(*this));
 					}
 				};
@@ -164,7 +164,7 @@ namespace ascension {
 				public:
 					Utf5() : EncoderFactoryImpl("UTF-5", MIB_OTHER, "Unicode (UTF-5)", 6) {}
 				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf5>(*this));
 					}
 				};
@@ -174,7 +174,7 @@ namespace ascension {
 				public:
 					UnicodeDetector() : EncodingDetector("UnicodeAutoDetect") {}
 				private:
-					std::tuple<MIBenum, std::string, std::size_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const override BOOST_NOEXCEPT;
+					std::tuple<MIBenum, std::string, std::size_t> doDetect(const boost::iterator_range<const Byte*>& bytes) const BOOST_NOEXCEPT override;
 				};
 
 				struct Installer {

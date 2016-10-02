@@ -372,7 +372,7 @@ namespace ascension {
 						: declaration_(std::move(declaration)), computedParentStyles_(computedParentStyles), cacheList_(cacheList) {
 				}
 				// ComputedStyledTextRunIterator
-				bool isDone() const override BOOST_NOEXCEPT {
+				bool isDone() const BOOST_NOEXCEPT override {
 					return declaration_->isDone();
 				}
 				void next() override {

@@ -17,20 +17,20 @@ namespace ascension {
 		class PresentativeTextRenderer : public graphics::font::StandardTextRenderer {
 		public:
 			PresentativeTextRenderer(std::shared_ptr<Presentation> presentation, const graphics::Dimension& initialSize);
-			BlockFlowDirection blockFlowDirection() const override BOOST_NOEXCEPT;
-			ReadingDirection inlineFlowDirection() const override BOOST_NOEXCEPT;
-			graphics::font::TextAnchor textAnchor() const override BOOST_NOEXCEPT;
-			TextOrientation textOrientation() const override BOOST_NOEXCEPT;
+			BlockFlowDirection blockFlowDirection() const BOOST_NOEXCEPT override;
+			ReadingDirection inlineFlowDirection() const BOOST_NOEXCEPT override;
+			graphics::font::TextAnchor textAnchor() const BOOST_NOEXCEPT override;
+			TextOrientation textOrientation() const BOOST_NOEXCEPT override;
 
 		protected:
-			graphics::Color actualLineBackgroundColor(const graphics::font::TextLayout& layout) const override BOOST_NOEXCEPT;
+			graphics::Color actualLineBackgroundColor(const graphics::font::TextLayout& layout) const BOOST_NOEXCEPT override;
 			std::tuple<
 				const ComputedTextToplevelStyle&,
 				const ComputedTextLineStyle&,
 				std::unique_ptr<ComputedStyledTextRunIterator>,
 				const ComputedTextRunStyle&
 			> buildStylesForLineLayout(Index line, const graphics::RenderingContext2D& renderingContext) const override;
-			std::shared_ptr<const graphics::font::Font> newDefaultFont() const override BOOST_NOEXCEPT;
+			std::shared_ptr<const graphics::font::Font> newDefaultFont() const BOOST_NOEXCEPT override;
 
 		private:
 			const std::shared_ptr<Presentation> presentation_;
