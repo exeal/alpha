@@ -213,6 +213,11 @@ namespace ascension {
 				inline SingleByteEncoderFactory<MappingTable>::~SingleByteEncoderFactory() BOOST_NOEXCEPT {
 				}
 
+				namespace detail {
+					std::unique_ptr<Encoder> createSingleByteEncoder(
+						const Char** byteToCharacterWire, const EncodingProperties& properties) BOOST_NOEXCEPT;
+				}
+
 				/// @see EncoderFactory#create
 				template<typename MappingTable> std::unique_ptr<Encoder>
 				SingleByteEncoderFactory<MappingTable>::create() const BOOST_NOEXCEPT {
@@ -243,11 +248,6 @@ namespace ascension {
 				class DBCSWire : public CodeWire<std::uint16_t, Line0, Line1, Line2, Line3,
 					Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB, LineC, LineD, LineE, LineF> {};
 			} // namespace dbcs
-		}
-
-		namespace detail {
-			std::unique_ptr<Encoder> createSingleByteEncoder(
-				const Char** byteToCharacterWire, const EncodingProperties& properties) BOOST_NOEXCEPT;
 		}
 
 		template<typename Code,
