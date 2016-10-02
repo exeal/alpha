@@ -106,8 +106,8 @@ namespace ascension {
 		 */
 		template<typename OutputIterator>
 		inline void EncoderRegistry::availableEncodings(OutputIterator out) {
-			for(std::size_t i = 0, c = registry().size(); i < c; ++i, ++out)
-				*out = std::make_pair(i, registry()[i]);
+			for(std::size_t i = 0, c = registry_.size(); i < c; ++i, ++out)
+				*out = std::make_pair(i, registry_[i]);
 		}
 	}
 } // namespace ascension.encoding
