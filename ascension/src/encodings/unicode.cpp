@@ -807,7 +807,8 @@ namespace ascension {
 								break;	// the destination buffer is insufficient
 
 							// encode
-							const Char utf16[3] = {fromNext[0], (encodables > 1) ? fromNext[1] : '\0', (encodables > 2) ? fromNext[2] : '\0'};
+							static const Char zero = 0;
+							const Char utf16[3] = {fromNext[0], (encodables > 1) ? fromNext[1] : zero, (encodables > 2) ? fromNext[2] : zero};
 							*(toNext++) = BASE64[utf16[0] >> 10];
 							*(toNext++) = BASE64[(utf16[0] >> 4) & 0x3f];
 							*(toNext++) = BASE64[(utf16[0] << 2 | utf16[1] >> 14) & 0x3f];
