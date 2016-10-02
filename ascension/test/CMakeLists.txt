@@ -43,8 +43,10 @@ add_test(
 add_executable(
 	regex-test
 	src/regex-test.cpp
-	${Ascension_SOURCE_DIR}/corelib/encoder.cpp
 	${Ascension_SOURCE_DIR}/corelib/regex.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoding/encoder.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoding/encoder-factory.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoding/encoder-implementation.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/character-property.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/grapheme-break-iterator.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/identifier-syntax.cpp)
@@ -67,6 +69,20 @@ add_executable(
 add_test(
 	NAME gap_vector
 	COMMAND $<TARGET_FILE:gap-vector-test>
+	CONFIGURATIONS Debug)
+
+# corelib.encoding
+add_executable(
+	encoder-test
+	src/encoder-test.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoding/encoder.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoding/encoder-factory.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoding/encoder-implementation.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoding/encoding-detector.cpp
+	${Ascension_SOURCE_DIR}/encodings/unicode.cpp)
+add_test(
+	NAME encoder
+	COMMAND $<TARGET_FILE:encoder-test>
 	CONFIGURATIONS Debug)
 
 # corelib.text
@@ -232,8 +248,10 @@ add_test(
 add_executable(
 	token-rules-test
 	src/token-rules-test.cpp
-	${Ascension_SOURCE_DIR}/corelib/encoder.cpp
 	${Ascension_SOURCE_DIR}/corelib/regex.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoding/encoder.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoding/encoder-factory.cpp
+	${Ascension_SOURCE_DIR}/corelib/encoding/encoder-implementation.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/character-property.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/identifier-syntax.cpp
 	${Ascension_SOURCE_DIR}/rules/number-token-rule.cpp
