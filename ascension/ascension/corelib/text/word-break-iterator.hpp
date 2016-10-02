@@ -75,7 +75,7 @@ namespace ascension {
 			WordBreakIterator(
 				BaseIterator base, WordBreakIteratorBase::Component component,
 				const IdentifierSyntax& syntax, const std::locale& locale = std::locale::classic())
-				: BreakIteratorImpl(base, locale, component, syntax) {}
+				: BreakIteratorImpl<WordBreakIterator<BaseIterator>, WordBreakIteratorBase, BaseIterator>(base, locale, component, syntax) {}
 		};
 	}
 } // namespace ascension.text
