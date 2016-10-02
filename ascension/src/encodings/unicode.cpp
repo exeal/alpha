@@ -252,7 +252,7 @@ namespace ascension {
 
 					bool bigEndian;
 					assert(!state.empty());
-					switch(boost::any_cast<Factory::EncodingState>(state)) {
+					switch(boost::any_cast<typename Factory::EncodingState>(state)) {
 						case Factory::SKIPPED_OUTGOING_BYTE_ORDER_MARK:
 							bigEndian = encoder.isBigEndianDefault();
 							break;
@@ -291,7 +291,7 @@ namespace ascension {
 						bigEndian = encoder.isBigEndianDefault();
 						state = Factory::SKIPPED_INCOMING_BYTE_ORDER_MARK;
 					} else {
-						switch(boost::any_cast<Factory::DecodingState>(state)) {
+						switch(boost::any_cast<typename Factory::DecodingState>(state)) {
 							case Factory::SKIPPED_INCOMING_BYTE_ORDER_MARK:
 								bigEndian = encoder.isBigEndianDefault();
 								break;
@@ -807,7 +807,7 @@ namespace ascension {
 								break;	// the destination buffer is insufficient
 
 							// encode
-							const Char utf16[3] = {fromNext[0], (encodables > 1) ? fromNext[1] : 0, (encodables > 2) ? fromNext[2] : 0};
+							const Char utf16[3] = {fromNext[0], (encodables > 1) ? fromNext[1] : '\0', (encodables > 2) ? fromNext[2] : '\0'};
 							*(toNext++) = BASE64[utf16[0] >> 10];
 							*(toNext++) = BASE64[(utf16[0] >> 4) & 0x3f];
 							*(toNext++) = BASE64[(utf16[0] << 2 | utf16[1] >> 14) & 0x3f];
