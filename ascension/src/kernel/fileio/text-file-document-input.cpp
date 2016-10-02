@@ -183,10 +183,9 @@ namespace ascension {
 			 * @param fileName The file name
 			 * @param encoding The character encoding of the input file or auto detection name
 			 * @param encodingSubstitutionPolicy The substitution policy used in encoding conversion
-			 * @param[out] endOfInsertedString The position of the end of the inserted text. Can be @c null if not
-			 *                                 needed
-			 * @return A pair consists of the encoding used to convert and the boolean value means if the input
-			 *         contained Unicode byte order mark
+			 * @return A tuple consists of three values: (0) the encoding used to convert, (1) the boolean value means
+			 *         if the input contained Unicode byte order mark and (2) the position of the end of the inserted
+			 *         text string
 			 * @throw UnmappableCharacterException
 			 * @throw MalformedInputException
 			 * @throw ... Any exceptions @c TextFileStreamBuffer#TextFileStreamBuffer and @c kernel#insert throw
@@ -692,7 +691,7 @@ private:
 			}
 
 			/**
-			 * Sets the character encoding.
+			 * Sets the character encoding. This method invokes @c FilePropertyListener#fileEncodingChanged.
 			 * @param encoding The encoding
 			 * @return This object
 			 * @throw encoding#UnsupportedEncodingException @a encoding is not supported
@@ -707,16 +706,32 @@ private:
 			}
 
 			/**
-			 * Sets the newline.
+			 * Sets the newline. This method invokes @c FilePropertyListener#fileEncodingChanged.
 			 * @param newline The newline
 			 * @return This object
 			 * @throw UnknownValueException @a newline is not literal
+			 * @see #newline
 			 */
 			TextFileDocumentInput& TextFileDocumentInput::setNewline(const text::Newline& newline) {
 				if(!newline.isLiteral())
 					throw UnknownValueException("newline");
-				else if(newline != newline_) {
+				else if(newline != this->newline()) {
 					newline_ = newline;
+					listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileEncodingChanged, *this);
+				}
+				return *this;
+			}
+
+			/**
+			 * Sets the unicode-byte-order-mark attribute. This method invokes
+			 * @c FilePropertyListener#fileEncodingChanged.
+			 * @param set The new value to set
+			 * @return This object
+			 * @tsee #unicodeByteOrder
+			 */
+			TextFileDocumentInput& TextFileDocumentInput::setUnicodeByteOrderMark(bool set) BOOST_NOEXCEPT {
+				if(set != unicodeByteOrderMark()) {
+					unicodeByteOrderMark_ = set;
 					listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileEncodingChanged, *this);
 				}
 				return *this;

@@ -113,22 +113,17 @@ namespace ascension {
 					public:
 						explicit InternalEncoder(const Factory& factory) BOOST_NOEXCEPT : properties_(factory) {}
 					private:
-						ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext) override;
-						ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
+						Result doFromUnicode(State& state,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext,
+							const boost::iterator_range<const Char*>& from, const Char*& fromNext) override;
+						Result doToUnicode(State& state,
+							const boost::iterator_range<Char*>& to, Char*& toNext,
+							const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
 						const EncodingProperties& properties() const override BOOST_NOEXCEPT {
 							return properties_;
 						}
-						Encoder& resetDecodingState() override BOOST_NOEXCEPT {
-							return decodingState_.reset(), *this;
-						}
-						Encoder& resetEncodingState() override BOOST_NOEXCEPT {
-							return encodingState_.reset(), *this;
-						}
 					private:
 						const EncodingProperties& properties_;
-						EncodingState encodingState_, decodingState_;
 					};
 
 					class ShiftJis : public EncoderFactoryImpl {
@@ -352,19 +347,19 @@ namespace ascension {
 					}
 
 					// UCS to JIS X 0213:2004
-					Encoder::ConversionResult convertUCStoX0213(const Char* first, const Char* last,
+					Encoder::Result convertUCStoX0213(const boost::iterator_range<const Char*>& ucs,
 							const Char*& next, bool eob, std::uint16_t& jis, bool& plane2) BOOST_NOEXCEPT {
 						jis = 0;
-						if(boost::binary_search(LEADING_BYTES_TO_JIS_X_0213, first[0])) {
-							if(first + 1 == last) {
+						if(boost::binary_search(LEADING_BYTES_TO_JIS_X_0213, ucs[0])) {
+							if(boost::size(ucs) == 1) {
 								if(!eob) {
 									// pending
-									next = first;
+									next = boost::const_begin(ucs);
 									return Encoder::COMPLETED;
 								}
 							} else {
-								if(first[1] == 0x309a) {	// <(kana), Combining Katakana-Hiragana Semi-Voiced Sound Mark>
-									switch(first[0]) {
+								if(ucs[1] == 0x309a) {	// <(kana), Combining Katakana-Hiragana Semi-Voiced Sound Mark>
+									switch(ucs[0]) {
 										case 0x304b: jis = 0x2477; break;	// ka -> bidakuon nga
 										case 0x304d: jis = 0x2478; break;	// ki -> bidakuon ngi
 										case 0x304f: jis = 0x2479; break;	// ku -> bidakuon ngu
@@ -380,34 +375,34 @@ namespace ascension {
 										case 0x30c8: jis = 0x257e; break;	// to -> ainu to (tu)
 										case 0x31f7: jis = 0x2678; break;	// small fu -> ainu p
 									}
-								} else if(first[1] == 0x0300) {	// <X, Combining Grave Accent>
-									switch(first[0]) {
+								} else if(ucs[1] == 0x0300) {	// <X, Combining Grave Accent>
+									switch(ucs[0]) {
 										case 0x00e6: jis = 0x2b44; break;	// ae
 										case 0x0254: jis = 0x2b48; break;	// open o
 										case 0x0259: jis = 0x2b4c; break;	// schwa
 										case 0x025a: jis = 0x2b4e; break;	// schwa with hook
 										case 0x028c: jis = 0x2b4a; break;	// turned v
 									}
-								} else if(first[1] == 0x0301) {	// <X, Combining Acute Accent>
-									switch(first[0]) {
+								} else if(ucs[1] == 0x0301) {	// <X, Combining Acute Accent>
+									switch(ucs[0]) {
 										case 0x0254: jis = 0x2b49; break;	// open o
 										case 0x0259: jis = 0x2b4d; break;	// schwa
 										case 0x025a: jis = 0x2b4f; break;	// schwa with hook
 										case 0x028c: jis = 0x2b4b; break;	// turned v
 									}
-								} else if(first[0] == 0x02e9) {
-									if(first[1] == 0x02e5)
+								} else if(ucs[0] == 0x02e9) {
+									if(ucs[1] == 0x02e5)
 										jis = 0x2b65;	// <Extra-Low Tone Bar, Extra-High Tone Bar> -> rising symbol
-									else if(first[1] == text::ZERO_WIDTH_NON_JOINER && first + 2 < last && first[2] == 0x02e5)
+									else if(ucs[1] == text::ZERO_WIDTH_NON_JOINER && boost::size(ucs) > 2 && ucs[2] == 0x02e5)
 										jis = 0x2b64;	// just dependent Extra-Low Tone Bar
-								} else if(first[0] == 0x02e5) {
-									if(first[1] == 0x02e9)
+								} else if(ucs[0] == 0x02e5) {
+									if(ucs[1] == 0x02e9)
 										jis = 0x2b66;	// <Extra-High Tone Bar, Extra-Low Tone Bar> -> falling symbol
-									else if(first[1] == text::ZERO_WIDTH_NON_JOINER && first + 2 < last && first[2] == 0x02e9)
+									else if(ucs[1] == text::ZERO_WIDTH_NON_JOINER && boost::size(ucs) > 2 && ucs[2] == 0x02e9)
 										jis = 0x2b60;	// just dependent Extra-High Tone Bar
 								}
 								if(jis != 0) {
-									next = first + 2;
+									next = boost::const_begin(ucs) + 2;
 									plane2 = false;
 									return Encoder::COMPLETED;
 								}
@@ -415,14 +410,14 @@ namespace ascension {
 						}
 
 						// one-to-one mapping
-						if(text::surrogates::isHighSurrogate(first[0])) {
-							if(first + 1 == last) {
-								next = first;
+						if(text::surrogates::isHighSurrogate(ucs[0])) {
+							if(boost::size(ucs) == 1) {
+								next = boost::const_begin(ucs);
 								return eob ? Encoder::MALFORMED_INPUT : Encoder::COMPLETED;
 							}
-							const CodePoint c = text::utf::decodeFirst(first, last);
+							const CodePoint c = text::utf::decodeFirst(ucs);
 							if(c < 0x10000ul) {
-								next = first;
+								next = boost::const_begin(ucs);
 								return Encoder::MALFORMED_INPUT;
 							} else if(c >= 0x20000ul && c < 0x30000ul) {
 								const std::uint16_t** wire;
@@ -435,34 +430,34 @@ namespace ascension {
 										plane2 = true;
 								}
 								if(jis != 0) {
-									next = first + 2;
+									next = boost::const_begin(ucs) + 2;
 									return Encoder::COMPLETED;
 								}
 							}
 							if(jis == 0) {
-								next = first;
+								next = boost::const_begin(ucs);
 								return Encoder::UNMAPPABLE_CHARACTER;
 							}
 						} else {
 							const std::uint16_t** wire;
-							if(nullptr != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_1[mask8Bit(first[0] >> 8)])) {
-								if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
+							if(nullptr != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_1[mask8Bit(ucs[0] >> 8)])) {
+								if(0 != (jis = wireAt(wire, mask8Bit(ucs[0]))))
 									plane2 = false;
 							}
-							if(jis == 0 && nullptr != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_2[mask8Bit(first[0] >> 8)])) {
-								if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
+							if(jis == 0 && nullptr != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_2[mask8Bit(ucs[0] >> 8)])) {
+								if(0 != (jis = wireAt(wire, mask8Bit(ucs[0]))))
 									plane2 = true;
 							}
-							if(jis == 0 && nullptr != (wire = UCS_TO_JIS_X_0208[mask8Bit(first[0] >> 8)])) {
-								if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
+							if(jis == 0 && nullptr != (wire = UCS_TO_JIS_X_0208[mask8Bit(ucs[0] >> 8)])) {
+								if(0 != (jis = wireAt(wire, mask8Bit(ucs[0]))))
 									plane2 = false;
 							}
 							if(jis == 0) {
-								next = first;
+								next = boost::const_begin(ucs);
 								return Encoder::UNMAPPABLE_CHARACTER;
 							}
 						}
-						next = first + 1;
+						next = boost::const_begin(ucs) + 1;
 						return Encoder::COMPLETED;
 					}
 
@@ -549,8 +544,8 @@ namespace ascension {
 					}
 
 					// converts from ISO-2022-JP-X into UTF-16.
-					Encoder::ConversionResult convertISO2022JPXtoUTF16(char x, Char* to, Char* toEnd, Char*& toNext,
-							const Byte* from, const Byte* fromEnd, const Byte*& fromNext,
+					Encoder::Result convertISO2022JPXtoUTF16(char x,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext,
 							EncodingState& state, bool eob, Encoder::SubstitutionPolicy substitutionPolicy) {
 						// Acceptable character sets and designate sequence are following. G0, unless described:
 						//
@@ -609,35 +604,34 @@ namespace ascension {
 							|| x == 's' || x == 'c'
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 							;
-						const Char* const beginning = to;
 						std::unique_ptr<Encoder> gb2312Encoder, ksc5601Encoder, iso88591Encoder, iso88597Encoder;
 						bool checkedGB2312 = false, checkedKSC5601 = false;
 
 #define ASCENSION_HANDLE_UNMAPPABLE()	{									\
 	if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTERS)			\
-		--to;																\
-	else if(substitutionPolicy != Encoder::REPLACE_UNMAPPABLE_CHARACTERS) {	\
-		toNext = to;														\
-		fromNext = from;													\
+		--toNext;															\
+	else if(substitutionPolicy != Encoder::REPLACE_UNMAPPABLE_CHARACTERS)	\
 		return Encoder::UNMAPPABLE_CHARACTER;								\
-	}																		\
 }
 
-						for(; to < toEnd && from < fromEnd; ++to, ++from) {
-							if(*from == ESC) {	// expect esc. seq.
-								if(from + 2 < fromEnd) {
-									switch(from[1]) {
-										case 'N': state.invokedG2 = true; ++from; continue;	// SS2
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+							if(*fromNext == ESC) {	// expect esc. seq.
+								if(fromNext + 2 < boost::const_end(from)) {
+									switch(fromNext[1]) {
+										case 'N':
+											state.invokedG2 = true; ++fromNext; continue;	// SS2
 										case '(':
-											switch(from[2]) {
-												case 'B': state.g0 = EncodingState::ASCII; from += 2; continue;				// "(B" => ASCII
-//												case 'I': state.g0 = EncodingState::JIS_X_0201_KANA; from += 2; continue;	// "(I" => JIS X 0201 Kana
-												case 'J': state.g0 = EncodingState::JIS_X_0201_ROMAN; from += 2; continue;	// "(J" => JIS X 0201 Roman
+											switch(fromNext[2]) {
+												case 'B': state.g0 = EncodingState::ASCII; fromNext += 2; continue;				// "(B" => ASCII
+//												case 'I': state.g0 = EncodingState::JIS_X_0201_KANA; fromNext += 2; continue;	// "(I" => JIS X 0201 Kana
+												case 'J': state.g0 = EncodingState::JIS_X_0201_ROMAN; fromNext += 2; continue;	// "(J" => JIS X 0201 Roman
 											}
 											break;
 										case '$':
-											switch(from[2]) {
-												case '@': state.g0 = EncodingState::JIS_X_0208; from += 2; continue;	// "$@" => JIS X 0208
+											switch(fromNext[2]) {
+												case '@': state.g0 = EncodingState::JIS_X_0208; fromNext += 2; continue;	// "$@" => JIS X 0208
 												case 'A':	// "$A" => GB2312
 													if(x != '2') break;
 													if(!checkedGB2312) {
@@ -645,11 +639,11 @@ namespace ascension {
 															gb2312Encoder->setSubstitutionPolicy(substitutionPolicy);
 													}
 													if(gb2312Encoder.get() == nullptr) break;
-													state.g0 = EncodingState::GB2312; from += 2; continue;
-												case 'B': state.g0 = EncodingState::JIS_X_0208; from += 2; continue;	// "$B" => JIS X 0208
+													state.g0 = EncodingState::GB2312; fromNext += 2; continue;
+												case 'B': state.g0 = EncodingState::JIS_X_0208; fromNext += 2; continue;	// "$B" => JIS X 0208
 												case '(':
-													if(from + 3 < fromEnd) {
-														switch(from[3]) {
+													if(fromNext + 3 < boost::const_end(from)) {
+														switch(fromNext[3]) {
 															case 'C':	// "$(C" => KSC5601
 																if(x != '2') break;
 																if(!checkedKSC5601) {
@@ -657,23 +651,23 @@ namespace ascension {
 																		ksc5601Encoder->setSubstitutionPolicy(substitutionPolicy);
 																}
 																if(ksc5601Encoder.get() == nullptr) break;
-																state.g0 = EncodingState::KS_C_5601; from += 3; continue;
+																state.g0 = EncodingState::KS_C_5601; fromNext += 3; continue;
 															case 'D':	// "$(D" => JIS X 0212
 																if(x != '2'
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 																	&& x != '1'
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 																	) break;
-																state.g0 = EncodingState::JIS_X_0212; from += 3; continue;
+																state.g0 = EncodingState::JIS_X_0212; fromNext += 3; continue;
 															case 'O':	// "$(O" => JIS X 0213 plane 1
 																if(!jis2004) break;
-																state.g0 = EncodingState::JIS_X_0213_PLANE_1; from += 3; continue;
+																state.g0 = EncodingState::JIS_X_0213_PLANE_1; fromNext += 3; continue;
 															case 'P':	// "$(P" => JIS X 0213 plane 2
 																if(!jis2004) break;
-																state.g0 = EncodingState::JIS_X_0213_PLANE_2; from += 3; continue;
+																state.g0 = EncodingState::JIS_X_0213_PLANE_2; fromNext += 3; continue;
 															case 'Q':	// "$(Q" => JIS X 0213 plane 1
 																if(!jis2004) break;
-																state.g0 = EncodingState::JIS_X_0213_PLANE_1; from += 3; continue;
+																state.g0 = EncodingState::JIS_X_0213_PLANE_1; fromNext += 3; continue;
 														}
 													}
 											}
@@ -681,8 +675,8 @@ namespace ascension {
 										case '.':
 											if(x == '2') {
 												switch(from[1]) {
-												case 'A': state.g2 = EncodingState::ISO_8859_1; from += 2; continue;	// ".A" => ISO-8859-1 (G2)
-												case 'F': state.g2 = EncodingState::ISO_8859_7; from += 2; continue;	// ".F" => ISO-8859-7 (G2)
+												case 'A': state.g2 = EncodingState::ISO_8859_1; fromNext += 2; continue;	// ".A" => ISO-8859-1 (G2)
+												case 'F': state.g2 = EncodingState::ISO_8859_7; fromNext += 2; continue;	// ".F" => ISO-8859-7 (G2)
 												}
 											}
 											break;
@@ -690,46 +684,41 @@ namespace ascension {
 								}
 
 								// illegal or unsupported esc. seq.
-								toNext = to;
-								fromNext = from;
 								return Encoder::MALFORMED_INPUT;
 							}
 
-							if(*from <= 0x20 || (*from >= 0x80 && *from < 0xa0)) {	// C0 or C1
-								if(*from == 0x0a || *from == 0x0d) {
+							if(*fromNext <= 0x20 || (*fromNext >= 0x80 && *fromNext < 0xa0)) {	// C0 or C1
+								if(*fromNext == 0x0a || *fromNext == 0x0d) {
 									state.g0 = EncodingState::ASCII;
 									state.g2 = EncodingState::UNDESIGNATED;
 								}
-								*to = *from;	// SI, SO, SS2 (1 byte) and SS3 (1 byte) are ignored
+								*toNext = *fromNext;	// SI, SO, SS2 (1 byte) and SS3 (1 byte) are ignored
 							} else if(state.invokedG2) {	// G2
-								const Byte c = *from | 0x80;
+								const Byte c = *fromNext | 0x80;
 								if(state.g2 == EncodingState::ISO_8859_1) {	// ISO-8859-1
 									if(iso88591Encoder.get() == nullptr)
 										(iso88591Encoder = EncoderRegistry::instance().forMIB(fundamental::ISO_8859_1))->setSubstitutionPolicy(substitutionPolicy);
 									const Byte* next;
-									const Encoder::ConversionResult r = iso88591Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
-									if(r != Encoder::COMPLETED) {
-										fromNext = from;
-										return r;
-									}
+									Char* temp;
+									Encoder::State state;
+									const auto r = iso88591Encoder->toUnicode(state, boost::make_iterator_range(toNext, boost::end(to)), temp, boost::make_iterator_range_n(&c, 1), next);
+									if(r != Encoder::COMPLETED)
+										return (toNext = temp), r;
 								} else if(state.g2 == EncodingState::ISO_8859_7) {	// ISO-8859-7
 									if(iso88597Encoder.get() == nullptr)
 										(iso88597Encoder = EncoderRegistry::instance().forMIB(standard::ISO_8859_7))->setSubstitutionPolicy(substitutionPolicy);
 									const Byte* next;
-									const Encoder::ConversionResult r = iso88597Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
-									if(r != Encoder::COMPLETED) {
-										fromNext = from;
-										return r;
-									}
-								} else {	// G2 is not designated
-									toNext = to;
-									fromNext = from;
+									Char* temp;
+									Encoder::State state;
+									const auto r = iso88597Encoder->toUnicode(state, boost::make_iterator_range(toNext, boost::end(to)), temp, boost::make_iterator_range_n(&c, 1), next);
+									if(r != Encoder::COMPLETED)
+										return (toNext = temp), r;
+								} else	// G2 is not designated
 									return Encoder::MALFORMED_INPUT;
-								}
 								state.invokedG2 = false;
 							} else if(state.g0 == EncodingState::JIS_X_0201_ROMAN) {	// JIS X 0201-Roman
-								*to = convertROMANtoUCS(*from);
-								if(*to == text::REPLACEMENT_CHARACTER)
+								*toNext = convertROMANtoUCS(*fromNext);
+								if(*toNext == text::REPLACEMENT_CHARACTER)
 									ASCENSION_HANDLE_UNMAPPABLE()
 /*							} else if(state.g0 == EncodingState::JIS_X_0201_KANA) {	// JIS X 0201-Kana
 								wchar_t	u;
@@ -743,83 +732,75 @@ namespace ascension {
 								dest[j++] = u;
 								++i;
 */							} else if(state.g0 == EncodingState::ASCII) {	// ASCII
-								if(*from >= 0x80)
+								if(*fromNext >= 0x80)
 									ASCENSION_HANDLE_UNMAPPABLE()
-								*to = *from;
-							} else if(from + 1 >= fromEnd) {	// the trail byte was not found
-								toNext = to;
-								fromNext = from;
+								*toNext = *fromNext;
+							} else if(fromNext + 1 >= boost::const_end(from))	// the trail byte was not found
 								return Encoder::MALFORMED_INPUT;
-							} else if(state.g0 == EncodingState::JIS_X_0208) {	// JIS X 0208:1978 or :1983
-								const std::uint16_t jis = (*from << 8) | from[1];
+							else if(state.g0 == EncodingState::JIS_X_0208) {	// JIS X 0208:1978 or :1983
+								const std::uint16_t jis = (*fromNext << 8) | fromNext[1];
 								const Char ucs = convertX0208toUCS(jis);
 								if(ucs == text::REPLACEMENT_CHARACTER)
 									ASCENSION_HANDLE_UNMAPPABLE()
-								++from;
+								++fromNext;
 							} else if(state.g0 == EncodingState::JIS_X_0212) {	// JIS X 0212:1990
-								const std::uint16_t jis = (*from << 8) | from[1];
+								const std::uint16_t jis = (*fromNext << 8) | fromNext[1];
 								const Char ucs = convertX0212toUCS(jis);
 								if(ucs == text::REPLACEMENT_CHARACTER)
 									ASCENSION_HANDLE_UNMAPPABLE()
-								++from;
+								++fromNext;
 							} else if(state.g0 == EncodingState::GB2312 || state.g0 == EncodingState::KS_C_5601) {	// GB2312:1980 or KSC5601:1987
-								const Byte buffer[2] = {*from | 0x80, from[1] | 0x80};
-								const Byte* const bufferEnd = buffer + std::extent<decltype(buffer)>::value;
+								const Byte buffer[2] = {*fromNext | 0x80, fromNext[1] | 0x80};
 								const Byte* next;
-								const Encoder::ConversionResult r = ((state.g0 == EncodingState::GB2312) ?
-									gb2312Encoder : ksc5601Encoder)->toUnicode(to, toEnd, toNext, buffer, bufferEnd, next);
-								if(r != Encoder::COMPLETED) {
-									fromNext = from;
-									return r;
-								}
-								from = next - 1;
+								Char* temp;
+								Encoder::State internalState;
+								const auto r = ((state.g0 == EncodingState::GB2312) ?
+									gb2312Encoder : ksc5601Encoder)->toUnicode(internalState, boost::make_iterator_range(toNext, boost::end(to)), temp, boost::make_iterator_range(buffer), next);
+								if(r != Encoder::COMPLETED)
+									return (toNext = temp), r;
+								fromNext = next - 1;
 							} else if(state.g0 == EncodingState::JIS_X_0213_PLANE_1
 									|| state.g0 == EncodingState::JIS_X_0213_PLANE_2) {	// JIS X 0213:2004 or :2000
-								const std::uint16_t jis = (*from << 8) | from[1];
+								const std::uint16_t jis = (*fromNext << 8) | fromNext[1];
 								CodePoint ucs = (state.g0 == EncodingState::JIS_X_0213_PLANE_1) ?
 									convertX0213Plane1toUCS(jis) : convertX0213Plane2toUCS(jis);
 
 								if(ucs == text::REPLACEMENT_CHARACTER) {
 									if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTERS) {
-										--to;
-										++from;
+										--toNext;
+										++fromNext;
 										continue;
-									} else if(substitutionPolicy != Encoder::REPLACE_UNMAPPABLE_CHARACTERS) {
-										toNext = to;
-										fromNext = from;
+									} else if(substitutionPolicy != Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
 										return Encoder::UNMAPPABLE_CHARACTER;
-									}
 								}
 								if(ucs > 0xffffu) {
-									if(to + 1 >= toEnd)
+									if(toNext + 1 >= boost::end(to))
 										break;	// INSUFFICIENT_BUFFER
 									if(ucs > 0x0010fffful) {	// two UCS characters
-										*to = maskUCS2(ucs >> 16);
-										*++to = maskUCS2(ucs);
+										*toNext = maskUCS2(ucs >> 16);
+										*++toNext = maskUCS2(ucs);
 									} else {
-										Char* temp = to++;
+										Char* temp = toNext++;
 										text::utf::encode(ucs, temp);
 									}
 								} else {
-									if(to > beginning && ((to[-1] == 0x02e9u && ucs == 0x02e5u) || (to[-1] == 0x02e5u && ucs == 0x02e9u))) {
-										if(to + 1 >= toEnd)
+									if(toNext > boost::begin(to) && ((toNext[-1] == 0x02e9u && ucs == 0x02e5u) || (toNext[-1] == 0x02e5u && ucs == 0x02e9u))) {
+										if(toNext + 1 >= boost::end(to))
 											break;	// INSUFFICIENT_BUFFER
-										*(to++) = text::ZERO_WIDTH_NON_JOINER;
+										*(toNext++) = text::ZERO_WIDTH_NON_JOINER;
 									}
-									*to = maskUCS2(ucs);
+									*toNext = maskUCS2(ucs);
 								}
-								++from;
+								++fromNext;
 							}
 						}
 #undef ASCENSION_HANDLE_UNMAPPABLE
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
 					}
 
 					// converts from UTF-16 into ISO-2022-JP-X.
-					Encoder::ConversionResult convertUTF16toISO2022JPX(char x, Byte* to, Byte* toEnd, Byte*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext,
+					Encoder::Result convertUTF16toISO2022JPX(char x,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext,
 							EncodingState& state, bool eob, Encoder::SubstitutionPolicy substitutionPolicy) {
 						const bool jis2004 = x == '4'
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
@@ -845,38 +826,37 @@ namespace ascension {
 		mbcs[1] = 1;															\
 		charset = EncodingState::ASCII;											\
 	} else if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTERS) {	\
-		--to;																	\
+		--toNext;																\
 		continue;																\
-	} else {																	\
-		toNext = to;															\
-		fromNext = from;														\
-		return Encoder::UNMAPPABLE_CHARACTER;									\
-	}
+	} else																		\
+		return Encoder::UNMAPPABLE_CHARACTER;
 
 						std::uint16_t jis;
 						Byte mbcs[2];
 						Byte* dummy1;
 						const Char* dummy2;
-						for(; to < toEnd && from < fromEnd; ++to, ++from) {
-							// first, convert '*from' into 'jis' or 'mbcs' buffer
-							if(*from < 0x80) {
-								mbcs[0] = mask8Bit(jis = *from);
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+							// first, convert '*fromNext' into 'jis' or 'mbcs' buffer
+							Encoder::State dummyState;
+							if(*fromNext < 0x80) {
+								mbcs[0] = mask8Bit(jis = *fromNext);
 								mbcs[1] = 0;
 								charset = EncodingState::ASCII;
-							} else if(0 != (jis = convertUCStoROMAN(*from)) && jis < 0x80)
+							} else if(0 != (jis = convertUCStoROMAN(*fromNext)) && jis < 0x80)
 								charset = /*(jis < 0x80) ?*/ EncodingState::JIS_X_0201_ROMAN /*: EncodingState::JIS_X_0201_KANA*/;
 							else if(jis2004) {
+								const Char* next;
 								bool plane2;
-								switch(convertUCStoX0213(from, fromEnd, fromNext, eob, jis, plane2)) {
+								switch(convertUCStoX0213(boost::make_iterator_range(fromNext, boost::const_end(from)), next, eob, jis, plane2)) {
 								case Encoder::COMPLETED:
-									if(fromNext == from) {
-										toNext = to;	// pending...
-										return Encoder::COMPLETED;
-									}
+									if(next == fromNext)
+										return Encoder::COMPLETED;	// pending...
 									charset = EncodingState::UNDESIGNATED;
 									if(!plane2) {
 										// try JIS X 0208 compatible sequence
-										if(x == 'c' && convertUCStoX0208(*from) != 0x00)
+										if(x == 'c' && convertUCStoX0208(*fromNext) != 0x00)
 											charset = EncodingState::JIS_X_0208;
 										else if(x == 's'
 												&& !isISO2022JP3ProhibitedIdeograph(jis)
@@ -892,108 +872,106 @@ namespace ascension {
 								case Encoder::MALFORMED_INPUT:
 									return Encoder::MALFORMED_INPUT;
 								}
-							} else if(0 != (jis = convertUCStoX0208(*from)))
+							} else if(0 != (jis = convertUCStoX0208(*fromNext)))
 								charset = EncodingState::JIS_X_0208;
 							else if((x == '2'
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
 									|| x == '1'
 #endif // !ASCENSION_NO_EXTENDED_ENCODINGS
-									) && (jis = convertUCStoX0212(*from)) != 0)
+									) && (jis = convertUCStoX0212(*fromNext)) != 0)
 								charset = EncodingState::JIS_X_0212;
 							else if(/*x == '2' &&*/ gb2312Encoder.get() != nullptr
-									&& gb2312Encoder->fromUnicode(mbcs, mbcs + std::extent<decltype(mbcs)>::value, dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+									&& gb2312Encoder->fromUnicode(dummyState, boost::make_iterator_range(mbcs), dummy1, boost::make_iterator_range_n(fromNext, 1), dummy2) == Encoder::COMPLETED)
 								charset = EncodingState::GB2312;
 							else if(/*x == '2' &&*/ ksc5601Encoder.get() != nullptr
-									&& ksc5601Encoder->fromUnicode(mbcs, mbcs + std::extent<decltype(mbcs)>::value, dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+									&& ksc5601Encoder->fromUnicode(dummyState, boost::make_iterator_range(mbcs), dummy1, boost::make_iterator_range_n(fromNext, 1), dummy2) == Encoder::COMPLETED)
 								charset = EncodingState::KS_C_5601;
 							else if(x == '2'
-									&& iso88591Encoder->fromUnicode(mbcs, mbcs + std::extent<decltype(mbcs)>::value, dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+									&& iso88591Encoder->fromUnicode(dummyState, boost::make_iterator_range(mbcs), dummy1, boost::make_iterator_range_n(fromNext, 1), dummy2) == Encoder::COMPLETED)
 								charset = EncodingState::ISO_8859_1;
 							else if(x == '2'
-									&& iso88597Encoder->fromUnicode(mbcs, mbcs + std::extent<decltype(mbcs)>::value, dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+									&& iso88597Encoder->fromUnicode(dummyState, boost::make_iterator_range(mbcs), dummy1, boost::make_iterator_range_n(fromNext, 1), dummy2) == Encoder::COMPLETED)
 								charset = EncodingState::ISO_8859_7;
 							else 
 								ASCENSION_HANDLE_UNMAPPABLE()
 
 #define ASCENSION_DESIGNATE_TO_G0(escapeSequence, length)	\
 	if(state.g0 != charset) {								\
-		if(to + length > toEnd)								\
+		if(std::next(toNext, length) > boost::end(to))		\
 			break;	/* INSUFFICIENT_BUFFER */				\
-		std::memcpy(to, escapeSequence, length);			\
-		to += length;										\
+		std::memcpy(toNext, escapeSequence, length);		\
+		std::advance(toNext, length);						\
 		state.g0 = static_cast<EncodingState::G0>(charset);	\
 	}
 #define ASCENSION_DESIGNATE_TO_G2(escapeSequence, length)	\
 	if(state.g2 != charset) {								\
-		if(to + length > toEnd)								\
+		if(std::next(toNext, length) > boost::end(to))		\
 			break;	/* INSUFFICIENT_BUFFER */				\
-		std::memcpy(to, escapeSequence, length);			\
-		to += length;										\
+		std::memcpy(toNext, escapeSequence, length);		\
+		std::advance(toNext, length);						\
 		state.g2 = static_cast<EncodingState::G2>(charset);	\
 	}
 
 							if(charset == EncodingState::ASCII) {	// ASCII
 								ASCENSION_DESIGNATE_TO_G0("\x1b(B", 3);
-								*to = mask8Bit(jis);
+								*toNext = mask8Bit(jis);
 							} else if(charset == EncodingState::JIS_X_0201_ROMAN) {	// JIS X 0201-Roman
 								ASCENSION_DESIGNATE_TO_G0("\x1b(J", 3);
-								*to = mask8Bit(jis);
+								*toNext = mask8Bit(jis);
 //							} else if(charset == EncodingState::JIS_X_0201_KANA) {	// JIS X 0201-Kana
 //								ASCENSION_DESIGNATE_TO_G0("\x1b(I", 3);
-//								*to = mask8Bit(jis);
+//								*toNext = mask8Bit(jis);
 							} else if(charset == EncodingState::JIS_X_0208) {	// JIS X 0208:1997 (:1990)
 								ASCENSION_DESIGNATE_TO_G0("\x1b$B", 3);
-								*to = mask8Bit(jis >> 8);
-								*++to = mask8Bit(jis);
+								*toNext = mask8Bit(jis >> 8);
+								*++toNext = mask8Bit(jis);
 							} else if(charset == EncodingState::JIS_X_0212) {	// JIS X 0212:1990
 								ASCENSION_DESIGNATE_TO_G0("\x1b$(D", 4);
-								*to = mask8Bit(jis >> 8);
-								*++to = mask8Bit(jis);
+								*toNext = mask8Bit(jis >> 8);
+								*++toNext = mask8Bit(jis);
 							} else if(charset == EncodingState::JIS_X_0213_PLANE_1) {	// JIS X 0213:2004 plane-1 /* or :2000 plane-1 */
 								ASCENSION_DESIGNATE_TO_G0("\x1b$(Q" /*"\x1b$(O"*/, 4);
-								*to = mask8Bit(jis >> 8);
-								*++to = mask8Bit(jis);
+								*toNext = mask8Bit(jis >> 8);
+								*++toNext = mask8Bit(jis);
 							} else if(charset == EncodingState::JIS_X_0213_PLANE_2) {	// JIS X 0213:2004 (:2000) plane-2
 								ASCENSION_DESIGNATE_TO_G0("\x1b$(P", 4);
-								*to = mask8Bit(jis >> 8);
-								*++to = mask8Bit(jis);
+								*toNext = mask8Bit(jis >> 8);
+								*++toNext = mask8Bit(jis);
 							} else if(charset == EncodingState::GB2312) {	// GB2312:1980
 								ASCENSION_DESIGNATE_TO_G0("\x1b$A", 3);
-								*to = mask7Bit(mbcs[0]);
+								*toNext = mask7Bit(mbcs[0]);
 								if(mbcs[1] != 0)
-									*++to = mask7Bit(mbcs[1]);
+									*++toNext = mask7Bit(mbcs[1]);
 							} else if(charset == EncodingState::KS_C_5601) {	// KSC5601:1987
 								ASCENSION_DESIGNATE_TO_G0("\x1b$(C", 4);
-								*to = mask7Bit(mbcs[0]);
+								*toNext = mask7Bit(mbcs[0]);
 								if(mbcs[1] != 0)
-									*++to = mask7Bit(mbcs[1]);
+									*++toNext = mask7Bit(mbcs[1]);
 							} else if(charset == EncodingState::ISO_8859_1) {	// ISO-8859-1
 								ASCENSION_DESIGNATE_TO_G2("\x1b.A", 3);
-								if(to + 3 >= toEnd)
+								if(std::next(toNext, 3) >= boost::end(to))
 									break;	// INSUFFICIENT_BUFFER
-								*to = ESC;	// SS2
-								*++to = 'N';
-								*++to = mask8Bit(mbcs[0]);
+								*toNext = ESC;	// SS2
+								*++toNext = 'N';
+								*++toNext = mask8Bit(mbcs[0]);
 							} else if(charset == EncodingState::ISO_8859_7) {	// ISO-8859-7
 
 								ASCENSION_DESIGNATE_TO_G2("\x1b.F", 3);
-								if(to + 3 >= toEnd)
+								if(std::next(toNext, 3) >= boost::end(to))
 									break;	// INSUFFICIENT_BUFFER
-								*to = ESC;	// SS2
-								*++to = 'N';
-								*++to = mask8Bit(mbcs[0]);
+								*toNext = ESC;	// SS2
+								*++toNext = 'N';
+								*++toNext = mask8Bit(mbcs[0]);
 							}
 						}
 
 						// restore G0 into ASCII and end (if sufficient buffer is)
-						if(from == fromEnd && state.g0 != EncodingState::ASCII && to + 3 <= toEnd) {
-							std::memcpy(to, "\x1b(B", 3);
-							to += 3;
+						if(fromNext == boost::const_end(from) && state.g0 != EncodingState::ASCII && toNext + 3 <= boost::end(to)) {
+							std::memcpy(toNext, "\x1b(B", 3);
+							toNext += 3;
 							state.g0 = EncodingState::ASCII;
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
 #undef ASCENSION_HANDLE_UNMAPPABLE
 #undef ASCENSION_DESIGNATE_TO_G0
 #undef ASCENSION_DESIGNATE_TO_G2
@@ -1001,7 +979,7 @@ namespace ascension {
 
 					// JIS X 0208 or JIS X 0213 <-> シフト JIS 2 バイト文字の変換
 					inline void shiftCode(std::uint16_t jis, Byte* dbcs, bool plane2) {
-						assert(dbcs != 0);
+						assert(dbcs != nullptr);
 						const Byte jk = mask8Bit((jis - 0x2020) >> 8);	// ku
 						const Byte jt = mask8Bit((jis - 0x2020) >> 0);	// ten
 
@@ -1015,7 +993,7 @@ namespace ascension {
 						else				dbcs[1] = jt + ((jt <= 63) ? 0x3f : 0x40);
 					}
 					inline std::uint16_t unshiftCodeX0208(const Byte dbcs[]) {
-						assert(dbcs != 0);
+						assert(dbcs != nullptr);
 						Byte jk, jt;
 
 						if(dbcs[0] >= 0x81 && dbcs[0] <= 0x9f)	// ku: 01..62
@@ -1059,440 +1037,409 @@ namespace ascension {
 						return ((jk << 8) | jt) + 0x2020;
 					}
 
+					inline bool eob(const Encoder& encoder) BOOST_NOEXCEPT {
+#if 0
+						return encoder.options().test(Encoder::END_OF_BUFFER);
+#else
+						boost::ignore_unused(encoder);
+						return true;
+#endif
+					}
+
 
 					// Shift_JIS //////////////////////////////////////////////////////////////////////////////////////
 
-					template<> Encoder::ConversionResult InternalEncoder<ShiftJis>::doFromUnicode(
-							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-						for(; to < toEnd && from < fromEnd; ++to, ++from) {
-							if(*from < 0x80)
-								*to = mask8Bit(*from);
+					template<> Encoder::Result InternalEncoder<ShiftJis>::doFromUnicode(State&,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+							if(*fromNext < 0x80)
+								*toNext = mask8Bit(*fromNext);
 							else {
-								std::uint16_t jis = convertUCStoX0208(*from);	// try JIS X 0208
+								std::uint16_t jis = convertUCStoX0208(*fromNext);	// try JIS X 0208
 								if(jis == 0x00) {
-									if(const Byte kana = convertUCStoKANA(*from)) {	// try JIS X 0201 kana
-										*to = kana;
+									if(const Byte kana = convertUCStoKANA(*fromNext)) {	// try JIS X 0201 kana
+										*toNext = kana;
 										continue;
 									} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-										*to = properties().substitutionCharacter();
+										*toNext = properties().substitutionCharacter();
 									else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-										--to;
-									else {
-										toNext = to;
-										fromNext = from;
+										--toNext;
+									else
 										return UNMAPPABLE_CHARACTER;
-									}
-								} else if(to + 1 >= toEnd)
+								} else if(toNext + 1 >= boost::end(to))
 									break;	// INSUFFICIENT_BUFFER
-								shiftCode(jis, to, false);
-								++to;	// DBCS			
+								shiftCode(jis, toNext, false);
+								++toNext;	// DBCS			
 							}
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					template<> Encoder::ConversionResult InternalEncoder<ShiftJis>::doToUnicode(
-							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-						for(; to < toEnd && from < fromEnd; ++to, ++from) {
-							if(*from < 0x80)	// ascii
-								*to = *from;
-							else if(*from >= 0xa1 && *from <= 0xdf)	// 1-byte kana
-								*to = convertKANAtoUCS(*from);
-							else if(*from == 0xa0) {
-								toNext = to;
-								fromNext = from;
+					template<> Encoder::Result InternalEncoder<ShiftJis>::doToUnicode(State&,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+							if(*fromNext < 0x80)	// ascii
+								*toNext = *fromNext;
+							else if(*fromNext >= 0xa1 && *fromNext <= 0xdf)	// 1-byte kana
+								*toNext = convertKANAtoUCS(*fromNext);
+							else if(*fromNext == 0xa0)
 								return MALFORMED_INPUT;
-							} else {	// DBCS leading byte
-								if(from + 1 < fromEnd && from[1] >= 0x40 && from[1] <= 0xfc && from[1] != 0x7f) {
-									*to = convertX0208toUCS(unshiftCodeX0208(from));
-									if(*to == text::REPLACEMENT_CHARACTER) {
+							else {	// DBCS leading byte
+								if(fromNext + 1 < boost::const_end(from) && fromNext[1] >= 0x40 && fromNext[1] <= 0xfc && fromNext[1] != 0x7f) {
+									*toNext = convertX0208toUCS(unshiftCodeX0208(fromNext));
+									if(*toNext == text::REPLACEMENT_CHARACTER) {
 										if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-											--to;
-										else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
-											toNext = to;
-											fromNext = from;
+											--toNext;
+										else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS)
 											return UNMAPPABLE_CHARACTER;
-										}
 									}
-									++from;
-								} else {
-									toNext = to;
-									fromNext = from;
-									return (from + 1 == fromEnd && options().test(END_OF_BUFFER)) ? COMPLETED : MALFORMED_INPUT;
-								}
+									++fromNext;
+								} else
+									return (fromNext + 1 == boost::const_end(from) && eob(*this)) ? COMPLETED : MALFORMED_INPUT;
 							}
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
 
 					// Shift_JIS-2004 /////////////////////////////////////////////////////////////////////////////////
 
-					template<> Encoder::ConversionResult InternalEncoder<ShiftJis2004>::doFromUnicode(
-							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+					template<> Encoder::Result InternalEncoder<ShiftJis2004>::doFromUnicode(State&,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
 						std::uint16_t jis;
 						bool plane2;
-						while(to < toEnd && from < fromEnd) {
-							if(*from < 0x0080) {
-								*to++ = mask8Bit(*from++);
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						while(toNext < boost::end(to) && fromNext < boost::const_end(from)) {
+							if(*fromNext < 0x0080) {
+								*toNext++ = mask8Bit(*fromNext++);
 								continue;
 							}
-							switch(convertUCStoX0213(from, fromEnd, fromNext, options().test(END_OF_BUFFER), jis, plane2)) {
+
+							const Char* next;
+							switch(convertUCStoX0213(boost::make_iterator_range(fromNext, boost::const_end(from)), next, eob(*this), jis, plane2)) {
 							case COMPLETED:
-								if(fromNext == from) {
-									assert(!options().test(END_OF_BUFFER));	// pending...
-									toNext = to;
+								if(next == fromNext) {
+									assert(!eob(*this));	// pending...
 									return COMPLETED;
 								}
 								break;
 							case UNMAPPABLE_CHARACTER:
-								if(0 == (jis = convertUCStoKANA(*from))) {
+								if(0 == (jis = convertUCStoKANA(*fromNext))) {
 									if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-										*to = properties().substitutionCharacter();
+										*toNext = properties().substitutionCharacter();
 									else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-										--to;
-									else {
-										toNext = to;
-										fromNext = from;
-										return UNMAPPABLE_CHARACTER;
-									}
+										--toNext;
+									else
+										return (fromNext = next), UNMAPPABLE_CHARACTER;
 								} else {
 									assert(jis < 0x0100);	// kana
-									*to = mask8Bit(jis);
+									*toNext = mask8Bit(jis);
 								}
-								++to;
-								++from;
+								++toNext;
+								++fromNext;
 								continue;
 							case MALFORMED_INPUT:
-								toNext = to;
-								fromNext = from;
-								return MALFORMED_INPUT;
+								return (fromNext = next), MALFORMED_INPUT;
 							}
 
 							// double-byte
-							if(to + 1 == toEnd)
+							if(toNext + 1 == boost::end(to))
 								break;	// insufficient buffer
-							shiftCode(jis, to, plane2);
-							to += 2;
-							from = fromNext;
+							shiftCode(jis, toNext, plane2);
+							std::advance(toNext, 2);
+							fromNext = next;
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					template<> Encoder::ConversionResult InternalEncoder<ShiftJis2004>::doToUnicode(
-							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-						const Char* const beginning = to;
-						for(; to < toEnd && from < fromEnd; ++to, ++from) {
-							if(*from < 0x80)	// ASCII
-								*to = *from;
-							else if(*from >= 0xa1 && *from <= 0xdf)	// kana
-								*to = convertKANAtoUCS(*from);
-							else if(*from == 0xa0) {	// illegal byte
+					template<> Encoder::Result InternalEncoder<ShiftJis2004>::doToUnicode(State&,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+							if(*fromNext < 0x80)	// ASCII
+								*toNext = *fromNext;
+							else if(*fromNext >= 0xa1 && *fromNext <= 0xdf)	// kana
+								*toNext = convertKANAtoUCS(*fromNext);
+							else if(*fromNext == 0xa0) {	// illegal byte
 								if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-									*to = properties().substitutionCharacter();
+									*toNext = properties().substitutionCharacter();
 								else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-									--to;
-								else {
-									toNext = to;
-									fromNext = from;
+									--toNext;
+								else
 									return UNMAPPABLE_CHARACTER;
-								}
 							} else {
-								if(from + 1 < fromEnd && (from[1] >= 0x40 && from[1] <= 0xfc && from[1] != 0x7f)) {	// double byte
+								if(fromNext + 1 < boost::const_end(from) && (fromNext[1] >= 0x40 && fromNext[1] <= 0xfc && fromNext[1] != 0x7f)) {	// double byte
 									bool plane2;
-									const std::uint16_t jis = unshiftCodeX0213(from, plane2);
+									const std::uint16_t jis = unshiftCodeX0213(fromNext, plane2);
 									const CodePoint ucs = !plane2 ? convertX0213Plane1toUCS(jis) : convertX0213Plane2toUCS(jis);
 
 									if(ucs == text::REPLACEMENT_CHARACTER) {	// unmappable
 										if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-											--to;
-										else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
-											toNext = to;
-											fromNext = from;
+											--toNext;
+										else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS)
 											return UNMAPPABLE_CHARACTER;
-										}
 										continue;
-									} else if(ucs >= 0x010000ul && to + 1 >= toEnd)
+									} else if(ucs >= 0x010000ul && toNext + 1 >= boost::end(to))
 										break;	// INSUFFICIENT_BUFFER
 
 									if(ucs > 0x0010fffful) {	// a character uses two code points
-										*to = maskUCS2(ucs >> 16);
-										*++to = maskUCS2(ucs);
+										*toNext = maskUCS2(ucs >> 16);
+										*++toNext = maskUCS2(ucs);
 									} else if(ucs >= 0x00010000ul) {	// out of BMP
-										Char* temp = to++;
+										Char* temp = toNext++;
 										text::utf::encode(ucs, temp);
 									} else {
-										if(to > beginning && (to[-1] == 0x02e9u && ucs == 0x02e5u) || (to[-1] == 0x02e5u && ucs == 0x02e9u)) {
-											if(to + 1 >= toEnd)
+										if(toNext > boost::begin(to) && (toNext[-1] == 0x02e9u && ucs == 0x02e5u) || (toNext[-1] == 0x02e5u && ucs == 0x02e9u)) {
+											if(toNext + 1 >= boost::end(to))
 												break;	// INSUFFICIENT_BUFFER
-											*(to++) = text::ZERO_WIDTH_NON_JOINER;
+											*(toNext++) = text::ZERO_WIDTH_NON_JOINER;
 										}
-										*to = maskUCS2(ucs);
+										*toNext = maskUCS2(ucs);
 									}
-									++from;
-								} else {
-									toNext = to;
-									fromNext = from;
+									++fromNext;
+								} else
 									return MALFORMED_INPUT;
-								}
 							}
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
 
 					// EUC-JP /////////////////////////////////////////////////////////////////////////////////////////
 
-					template<> Encoder::ConversionResult InternalEncoder<EucJp>::doFromUnicode(
-							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-						for(; to < toEnd && from < fromEnd; ++to, ++from) {
-							if(*from < 0x0080) {	// ASCII
-								*to = mask8Bit(*from);
+					template<> Encoder::Result InternalEncoder<EucJp>::doFromUnicode(State&,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+							if(*fromNext < 0x0080) {	// ASCII
+								*toNext = mask8Bit(*fromNext);
 								continue;
 							}
 
 							bool x0212 = false;
-							std::uint16_t jis = convertUCStoX0208(*from);
+							std::uint16_t jis = convertUCStoX0208(*fromNext);
 							if(jis == 0x00) {
-								if((jis = convertUCStoX0212(*from)) != 0x00)
+								if((jis = convertUCStoX0212(*fromNext)) != 0x00)
 									// JIS X 0212
 									x0212 = true;
-								else if(const Byte kana = convertUCStoKANA(*from)) {
+								else if(const Byte kana = convertUCStoKANA(*fromNext)) {
 									// JIS X 0201 Kana
-									if(to + 1 >= toEnd) {
-										toNext = to;
-										fromNext = from;
+									if(toNext + 1 >= boost::end(to))
 										return INSUFFICIENT_BUFFER;
-									}
-									*to = SS2_8BIT;
-									*++to = kana;
+									*toNext = SS2_8BIT;
+									*++toNext = kana;
 									continue;
 								} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-									*to = properties().substitutionCharacter();
+									*toNext = properties().substitutionCharacter();
 								else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-									--to;
-								else {
-									toNext = to;
-									fromNext = from;
+									--toNext;
+								else
 									return UNMAPPABLE_CHARACTER;
-								}
-							} else if(to + 1 >= toEnd) {
-								toNext = to;
-								fromNext = from;
+							} else if(toNext + 1 >= boost::end(to))
 								return INSUFFICIENT_BUFFER;
-							}
 
 							jis |= 0x8080;	// jis -> euc-jp
 							if(!x0212) {	// JIS X 0208
-								*to = mask8Bit(jis >> 8);
-								*++to = mask8Bit(jis);
-							} else if(to + 2 >= toEnd) {
-								toNext = to;
-								fromNext = from;
+								*toNext = mask8Bit(jis >> 8);
+								*++toNext = mask8Bit(jis);
+							} else if(toNext + 2 >= boost::end(to))
 								return INSUFFICIENT_BUFFER;
-							} else {	// JIS X 0212
-								*to = SS3_8BIT;
-								*++to = mask8Bit(jis >> 8);
-								*++to = mask8Bit(jis);
+							else {	// JIS X 0212
+								*toNext = SS3_8BIT;
+								*++toNext = mask8Bit(jis >> 8);
+								*++toNext = mask8Bit(jis);
 							}
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					template<> Encoder::ConversionResult InternalEncoder<EucJp>::doToUnicode(
-							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-						for(; to < toEnd && from < fromEnd; ++to, ++from) {
-							if(*from < 0x80)
-								*to = *from;
+					template<> Encoder::Result InternalEncoder<EucJp>::doToUnicode(State&,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+							if(*fromNext < 0x80)
+								*toNext = *fromNext;
 							else {
-								const std::size_t bytes = (*from != SS3_8BIT) ? 2 : 3;
-								if(from + bytes > fromEnd) {
-									toNext = to;
-									fromNext = from;
+								const std::size_t bytes = (*fromNext != SS3_8BIT) ? 2 : 3;
+								if(std::next(fromNext, bytes) > boost::const_end(from))
 									return MALFORMED_INPUT;
-								} else if(*from == SS2_8BIT)	// SS2 -> JIS X 0201 Kana
-									*to = convertKANAtoUCS(from[1]);
-								else if(*from == SS3_8BIT) {	// SS3 -> JIS X 0212
-									const std::uint16_t jis = ((from[1] << 8) | from[2]) - 0x8080;
-									*to = convertX0212toUCS(jis);
+								else if(*fromNext == SS2_8BIT)	// SS2 -> JIS X 0201 Kana
+									*toNext = convertKANAtoUCS(fromNext[1]);
+								else if(*fromNext == SS3_8BIT) {	// SS3 -> JIS X 0212
+									const std::uint16_t jis = ((fromNext[1] << 8) | fromNext[2]) - 0x8080;
+									*toNext = convertX0212toUCS(jis);
 								} else {	// JIS X 0208
-									const std::uint16_t jis = ((*from << 8) | from[1]) - 0x8080;
-									*to = convertX0208toUCS(jis);
+									const std::uint16_t jis = ((*fromNext << 8) | fromNext[1]) - 0x8080;
+									*toNext = convertX0208toUCS(jis);
 								}
 
-								if(*to == text::REPLACEMENT_CHARACTER) {	// unmappable
+								if(*toNext == text::REPLACEMENT_CHARACTER) {	// unmappable
 									if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-										--to;
-									else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
-										toNext = to;
-										fromNext = from;
+										--toNext;
+									else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS)
 										return UNMAPPABLE_CHARACTER;
-									}
 								}
-								from += bytes - 1;
+								fromNext += bytes - 1;
 							}
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
 
 					// EUC-JIS-2004 ///////////////////////////////////////////////////////////////////////////////////
 
-					template<> Encoder::ConversionResult InternalEncoder<EucJis2004>::doFromUnicode(
-							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+					template<> Encoder::Result InternalEncoder<EucJis2004>::doFromUnicode(State&,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
 						std::uint16_t jis;
 						bool plane2 = false;
-						while(to < toEnd && from < fromEnd) {
-							if(*from < 0x0080) {	// ASCII
-								*to++ = mask8Bit(*from++);
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						while(toNext < boost::end(to) && fromNext < boost::const_end(from)) {
+							if(*fromNext < 0x0080) {	// ASCII
+								*toNext++ = mask8Bit(*fromNext++);
 								continue;
-							} else if(to + 1 == toEnd)	// insufficient buffer
+							} else if(toNext + 1 == boost::end(to))	// insufficient buffer
 								break;
 
 							// UCS -> JIS
-							switch(convertUCStoX0213(from, fromEnd, fromNext, options().test(END_OF_BUFFER), jis, plane2)) {
-							case COMPLETED:
-								if(fromNext == from) {
-									assert(!options().test(END_OF_BUFFER));	// pending...
-									toNext = to;
-									return COMPLETED;
-								}
-							case UNMAPPABLE_CHARACTER:
-								if(0 == (jis = convertUCStoKANA(*from))) {
-									if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-										*to = properties().substitutionCharacter();
-									else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-										--to;
-									else {
-										toNext = to;
-										fromNext = from;
-										return UNMAPPABLE_CHARACTER;
+							const Char* next;
+							switch(convertUCStoX0213(boost::make_iterator_range(fromNext, boost::const_end(from)), next, eob(*this), jis, plane2)) {
+								case COMPLETED:
+									if(next == fromNext) {
+										assert(!eob(*this));	// pending...
+										return COMPLETED;
 									}
-								} else {
-									assert(jis < 0x0100);	// kana
-									*to = SS2_8BIT;
-									*++to = mask8Bit(jis);
-								}
-								++to;
-								++from;
-								continue;
-							case MALFORMED_INPUT:
-								toNext = to;
-								fromNext = from;
-								return MALFORMED_INPUT;
+								case UNMAPPABLE_CHARACTER:
+									if(0 == (jis = convertUCStoKANA(*fromNext))) {
+										if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
+											*toNext = properties().substitutionCharacter();
+										else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
+											--toNext;
+										else
+											return (fromNext = next), UNMAPPABLE_CHARACTER;
+									} else {
+										assert(jis < 0x0100);	// kana
+										*toNext = SS2_8BIT;
+										*++toNext = mask8Bit(jis);
+									}
+									++toNext;
+									++fromNext;
+									continue;
+								case MALFORMED_INPUT:
+									return (fromNext = next), MALFORMED_INPUT;
 							}
 
 							// JIS -> EUC-JIS
 							jis += 0x8080;
 							if(!plane2) {	// plane 1
-								*to = mask8Bit(jis >> 8);
-								*++to = mask8Bit(jis >> 0);
+								*toNext = mask8Bit(jis >> 8);
+								*++toNext = mask8Bit(jis >> 0);
 							} else {	// plane 2
-								if(to + 2 == toEnd)
+								if(toNext + 2 == boost::end(to))
 									break;	// insufficient buffer
-								*to = SS3_8BIT;
-								*++to = mask8Bit(jis >> 8);
-								*++to = mask8Bit(jis >> 0);
+								*toNext = SS3_8BIT;
+								*++toNext = mask8Bit(jis >> 8);
+								*++toNext = mask8Bit(jis >> 0);
 							}
-							++to;
-							from = fromNext;
+							++toNext;
+							fromNext = next;
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					template<> Encoder::ConversionResult InternalEncoder<EucJis2004>::doToUnicode(
-							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-						const Char* const beginning = to;
-						for(; to < toEnd && from < fromEnd; ++to, ++from) {
-							if(*from < 0x80)
-								*to = *from;
+					template<> Encoder::Result InternalEncoder<EucJis2004>::doToUnicode(State&,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+							if(*fromNext < 0x80)
+								*toNext = *fromNext;
 							else {
-								const std::ptrdiff_t bytes = (*from != SS3_8BIT) ? 2 : 3;
-								if(from + bytes > fromEnd) {
-									toNext = to;
-									fromNext = from;
+								const std::ptrdiff_t bytes = (*fromNext != SS3_8BIT) ? 2 : 3;
+								if(std::next(fromNext, bytes) > boost::const_end(from))
 									return MALFORMED_INPUT;
-								} else if(*from == SS2_8BIT)	// SS2 -> JIS X 0201 Kana
-									*to = convertKANAtoUCS(from[1]);
-								else if(*from == SS3_8BIT) {	// SS3 -> plane-2
-									const std::uint16_t jis = ((from[1] << 8) | from[2]) - 0x8080;
+								else if(*fromNext == SS2_8BIT)	// SS2 -> JIS X 0201 Kana
+									*toNext = convertKANAtoUCS(from[1]);
+								else if(*fromNext == SS3_8BIT) {	// SS3 -> plane-2
+									const std::uint16_t jis = ((fromNext[1] << 8) | fromNext[2]) - 0x8080;
 									const CodePoint ucs = convertX0213Plane2toUCS(jis);
 									if(ucs != text::REPLACEMENT_CHARACTER) {
-										if(ucs > 0x010000ul && to + 1 >= toEnd)
+										if(ucs > 0x010000ul && toNext + 1 >= boost::end(to))
 											break;	// INSUFFICIENT_BUFFER
 										if(ucs > 0x0010fffful) {	// a character uses two code points
-											*to = maskUCS2(ucs >> 16);
-											*++to = maskUCS2(ucs >> 0);
+											*toNext = maskUCS2(ucs >> 16);
+											*++toNext = maskUCS2(ucs >> 0);
 										} else if(ucs >= 0x00010000ul) {	// out of BMP
-											Char* temp = to++;
+											Char* temp = toNext++;
 											text::utf::encode(ucs, temp);
 										} else
-											*to = maskUCS2(ucs);
+											*toNext = maskUCS2(ucs);
 									}
 								} else {	// plane-1
-									const std::uint16_t jis = ((*from << 8) | from[1]) - 0x8080;
+									const std::uint16_t jis = ((*fromNext << 8) | fromNext[1]) - 0x8080;
 									const CodePoint ucs = convertX0213Plane1toUCS(jis);
 									if(ucs != text::REPLACEMENT_CHARACTER) {
 										if(ucs > 0x0010fffful) {	// a character uses two code points
-											*to = maskUCS2(ucs >> 16);
-											*++to = maskUCS2(ucs >> 0);
+											*toNext = maskUCS2(ucs >> 16);
+											*++toNext = maskUCS2(ucs >> 0);
 										} else if(ucs >= 0x00010000ul) {	// out of BMP
-											Char* temp = to++;
+											Char* temp = toNext++;
 											text::utf::encode(ucs, temp);
 										} else {
-											if(to > beginning
-													&& ((to[-1] == 0x02e9u && ucs == 0x02e5u)
-													|| (to[-1] == 0x02e5u && ucs == 0x02e9u))) {
-												if(to + 1 >= toEnd)
+											if(toNext > boost::begin(to)
+													&& ((toNext[-1] == 0x02e9u && ucs == 0x02e5u)
+													|| (toNext[-1] == 0x02e5u && ucs == 0x02e9u))) {
+												if(toNext + 1 >= boost::end(to))
 													break;	// INSUFFICIENT_BUFFER
-												*(to++) = text::ZERO_WIDTH_NON_JOINER;
+												*(toNext++) = text::ZERO_WIDTH_NON_JOINER;
 											}
-											*to = maskUCS2(ucs);
+											*toNext = maskUCS2(ucs);
 										}
 									}
 								}
-								if(*to == text::REPLACEMENT_CHARACTER) {	// unmappable
+								if(*toNext == text::REPLACEMENT_CHARACTER) {	// unmappable
 									if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-										--to;
-									else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
-										toNext = to;
-										fromNext = from;
+										--toNext;
+									else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS)
 										return UNMAPPABLE_CHARACTER;
-									}
 								}
-								from += bytes - 1;
+								std::advance(fromNext, bytes - 1);
 							}
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
 
-#define ASCENSION_IMPLEMENT_ISO_2022_JP_X(x, suffix)																\
-	template<> Encoder::ConversionResult InternalEncoder<Iso2022##suffix>::doFromUnicode(							\
-			Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {	\
-		return convertUTF16toISO2022JPX(x, to, toEnd, toNext, from, fromEnd, fromNext,								\
-			encodingState_,	options().test(END_OF_BUFFER), substitutionPolicy());									\
-	}																												\
-	template<> Encoder::ConversionResult InternalEncoder<Iso2022##suffix>::doToUnicode(								\
-			Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {	\
-		return convertISO2022JPXtoUTF16(x, to, toEnd, toNext, from, fromEnd, fromNext,								\
-			decodingState_, options().test(END_OF_BUFFER), substitutionPolicy());									\
+#define ASCENSION_IMPLEMENT_ISO_2022_JP_X(x, suffix)											\
+	template<> Encoder::Result InternalEncoder<Iso2022##suffix>::doFromUnicode(State& state,	\
+			const boost::iterator_range<Byte*>& to, Byte*& toNext,								\
+			const boost::iterator_range<const Char*>& from, const Char*& fromNext) {			\
+		if(state.empty())																		\
+			state = EncodingState();															\
+		if(EncodingState* const st = boost::any_cast<EncodingState>(&state))					\
+			return convertUTF16toISO2022JPX(x,													\
+				to, toNext, from, fromNext, *st, eob(*this), substitutionPolicy());				\
+		else																					\
+			throw Encoder::BadStateException();													\
+	}																							\
+	template<> Encoder::Result InternalEncoder<Iso2022##suffix>::doToUnicode(State& state,		\
+			const boost::iterator_range<Char*>& to, Char*& toNext,								\
+			const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {			\
+		if(state.empty())																		\
+			state = EncodingState();															\
+		if(EncodingState* const st = boost::any_cast<EncodingState>(&state))					\
+			return convertISO2022JPXtoUTF16(x,													\
+				to, toNext, from, fromNext, *st, eob(*this), substitutionPolicy());				\
+		else																					\
+			throw Encoder::BadStateException();													\
 	}
 
 

@@ -39,10 +39,12 @@ namespace ascension {
 						explicit InternalEncoder(const EncodingProperties& properties) BOOST_NOEXCEPT : props_(properties) {
 						}
 					private:
-						ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext) override;
-						ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
+						Result doFromUnicode(State& state,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext,
+							const boost::iterator_range<const Char*>& from, const Char*& fromNext) override;
+						Result doToUnicode(State& state,
+							const boost::iterator_range<Char*>& to, Char*& toNext,
+							const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
 						const EncodingProperties& properties() const override BOOST_NOEXCEPT {return props_;}
 					private:
 						const EncodingProperties& props_;
@@ -184,68 +186,59 @@ namespace ascension {
 				template<> ARMSCII<8>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryImpl("ARMSCII-8", MIB_OTHER, "Armenian (ARMSCII-8)", 1, 2, "", 0x1a) {
 				}
 
-				template<> Encoder::ConversionResult ARMSCII<8>::InternalEncoder::doFromUnicode(
-						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-					for(; to < toEnd && from < fromEnd; ++to, ++from) {
-						if(*from < 0x0028) {
-							*to = mask8Bit(*from);
+				template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(State& state,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+						if(*fromNext < 0x0028) {
+							*toNext = mask8Bit(*fromNext);
 							continue;
-						} else if(*from < 0x0028 + std::extent<decltype(UCStoARMSCII8_0028)>::value)
-							*to = UCStoARMSCII8_0028[*from - 0x0028];
-						else if(*from < 0x00a0 + std::extent<decltype(UCStoARMSCII78_00A0)>::value)
-							*to = UCStoARMSCII78_00A0[*from - 0x00a0];
-						else if(*from < 0x0530 + std::extent<decltype(UCStoARMSCII78_0530)>::value)
-							*to = UCStoARMSCII78_0530[*from - 0x0530];
-						else if(*from < 0x2010 + std::extent<decltype(UCStoARMSCII78_2010)>::value)
-							*to = UCStoARMSCII78_2010[*from - 0x2010];
-						else if(const Char* decomposed = decomposeArmenianLigature(*from)) {
-							if(to + 1 < toEnd) {
-								toNext = to;
-								fromNext = from;
+						} else if(*fromNext < 0x0028 + std::extent<decltype(UCStoARMSCII8_0028)>::value)
+							*toNext = UCStoARMSCII8_0028[*fromNext - 0x0028];
+						else if(*fromNext < 0x00a0 + std::extent<decltype(UCStoARMSCII78_00A0)>::value)
+							*toNext = UCStoARMSCII78_00A0[*fromNext - 0x00a0];
+						else if(*fromNext < 0x0530 + std::extent<decltype(UCStoARMSCII78_0530)>::value)
+							*toNext = UCStoARMSCII78_0530[*fromNext - 0x0530];
+						else if(*fromNext < 0x2010 + std::extent<decltype(UCStoARMSCII78_2010)>::value)
+							*toNext = UCStoARMSCII78_2010[*fromNext - 0x2010];
+						else if(const Char* decomposed = decomposeArmenianLigature(*fromNext)) {
+							if(toNext + 1 < boost::end(to))
 								return INSUFFICIENT_BUFFER;
-							}
-							*to = UCStoARMSCII78_0530[decomposed[0] - 0x0530] + 0x80;
-							*++to = UCStoARMSCII78_0530[decomposed[1] - 0x0530] + 0x80;
-							assert(to[-1] != 0x80 && to[0] != 0x80);
+							*toNext = UCStoARMSCII78_0530[decomposed[0] - 0x0530] + 0x80;
+							*++toNext = UCStoARMSCII78_0530[decomposed[1] - 0x0530] + 0x80;
+							assert(toNext[-1] != 0x80 && toNext[0] != 0x80);
 							continue;
 						} else
-							*to = props_.substitutionCharacter();
+							*toNext = props_.substitutionCharacter();
 
-						if(*to == props_.substitutionCharacter()) {
+						if(*toNext == props_.substitutionCharacter()) {
 							if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS) {
-								--to;
+								--toNext;
 								continue;
-							} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
-								toNext = to;
-								fromNext = from;
+							} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 								return UNMAPPABLE_CHARACTER;
-							}
 						}
-						*to += 0x80;
+						*toNext += 0x80;
 					}
-					toNext = to;
-					fromNext = from;
-					return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::ConversionResult ARMSCII<8>::InternalEncoder::doToUnicode(
-						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-					for(; to < toEnd && from < fromEnd; ++to, ++from) {
-						if(*from < 0xa1)
-							*to = *from;
-						else if(ARMSCII78toUCS_20[*from - 0x20 - 0x80] != text::REPLACEMENT_CHARACTER)
-							*to = ARMSCII78toUCS_20[*from - 0x20 - 0x80];
+				template<> Encoder::Result ARMSCII<8>::InternalEncoder::doToUnicode(State& state,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+						if(*fromNext < 0xa1)
+							*toNext = *fromNext;
+						else if(ARMSCII78toUCS_20[*fromNext - 0x20 - 0x80] != text::REPLACEMENT_CHARACTER)
+							*toNext = ARMSCII78toUCS_20[*fromNext - 0x20 - 0x80];
 						else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-							--to;
-						else if(substitutionPolicy() == DONT_SUBSTITUTE) {
-							toNext = to;
-							fromNext = from;
+							--toNext;
+						else if(substitutionPolicy() == DONT_SUBSTITUTE)
 							return UNMAPPABLE_CHARACTER;
-						}
 					}
-					toNext = to;
-					fromNext = from;
-					return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
 
@@ -256,67 +249,58 @@ namespace ascension {
 				template<> ARMSCII<7>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryImpl("ARMSCII-7", MIB_OTHER, "Armenian (ARMSCII-7)", 1, 2, "", 0x1a) {
 				}
 
-				template<> Encoder::ConversionResult ARMSCII<7>::InternalEncoder::doFromUnicode(
-						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-					for(; to < toEnd && from < fromEnd; ++to, ++from) {
-						if(*from < 0x0028) {
-							*to = mask8Bit(*from);
+				template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(State& state,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+						if(*fromNext < 0x0028) {
+							*toNext = mask8Bit(*fromNext);
 							continue;
-						} else if(*from < 0x0028 + std::extent<decltype(UCStoARMSCII7_0028)>::value)
-							*to = UCStoARMSCII7_0028[*from - 0x0028];
-						else if(*from < 0x00a0 + std::extent<decltype(UCStoARMSCII78_00A0)>::value)
-							*to = UCStoARMSCII78_00A0[*from - 0x00a0];
-						else if(*from < 0x0530 + std::extent<decltype(UCStoARMSCII78_0530)>::value)
-							*to = UCStoARMSCII78_0530[*from - 0x0530];
-						else if(*from < 0x2010 + std::extent<decltype(UCStoARMSCII78_2010)>::value)
-							*to = UCStoARMSCII78_2010[*from - 0x2010];
-						else if(const Char* const decomposed = decomposeArmenianLigature(*from)) {
-							if(to + 1 < toEnd) {
-								toNext = to;
-								fromNext = from;
+						} else if(*fromNext < 0x0028 + std::extent<decltype(UCStoARMSCII7_0028)>::value)
+							*toNext = UCStoARMSCII7_0028[*fromNext - 0x0028];
+						else if(*fromNext < 0x00a0 + std::extent<decltype(UCStoARMSCII78_00A0)>::value)
+							*toNext = UCStoARMSCII78_00A0[*fromNext - 0x00a0];
+						else if(*fromNext < 0x0530 + std::extent<decltype(UCStoARMSCII78_0530)>::value)
+							*toNext = UCStoARMSCII78_0530[*fromNext - 0x0530];
+						else if(*fromNext < 0x2010 + std::extent<decltype(UCStoARMSCII78_2010)>::value)
+							*toNext = UCStoARMSCII78_2010[*fromNext - 0x2010];
+						else if(const Char* const decomposed = decomposeArmenianLigature(*fromNext)) {
+							if(toNext + 1 < boost::end(to))
 								return INSUFFICIENT_BUFFER;
-							}
-							*to = UCStoARMSCII78_0530[decomposed[0] - 0x0530];
-							*++to = UCStoARMSCII78_0530[decomposed[1] - 0x0530];
-							assert(to[-1] != props_.substitutionCharacter() && to[0] != props_.substitutionCharacter());
+							*toNext = UCStoARMSCII78_0530[decomposed[0] - 0x0530];
+							*++toNext = UCStoARMSCII78_0530[decomposed[1] - 0x0530];
+							assert(toNext[-1] != props_.substitutionCharacter() && toNext[0] != props_.substitutionCharacter());
 							continue;
 						} else
-							*to = props_.substitutionCharacter();
+							*toNext = props_.substitutionCharacter();
 
-						if(*to == props_.substitutionCharacter()) {
+						if(*toNext == props_.substitutionCharacter()) {
 							if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-								--to;
-							else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
-								toNext = to;
-								fromNext = from;
+								--toNext;
+							else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS)
 								return UNMAPPABLE_CHARACTER;
-							}
 						}
 					}
-					toNext = to;
-					fromNext = from;
-					return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::ConversionResult ARMSCII<7>::InternalEncoder::doToUnicode(
-						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-					for(; to < toEnd && from < fromEnd; ++to, ++from) {
-						if(*from < 0x20)
-							*to = *from;
-						else if(*from < 0x20 + std::extent<decltype(ARMSCII78toUCS_20)>::value
-								&& ARMSCII78toUCS_20[*from - 0x20] != text::REPLACEMENT_CHARACTER)
-							*to = ARMSCII78toUCS_20[*from - 0x20];
+				template<> Encoder::Result ARMSCII<7>::InternalEncoder::doToUnicode(State& state,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+						if(*fromNext < 0x20)
+							*toNext = *fromNext;
+						else if(*fromNext < 0x20 + std::extent<decltype(ARMSCII78toUCS_20)>::value
+								&& ARMSCII78toUCS_20[*fromNext - 0x20] != text::REPLACEMENT_CHARACTER)
+							*toNext = ARMSCII78toUCS_20[*fromNext - 0x20];
 						else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-							--to;
-						else if(substitutionPolicy() == DONT_SUBSTITUTE) {
-							toNext = to;
-							fromNext = from;
+							--toNext;
+						else if(substitutionPolicy() == DONT_SUBSTITUTE)
 							return UNMAPPABLE_CHARACTER;
-						}
 					}
-					toNext = to;
-					fromNext = from;
-					return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
 
@@ -325,70 +309,61 @@ namespace ascension {
 				template<> ARMSCII<0x8a>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryImpl("ARMSCII-8A", MIB_OTHER, "Armenian (ARMSCII-8A)", 1, 2, "", 0x1a) {
 				}
 
-				template<> Encoder::ConversionResult ARMSCII<0x8a>::InternalEncoder::doFromUnicode(
-						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-					for(; to < toEnd && from < fromEnd; ++to, ++from) {
-						if(*from < 0x80) {
+				template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doFromUnicode(State& state,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+						if(*fromNext < 0x80) {
 							static const Char invChars[] = {0x0027, 0x003a, 0x005f, 0x0060, 0x007e};
-							*to = boost::binary_search(invChars, *from) ? mask8Bit(*from) : props_.substitutionCharacter();
-						} else if(*from < 0x00a8)
-							*to = props_.substitutionCharacter();
-						else if(*from < 0x00a8 + std::extent<decltype(UCStoARMSCII8A_00A8)>::value)
-							*to = UCStoARMSCII8A_00A8[*from - 0x00a8];
-						else if(*from < 0x0530 + std::extent<decltype(UCStoARMSCII8A_0530)>::value)
-							*to = UCStoARMSCII8A_0530[*from - 0x0530];
-						else if(*from < 0x2010 + std::extent<decltype(UCStoARMSCII8A_2010)>::value)
-							*to = UCStoARMSCII8A_2010[*from - 0x2010];
-						else if(const Char* const decomposed = decomposeArmenianLigature(*from)) {
-							if(to + 1 < toEnd) {
-								toNext = to;
-								fromNext = from;
+							*toNext = boost::binary_search(invChars, *fromNext) ? mask8Bit(*fromNext) : props_.substitutionCharacter();
+						} else if(*fromNext < 0x00a8)
+							*toNext = props_.substitutionCharacter();
+						else if(*fromNext < 0x00a8 + std::extent<decltype(UCStoARMSCII8A_00A8)>::value)
+							*toNext = UCStoARMSCII8A_00A8[*fromNext - 0x00a8];
+						else if(*fromNext < 0x0530 + std::extent<decltype(UCStoARMSCII8A_0530)>::value)
+							*toNext = UCStoARMSCII8A_0530[*fromNext - 0x0530];
+						else if(*fromNext < 0x2010 + std::extent<decltype(UCStoARMSCII8A_2010)>::value)
+							*toNext = UCStoARMSCII8A_2010[*fromNext - 0x2010];
+						else if(const Char* const decomposed = decomposeArmenianLigature(*fromNext)) {
+							if(toNext + 1 < boost::end(to))
 								return INSUFFICIENT_BUFFER;
-							}
-							*to = UCStoARMSCII8A_0530[decomposed[0] - 0x0530] + 0x80;
-							*++to = UCStoARMSCII8A_0530[decomposed[1] - 0x0530] + 0x80;
-							assert(to[-1] != 0x80 && to[0] != 0x80);
+							*toNext = UCStoARMSCII8A_0530[decomposed[0] - 0x0530] + 0x80;
+							*++toNext = UCStoARMSCII8A_0530[decomposed[1] - 0x0530] + 0x80;
+							assert(toNext[-1] != 0x80 && toNext[0] != 0x80);
 							continue;
 						} else
-							*to = props_.substitutionCharacter();
+							*toNext = props_.substitutionCharacter();
 
-						if(*to == props_.substitutionCharacter()) {
+						if(*toNext == props_.substitutionCharacter()) {
 							if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-								--to;
-							else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
-								toNext = to;
-								fromNext = from;
+								--toNext;
+							else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
 								return UNMAPPABLE_CHARACTER;
-							}
 						}
 					}
-					toNext = to;
-					fromNext = from;
-					return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::ConversionResult ARMSCII<0x8a>::InternalEncoder::doToUnicode(
-						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-					for(; to < toEnd && from < fromEnd; ++to, ++from) {
-						if(*from < 0x20)
-							*to = *from;
-						else if(*from < 0x20 + std::extent<decltype(ARMSCII8AtoUCS_20)>::value)
-							*to = ARMSCII8AtoUCS_20[*from - 0x20];
+				template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doToUnicode(State& state,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+						if(*fromNext < 0x20)
+							*toNext = *fromNext;
+						else if(*fromNext < 0x20 + std::extent<decltype(ARMSCII8AtoUCS_20)>::value)
+							*toNext = ARMSCII8AtoUCS_20[*fromNext - 0x20];
 						else
-							*to = ARMSCII8AtoUCS_D8[*from - 0xd8];
-						if(*to == text::REPLACEMENT_CHARACTER) {
+							*toNext = ARMSCII8AtoUCS_D8[*fromNext - 0xd8];
+						if(*toNext == text::REPLACEMENT_CHARACTER) {
 							if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-								--to;
-							else if(substitutionPolicy() == DONT_SUBSTITUTE) {
-								toNext = to;
-								fromNext = from;
+								--toNext;
+							else if(substitutionPolicy() == DONT_SUBSTITUTE)
 								return UNMAPPABLE_CHARACTER;
-							}
 						}
 					}
-					toNext = to;
-					fromNext = from;
-					return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS

@@ -315,25 +315,28 @@ namespace ascension {
 					if(encoder.get() == nullptr)
 						throw encoding::UnsupportedEncodingException("Shift_JIS is not supported in this platform.");
 					else {
+						encoding::Encoder::State state;
 						std::size_t bufferLength = encoder->properties().maximumNativeBytes() * s.length();
 						std::unique_ptr<Byte[]> buffer(new Byte[bufferLength + 1]);
 						Byte* toNext;
 						const Char* fromNext;
-						if(encoding::Encoder::COMPLETED != encoder->fromUnicode(buffer.get(),
-								buffer.get() + bufferLength, toNext,
-								s.cbegin(), s.cend(), fromNext), encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
+						if(encoding::Encoder::COMPLETED != encoder->fromUnicode(state,
+								boost::make_iterator_range_n(buffer.get(), bufferLength), toNext,
+								boost::make_iterator_range(s), fromNext), encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
 							throw encoding::UnsupportedEncodingException("internal encoding failed.");
 						*toNext = 0;
 						query(buffer.get());	// may throw std.runtime_error
 					}
 		
 					// convert the result pattern from native Japanese encoding to UTF-16
+					encoding::Encoder::State state;
 					const std::size_t nativePatternLength = strlen(reinterpret_cast<const char*>(lastNativePattern_.get()));
 					std::unique_ptr<Char[]> pattern(new Char[outputLength = encoder->properties().maximumUCSLength() * (nativePatternLength + 1)]);
 					Char* toNext;
 					const Byte* fromNext;
-					encoder->setSubstitutionPolicy(encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS).toUnicode(
-						pattern.get(), pattern.get() + outputLength, toNext, lastNativePattern_.get(), lastNativePattern_.get() + nativePatternLength, fromNext);
+					encoder->setSubstitutionPolicy(encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS).toUnicode(state,
+						boost::make_iterator_range_n(pattern.get(), outputLength), toNext,
+						boost::make_iterator_range_n(lastNativePattern_.get(), nativePatternLength), fromNext);
 					outputLength = toNext - pattern.get();
 					lastPattern_ = pattern.get();
 					return lastPattern_;

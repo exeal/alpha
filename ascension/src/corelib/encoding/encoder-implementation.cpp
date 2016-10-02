@@ -121,10 +121,12 @@ namespace ascension {
 						explicit SingleByteEncoder(const Char** byteToCharacterWire, const EncodingProperties& properties) BOOST_NOEXCEPT;
 					private:
 						// Encoder
-						ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext) override;
-						ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
+						Result doFromUnicode(State& state,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext,
+							const boost::iterator_range<const Char*>& from, const Char*& fromNext) override;
+						Result doToUnicode(State& state,
+							const boost::iterator_range<Char*>& to, Char*& toNext,
+							const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
 						const EncodingProperties& properties() const override BOOST_NOEXCEPT {return props_;}
 					private:
 						const sbcs::BidirectionalMap table_;
@@ -135,44 +137,38 @@ namespace ascension {
 							const EncodingProperties& properties) BOOST_NOEXCEPT : table_(byteToCharacterWire), props_(properties) {
 					}
 
-					Encoder::ConversionResult SingleByteEncoder::doFromUnicode(Byte* to, Byte* toEnd,
-							Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-						for(; to < toEnd && from < fromEnd; ++to, ++from) {
-							*to = table_.toByte(*from);
-							if(*to == sbcs::UNMAPPABLE_BYTE && *from != sbcs::UNMAPPABLE_BYTE) {
+					Encoder::Result SingleByteEncoder::doFromUnicode(State& state,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+							*toNext = table_.toByte(*fromNext);
+							if(*toNext == sbcs::UNMAPPABLE_BYTE && *fromNext != sbcs::UNMAPPABLE_BYTE) {
 								if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-									--to;
+									--toNext;
 								else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-									*to = properties().substitutionCharacter();
-								else {
-									toNext = to;
-									fromNext = from;
+									*toNext = properties().substitutionCharacter();
+								else
 									return UNMAPPABLE_CHARACTER;
-								}
 							}
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					Encoder::ConversionResult SingleByteEncoder::doToUnicode(Char* to, Char* toEnd,
-							Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-						for(; to < toEnd && from < fromEnd; ++to, ++from) {
-							*to = table_.toCharacter(*from);
-							if(*to == text::REPLACEMENT_CHARACTER) {
+					Encoder::Result SingleByteEncoder::doToUnicode(State& state,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++toNext, ++fromNext) {
+							*toNext = table_.toCharacter(*fromNext);
+							if(*toNext == text::REPLACEMENT_CHARACTER) {
 								if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-									--to;
-								else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {
-									toNext = to;
-									fromNext = from;
+									--toNext;
+								else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS)
 									return UNMAPPABLE_CHARACTER;
-								}
 							}
 						}
-						toNext = to;
-						fromNext = from;
-						return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 				} // namespace @0
 			}

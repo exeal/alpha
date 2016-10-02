@@ -31,8 +31,8 @@ namespace ascension {
 #endif
 				LocationType;
 			/**
-			 * Thrown if @c DocumentInput rejected the change of the document. For details, see the
-			 * documentation of @c Document class.
+			 * Thrown if @c DocumentInput rejected the change of the document. For details, see the documentation of
+			 * @c Document class.
 			 * @see Document#redo, Document#replace, Document#resetContent, Document#undo,
 			 *      DocumentInput#documentAboutToBeChanged
 			 */
@@ -50,6 +50,9 @@ namespace ascension {
 			/// Returns the default newline of the document. The returned value can be neighter
 			/// @c text#Newline#USE_INTRINSIC_VALUE nor @c text#Newline#USE_DOCUMENT_INPUT.
 			virtual text::Newline newline() const BOOST_NOEXCEPT = 0;
+			/// Returns @c true if the input has Unicode byte order mark. This attribute does not bother if the
+			/// @c #encoding is not Unicode.
+			virtual bool unicodeByteOrderMark() const BOOST_NOEXCEPT = 0;
 
 		private:
 			virtual bool isChangeable(const Document& document) const BOOST_NOEXCEPT = 0;

@@ -95,6 +95,7 @@ namespace ascension {
 			void TextFileStreamBuffer::buildEncoder(const std::string& encoding, bool detectEncoding) {
 				assert(encoder_.get() == nullptr);
 				encoder_ = encoding::EncoderRegistry::instance().forName(encoding);
+				encodingState_ = decodingState_ = encoding::Encoder::State();
 				if(encoder_.get() != nullptr)
 					return;
 				else if(detectEncoding) {
@@ -211,10 +212,8 @@ namespace ascension {
 					return this;
 				}
 #endif
-				if(encoder_.get() != nullptr) {
-					encoder_->resetEncodingState();
-					encoder_->resetDecodingState();
-				}
+				if(encoder_.get() != nullptr)
+					encodingState_ = decodingState_ = encoding::Encoder::State();
 				return nullptr;	// didn't close the file actually
 			}
 
@@ -315,11 +314,8 @@ namespace ascension {
 					throw;
 				}
 
-				if(writeUnicodeByteOrderMark) {
-					auto encodingOptions(encoder_->options());
-					encodingOptions.set(encoding::Encoder::UNICODE_BYTE_ORDER_MARK);
-					encoder_->setOptions(encodingOptions);
-				}
+				if(writeUnicodeByteOrderMark)
+					encoder_->writeByteOrderMark();
 				setp(ucsBuffer_.data(), ucsBuffer_.data() + ucsBuffer_.size());
 			}
 
@@ -351,16 +347,13 @@ namespace ascension {
 					Byte* toNext;
 					const Char* fromNext;
 					std::array<Byte, std::tuple_size<decltype(ucsBuffer_)>::value> nativeBuffer;
-					auto encodingOptions(encoder_->options());
-					encodingOptions.set(encoding::Encoder::BEGINNING_OF_BUFFER);
-					encodingOptions.set(encoding::Encoder::END_OF_BUFFER);
-					encoder_->setOptions(encodingOptions);
 					while(true) {
 						const Char* const fromEnd = pptr();
 
 						// conversion
-						const auto encodingResult = encoder_->fromUnicode(
-							nativeBuffer.data(), nativeBuffer.data() + nativeBuffer.size(), toNext, pbase(), fromEnd, fromNext);
+						const auto encodingResult = encoder_->fromUnicode(encodingState_,
+							boost::make_iterator_range_n(nativeBuffer.data(), nativeBuffer.size()), toNext,
+							boost::make_iterator_range<const Char*>(pbase(), fromEnd), fromNext);
 						if(encodingResult == encoding::Encoder::UNMAPPABLE_CHARACTER)
 							throw UnmappableCharacterException();
 						else if(encodingResult == encoding::Encoder::MALFORMED_INPUT)
@@ -397,10 +390,9 @@ namespace ascension {
 
 				Char* toNext;
 				const Byte* fromNext;
-				auto encodingOptions(encoder_->options());
-				encodingOptions.set(encoding::Encoder::BEGINNING_OF_BUFFER).set(encoding::Encoder::END_OF_BUFFER);
-				encoder_->setOptions(encodingOptions);
-				switch(encoder_->toUnicode(ucsBuffer_.data(), ucsBuffer_.data() + ucsBuffer_.size(), toNext, inputMapping_.current, std::end(inputMapping_.buffer), fromNext)) {
+				switch(encoder_->toUnicode(encodingState_,
+						boost::make_iterator_range_n(ucsBuffer_.data(), ucsBuffer_.size()), toNext,
+						boost::make_iterator_range(inputMapping_.current, std::end(inputMapping_.buffer)), fromNext)) {
 					case encoding::Encoder::UNMAPPABLE_CHARACTER:
 						throw UnmappableCharacterException();
 					case encoding::Encoder::MALFORMED_INPUT:
@@ -414,9 +406,12 @@ namespace ascension {
 				return (toNext > ucsBuffer_.data()) ? traits_type::to_int_type(*gptr()) : traits_type::eof();
 			}
 
-			/// Returns @c true if the internal encoder has @c Encoder#UNICODE_BYTE_ORDER_MARK flag.
+			/**
+			 * Returns @c true if the internal encoder has scanned Unicode byte order mark in incoming byte sequence.
+			 * @see encoding#Encoder#isByteOrderMarkEncountered
+			 */
 			bool TextFileStreamBuffer::unicodeByteOrderMark() const BOOST_NOEXCEPT {
-				return encoder_->options().test(encoding::Encoder::UNICODE_BYTE_ORDER_MARK);
+				return encoder_->isByteOrderMarkEncountered(decodingState_);
 			}
 
 			namespace detail {

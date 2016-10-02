@@ -26,25 +26,31 @@ namespace ascension {
 #include "generated/windows-949-to-ucs.dat"
 					};
 
+					inline bool eob(const Encoder& encoder) BOOST_NOEXCEPT {
+#if 0
+						return encoder.options().test(Encoder::END_OF_BUFFER);
+#else
+						boost::ignore_unused(encoder);
+						return true;
+#endif
+					}
+
 					template<typename Factory>
 					class InternalEncoder : public Encoder {
 					public:
-						explicit InternalEncoder(const Factory& factory) BOOST_NOEXCEPT : properties_(factory), encodingState_(0), decodingState_(0) {}
+						explicit InternalEncoder(const Factory& factory) BOOST_NOEXCEPT : properties_(factory) {}
 					private:
-						ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
-							const Char* from, const Char* fromEnd, const Char*& fromNext) override;
-						ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-							const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
-						const EncodingProperties& properties() const override BOOST_NOEXCEPT {return properties_;}
-						Encoder& resetDecodingState() override BOOST_NOEXCEPT {
-							return (decodingState_ = 0), *this;
-						}
-						Encoder& resetEncodingState() override BOOST_NOEXCEPT {
-							return (encodingState_ = 0), *this;
+						Result doFromUnicode(State& state,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext,
+							const boost::iterator_range<const Char*>& from, const Char*& fromNext) override;
+						Result doToUnicode(State& state,
+							const boost::iterator_range<Char*>& to, Char*& toNext,
+							const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
+						const EncodingProperties& properties() const override BOOST_NOEXCEPT {
+							return properties_;
 						}
 					private:
 						const EncodingProperties& properties_;
-						Byte encodingState_, decodingState_;
 					};
 
 					class Uhc : public EncoderFactoryImpl {
@@ -88,271 +94,243 @@ namespace ascension {
 
 					// UHC ////////////////////////////////////////////////////////////////////////////////////////////
 
-					template<> Encoder::ConversionResult InternalEncoder<Uhc>::doFromUnicode(
-							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-						for(; to < toEnd && from < fromEnd; ++from) {
-							if(*from < 0x80)
-								*(to++) = mask8Bit(*from);
+					template<> Encoder::Result InternalEncoder<Uhc>::doFromUnicode(State& state,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++fromNext) {
+							if(*fromNext < 0x80)
+								*(toNext++) = mask8Bit(*fromNext);
 							else {	// double byte character
-								if(const Char** const wire = UCS_TO_UHC[mask8Bit(*from >> 8)]) {
-									if(const std::uint16_t dbcs = wireAt(wire, mask8Bit(*from))) {
-										if(to + 1 >= toEnd)
+								if(const Char** const wire = UCS_TO_UHC[mask8Bit(*fromNext >> 8)]) {
+									if(const std::uint16_t dbcs = wireAt(wire, mask8Bit(*fromNext))) {
+										if(toNext + 1 >= boost::end(to))
 											break;	// the destnation buffer is insufficient
-										*(to++) = mask8Bit(dbcs >> 8);
-										*(to++) = mask8Bit(dbcs >> 0);
+										*(toNext++) = mask8Bit(dbcs >> 8);
+										*(toNext++) = mask8Bit(dbcs >> 0);
 										continue;
 									}
 								}
 								if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-									*(to++) = properties().substitutionCharacter();
-								else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS) {
-									toNext = to;
-									fromNext = from;
+									*(toNext++) = properties().substitutionCharacter();
+								else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS)
 									return UNMAPPABLE_CHARACTER;
-								}
 							}
 						}
-						fromNext = from;
-						toNext = to;
-						return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 		
-					template<> Encoder::ConversionResult InternalEncoder<Uhc>::doToUnicode(
-							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-						while(to < toEnd && from < fromEnd) {
-							if(*from < 0x80)
-								*(to++) = *(from++);
-							else if(from + 1 >= fromEnd) {	// remaining lead byte
-								toNext = to;
-								fromNext = from;
-								return options().test(END_OF_BUFFER) ? MALFORMED_INPUT : COMPLETED;
-							} else {	// double byte character
-								if(const std::uint16_t** const wire = UHC_TO_UCS[mask8Bit(*from)]) {
-									const Char ucs = wireAt(wire, mask8Bit(from[1]));
+					template<> Encoder::Result InternalEncoder<Uhc>::doToUnicode(State& state,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						while(toNext < boost::end(to) && fromNext < boost::const_end(from)) {
+							if(*fromNext < 0x80)
+								*(toNext++) = *(fromNext++);
+							else if(fromNext + 1 >= boost::const_end(from))	// remaining lead byte
+								return eob(*this) ? MALFORMED_INPUT : COMPLETED;
+							else {	// double byte character
+								if(const std::uint16_t** const wire = UHC_TO_UCS[mask8Bit(*fromNext)]) {
+									const Char ucs = wireAt(wire, mask8Bit(fromNext[1]));
 									if(ucs != text::REPLACEMENT_CHARACTER) {
-										*(to++) = ucs;
-										from += 2;
+										*(toNext++) = ucs;
+										fromNext += 2;
 										continue;
 									}
 								}
 								if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
-									*(to++) = text::REPLACEMENT_CHARACTER;
-									from += 2;
+									*(toNext++) = text::REPLACEMENT_CHARACTER;
+									fromNext += 2;
 								} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-									from += 2;
-								else {
-									toNext = to;
-									fromNext = from;
+									fromNext += 2;
+								else
 									return UNMAPPABLE_CHARACTER;
-								}
 							}
 						}
-						fromNext = from;
-						toNext = to;
-						return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
 
 					// EUC-KR /////////////////////////////////////////////////////////////////////////////////////////
 
-					template<> Encoder::ConversionResult InternalEncoder<EucKr>::doFromUnicode(
-							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-						for(; to < toEnd && from < fromEnd; ++from) {
-							if(*from < 0x80)
-								*(to++) = mask8Bit(*from);
+					template<> Encoder::Result InternalEncoder<EucKr>::doFromUnicode(State& state,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++fromNext) {
+							if(*fromNext < 0x80)
+								*(toNext++) = mask8Bit(*fromNext);
 							else {	// double byte character
-								if(const Char** const wire = UCS_TO_UHC[mask8Bit(*from >> 8)]) {
-									if(const std::uint16_t dbcs = wireAt(wire, mask8Bit(*from))) {
+								if(const Char** const wire = UCS_TO_UHC[mask8Bit(*fromNext >> 8)]) {
+									if(const std::uint16_t dbcs = wireAt(wire, mask8Bit(*fromNext))) {
 										const Byte lead = mask8Bit(dbcs >> 8), trail = mask8Bit(dbcs);
 										if(lead - 0xa1u < 0x5e && trail - 0xa1 < 0x5e) {
 //									if(lead >= 0xa1 && lead <= 0xfe && trail >= 0xa1 && trail <= 0xfe) {
-											if(to + 1 >= toEnd)
+											if(toNext + 1 >= boost::end(to))
 												break;	// the destnation buffer is insufficient
-											*(to++) = lead;
-											*(to++) = trail;
+											*(toNext++) = lead;
+											*(toNext++) = trail;
 											continue;
 										}
 									}
 								}
 								if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-									*(to++) = properties().substitutionCharacter();
-								else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS) {
-									toNext = to;
-									fromNext = from;
+									*(toNext++) = properties().substitutionCharacter();
+								else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS)
 									return UNMAPPABLE_CHARACTER;
-								}
 							}
 						}
-						fromNext = from;
-						toNext = to;
-						return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 		
-					template<> Encoder::ConversionResult InternalEncoder<EucKr>::doToUnicode(
-							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-						while(to < toEnd && from < fromEnd) {
-							if(*from < 0x80)
-								*(to++) = *(from++);
-							else if(from + 1 >= fromEnd) {	// remaining lead byte
-								toNext = to;
-								fromNext = from;
-								return options().test(END_OF_BUFFER) ? MALFORMED_INPUT : COMPLETED;
-							} else {	// double byte character
-								if(from[0] - 0xa1u > 0x5du || from[1] - 0xa1u > 0x5du) {
-//							if(!(from[0] >= 0xa1 && from[0] <= 0xfe) || !(from[1] >= 0xa1 && from[1] <= 0xfe)) {
-									toNext = to;
-									fromNext = from;
+					template<> Encoder::Result InternalEncoder<EucKr>::doToUnicode(State& state,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						while(toNext < boost::end(to) && fromNext < boost::const_end(from)) {
+							if(*fromNext < 0x80)
+								*(toNext++) = *(fromNext++);
+							else if(fromNext + 1 >= boost::const_end(from))	// remaining lead byte
+								return eob(*this) ? MALFORMED_INPUT : COMPLETED;
+							else {	// double byte character
+								if(fromNext[0] - 0xa1u > 0x5du || fromNext[1] - 0xa1u > 0x5du)
+//								if(!(fromNext[0] >= 0xa1 && fromNext[0] <= 0xfe) || !(fromNext[1] >= 0xa1 && fromNext[1] <= 0xfe))
 									return MALFORMED_INPUT;
-								} else if(const std::uint16_t** const wire = UHC_TO_UCS[mask8Bit(*from)]) {
-									const Char ucs = wireAt(wire, mask8Bit(from[1]));
+								else if(const std::uint16_t** const wire = UHC_TO_UCS[mask8Bit(*fromNext)]) {
+									const Char ucs = wireAt(wire, mask8Bit(fromNext[1]));
 									if(ucs != text::REPLACEMENT_CHARACTER) {
-										*(to++) = ucs;
-										from += 2;
+										*(toNext++) = ucs;
+										fromNext += 2;
 										continue;
 									}
 								}
 								if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
-									*(to++) = text::REPLACEMENT_CHARACTER;
-									from += 2;
+									*(toNext++) = text::REPLACEMENT_CHARACTER;
+									fromNext += 2;
 								} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-									from += 2;
-								else {
-									toNext = to;
-									fromNext = from;
+									fromNext += 2;
+								else
 									return UNMAPPABLE_CHARACTER;
-								}
 							}
 						}
-						fromNext = from;
-						toNext = to;
-						return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
 
 					// ISO-2022-KR ////////////////////////////////////////////////////////////////////////////////////
 
-					// state definition
-					// 0 : initial, 1 : encountered/written escape sequence and ASCII, 2 : KS C 5601 (KS X 1001)
+					enum ConversionState {
+						ASCII,		// encountered/written escape sequence and ASCII
+						KS_C_5601	// KS C 5601 (KS X 1001)
+					};
 
-					template<> Encoder::ConversionResult InternalEncoder<Iso2022Kr>::doFromUnicode(
-							Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-						if(encodingState_ == 0) {
+					template<> Encoder::Result InternalEncoder<Iso2022Kr>::doFromUnicode(State& state,
+							const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+						if(state.empty()) {
 							// write an escape sequence
-							if(to + 3 >= toEnd) {
-								toNext = to;
-								fromNext = from;
+							if(std::next(toNext, 3) >= boost::end(to))
 								return INSUFFICIENT_BUFFER;
-							}
-							std::memcpy(to, "\x1b$)C", 4);
-							++encodingState_;
-							to += 4;
-						}
-						for(; to < toEnd && from < fromEnd; ++from) {
-							if(*from < 0x80) {
-								if(encodingState_ == 2) {
+							std::memcpy(toNext, "\x1b$)C", 4);
+							state = ASCII;
+							std::advance(toNext, 4);
+						} else if(boost::any_cast<ConversionState>(&state) == nullptr)
+							throw BadStateException();
+
+						ConversionState& conversionState = boost::any_cast<ConversionState&>(state);
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++fromNext) {
+							if(*fromNext < 0x80) {
+								if(conversionState == KS_C_5601) {
 									// introduce ASCII character set
-									*(to++) = SI;
-									--encodingState_;
-									if(to == toEnd)
+									*(toNext++) = SI;
+									conversionState = ASCII;
+									if(toNext == boost::end(to))
 										break;
 								}
-								*(to++) = mask8Bit(*from);
+								*(toNext++) = mask8Bit(*fromNext);
 							} else {	// double byte character
-								if(encodingState_ == 1) {
+								if(conversionState == ASCII) {
 									// introduce KS C 5601 (KS X 1001) character set
-									*(to++) = SO;
-									++encodingState_;
-									if(to == toEnd)
+									*(toNext++) = SO;
+									conversionState = KS_C_5601;
+									if(toNext == boost::end(to))
 										break;
 								}
-								if(const Char** const wire = UCS_TO_UHC[mask8Bit(*from >> 8)]) {
-									if(const std::uint16_t dbcs = wireAt(wire, mask8Bit(*from))) {
+								if(const Char** const wire = UCS_TO_UHC[mask8Bit(*fromNext >> 8)]) {
+									if(const std::uint16_t dbcs = wireAt(wire, mask8Bit(*fromNext))) {
 										const Byte lead = mask8Bit(dbcs >> 8), trail = mask8Bit(dbcs);
 										if(lead - 0xa1u < 0x5e && trail - 0xa1 < 0x5e) {
-//									if(lead >= 0xa1 && lead <= 0xfe && trail >= 0xa1 && trail <= 0xfe) {
-											if(to + 1 >= toEnd)
+//										if(lead >= 0xa1 && lead <= 0xfe && trail >= 0xa1 && trail <= 0xfe) {
+											if(toNext + 1 >= boost::end(to))
 												break;	// the destnation buffer is insufficient
-											*(to++) = mask7Bit(lead);
-											*(to++) = mask7Bit(trail);
+											*(toNext++) = mask7Bit(lead);
+											*(toNext++) = mask7Bit(trail);
 											continue;
 										}
 									}
 								}
 								if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-									*(to++) = properties().substitutionCharacter();
-								else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS) {
-									toNext = to;
-									fromNext = from;
+									*(toNext++) = properties().substitutionCharacter();
+								else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS)
 									return UNMAPPABLE_CHARACTER;
-								}
 							}
 						}
-						fromNext = from;
-						toNext = to;
-						return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 
-					template<> Encoder::ConversionResult InternalEncoder<Iso2022Kr>::doToUnicode(
-							Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-						if(decodingState_ == 0)
-							++decodingState_;
-						while(to < toEnd && from < fromEnd) {
-							if((*from & 0x80) != 0) {
-								// reject 8-bit character
-								toNext = to;
-								fromNext = from;
+					template<> Encoder::Result InternalEncoder<Iso2022Kr>::doToUnicode(State& state,
+							const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+						if(state.empty())
+							state = ASCII;
+						else if(boost::any_cast<ConversionState>(&state) == nullptr)
+							throw BadStateException();
+
+						ConversionState& conversionState = boost::any_cast<ConversionState&>(state);
+						toNext = boost::begin(to);
+						fromNext = boost::const_begin(from);
+						while(toNext < boost::end(to) && fromNext < boost::const_end(from)) {
+							if((*fromNext & 0x80) != 0)	// reject 8-bit character
 								return MALFORMED_INPUT;
-							} else if(*from == SI) {
+							else if(*fromNext == SI) {
 								// introduce ASCII character set
-								decodingState_ = 2;
-								++from;
-							} else if(*from == SO) {
+								conversionState = ASCII;
+								++fromNext;
+							} else if(*fromNext == SO) {
 								// introduce KS C 5601 (KS X 1001) character set
-								decodingState_ = 3;
-								++from;
-							} else if(*from == ESC) {
-								if(from + 3 >= fromEnd || std::memcmp(from + 1, "$)C", 3) != 0) {
+								conversionState = KS_C_5601;
+								++fromNext;
+							} else if(*fromNext == ESC) {
+								if(fromNext + 3 >= boost::const_end(from) || std::memcmp(fromNext + 1, "$)C", 3) != 0)
 									// invalid escape sequence
-									toNext = to;
-									fromNext = from;
 									return MALFORMED_INPUT;
-								}
-								from += 4;
-							} else if(decodingState_ == 1)
-								*(to++) = *(from++);
-							else if(from + 1 >= fromEnd) {	// remaining lead byte
-								toNext = to;
-								fromNext = from;
-								return options().test(END_OF_BUFFER) ? MALFORMED_INPUT : COMPLETED;
-							} else {	// double byte character
-								if(from[0] - 0x21u > 0x5du || from[1] - 0x21u > 0x5du) {
-//							if(!(from[0] >= 0x21 && from[0] <= 0x7e) || !(from[1] >= 0x21 && from[1] <= 0x7e)) {
-									toNext = to;
-									fromNext = from;
+								std::advance(fromNext, 4);
+							} else if(conversionState == ASCII)
+								*(toNext++) = *(fromNext++);
+							else if(fromNext + 1 >= boost::const_end(from))	// remaining lead byte
+								return eob(*this) ? MALFORMED_INPUT : COMPLETED;
+							else {	// double byte character
+								if(fromNext[0] - 0x21u > 0x5du || fromNext[1] - 0x21u > 0x5du)
+	//							if(!(fromNext[0] >= 0x21 && fromNext[0] <= 0x7e) || !(fromNext[1] >= 0x21 && fromNext[1] <= 0x7e))
 									return MALFORMED_INPUT;
-								} else if(const std::uint16_t** const wire = UHC_TO_UCS[mask8Bit(*from + 0x80)]) {
-									const Char ucs = wireAt(wire, mask8Bit(from[1] + 0x80));
+								else if(const std::uint16_t** const wire = UHC_TO_UCS[mask8Bit(*fromNext + 0x80)]) {
+									const Char ucs = wireAt(wire, mask8Bit(fromNext[1] + 0x80));
 									if(ucs != text::REPLACEMENT_CHARACTER) {
-										*(to++) = ucs;
-										from += 2;
+										*(toNext++) = ucs;
+										fromNext += 2;
 										continue;
 									}
 								}
 								if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
-									*(to++) = text::REPLACEMENT_CHARACTER;
-									from += 2;
+									*(toNext++) = text::REPLACEMENT_CHARACTER;
+									fromNext += 2;
 								} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
-									from += 2;
-								else {
-									toNext = to;
-									fromNext = from;
+									fromNext += 2;
+								else
 									return UNMAPPABLE_CHARACTER;
-								}
 							}
 						}
-						fromNext = from;
-						toNext = to;
-						return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+						return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 					}
 				}
 			}

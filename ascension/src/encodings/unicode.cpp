@@ -10,6 +10,12 @@
  * - UTF-32BE
  * - UTF-32LE
  * - UTF-5
+ * @note To write byte order mark with UTF-8, UTF-16 or UTF-32 in encoding context, use @c Encoder#writeByteOrderMark
+ *       method.
+ * @note UTF-16BE, UTF-16LE, UTF32-BE and UTF-32LE does not write byte order mark event if
+ *       @c Encoder#writesByteOrderMark method returned @c true.
+ * @note To check if the encoder read a byte order mark, use @c Encoder#isBigEndian method.
+ * @note In this implementation, UTF-7 and UTF-5 never use byte order marks.
  * @author exeal
  * @date 2003-2012, 2014
  */
@@ -18,10 +24,10 @@
 #include <ascension/corelib/encoding/encoder-implementation.hpp>
 #include <ascension/corelib/encoding/encoding-detector.hpp>
 #include <ascension/corelib/text/utf.hpp>
-#include <algorithm>	// std.find_if
+#include <boost/range/algorithm/copy.hpp>
+#include <boost/range/algorithm/equal.hpp>
 #include <array>
 #include <cassert>
-#include <cstring>		// std.memcmp, std.memcpy
 #include <type_traits>	// std.is_same
 
 namespace ascension {
@@ -32,32 +38,65 @@ namespace ascension {
 				template<typename Factory>
 				class InternalEncoder : public Encoder {
 				public:
-					explicit InternalEncoder(const Factory& factory) BOOST_NOEXCEPT : properties_(factory), encodingState_(0), decodingState_(0) {}
+					explicit InternalEncoder(const Factory& factory) BOOST_NOEXCEPT : properties_(factory) {}
 				private:
-					ConversionResult doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
-						const Char* from, const Char* fromEnd, const Char*& fromNext) override;
-					ConversionResult doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-						const Byte* from, const Byte* fromEnd, const Byte*& fromNext) override;
+					Result doFromUnicode(State& state,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext,
+						const boost::iterator_range<const Char*>& from, const Char*& fromNext) override;
+					boost::optional<bool> doIsBigEndian(const State& decodingState) const override {
+						return Encoder::doIsBigEndian(decodingState);
+					}
+					bool doIsByteOrderMarkEncountered(const State& decodingState) const override {
+						return Encoder::doIsByteOrderMarkEncountered(decodingState);
+					}
+					Result doToUnicode(State& state,
+						const boost::iterator_range<Char*>& to, Char*& toNext,
+						const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) override;
 					const EncodingProperties& properties() const override BOOST_NOEXCEPT {
 						return properties_;
 					}
-					Encoder& resetDecodingState() override BOOST_NOEXCEPT {
-						return (decodingState_ = 0), *this;
-					}
-					Encoder& resetEncodingState() override BOOST_NOEXCEPT {
-						return (encodingState_ = 0), *this;
-					}
 				private:
 					const EncodingProperties& properties_;
-					Byte encodingState_, decodingState_;
 				};
 
 				class Utf8 : public EncoderFactoryImpl {
 				public:
+					enum EncodingState {SKIPPED_OUTGOING_BYTE_ORDER_MARK, WROTE_BYTE_ORDER_MARK};
+					enum DecodingState {SKIPPED_INCOMING_BYTE_ORDER_MARK, READ_BYTE_ORDER_MARK};
+					static const std::array<Byte, 3> BYTE_ORDER_MARK;
 					Utf8() : EncoderFactoryImpl("UTF-8", fundamental::UTF_8, "Unicode (UTF-8)", 4) {}
 				private:
 					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf8>(*this));
+					}
+				};
+				const std::array<Byte, 3> Utf8::BYTE_ORDER_MARK = {{0xef, 0xbb, 0xbf}};
+
+				class Utf16 : public EncoderFactoryImpl {
+				public:
+					enum EncodingState {SKIPPED_OUTGOING_BYTE_ORDER_MARK, WROTE_BIG_ENDIAN_BYTE_ORDER_MARK, WROTE_LITTLE_ENDIAN_BYTE_ORDER_MARK};
+					enum DecodingState {SKIPPED_INCOMING_BYTE_ORDER_MARK, READ_BIG_ENDIAN_BYTE_ORDER_MARK, READ_LITTLE_ENDIAN_BYTE_ORDER_MARK};
+					static const std::size_t BYTE_ORDER_MARK_SIZE = 2;
+					static const std::array<Byte, BYTE_ORDER_MARK_SIZE> BIG_ENDIAN_BYTE_ORDER_MARK, LITTLE_ENDIAN_BYTE_ORDER_MARK;
+					static Encoder::Result fromUnicode(bool bigEndian,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext);
+					static Encoder::Result toUnicode(const Encoder& encoder, bool bigEndian,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext);
+					Utf16() : EncoderFactoryImpl("UTF-16", fundamental::UTF_16, "Unicode (UTF-16)", 2) {}
+				private:
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						return std::unique_ptr<Encoder>(new InternalEncoder<Utf16>(*this));
+					}
+				};
+				const std::array<Byte, Utf16::BYTE_ORDER_MARK_SIZE> Utf16::BIG_ENDIAN_BYTE_ORDER_MARK = {{0xfe, 0xff}};
+				const std::array<Byte, Utf16::BYTE_ORDER_MARK_SIZE> Utf16::LITTLE_ENDIAN_BYTE_ORDER_MARK = {{0xff, 0xfe}};
+
+				class Utf16BigEndian : public EncoderFactoryImpl {
+				public:
+					Utf16BigEndian() : EncoderFactoryImpl("UTF-16BE", fundamental::UTF_16BE, "Unicode (UTF-16BE)", 2) {}
+				private:
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						return std::unique_ptr<Encoder>(new InternalEncoder<Utf16BigEndian>(*this));
 					}
 				};
 
@@ -70,22 +109,43 @@ namespace ascension {
 					}
 				};
 
-				class Utf16BigEndian : public EncoderFactoryImpl {
-				public:
-					Utf16BigEndian() : EncoderFactoryImpl("UTF-16BE", fundamental::UTF_16BE, "Unicode (UTF-16BE)", 2) {}
-				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
-						return std::unique_ptr<Encoder>(new InternalEncoder<Utf16BigEndian>(*this));
-					}
-				};
-
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 				class Utf7 : public EncoderFactoryImpl {
 				public:
+					enum ConversionState {BASE64};
 					Utf7() : EncoderFactoryImpl("UTF-7", standard::UTF_7, "Unicode (UTF-7)", 8) {}
+					static bool isBase64(const Encoder::State& state);
 				private:
 					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf7>(*this));
+					}
+				};
+
+				class Utf32 : public EncoderFactoryImpl {
+				public:
+					enum EncodingState {SKIPPED_OUTGOING_BYTE_ORDER_MARK, WROTE_BIG_ENDIAN_BYTE_ORDER_MARK, WROTE_LITTLE_ENDIAN_BYTE_ORDER_MARK};
+					enum DecodingState {SKIPPED_INCOMING_BYTE_ORDER_MARK, READ_BIG_ENDIAN_BYTE_ORDER_MARK, READ_LITTLE_ENDIAN_BYTE_ORDER_MARK};
+					static const std::size_t BYTE_ORDER_MARK_SIZE = 4;
+					static const std::array<Byte, BYTE_ORDER_MARK_SIZE> BIG_ENDIAN_BYTE_ORDER_MARK, LITTLE_ENDIAN_BYTE_ORDER_MARK;
+					static Encoder::Result fromUnicode(bool bigEndian,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext);
+					static Encoder::Result toUnicode(const Encoder& encoder, bool bigEndian,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext);
+					Utf32() : EncoderFactoryImpl("UTF-32", standard::UTF_32, "Unicode (UTF-32)", 4) {}
+				private:
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						return std::unique_ptr<Encoder>(new InternalEncoder<Utf32>(*this));
+					}
+				};
+				const std::array<Byte, Utf32::BYTE_ORDER_MARK_SIZE> Utf32::BIG_ENDIAN_BYTE_ORDER_MARK = {{0xff, 0xff, 0x00, 0x00}};
+				const std::array<Byte, Utf32::BYTE_ORDER_MARK_SIZE> Utf32::LITTLE_ENDIAN_BYTE_ORDER_MARK = {{0xfe, 0xff, 0x00, 0x00}};
+
+				class Utf32BigEndian : public EncoderFactoryImpl {
+				public:
+					Utf32BigEndian() : EncoderFactoryImpl("UTF-32BE", standard::UTF_32BE, "Unicode (UTF-32BE)", 4) {}
+				private:
+					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
+						return std::unique_ptr<Encoder>(new InternalEncoder<Utf32BigEndian>(*this));
 					}
 				};
 
@@ -95,15 +155,6 @@ namespace ascension {
 				private:
 					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
 						return std::unique_ptr<Encoder>(new InternalEncoder<Utf32LittleEndian>(*this));
-					}
-				};
-
-				class Utf32BigEndian : public EncoderFactoryImpl {
-				public:
-					Utf32BigEndian() : EncoderFactoryImpl("UTF-32BE", standard::UTF_32BE, "Unicode (UTF-32BE)", 4) {}
-				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT {
-						return std::unique_ptr<Encoder>(new InternalEncoder<Utf32BigEndian>(*this));
 					}
 				};
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
@@ -128,21 +179,24 @@ namespace ascension {
 
 				struct Installer {
 					Installer() BOOST_NOEXCEPT : UTF_8(std::make_shared<Utf8>()),
-							UTF_16LE(std::make_shared<Utf16LittleEndian>()), UTF_16BE(std::make_shared<Utf16BigEndian>())
+							UTF_16BE(std::make_shared<Utf16BigEndian>()), UTF_16LE(std::make_shared<Utf16LittleEndian>()), UTF_16(std::make_shared<Utf16>())
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-							, UTF_7(std::make_shared<Utf7>()), UTF_32LE(std::make_shared<Utf32LittleEndian>()), UTF_32BE(std::make_shared<Utf32BigEndian>())
+							, UTF_7(std::make_shared<Utf7>()),
+							UTF_32BE(std::make_shared<Utf32BigEndian>()), UTF_32LE(std::make_shared<Utf32LittleEndian>()), UTF_32(std::make_shared<Utf32>())
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 							, UTF_5(std::make_shared<Utf5>())
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 					{
 						EncoderRegistry::instance().registerFactory(UTF_8);
-						EncoderRegistry::instance().registerFactory(UTF_16LE);
 						EncoderRegistry::instance().registerFactory(UTF_16BE);
+						EncoderRegistry::instance().registerFactory(UTF_16LE);
+						EncoderRegistry::instance().registerFactory(UTF_16);
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 						EncoderRegistry::instance().registerFactory(UTF_7);
-						EncoderRegistry::instance().registerFactory(UTF_32LE);
 						EncoderRegistry::instance().registerFactory(UTF_32BE);
+						EncoderRegistry::instance().registerFactory(UTF_32LE);
+						EncoderRegistry::instance().registerFactory(UTF_32);
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 						EncoderRegistry::instance().registerFactory(UTF_5);
@@ -151,44 +205,108 @@ namespace ascension {
 					}
 
 					const std::shared_ptr<Utf8> UTF_8;
-					const std::shared_ptr<Utf16LittleEndian> UTF_16LE;
 					const std::shared_ptr<Utf16BigEndian> UTF_16BE;
+					const std::shared_ptr<Utf16LittleEndian> UTF_16LE;
+					const std::shared_ptr<Utf16> UTF_16;
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 					const std::shared_ptr<Utf7> UTF_7;
-					const std::shared_ptr<Utf32LittleEndian> UTF_32LE;
 					const std::shared_ptr<Utf32BigEndian> UTF_32BE;
+					const std::shared_ptr<Utf32LittleEndian> UTF_32LE;
+					const std::shared_ptr<Utf32> UTF_32;
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 					const std::shared_ptr<Utf5> UTF_5;
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 				} installer;
 
-				const std::array<Byte, 3> UTF8_BOM = {0xef, 0xbb, 0xbf};
-				const std::array<Byte, 2> UTF16LE_BOM = {0xff, 0xfe};
-				const std::array<Byte, 2> UTF16BE_BOM = {0xfe, 0xff};
-#ifndef ASCENSION_NO_STANDARD_ENCODINGS
-				const std::array<Byte, 4> UTF32LE_BOM = {0xff, 0xff, 0x00, 0x00};
-				const std::array<Byte, 4> UTF32BE_BOM = {0xfe, 0xff, 0x00, 0x00};
-#endif // !ASCENSION_NO_STANDARD_ENCODINGS
+				inline bool eob(const Encoder& encoder) BOOST_NOEXCEPT {
+#if 0
+					return encoder.options().test(Encoder::END_OF_BUFFER);
+#else
+					boost::ignore_unused(encoder);
+					return true;
+#endif
+				}
 
-#define ASCENSION_ENCODE_BOM(encoding)														\
-	if(options().test(BEGINNING_OF_BUFFER) && options().test(UNICODE_BYTE_ORDER_MARK)) {	\
-		if(to + encoding##_BOM.size() >= toEnd)												\
-			return INSUFFICIENT_BUFFER;														\
-		std::memcpy(to, encoding##_BOM.data(), encoding##_BOM.size());						\
-		to += encoding##_BOM.size();														\
-	}
+				template<typename Factory>
+				inline Encoder::Result _fromUnicode(const Encoder& encoder, Encoder::State& state,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					auto _to(to);
 
-#define ASCENSION_DECODE_BOM(encoding)															\
-	if(options().test(BEGINNING_OF_BUFFER)) {													\
-		auto o(options());																		\
-		if(fromEnd - from >= static_cast<std::ptrdiff_t>(encoding##_BOM.size())					\
-				&& std::equal(std::begin(encoding##_BOM), std::end(encoding##_BOM), from)) {	\
-			setOptions(o.set(UNICODE_BYTE_ORDER_MARK));											\
-			from += encoding##_BOM.size();														\
-		} else																					\
-			setOptions(o.reset(UNICODE_BYTE_ORDER_MARK));										\
-	}
+					// handle byte order mark
+					if(state.empty()) {
+						if(encoder.writesByteOrderMark()) {
+							if(boost::size(to) < Factory::BYTE_ORDER_MARK_SIZE)
+								return Encoder::INSUFFICIENT_BUFFER;
+							if(encoder.isBigEndianDefault()) {
+								boost::copy(Factory::BIG_ENDIAN_BYTE_ORDER_MARK, toNext);
+								state = Factory::WROTE_BIG_ENDIAN_BYTE_ORDER_MARK;
+							} else {
+								boost::copy(Factory::LITTLE_ENDIAN_BYTE_ORDER_MARK, toNext);
+								state = Factory::WROTE_LITTLE_ENDIAN_BYTE_ORDER_MARK;
+							}
+							_to.advance_begin(Factory::BYTE_ORDER_MARK_SIZE);
+						} else
+							state = Factory::SKIPPED_OUTGOING_BYTE_ORDER_MARK;
+					}
+
+					bool bigEndian;
+					assert(!state.empty());
+					switch(boost::any_cast<Factory::EncodingState>(state)) {
+						case Factory::SKIPPED_OUTGOING_BYTE_ORDER_MARK:
+							bigEndian = encoder.isBigEndianDefault();
+							break;
+						case Factory::WROTE_BIG_ENDIAN_BYTE_ORDER_MARK:
+							bigEndian = true;
+							break;
+						case Factory::WROTE_LITTLE_ENDIAN_BYTE_ORDER_MARK:
+							bigEndian = false;
+							break;
+						default:
+							throw Encoder::BadStateException();
+					}
+					return Factory::fromUnicode(bigEndian, _to, toNext, from, fromNext);
+				}
+
+				template<typename Factory>
+				inline Encoder::Result _toUnicode(const Encoder& encoder, Encoder::State& state,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					auto _from(from);
+
+					// handle byte order mark
+					if(state.empty()) {
+						if(boost::size(from) >= Factory::BYTE_ORDER_MARK_SIZE) {
+							const auto initialBytes(boost::make_iterator_range_n(boost::const_begin(from), Factory::BYTE_ORDER_MARK_SIZE));
+							if(boost::equal(initialBytes, Factory::BIG_ENDIAN_BYTE_ORDER_MARK))
+								state = Factory::READ_BIG_ENDIAN_BYTE_ORDER_MARK;
+							else if(boost::equal(initialBytes, Factory::LITTLE_ENDIAN_BYTE_ORDER_MARK))
+								state = Factory::READ_LITTLE_ENDIAN_BYTE_ORDER_MARK;
+							if(!state.empty())
+								_from.advance_begin(Factory::BYTE_ORDER_MARK_SIZE);
+						}
+					}
+
+					bool bigEndian;
+					if(state.empty()) {
+						bigEndian = encoder.isBigEndianDefault();
+						state = Factory::SKIPPED_INCOMING_BYTE_ORDER_MARK;
+					} else {
+						switch(boost::any_cast<Factory::DecodingState>(state)) {
+							case Factory::SKIPPED_INCOMING_BYTE_ORDER_MARK:
+								bigEndian = encoder.isBigEndianDefault();
+								break;
+							case Factory::READ_BIG_ENDIAN_BYTE_ORDER_MARK:
+								bigEndian = true;
+								break;
+							case Factory::READ_LITTLE_ENDIAN_BYTE_ORDER_MARK:
+								bigEndian = false;
+								break;
+							default:
+								throw Encoder::BadStateException();
+						}
+					}
+					return Factory::toUnicode(encoder, bigEndian, to, toNext, _from, fromNext);
+				}
 
 
 				// UTF-8 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -219,294 +337,409 @@ namespace ascension {
 					0x46, 0x47, 0x47, 0x47, 0x48, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09	// 0xF0
 				};
 
-				inline bool writeSurrogatePair(Byte*& to, Byte* toEnd, Char high, Char low) {
-					if(to + 3 >= toEnd)
-						return false;
+				inline Byte* writeSurrogatePair(const boost::iterator_range<Byte*>& to, Char high, Char low) {
+					if(boost::size(to) < 4)
+						return nullptr;
 					// 0000 0000  000w wwxx  xxxx yyyy  yyzz zzzz -> 1111 0www  10xx xxxx  10yy yyyy 10zz zzzz
 					const CodePoint c = text::surrogates::checkedDecode(high, low);
-					(*to++) = 0xf0 | mask8Bit((c & 0x001c0000ul) >> 18);
-					(*to++) = 0x80 | mask8Bit((c & 0x0003f000ul) >> 12);
-					(*to++) = 0x80 | mask8Bit((c & 0x00000fc0ul) >> 6);
-					(*to++) = 0x80 | mask8Bit((c & 0x0000003ful) >> 0);
-					return true;
+					auto p = boost::begin(to);
+					(*p++) = 0xf0 | mask8Bit((c & 0x001c0000ul) >> 18);
+					(*p++) = 0x80 | mask8Bit((c & 0x0003f000ul) >> 12);
+					(*p++) = 0x80 | mask8Bit((c & 0x00000fc0ul) >> 6);
+					(*p++) = 0x80 | mask8Bit((c & 0x0000003ful) >> 0);
+					return p;
 				}
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf8>::doFromUnicode(
-						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-					ASCENSION_ENCODE_BOM(UTF8)
-					for(; to < toEnd && from < fromEnd; ++from) {
-						if(*from < 0x0080u)	// 0000 0000  0zzz zzzz -> 0zzz zzzz
-							(*to++) = mask8Bit(*from);
-						else if(*from < 0x0800u) {	// 0000 0yyy  yyzz zzzz -> 110y yyyy  10zz zzzz
-							if(to + 1 >= toEnd)
+				template<> Encoder::Result InternalEncoder<Utf8>::doFromUnicode(State& state,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+
+					// handle byte order mark
+					if(state.empty()) {
+						if(writesByteOrderMark()) {
+							if(boost::size(to) < boost::size(Utf8::BYTE_ORDER_MARK))
+								return INSUFFICIENT_BUFFER;
+							boost::copy(Utf8::BYTE_ORDER_MARK, toNext);
+							state = Utf8::WROTE_BYTE_ORDER_MARK;
+							std::advance(toNext, boost::size(Utf8::BYTE_ORDER_MARK));
+						} else
+							state = Utf8::SKIPPED_OUTGOING_BYTE_ORDER_MARK;
+					}
+
+					for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++fromNext) {
+						if(*fromNext < 0x0080u)	// 0000 0000  0zzz zzzz -> 0zzz zzzz
+							(*toNext++) = mask8Bit(*fromNext);
+						else if(*fromNext < 0x0800u) {	// 0000 0yyy  yyzz zzzz -> 110y yyyy  10zz zzzz
+							if(toNext + 1 >= boost::end(to))
 								break;
-							(*to++) = 0xc0 | mask8Bit(*from >> 6);
-							(*to++) = 0x80 | mask8Bit(*from & 0x003fu);
-						} else if(text::surrogates::isHighSurrogate(*from)) {
-							if(from + 1 == fromEnd) {
-								toNext = to;
-								fromNext = from;
+							(*toNext++) = 0xc0 | mask8Bit(*fromNext >> 6);
+							(*toNext++) = 0x80 | mask8Bit(*fromNext & 0x003fu);
+						} else if(text::surrogates::isHighSurrogate(*fromNext)) {
+							if(fromNext + 1 == boost::const_end(from))
 								return COMPLETED;
-							} else if(text::surrogates::isLowSurrogate(from[1])) {
-								if(!writeSurrogatePair(to, toEnd, from[0], from[1]))
+							else if(text::surrogates::isLowSurrogate(fromNext[1])) {
+								const auto temp = writeSurrogatePair(boost::make_iterator_range(toNext, boost::end(to)), fromNext[0], fromNext[1]);
+								if(temp == nullptr)
 									break;
-								++from;
-							} else {
-								toNext = to;
-								fromNext = from;
+								toNext = temp;
+								++fromNext;
+							} else
 								return MALFORMED_INPUT;
-							}
 						} else {	// xxxx yyyy  yyzz zzzz -> 1110 xxxx  10yy yyyy  10zz zzzz
-							if(to + 2 >= toEnd)
+							if(toNext + 2 >= boost::end(to))
 								break;
-							(*to++) = 0xe0 | mask8Bit((*from & 0xf000u) >> 12);
-							(*to++) = 0x80 | mask8Bit((*from & 0x0fc0u) >> 6);
-							(*to++) = 0x80 | mask8Bit((*from & 0x003fu) >> 0);
+							(*toNext++) = 0xe0 | mask8Bit((*fromNext & 0xf000u) >> 12);
+							(*toNext++) = 0x80 | mask8Bit((*fromNext & 0x0fc0u) >> 6);
+							(*toNext++) = 0x80 | mask8Bit((*fromNext & 0x003fu) >> 0);
 						}
 					}
-					fromNext = from;
-					toNext = to;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf8>::doToUnicode(
-						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-					ASCENSION_DECODE_BOM(UTF8)
-					while(to < toEnd && from < fromEnd) {
-						if(*from < 0x80)
-							*(to++) = *(from++);
+				template<> boost::optional<bool> InternalEncoder<Utf8>::doIsBigEndian(const State& decodingState) const {
+					if(decodingState.empty())
+						return boost::none;
+					switch(boost::any_cast<Utf8::DecodingState>(decodingState)) {
+						case Utf8::SKIPPED_INCOMING_BYTE_ORDER_MARK:
+						case Utf8::READ_BYTE_ORDER_MARK:
+							return boost::none;
+						default:
+							throw BadStateException();
+					}
+				}
+
+				template<> bool InternalEncoder<Utf8>::doIsByteOrderMarkEncountered(const State& decodingState) const {
+					if(decodingState.empty())
+						return false;
+					switch(boost::any_cast<Utf8::DecodingState>(decodingState)) {
+						case Utf8::SKIPPED_INCOMING_BYTE_ORDER_MARK:
+							return false;
+						case Utf8::READ_BYTE_ORDER_MARK:
+							return true;
+						default:
+							throw BadStateException();
+					}
+				}
+
+				template<> Encoder::Result InternalEncoder<Utf8>::doToUnicode(State& state,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+
+					// handle byte order mark
+					if(state.empty()) {
+						if(boost::size(from) >= boost::size(Utf8::BYTE_ORDER_MARK)
+								&& boost::equal(boost::make_iterator_range_n(fromNext, boost::size(Utf8::BYTE_ORDER_MARK)), Utf8::BYTE_ORDER_MARK)) {
+							state = Utf8::READ_BYTE_ORDER_MARK;
+							std::advance(fromNext, boost::size(Utf8::BYTE_ORDER_MARK));
+						} else
+							state = Utf8::SKIPPED_INCOMING_BYTE_ORDER_MARK;
+					}
+
+					while(toNext < boost::end(to) && fromNext < boost::const_end(from)) {
+						if(*fromNext < 0x80)
+							*(toNext++) = *(fromNext++);
 						else {
-							const Byte v = UTF8_WELL_FORMED_FIRST_BYTES[*from - 0x80];
+							const Byte v = UTF8_WELL_FORMED_FIRST_BYTES[*fromNext - 0x80];
 							// check the source buffer length
 							std::ptrdiff_t bytes = (v >> 4);
-							if(fromEnd - from < bytes) {
-								toNext = to;
-								fromNext = from;
+							if(std::distance(fromNext, boost::const_end(from)) < bytes)
 								return COMPLETED;
-							}
 							// check the second byte
 							switch(v & 0x0f) {
 								case 1:
 								case 3:
 								case 5:
 								case 7:
-									if(from[1] < 0x80 || from[1] > 0xbf)
+									if(fromNext[1] < 0x80 || from[1] > 0xbf)
 										bytes = 0;
 									break;
 								case 2:
-									if(from[1] < 0xa0 || from[1] > 0xbf)
+									if(fromNext[1] < 0xa0 || from[1] > 0xbf)
 										bytes = 0;
 									break;
 								case 4:
-									if(from[1] < 0x80 || from[1] > 0x9f)
+									if(fromNext[1] < 0x80 || from[1] > 0x9f)
 										bytes = 0;
 									break;
 								case 6:
-									if(from[1] < 0x90 || from[1] > 0xbf)
+									if(fromNext[1] < 0x90 || from[1] > 0xbf)
 										bytes = 0;
 									break;
 								case 8:
-									if(from[1] < 0x80 || from[1] > 0x8f)
+									if(fromNext[1] < 0x80 || from[1] > 0x8f)
 										bytes = 0;
 									break;
 							}
 							// check the third byte
-							if(bytes >= 3 && (from[2] < 0x80 || from[2] > 0xbf))
+							if(bytes >= 3 && (fromNext[2] < 0x80 || fromNext[2] > 0xbf))
 								bytes = 0;
 							// check the forth byte
-							if(bytes >= 4 && (from[3] < 0x80 || from[3] > 0xbf))
+							if(bytes >= 4 && (fromNext[3] < 0x80 || fromNext[3] > 0xbf))
 								bytes = 0;
 
-							if(bytes == 0) {
-								toNext = to;
-								fromNext = from;
+							if(bytes == 0)
 								return MALFORMED_INPUT;
-							}
 
 							// decode
 							CodePoint cp;
 							assert(bytes >= 2 && bytes <= 4);
 							switch(bytes) {
 								case 2:	// 110y yyyy  10zz zzzz -> 0000 0yyy yyzz zzzz
-									cp = ((from[0] & 0x1f) << 6) | ((from[1] & 0x3f) << 0);
+									cp = ((fromNext[0] & 0x1f) << 6) | ((fromNext[1] & 0x3f) << 0);
 									break;
 								case 3:	// 1110 xxxx  10yy yyyy  10zz zzzz -> xxxx yyyy yyzz zzzz
-									cp = ((from[0] & 0x0f) << 12) | ((from[1] & 0x3f) << 6) | ((from[2] & 0x3f) << 0);
+									cp = ((fromNext[0] & 0x0f) << 12) | ((fromNext[1] & 0x3f) << 6) | ((fromNext[2] & 0x3f) << 0);
 									break;
 								case 4:	// 1111 0www  10xx xxxx  10yy yyyy  10zz zzzz -> 0000 0000 000w wwxx xxxx yyyy yyzz zzzz
-									cp = ((from[0] & 0x07) << 18) | ((from[1] & 0x3f) << 12)
-										| ((from[2] & 0x3f) << 6) | ((from[3] & 0x3f) << 0);
+									cp = ((fromNext[0] & 0x07) << 18) | ((fromNext[1] & 0x3f) << 12)
+										| ((fromNext[2] & 0x3f) << 6) | ((fromNext[3] & 0x3f) << 0);
 									break;
 							}
 
-							if(to == toEnd - 1 && text::surrogates::isSupplemental(cp)) {
-								fromNext = from;
-								toNext = to;
+							if(std::distance(toNext, boost::end(to)) == 1 && text::surrogates::isSupplemental(cp))
 								return INSUFFICIENT_BUFFER;
-							}
-							text::utf::encode(cp, to);
-							to += text::surrogates::isSupplemental(cp) ? 2 : 1;
-							from += bytes;
+							text::utf::encode(cp, toNext);
+							std::advance(toNext, text::surrogates::isSupplemental(cp) ? 2 : 1);
+							std::advance(fromNext, bytes);
 						}
 
 					}
-					fromNext = from;
-					toNext = to;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
 
-				// UTF-16LE ///////////////////////////////////////////////////////////////////////////////////////////
+				// UTF-16 /////////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf16LittleEndian>::doFromUnicode(
-						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-					ASCENSION_ENCODE_BOM(UTF16LE)
-					for(; to < toEnd - 1 && from < fromEnd; ++from) {
-						*(to++) = static_cast<Byte>((*from & 0x00ffu) >> 0);
-						*(to++) = static_cast<Byte>((*from & 0xff00u) >> 8);
+				Encoder::Result Utf16::fromUnicode(bool bigEndian,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					static const std::array<Char, 2> BIG_ENDIAN_MASKS = {{0xff00u, 0x00ffu}}, LITTLE_ENDIAN_MASKS = {{0x00ffu, 0xff00u}};
+					static const std::array<int, 2> BIG_ENDIAN_SHIFTS = {{8, 0}}, LITTLE_ENDIAN_SHIFTS = {{0, 8}};
+					const auto& masks = bigEndian ? BIG_ENDIAN_MASKS : LITTLE_ENDIAN_MASKS;
+					const auto& shifts = bigEndian ? BIG_ENDIAN_SHIFTS : LITTLE_ENDIAN_SHIFTS;
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; std::distance(toNext, boost::end(to)) > 1 && fromNext < boost::const_end(from); ++fromNext) {
+						*(toNext++) = static_cast<Byte>((*fromNext & std::get<0>(masks)) >> std::get<0>(shifts));
+						*(toNext++) = static_cast<Byte>((*fromNext & std::get<1>(masks)) >> std::get<1>(shifts));
 					}
-					fromNext = from;
-					toNext = to;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf16LittleEndian>::doToUnicode(
-						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-					ASCENSION_DECODE_BOM(UTF16LE)
-					for(; to < toEnd && from < fromEnd - 1; from += 2)
-						*(to++) = *from | maskUCS2(from[1] << 8);
-					fromNext = from;
-					toNext = to;
-					if(from == fromEnd)
-						return COMPLETED;
+				Encoder::Result Utf16::toUnicode(const Encoder&, bool bigEndian,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					static const std::array<int, 2> BIG_ENDIAN_SHIFTS = {{0, 8}}, LITTLE_ENDIAN_SHIFTS = {{8, 0}};
+					const auto& shifts = bigEndian ? BIG_ENDIAN_SHIFTS : LITTLE_ENDIAN_SHIFTS;
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; toNext < boost::end(to) && std::distance(fromNext, boost::const_end(from)) > 1; std::advance(fromNext, 2))
+						*(toNext++) = maskUCS2(fromNext[0] << std::get<0>(shifts)) | maskUCS2(fromNext[1] << std::get<1>(shifts));
+					if(fromNext == boost::const_end(from))
+						return Encoder::COMPLETED;
 					else
-						return (to >= toEnd - 1) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
+						return (std::distance(toNext, boost::end(to)) <= 1) ? Encoder::INSUFFICIENT_BUFFER : Encoder::UNMAPPABLE_CHARACTER;
+				}
+				
+				template<> Encoder::Result InternalEncoder<Utf16>::doFromUnicode(State& state,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					return _fromUnicode<Utf16>(*this, state, to, toNext, from, fromNext);
+				}
+
+				template<> boost::optional<bool> InternalEncoder<Utf16>::doIsBigEndian(const State& decodingState) const {
+					if(decodingState.empty())
+						return boost::none;
+					switch(boost::any_cast<Utf16::DecodingState>(decodingState)) {
+						case Utf16::SKIPPED_INCOMING_BYTE_ORDER_MARK:
+							return boost::none;
+						case Utf16::READ_BIG_ENDIAN_BYTE_ORDER_MARK:
+							return true;
+						case Utf16::READ_LITTLE_ENDIAN_BYTE_ORDER_MARK:
+							return false;
+						default:
+							throw BadStateException();
+					}
+				}
+
+				template<> bool InternalEncoder<Utf16>::doIsByteOrderMarkEncountered(const State& decodingState) const {
+					if(decodingState.empty())
+						return false;
+					switch(boost::any_cast<Utf16::DecodingState>(decodingState)) {
+						case Utf16::SKIPPED_INCOMING_BYTE_ORDER_MARK:
+							return false;
+						case Utf16::READ_BIG_ENDIAN_BYTE_ORDER_MARK:
+						case Utf16::READ_LITTLE_ENDIAN_BYTE_ORDER_MARK:
+							return true;
+						default:
+							throw BadStateException();
+					}
+				}
+
+				template<> Encoder::Result InternalEncoder<Utf16>::doToUnicode(State& state,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					return _toUnicode<Utf16>(*this, state, to, toNext, from, fromNext);
 				}
 
 
 				// UTF-16BE ///////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf16BigEndian>::doFromUnicode(
-						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-					ASCENSION_ENCODE_BOM(UTF16BE)
-					for(; to < toEnd - 1 && from < fromEnd; ++from) {
-						*(to++) = static_cast<Byte>((*from & 0xff00u) >> 8);
-						*(to++) = static_cast<Byte>((*from & 0x00ffu) >> 0);
-					}
-					fromNext = from;
-					toNext = to;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+				template<> Encoder::Result InternalEncoder<Utf16BigEndian>::doFromUnicode(State&,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					return Utf16::fromUnicode(true, to, toNext, from, fromNext);
 				}
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf16BigEndian>::doToUnicode(
-						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-					ASCENSION_DECODE_BOM(UTF16BE)
-					for(; to < toEnd && from < fromEnd - 1; from += 2)
-						*(to++) = maskUCS2(*from << 8) | from[1];
-					fromNext = from;
-					toNext = to;
-					if(from == fromEnd)
-						return COMPLETED;
-					else
-						return (to >= toEnd - 1) ? INSUFFICIENT_BUFFER : UNMAPPABLE_CHARACTER;
+				template<> Encoder::Result InternalEncoder<Utf16BigEndian>::doToUnicode(State&,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					return Utf16::toUnicode(*this, true, to, toNext, from, fromNext);
+				}
+
+
+				// UTF-16LE ///////////////////////////////////////////////////////////////////////////////////////////
+
+				template<> Encoder::Result InternalEncoder<Utf16LittleEndian>::doFromUnicode(State&,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					return Utf16::fromUnicode(false, to, toNext, from, fromNext);
+				}
+
+				template<> Encoder::Result InternalEncoder<Utf16LittleEndian>::doToUnicode(State&,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					return Utf16::toUnicode(*this, false, to, toNext, from, fromNext);
 				}
 
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 
-				// UTF-32LE ///////////////////////////////////////////////////////////////////////////////////////////
+				// UTF-32 /////////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf32LittleEndian>::doFromUnicode(
-						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-					ASCENSION_ENCODE_BOM(UTF32LE)
-					for(; to < toEnd - 3 && from < fromEnd; ++from) {
-						const CodePoint c = text::utf::decodeFirst(from, fromEnd);
+				Encoder::Result Utf32::fromUnicode(bool bigEndian,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					static const std::array<CodePoint, 4> BIG_ENDIAN_MASKS = {{0xff000000ul, 0x00ff0000ul, 0x0000ff00ul, 0x000000fful}};
+					static const std::array<CodePoint, 4> LITTLE_ENDIAN_MASKS = {{0x000000fful, 0x0000ff00ul, 0x00ff0000ul, 0xff000000ul}};
+					static const std::array<int, 4> BIG_ENDIAN_SHIFTS = {{24, 16, 8, 0}};
+					static const std::array<int, 4> LITTLE_ENDIAN_SHIFTS = {{0, 8, 16, 24}};
+					const auto& masks = bigEndian ? BIG_ENDIAN_MASKS : LITTLE_ENDIAN_MASKS;
+					const auto& shifts = bigEndian ? BIG_ENDIAN_SHIFTS : LITTLE_ENDIAN_SHIFTS;
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; std::distance(toNext, boost::end(to)) > 3 && fromNext < boost::const_end(from); ++fromNext) {
+						const CodePoint c = text::utf::decodeFirst(fromNext, boost::const_end(from));
 						if(!text::isScalarValue(c)) {
-							toNext = to;
-							fromNext = from;
-							if(text::surrogates::isHighSurrogate(c) && from == fromEnd - 1)	// low surrogate may appear immediately
-								return COMPLETED;
-							return MALFORMED_INPUT;
+							if(text::surrogates::isHighSurrogate(c) && std::next(fromNext, 1) == boost::const_end(from))	// low surrogate may appear immediately
+								return Encoder::COMPLETED;
+							return Encoder::MALFORMED_INPUT;
 						}
-						*(to++) = mask8Bit((c & 0x000000fful) >> 0);
-						*(to++) = mask8Bit((c & 0x0000ff00ul) >> 8);
-						*(to++) = mask8Bit((c & 0x00ff0000ul) >> 16);
-						*(to++) = mask8Bit((c & 0xff000000ul) >> 24);
+						*(toNext++) = mask8Bit((c & std::get<0>(masks)) >> std::get<0>(shifts));
+						*(toNext++) = mask8Bit((c & std::get<1>(masks)) >> std::get<1>(shifts));
+						*(toNext++) = mask8Bit((c & std::get<2>(masks)) >> std::get<2>(shifts));
+						*(toNext++) = mask8Bit((c & std::get<3>(masks)) >> std::get<3>(shifts));
 						if(text::surrogates::isSupplemental(c))
-							++from;
+							++fromNext;
 					}
-					fromNext = from;
-					toNext = to;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf32LittleEndian>::doToUnicode(
-						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-					ASCENSION_DECODE_BOM(UTF32LE)
-					for(; to < toEnd && from < fromEnd - 3; from += 4) {
-						const CodePoint c = from[0] + (from[1] << 8) + (from[2] << 16) + (from[3] << 24);
+				Encoder::Result Utf32::toUnicode(const Encoder& encoder, bool bigEndian,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					static const std::array<int, 4> BIG_ENDIAN_SHIFTS = {{24, 16, 8, 0}};
+					static const std::array<int, 4> LITTLE_ENDIAN_SHIFTS = {{0, 8, 16, 24}};
+					const auto& shifts = bigEndian ? BIG_ENDIAN_SHIFTS : LITTLE_ENDIAN_SHIFTS;
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; toNext < boost::end(to) && std::distance(fromNext, boost::const_end(from)) > 3; std::advance(fromNext, 4)) {
+						const CodePoint c =
+							(fromNext[0] << std::get<0>(shifts)) + (fromNext[1] << std::get<1>(shifts))
+							+ (fromNext[2] << std::get<2>(shifts)) + (fromNext[3] << std::get<3>(shifts));
 						if(text::isValidCodePoint(c)) {
-							if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-								*(to++) = text::REPLACEMENT_CHARACTER;
-							else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS) {
-								fromNext = from;
-								toNext = to;
-								return UNMAPPABLE_CHARACTER;
-							}
+							if(encoder.substitutionPolicy() == Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
+								*(toNext++) = text::REPLACEMENT_CHARACTER;
+							else if(encoder.substitutionPolicy() != Encoder::IGNORE_UNMAPPABLE_CHARACTERS)
+								return Encoder::UNMAPPABLE_CHARACTER;
 						} else
-							to += text::utf::encode(c, to);
+							toNext += text::utf::encode(c, toNext);
 					}
-					fromNext = from;
-					toNext = to;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
+				}
+				
+				template<> Encoder::Result InternalEncoder<Utf32>::doFromUnicode(State& state,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					return _fromUnicode<Utf32>(*this, state, to, toNext, from, fromNext);
+				}
+
+				template<> boost::optional<bool> InternalEncoder<Utf32>::doIsBigEndian(const State& decodingState) const {
+					if(decodingState.empty())
+						return boost::none;
+					switch(boost::any_cast<Utf32::DecodingState>(decodingState)) {
+						case Utf32::SKIPPED_INCOMING_BYTE_ORDER_MARK:
+							return boost::none;
+						case Utf32::READ_BIG_ENDIAN_BYTE_ORDER_MARK:
+							return true;
+						case Utf32::READ_LITTLE_ENDIAN_BYTE_ORDER_MARK:
+							return false;
+						default:
+							throw BadStateException();
+					}
+				}
+
+				template<> bool InternalEncoder<Utf32>::doIsByteOrderMarkEncountered(const State& decodingState) const {
+					if(decodingState.empty())
+						return false;
+					switch(boost::any_cast<Utf16::DecodingState>(decodingState)) {
+						case Utf32::SKIPPED_INCOMING_BYTE_ORDER_MARK:
+							return false;
+						case Utf32::READ_BIG_ENDIAN_BYTE_ORDER_MARK:
+						case Utf32::READ_LITTLE_ENDIAN_BYTE_ORDER_MARK:
+							return true;
+						default:
+							throw BadStateException();
+					}
+				}
+
+				template<> Encoder::Result InternalEncoder<Utf32>::doToUnicode(State& state,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					return _toUnicode<Utf32>(*this, state, to, toNext, from, fromNext);
 				}
 
 
 				// UTF-32BE ///////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf32BigEndian>::doFromUnicode(
-						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-					ASCENSION_ENCODE_BOM(UTF32BE)
-					for(; to < toEnd - 3 && from < fromEnd; ++from) {
-						const CodePoint c = text::utf::decodeFirst(from, fromEnd);
-						*(to++) = mask8Bit((c & 0xff000000ul) >> 24);
-						*(to++) = mask8Bit((c & 0x00ff0000ul) >> 16);
-						*(to++) = mask8Bit((c & 0x0000ff00ul) >> 8);
-						*(to++) = mask8Bit((c & 0x000000fful) >> 0);
-						if(text::surrogates::isSupplemental(c))
-							++from;
-					}
-					fromNext = from;
-					toNext = to;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+				template<> Encoder::Result InternalEncoder<Utf32BigEndian>::doFromUnicode(State&,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					return Utf32::fromUnicode(true, to, toNext, from, fromNext);
 				}
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf32BigEndian>::doToUnicode(
-						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-					ASCENSION_DECODE_BOM(UTF32BE)
-					for(; to < toEnd && from < fromEnd - 3; from += 4) {
-						const CodePoint cp = from[3] + (from[2] << 8) + (from[1] << 16) + (from[0] << 24);
-						if(text::isValidCodePoint(cp)) {
-							if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-								*(to++) = text::REPLACEMENT_CHARACTER;
-							else if(substitutionPolicy() != IGNORE_UNMAPPABLE_CHARACTERS) {
-								fromNext = from;
-								toNext = to;
-								return UNMAPPABLE_CHARACTER;
-							}
-						} else
-							to += text::utf::encode(cp, to);
-					}
-					fromNext = from;
-					toNext = to;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+				template<> Encoder::Result InternalEncoder<Utf32BigEndian>::doToUnicode(State&,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					return Utf32::toUnicode(*this, true, to, toNext, from, fromNext);
+				}
+
+
+				// UTF-32LE ///////////////////////////////////////////////////////////////////////////////////////////
+
+				template<> Encoder::Result InternalEncoder<Utf32LittleEndian>::doFromUnicode(State&,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
+					return Utf32::fromUnicode(false, to, toNext, from, fromNext);
+				}
+
+				template<> Encoder::Result InternalEncoder<Utf32LittleEndian>::doToUnicode(State&,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
+					return Utf32::toUnicode(*this, false, to, toNext, from, fromNext);
 				}
 
 
 				// UTF-7 //////////////////////////////////////////////////////////////////////////////////////////////
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf7>::doFromUnicode(
-						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+				bool Utf7::isBase64(const Encoder::State& state) {
+					if(state.empty())
+						return false;
+					else if(const auto* const st = boost::any_cast<ConversionState>(&state)) {
+						if(*st == BASE64)
+							return true;
+					}
+					throw Encoder::BadStateException();
+				}
+
+				template<> Encoder::Result InternalEncoder<Utf7>::doFromUnicode(State& state,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
 					static const Byte SET_D[0x80] = {
 						// 1 : in set D, 2 : '=', 3 : direct encodable but not set D, 0 : otherwise
 						0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 3, 0, 0,	// 0x00
@@ -520,51 +753,53 @@ namespace ascension {
 					};
 					static const Byte BASE64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-					// encodingState_ == 1 if in BASE64. 0 otherwise
-					for(; to < toEnd && from < fromEnd; ++from) {
-						const Byte klass = (*from < 0x80) ? SET_D[*from] : 0;
+					bool base64 = Utf7::isBase64(state);
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++fromNext) {
+						const Byte klass = (*fromNext < 0x80) ? SET_D[*fromNext] : 0;
 						if((klass & 1) == 1) {
 							// encode directly (ascension puts '-' explicitly even if klass is 3)
-							if(encodingState_ == 1) {
-								*to = '-';
-								encodingState_ = 0;
-								if(++to == toEnd)
+							if(base64) {
+								*toNext = '-';
+								base64 = false;
+								if(++toNext == boost::end(to))
 									break;	// the destination buffer is insufficient
 							}
-							*(to++) = mask8Bit(*from);
+							*(toNext++) = mask8Bit(*fromNext);
 						} else if(klass == 2) {
 							// '+' => '+-'
-							if(to + 1 == toEnd)
+							if(std::distance(toNext, boost::end(to)) == 1)
 								break;	// the destination buffer is insufficient
-							*(to++) = '+';
-							*(to++) = '-';
+							*(toNext++) = '+';
+							*(toNext++) = '-';
 						} else {
 							// modified BASE64 encode
-							if(encodingState_ == 0) {
-								*to = '+';
-								encodingState_ = 1;
-								if(++to == toEnd)
+							if(!base64) {
+								*toNext = '+';
+								base64 = true;
+								if(++toNext == boost::end(to))
 									break;	// the destination buffer is insufficient
 							}
 							// first, determine how many source characters can be encoded
 							std::ptrdiff_t encodables = 1;
-							if(from + 1 < fromEnd && (from[1] >= 0x80 || SET_D[from[1]] == 0)) {
+							if(std::distance(fromNext, boost::const_end(from)) > 1 && (fromNext[1] >= 0x80 || SET_D[fromNext[1]] == 0)) {
 								++encodables;
-								if(from + 2 < fromEnd && (from[2] >= 0x80 || SET_D[from[2]] == 0))
+								if(std::distance(fromNext, boost::const_end(from)) > 2 && (fromNext[2] >= 0x80 || SET_D[fromNext[2]] == 0))
 									++encodables;
 							}
 							// check the size of the destination buffer
 							switch(encodables) {
 								case 3:
-									if(to + 8 >= toEnd)
+									if(std::distance(toNext, boost::end(to)) <= 8)
 										encodables = 0;
 									break;
 								case 2:
-									if(to + 6 >= toEnd)
+									if(std::distance(toNext, boost::end(to)) <= 6)
 										encodables = 0;
 									break;
 								case 1:
-									if(to + 3 >= toEnd)
+									if(std::distance(toNext, boost::end(to)) <= 3)
 										encodables = 0;
 									break;
 							}
@@ -572,31 +807,33 @@ namespace ascension {
 								break;	// the destination buffer is insufficient
 
 							// encode
-							const Char utf16[3] = {from[0], (encodables > 1) ? from[1] : 0, (encodables > 2) ? from[2] : 0};
-							*(to++) = BASE64[utf16[0] >> 10];
-							*(to++) = BASE64[(utf16[0] >> 4) & 0x3f];
-							*(to++) = BASE64[(utf16[0] << 2 | utf16[1] >> 14) & 0x3f];
+							const Char utf16[3] = {fromNext[0], (encodables > 1) ? fromNext[1] : 0, (encodables > 2) ? fromNext[2] : 0};
+							*(toNext++) = BASE64[utf16[0] >> 10];
+							*(toNext++) = BASE64[(utf16[0] >> 4) & 0x3f];
+							*(toNext++) = BASE64[(utf16[0] << 2 | utf16[1] >> 14) & 0x3f];
 							if(encodables >= 2) {
-								*(to++) = BASE64[(utf16[1] >> 8) & 0x3f];
-								*(to++) = BASE64[(utf16[1] >> 2) & 0x3f];
-								*(to++) = BASE64[(utf16[1] << 4 | utf16[2] >> 12) & 0x3f];
+								*(toNext++) = BASE64[(utf16[1] >> 8) & 0x3f];
+								*(toNext++) = BASE64[(utf16[1] >> 2) & 0x3f];
+								*(toNext++) = BASE64[(utf16[1] << 4 | utf16[2] >> 12) & 0x3f];
 								if(encodables >= 3) {
-									*(to++) = BASE64[(utf16[2] >> 6) & 0x3f];
-									*(to++) = BASE64[utf16[2] & 0x3f];
+									*(toNext++) = BASE64[(utf16[2] >> 6) & 0x3f];
+									*(toNext++) = BASE64[utf16[2] & 0x3f];
 								}
 							}
-							from += encodables - 1;
+							std::advance(fromNext, encodables - 1);
 						}
 					}
-					if(from == fromEnd && options().test(END_OF_BUFFER) && to != toEnd)
-						*(to++) = '-';
-					toNext = to;
-					fromNext = from;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					if(fromNext == boost::const_end(from) && eob(*this) && toNext != boost::end(to))
+						*(toNext++) = '-';
+					if(base64)
+						state = Utf7::BASE64;
+					else
+						state = boost::any();
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 		
-				template<> Encoder::ConversionResult InternalEncoder<Utf7>::doToUnicode(
-						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
+				template<> Encoder::Result InternalEncoder<Utf7>::doToUnicode(State& state,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
 					static const Byte SET_B[0x80] = {
 						// 1 : in set B, 2 : '+', 3 : directly appearable in BASE64, 4 : '-', 0 : otherwise
 						0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 3, 0, 0,	// 0x00
@@ -619,81 +856,71 @@ namespace ascension {
 						0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30,	0x31, 0x32, 0x33, 0xff, 0xff, 0xff, 0xff, 0xff	// pqrstuvwxyz{|}~
 					};
 
-					// decodingState_ == 1 if in BASE64. 0 otherwise
-					while(to < toEnd && from < fromEnd) {
-						if(*from >= 0x80 || SET_B[*from] == 0) {
-							toNext = to;
-							fromNext = from;
+					bool base64 = Utf7::isBase64(state);
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					while(toNext < boost::end(to) && fromNext < boost::const_end(from)) {
+						if(*fromNext >= 0x80 || SET_B[*fromNext] == 0)
 							return MALFORMED_INPUT;
-						}
-						const Byte klass = SET_B[*from];
+						const Byte klass = SET_B[*fromNext];
 						if(klass == 2) {
 							// '+'
-							if(from + 1 == fromEnd) {	// the input is terminated by '+'...
-								if(options().test(END_OF_BUFFER)) {
-									toNext = to;
-									fromNext = from;
+							if(std::distance(fromNext, boost::const_end(from)) == 1) {	// the input is terminated by '+'...
+								if(eob(*this))
 									return COMPLETED;
-								} else {
-									decodingState_ = 1;
-									++from;
+								else {
+									base64 = true;
+									++fromNext;
 									break;
 								}
-							} else if(from[1] == '-') {
+							} else if(fromNext[1] == '-') {
 								// '+-' => '+'
-								*(to++) = L'+';
-								from += 2;
+								*(toNext++) = L'+';
+								fromNext += 2;
 							} else {
-								decodingState_ = 1;	// introduce modified BASE64 sequence
-								++from;
+								base64 = true;	// introduce modified BASE64 sequence
+								++fromNext;
 							}
 						} else if(klass == 3) {
-							(*to++) = (*from++);
-							decodingState_ = 0;	// terminate modified BASE64 implicitly
+							(*toNext++) = (*fromNext++);
+							base64 = false;	// terminate modified BASE64 implicitly
 						} else if(klass == 4) {
 							// '-'
-							if(decodingState_ == 1)
-								decodingState_ = 0;
-							else {
-								toNext = to;
-								fromNext = from;
+							if(base64)
+								base64 = false;
+							else
 								return MALFORMED_INPUT;	// '-' can't appear here
 								// ...this can't handle '-' appeared at the exact beginning of the input buffer
-							}
-							++from;
+							++fromNext;
 						} else {
 							// first, determine how many bytes can be decoded
 							std::ptrdiff_t decodables = 1;
-							for(const std::ptrdiff_t minimum = std::min<std::ptrdiff_t>(fromEnd - from, 8); decodables < minimum; ++decodables) {
-								if(BASE64[from[decodables]] == 0xff)
+							for(const std::ptrdiff_t minimum = std::min<std::ptrdiff_t>(std::distance(fromNext, boost::const_end(from)), 8); decodables < minimum; ++decodables) {
+								if(BASE64[fromNext[decodables]] == 0xff)
 									break;
 							}
 							// check the size of the destination buffer
 							switch(decodables) {
-							case 8: if(to + 2 >= toEnd) decodables = 0; break;
-							case 6: if(to + 1 >= toEnd) decodables = 0; break;
-							case 3: break;
-							default:
-								toNext = to;
-								fromNext = from;
-								return MALFORMED_INPUT;	// invalid modified BASE64 sequence
+								case 8: if(std::distance(toNext, boost::end(to)) <= 2) decodables = 0; break;
+								case 6: if(std::distance(toNext, boost::end(to)) <= 1) decodables = 0; break;
+								case 3: break;
+								default:
+									return MALFORMED_INPUT;	// invalid modified BASE64 sequence
 							}
 							if(decodables == 0)
 								break;	// the destination buffer is insufficient
 
 							// decode
-							*(to++) = BASE64[from[0]] << 10 | BASE64[from[1]] << 4 | BASE64[from[2]] >> 2;
+							*(toNext++) = BASE64[fromNext[0]] << 10 | BASE64[fromNext[1]] << 4 | BASE64[fromNext[2]] >> 2;
 							if(decodables >= 6) {
-								*(to++) = maskUCS2(BASE64[from[2]] << 14) | BASE64[from[3]] << 8 | BASE64[from[4]] << 2 | BASE64[from[5]] >> 4;
+								*(toNext++) = maskUCS2(BASE64[fromNext[2]] << 14) | BASE64[fromNext[3]] << 8 | BASE64[fromNext[4]] << 2 | BASE64[fromNext[5]] >> 4;
 								if(decodables >= 8)
-									*(to++) = BASE64[from[5]] << 12 | BASE64[from[6]] << 6 | BASE64[from[7]];
+									*(toNext++) = BASE64[fromNext[5]] << 12 | BASE64[fromNext[6]] << 6 | BASE64[fromNext[7]];
 							}
-							from += decodables;			
+							std::advance(fromNext, decodables);			
 						}
 					}
-					toNext = to;
-					fromNext = from;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
@@ -704,39 +931,38 @@ namespace ascension {
 
 				/**
 				 * Transcodes the given UTF-5 sequence into a Unicode character.
-				 * @param first the beginning of the sequence
-				 * @param last the end of the sequence
-				 * @param[out] cp code point of the decoded character
-				 * @return the end of the eaten subsequence
+				 * @param s The UTF-5 byte sequence
+				 * @param[out] cp Code point of the decoded character
+				 * @return The end of the eaten subsequence, or @c null
 				 */
-				inline const Byte* decodeUtf5Character(const Byte* first, const Byte* last, CodePoint& cp) BOOST_NOEXCEPT {
-					if(*first < 'G' || *first > 'V')
+				inline const Byte* decodeUtf5Character(const boost::iterator_range<const Byte*>& s, CodePoint& cp) BOOST_NOEXCEPT {
+					auto p = boost::const_begin(s);
+					if(*p < 'G' || *p > 'V')
 						return nullptr;
-					cp = *first - 'G';
-					for(++first; first < last; ++first) {
-						if(*first >= '0' && *first <= '9') {
+					cp = *p - 'G';
+					for(++p; p < boost::const_end(s); ++p) {
+						if(*p >= '0' && *p <= '9') {
 							cp <<= 4;
-							cp |= *first - '0';
-						} else if(*first >= 'A' && *first <= 'F'){
+							cp |= *p - '0';
+						} else if(*p >= 'A' && *p <= 'F'){
 							cp <<= 4;
-							cp |= *first - 'A' + 0x0a;
+							cp |= *p - 'A' + 0x0a;
 						} else
 							break;
 					}
-					return first;
+					return p;
 				}
 
 				/**
 				 * Transcodes the given Unicode character into UTF-5.
-				 * @param from the beginning of the sequence
-				 * @param fromEnd the end of the sequence
-				 * @param[out] to beginning of the destination buffer
-				 * @return the end of the eaten subsequence
+				 * @param s The Unicode character sequence
+				 * @param[out] to The beginning of the destination buffer
+				 * @return The end of the eaten subsequence
 				 */
-				inline Byte* encodeUtf5Character(const Char* from, const Char* fromEnd, Byte* to) {
+				inline Byte* encodeUtf5Character(const boost::iterator_range<const Char*>& s, Byte* to) {
 #define D2C(n) (mask8Bit(n) < 0x0a) ? (mask8Bit(n) + '0') : (mask8Bit(n) - 0x0a + 'A')
 
-					const CodePoint cp = text::utf::decodeFirst(from, fromEnd);
+					const CodePoint cp = text::utf::decodeFirst(s);
 					if(cp < 0x00000010ul)
 						*(to++) = mask8Bit((cp & 0x0000000ful) >> 0) + 'G';
 					else if(cp < 0x00000100ul) {
@@ -786,74 +1012,61 @@ namespace ascension {
 #undef D2C
 				}
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf5>::doFromUnicode(
-						Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+				template<> Encoder::Result InternalEncoder<Utf5>::doFromUnicode(State&,
+						const boost::iterator_range<Byte*>& to, Byte*& toNext, const boost::iterator_range<const Char*>& from, const Char*& fromNext) {
 					Byte temp[8];
 					Byte* e;
-					for(; to < toEnd && from < fromEnd; ++from) {
-						e = encodeUtf5Character(from, fromEnd, temp);
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					for(; toNext < boost::end(to) && fromNext < boost::const_end(from); ++fromNext) {
+						e = encodeUtf5Character(boost::make_iterator_range(fromNext, boost::const_end(from)), temp);
 						if(e == temp) {
 							if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-								*(to++) = properties().substitutionCharacter();
+								*(toNext++) = properties().substitutionCharacter();
 							else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 								continue;
-							else {
-								fromNext = from;
-								toNext = to;
+							else
 								return UNMAPPABLE_CHARACTER;
-							}
-						} else if(e - temp > toEnd - to) {
-							fromNext = from;
-							toNext = to;
+						} else if(std::distance(temp, e) > std::distance(toNext, boost::end(to)))
 							return INSUFFICIENT_BUFFER;
-						} else {
-							std::memcpy(to, temp, e - temp);
-							to += e - temp;
-							if(e - temp >= 5)
-								++from;
+						else {
+							boost::copy(boost::make_iterator_range(temp, e), toNext);
+							std::advance(toNext, e - temp);
+							if(std::distance(temp, e) >= 5)
+								++fromNext;
 						}
 					}
-					fromNext = from;
-					toNext = to;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 
-				template<> Encoder::ConversionResult InternalEncoder<Utf5>::doToUnicode(
-						Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
+				template<> Encoder::Result InternalEncoder<Utf5>::doToUnicode(State&,
+						const boost::iterator_range<Char*>& to, Char*& toNext, const boost::iterator_range<const Byte*>& from, const Byte*& fromNext) {
 					const Byte* e;
 					CodePoint cp;
-					while(to < toEnd && from < fromEnd) {
-						e = decodeUtf5Character(from, fromEnd, cp);
-						if(e == from) {
-							fromNext = from;
-							toNext = to;
+					toNext = boost::begin(to);
+					fromNext = boost::const_begin(from);
+					while(toNext < boost::end(to) && fromNext < boost::const_end(from)) {
+						e = decodeUtf5Character(boost::make_iterator_range(fromNext, boost::const_end(from)), cp);
+						if(e == fromNext)
 							return MALFORMED_INPUT;
-						} else if(!text::isValidCodePoint(cp)) {
+						else if(!text::isValidCodePoint(cp)) {
 							if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
 								cp = text::REPLACEMENT_CHARACTER;
-								if(e == from)
-									e = from + 1;
+								if(e == fromNext)
+									e = std::next(fromNext, 1);
 							} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS) {
-								++from;
+								++fromNext;
 								continue;
-							} else {
-								fromNext = from;
-								toNext = to;
+							} else
 								return UNMAPPABLE_CHARACTER;
-							}
 						}
-						if(to == toEnd - 1 && text::surrogates::isSupplemental(cp)) {
-							fromNext = from;
-							toNext = to;
+						if(std::next(toNext, 1) == boost::end(to) && text::surrogates::isSupplemental(cp))
 							return INSUFFICIENT_BUFFER;
-						}
-						from = e;
-						text::utf::encode(cp, to);
-						to += text::surrogates::isSupplemental(cp) ? 2 : 1;
+						fromNext = e;
+						text::utf::encode(cp, toNext);
+						std::advance(toNext, text::surrogates::isSupplemental(cp) ? 2 : 1);
 					}
-					fromNext = from;
-					toNext = to;
-					return (from == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
+					return (fromNext == boost::const_end(from)) ? COMPLETED : INSUFFICIENT_BUFFER;
 				}
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
@@ -871,22 +1084,24 @@ namespace ascension {
 				std::tuple<MIBenum, std::string, std::size_t> UnicodeDetector::doDetect(const boost::iterator_range<const Byte*>& bytes) const BOOST_NOEXCEPT {
 					std::shared_ptr<const EncodingProperties> result;
 					// first, test Unicode byte order marks
-					if(boost::size(bytes) >= static_cast<std::ptrdiff_t>(UTF8_BOM.size()) && std::equal(std::begin(UTF8_BOM), std::end(UTF8_BOM), boost::const_begin(bytes)))
+					if(boost::size(bytes) >= boost::size(Utf8::BYTE_ORDER_MARK)
+							&& boost::equal(boost::make_iterator_range_n(boost::const_begin(bytes), boost::size(Utf8::BYTE_ORDER_MARK)), Utf8::BYTE_ORDER_MARK))
 						result = installer.UTF_8;
-					else if(boost::size(bytes) >= static_cast<std::ptrdiff_t>(UTF16LE_BOM.size())) {
-						static_assert(std::is_same<decltype(UTF16LE_BOM), decltype(UTF16BE_BOM)>::value, "");
-						if(std::equal(std::begin(UTF16LE_BOM), std::end(UTF16LE_BOM), boost::const_begin(bytes)))
-							result = installer.UTF_16LE;
-						else if(std::equal(std::begin(UTF16BE_BOM), std::end(UTF16BE_BOM), boost::const_begin(bytes)))
+					else if(boost::size(bytes) >= Utf16::BYTE_ORDER_MARK_SIZE) {
+						const auto initialBytes(boost::make_iterator_range_n(boost::const_begin(bytes), Utf16::BYTE_ORDER_MARK_SIZE));
+						static_assert(std::is_same<decltype(Utf16::BIG_ENDIAN_BYTE_ORDER_MARK), decltype(Utf16::LITTLE_ENDIAN_BYTE_ORDER_MARK)>::value, "");
+						if(boost::equal(initialBytes, Utf16::BIG_ENDIAN_BYTE_ORDER_MARK))
 							result = installer.UTF_16BE;
+						else if(boost::equal(initialBytes, Utf16::LITTLE_ENDIAN_BYTE_ORDER_MARK))
+							result = installer.UTF_16LE;
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-						if(boost::size(bytes) >= static_cast<std::ptrdiff_t>(UTF32LE_BOM.size())) {
-							static_assert(std::is_same<decltype(UTF32LE_BOM), decltype(UTF32BE_BOM)>::value, "");
-							if(std::equal(std::begin(UTF32LE_BOM), std::end(UTF32LE_BOM), boost::const_begin(bytes)))
-								result = installer.UTF_32LE;
-							else if(std::equal(std::begin(UTF32BE_BOM), std::end(UTF32BE_BOM), boost::const_begin(bytes)))
-								result = installer.UTF_32BE;
-						}
+					} else if(boost::size(bytes) >= Utf32::BYTE_ORDER_MARK_SIZE) {
+						const auto initialBytes(boost::make_iterator_range_n(boost::const_begin(bytes), Utf32::BYTE_ORDER_MARK_SIZE));
+						static_assert(std::is_same<decltype(Utf32::BIG_ENDIAN_BYTE_ORDER_MARK), decltype(Utf32::LITTLE_ENDIAN_BYTE_ORDER_MARK)>::value, "");
+						if(boost::equal(initialBytes, Utf32::BIG_ENDIAN_BYTE_ORDER_MARK))
+							result = installer.UTF_32BE;
+						else if(boost::equal(initialBytes, Utf32::LITTLE_ENDIAN_BYTE_ORDER_MARK))
+							result = installer.UTF_32LE;
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 					}
 
@@ -904,6 +1119,3 @@ namespace ascension {
 		}
 	}
 }
-
-#undef ASCENSION_ENCODE_BOM
-#undef ASCENSION_DECODE_BOM
