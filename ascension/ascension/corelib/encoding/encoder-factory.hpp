@@ -78,7 +78,7 @@ namespace ascension {
 		public:
 			static const char ALIASES_SEPARATOR;
 		public:
-			template<typename OutputIterator> static void availableEncodings(OutputIterator out);
+			template<typename OutputIterator> void availableEncodings(OutputIterator out);
 			static EncoderRegistry& instance() BOOST_NOEXCEPT;
 			std::unique_ptr<Encoder> forCCSID(int ccsid) BOOST_NOEXCEPT;
 			std::unique_ptr<Encoder> forCPGID(int cpgid) BOOST_NOEXCEPT;
