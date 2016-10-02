@@ -174,7 +174,7 @@ namespace ascension {
 						const std::string& displayName, const std::string& aliases, Byte substitutionCharacter);
 					virtual ~SingleByteEncoderFactory() BOOST_NOEXCEPT;
 				private:
-					std::unique_ptr<Encoder> create() const override BOOST_NOEXCEPT;
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT override;
 				};
 
 				/**
