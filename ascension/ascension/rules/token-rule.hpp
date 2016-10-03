@@ -9,7 +9,6 @@
 #define ASCENSION_TOKEN_RULES_HPP
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/rules/token.hpp>
-#include <memory>
 
 namespace ascension {
 	namespace text {
