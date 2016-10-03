@@ -433,15 +433,6 @@ namespace ascension {
 			}
 		} // namespace @0
 
-		/// Constructor. The set of the valid schemes is empty.
-		URIDetector::URIDetector() BOOST_NOEXCEPT : validSchemes_(nullptr) {
-		}
-
-		/// Destructor.
-		URIDetector::~URIDetector() BOOST_NOEXCEPT {
-			delete validSchemes_;
-		}
-
 		/// Returns the default generic instance.
 		const URIDetector& URIDetector::defaultGenericInstance() BOOST_NOEXCEPT {
 			static URIDetector singleton;
@@ -454,7 +445,7 @@ namespace ascension {
 		 */
 		const URIDetector& URIDetector::defaultIANAURIInstance() BOOST_NOEXCEPT {
 			static URIDetector singleton;
-			if(singleton.validSchemes_ == nullptr) {
+			if(singleton.validSchemes_.get() == nullptr) {
 				const char SCHEMES[] =
 					// permanent URI schemes
 					"aaa|aaas|acap|cap|cid|crid|data|dav|dict|dns|fax|file|ftp|go|gopher|h323|http|https"
@@ -485,7 +476,7 @@ namespace ascension {
 		
 			// check scheme
 			StringPiece::const_iterator endOfScheme;
-			if(validSchemes_ != nullptr) {
+			if(validSchemes_.get() != nullptr) {
 				auto s(text.substr(1));
 				if(s.length() > validSchemes_->maximumLength())
 					s.remove_suffix(s.length() - validSchemes_->maximumLength());
@@ -524,7 +515,7 @@ namespace ascension {
 				return StringPiece();
 			for(StringPiece::const_iterator p(text.cbegin()); ; ) {
 				if(handleScheme(makeStringPiece(p, nextColon)) == nextColon) {
-					if(validSchemes_ == nullptr || validSchemes_->matches(makeStringPiece(p, nextColon))) {
+					if(validSchemes_.get() == nullptr || validSchemes_->matches(makeStringPiece(p, nextColon))) {
 						if(const auto e = handleIRI(text.substr(p - text.cbegin())))
 							return makeStringPiece(p, e);
 					}
@@ -558,9 +549,7 @@ namespace ascension {
 			}
 		
 			// rebuild hash table
-			detail::HashTable* newSchemes = new detail::HashTable(std::begin(schemes), std::end(schemes), !caseSensitive);
-			delete validSchemes_;
-			validSchemes_ = newSchemes;
+			validSchemes_.reset(new detail::HashTable(std::begin(schemes), std::end(schemes), !caseSensitive));
 		
 			return *this;
 		}
