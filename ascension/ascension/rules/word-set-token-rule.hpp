@@ -12,8 +12,6 @@
 
 namespace ascension {
 	namespace rules {
-		class HashTable;
-
 		/// A concrete rule detects the registered words.
 		class WordSetTokenRule : protected WordTokenRule {
 		public:
