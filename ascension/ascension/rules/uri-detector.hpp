@@ -10,6 +10,7 @@
 #define ASCENSION_URI_DETECTOR_HPP
 #include <ascension/corelib/string-piece.hpp>
 #include <boost/core/noncopyable.hpp>
+#include <memory>
 #include <set>
 
 namespace ascension {
@@ -25,9 +26,6 @@ namespace ascension {
 		 */
 		class URIDetector : private boost::noncopyable {
 		public:
-			explicit URIDetector() BOOST_NOEXCEPT;
-			~URIDetector() BOOST_NOEXCEPT;
-
 			/// @name Parsing
 			/// @{
 			StringPiece::const_iterator detect(const StringPiece& text) const;
@@ -47,7 +45,7 @@ namespace ascension {
 			/// @}
 
 		private:
-			detail::HashTable* validSchemes_;
+			std::unique_ptr<detail::HashTable> validSchemes_;
 		};
 	}
 } // namespace ascension.rules
