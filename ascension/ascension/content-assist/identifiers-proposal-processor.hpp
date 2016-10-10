@@ -28,14 +28,14 @@ namespace ascension {
 			// ContentAssistProcessor
 			virtual std::shared_ptr<const CompletionProposal> activeCompletionProposal(
 				const viewer::TextViewer& textViewer, const kernel::Region& replacementRegion,
-				std::shared_ptr<const CompletionProposal> proposals[], std::size_t numberOfProposals) const BOOST_NOEXCEPT;
-			virtual bool compareDisplayStrings(const String& s1, const String& s2) const BOOST_NOEXCEPT;
+				std::shared_ptr<const CompletionProposal> proposals[], std::size_t numberOfProposals) const BOOST_NOEXCEPT override;
+			virtual bool compareDisplayStrings(const String& s1, const String& s2) const BOOST_NOEXCEPT override;
 			virtual void computeCompletionProposals(const viewer::Caret& caret, bool& incremental,
-				kernel::Region& replacementRegion, std::set<std::shared_ptr<const CompletionProposal>>& proposals) const;
-			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const BOOST_NOEXCEPT;
+				kernel::Region& replacementRegion, std::set<std::shared_ptr<const CompletionProposal>>& proposals) const override;
+			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const BOOST_NOEXCEPT override;
 			virtual void recomputeIncrementalCompletionProposals(const viewer::TextViewer& textViewer,
 				const kernel::Region& replacementRegion, std::shared_ptr<const CompletionProposal> currentProposals[],
-				std::size_t numberOfCurrentProposals, std::set<std::shared_ptr<const CompletionProposal>>& newProposals) const;
+				std::size_t numberOfCurrentProposals, std::set<std::shared_ptr<const CompletionProposal>>& newProposals) const override;
 		private:
 			const kernel::ContentType contentType_;
 			const text::IdentifierSyntax& syntax_;
