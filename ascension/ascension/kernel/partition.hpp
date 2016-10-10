@@ -22,7 +22,7 @@ namespace ascension {
 			ContentType contentType;	///< Content type of the partition.
 			Region region;				///< Region of the partition.
 			/// Default constructor.
-			DocumentPartition() : contentType(ContentType::DEFAULT_CONTENT) BOOST_NOEXCEPT {}
+			DocumentPartition() BOOST_NOEXCEPT : contentType(ContentType::DEFAULT_CONTENT) {}
 			/// Constructor.
 			DocumentPartition(const ContentType& type, const Region& r) BOOST_NOEXCEPT : contentType(type), region(r) {}
 		};
