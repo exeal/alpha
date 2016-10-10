@@ -34,7 +34,7 @@ namespace ascension {
 					return positions::shrinkToAccessibleRegion(document(p), position(p));
 				}
 				template<typename T>
-				inline void throwIfOutsideOfDocument(const T& p) BOOST_NOEXCEPT {
+				inline void throwIfOutsideOfDocument(const T& p) {
 					if(positions::isOutsideOfDocumentRegion(document(p), position(p)))
 						throw BadPositionException(position(p));
 				}
