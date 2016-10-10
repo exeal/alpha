@@ -235,6 +235,7 @@
     <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\abstract-point.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\bookmarker.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\content-type.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\document-character-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\fileio\text-file-document-input.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\fileio\text-file-stream-buffer.cpp" />
@@ -504,6 +505,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\abstract-point.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\bookmarker.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\content-type.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-exceptions.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-input.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />

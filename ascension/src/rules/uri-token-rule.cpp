@@ -24,13 +24,13 @@ namespace ascension {
 				throw NullPointerException("uriDetector");
 		}
 		
-		/// @see Rule#parse
-		boost::optional<StringPiece::const_iterator> URITokenRule::parse(const StringPiece& text,
-				StringPiece::const_iterator start, const text::IdentifierSyntax&) const BOOST_NOEXCEPT {
-			assert(text.cbegin() < text.cend() && start >= text.cbegin() && start < text.cend());
+		/// @see TokenRule#parse
+		boost::optional<Index> URITokenRule::matches(const StringPiece& lineString,
+				StringPiece::const_iterator at, const text::IdentifierSyntax&) const BOOST_NOEXCEPT {
+			assert(lineString.cbegin() < lineString.cend() && at >= lineString.cbegin() && at < lineString.cend());
 
-			const StringPiece::const_iterator e(uriDetector_->detect(text.substr(start - text.cbegin())));
-			return (e != start) ? boost::make_optional(e) : boost::none;
+			const auto e(uriDetector_->detect(lineString.substr(std::distance(lineString.cbegin(), at))));
+			return (e != at) ? boost::make_optional<Index>(std::distance(at, e)) : boost::none;
 		}
 	}
 }

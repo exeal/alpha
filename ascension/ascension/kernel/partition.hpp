@@ -7,39 +7,12 @@
 #ifndef ASCENSION_PARTITION_HPP
 #define ASCENSION_PARTITION_HPP
 #include <ascension/corelib/basic-types.hpp>
+#include <ascension/kernel/content-type.hpp>
 #include <ascension/kernel/region.hpp>
-#include <cstdint>
 
 namespace ascension {
-	namespace text {
-		class IdentifierSyntax;
-	}
-
 	namespace kernel {
-		class Document;
 		class DocumentChange;
-
-		/**
-		 * Content type of a document partition.
-		 * The values less than 100 are reserved for library internal use.
-		 */
-		typedef std::uint32_t ContentType;
-
-		// special content types
-		const ContentType
-			/// Default content type.
-			DEFAULT_CONTENT_TYPE = 0,
-			/// Type of the parent (means "transition source") content.
-			PARENT_CONTENT_TYPE = 1,
-			/// Type of Undetermined (not calculated) content.
-			UNDETERMINED_CONTENT_TYPE = 2;
-
-		ContentType contentType(const std::pair<const Document&, Position>& p);
-
-		/// Returns @c true if the given content type value @a v is for special use.
-		inline bool isSpecialContentType(ContentType v) BOOST_NOEXCEPT {
-			return v < 100;
-		}
 
 		/**
 		 * A document partition.
@@ -49,25 +22,9 @@ namespace ascension {
 			ContentType contentType;	///< Content type of the partition.
 			Region region;				///< Region of the partition.
 			/// Default constructor.
-			DocumentPartition() BOOST_NOEXCEPT {}
+			DocumentPartition() : contentType(ContentType::DEFAULT_CONTENT) BOOST_NOEXCEPT {}
 			/// Constructor.
-			DocumentPartition(ContentType type, const Region& r) BOOST_NOEXCEPT : contentType(type), region(r) {}
-		};
-
-		/**
-		 * An @c ContentTypeInformationProvider provides the information about the document's content types.
-		 * @see Document#setContentTypeInformation, Document#setContentTypeInformation
-		 */
-		class ContentTypeInformationProvider {
-		public:
-			/// Destructor.
-			virtual ~ContentTypeInformationProvider() BOOST_NOEXCEPT {}
-			/**
-			 * Returns the identifier syntax for the specified content type.
-			 * @param contentType The type of content
-			 * @return The identifier syntax
-			 */
-			virtual const text::IdentifierSyntax& getIdentifierSyntax(ContentType contentType) const BOOST_NOEXCEPT = 0;
+			DocumentPartition(const ContentType& type, const Region& r) BOOST_NOEXCEPT : contentType(type), region(r) {}
 		};
 
 		/**

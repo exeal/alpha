@@ -9,8 +9,8 @@
 #define ASCENSION_CONTENT_ASSIST_HPP
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/text/code-point.hpp>
+#include <ascension/kernel/content-type.hpp>
 #include <ascension/kernel/document-observers.hpp>
-#include <ascension/kernel/partition.hpp>	// kernel.ContentType
 #include <memory>	// std.shared_ptr
 #include <set>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -18,6 +18,9 @@
 #endif
 
 namespace ascension {
+	namespace kernel {
+		class Region;
+	}
 
 	namespace viewer {
 		class Caret;
@@ -188,7 +191,7 @@ namespace ascension {
 			 *         @a contentType
 			 */
 			virtual std::shared_ptr<const ContentAssistProcessor>
-				contentAssistProcessor(kernel::ContentType contentType) const BOOST_NOEXCEPT = 0;
+				contentAssistProcessor(const kernel::ContentType& contentType) const BOOST_NOEXCEPT = 0;
 			/// Shows all possible completions on the current context.
 			virtual void showPossibleCompletions() = 0;
 		protected:

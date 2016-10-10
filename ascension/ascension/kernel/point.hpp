@@ -7,7 +7,6 @@
 #ifndef ASCENSION_KERNEL_POINT_HPP
 #define ASCENSION_KERNEL_POINT_HPP
 #include <ascension/kernel/abstract-point.hpp>
-#include <ascension/kernel/partition.hpp>
 #include <ascension/kernel/position.hpp>
 #include <boost/operators.hpp>
 

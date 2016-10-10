@@ -248,7 +248,7 @@ namespace ascension {
 			public:
 				DefaultContentTypeInformationProvider();
 				~DefaultContentTypeInformationProvider() BOOST_NOEXCEPT;
-				const text::IdentifierSyntax& getIdentifierSyntax(ContentType) const BOOST_NOEXCEPT {return *syntax_;}
+				const text::IdentifierSyntax& getIdentifierSyntax(const ContentType&) const BOOST_NOEXCEPT override {return *syntax_;}
 			private:
 				text::IdentifierSyntax* syntax_;	// use a pointer to brake dependency
 			};

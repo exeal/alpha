@@ -184,7 +184,7 @@ namespace ascension {
 		}
 
 		/// @see ContentAssistant#contentAssistProcessor
-		std::shared_ptr<const ContentAssistProcessor> DefaultContentAssistant::contentAssistProcessor(kernel::ContentType contentType) const BOOST_NOEXCEPT {
+		std::shared_ptr<const ContentAssistProcessor> DefaultContentAssistant::contentAssistProcessor(const kernel::ContentType& contentType) const BOOST_NOEXCEPT {
 			std::map<kernel::ContentType, std::shared_ptr<ContentAssistProcessor>>::const_iterator i(processors_.find(contentType));
 			return (i != std::end(processors_)) ? i->second : std::shared_ptr<const ContentAssistProcessor>();
 		}
@@ -215,7 +215,7 @@ namespace ascension {
 		 * @param contentType The content type
 		 * @param processor The new content assist processor to register or @c null to unregister
 		 */
-		void DefaultContentAssistant::setContentAssistProcessor(kernel::ContentType contentType, std::unique_ptr<ContentAssistProcessor> processor) {
+		void DefaultContentAssistant::setContentAssistProcessor(const kernel::ContentType& contentType, std::unique_ptr<ContentAssistProcessor> processor) {
 			std::map<kernel::ContentType, std::shared_ptr<ContentAssistProcessor>>::iterator i(processors_.find(contentType));
 			if(i != std::end(processors_))
 				processors_.erase(i);

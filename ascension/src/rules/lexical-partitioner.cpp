@@ -95,21 +95,23 @@ namespace ascension {
 				kernel::Region(
 					kernel::Position::bol(std::min(kernel::line(*boost::const_begin(change.erasedRegion())), kernel::line(*boost::const_begin(change.insertedRegion())))),
 					*boost::const_end(doc.region())));
-			kernel::ContentType contentType, destination;
-			contentType = (kernel::line(i.tell()) == 0) ? kernel::DEFAULT_CONTENT_TYPE
-				: (*partitionAt(kernel::Position(kernel::line(i.tell()), doc.lineLength(kernel::line(i.tell()) - 1))))->contentType;
+			kernel::ContentType contentType((kernel::line(i.tell()) == 0) ? kernel::ContentType::DEFAULT_CONTENT
+				: (*partitionAt(kernel::Position(kernel::line(i.tell()), doc.lineLength(kernel::line(i.tell()) - 1))))->contentType);
 			for(const String* line = &doc.lineString(kernel::line(i.tell())); ; ) {	// scan and tokenize into partitions...
 				const bool atEOL = kernel::offsetInLine(i.tell()) == line->length();
-				Index tokenLength = tryTransition(*line, kernel::offsetInLine(i.tell()), contentType, destination);
-				if(tokenLength != 0) {	// a token was found
+				const auto transition(tryTransition(*line, kernel::offsetInLine(i.tell()), contentType));
+				if(transition != boost::none) {	// a transition token was found
+					Index tokenLength;
+					kernel::ContentType newPartitionContentType = kernel::ContentType::DEFAULT_CONTENT;
+					bool newParitionBeginsAtEndOfToken;
+					std::tie(tokenLength, newPartitionContentType, newParitionBeginsAtEndOfToken) = boost::get(transition);
 					if(atEOL)
 						tokenLength = 0;	// a line terminator is zero-length...
 					const kernel::Position tokenEnd(kernel::line(i.tell()), kernel::offsetInLine(i.tell()) + tokenLength);
 					// insert the new partition behind the current
-					assert(destination != contentType);
-					newPartitions.push_back(new Partition(
-						destination, (destination > contentType) ? i.tell() : tokenEnd, i.tell(), tokenLength));
-					contentType = destination;
+					assert(newPartitionContentType != contentType);
+					newPartitions.push_back(new Partition(newPartitionContentType, !newParitionBeginsAtEndOfToken ? i.tell() : tokenEnd, i.tell(), tokenLength));
+					contentType = newPartitionContentType;
 					// go to the end of the found token
 					if(!atEOL)
 						i.seek(tokenEnd);
@@ -124,7 +126,7 @@ namespace ascension {
 						break;
 				}
 				// go to the next character if no transition occurred
-				if(tokenLength == 0) {
+				if(transition != boost::none) {
 					++i;
 					if(kernel::offsetInLine(i.tell()) == 0)	// entered the next line
 						line = &doc.lineString(kernel::line(i.tell()));
@@ -158,7 +160,7 @@ namespace ascension {
 			BOOST_FOREACH(const Partition* partition, partitions_)
 				delete partition;
 			partitions_.clear();
-			partitions_.insert(std::begin(partitions_), new Partition(kernel::DEFAULT_CONTENT_TYPE, kernel::Position::zero(), kernel::Position::zero(), 0));
+			partitions_.insert(std::begin(partitions_), new Partition(kernel::ContentType::DEFAULT_CONTENT, kernel::Position::zero(), kernel::Position::zero(), 0));
 			kernel::Region dummy;
 			const kernel::Region entire(document()->region());
 			computePartitioning(*boost::const_begin(entire), *boost::const_end(entire), dummy);
@@ -170,7 +172,7 @@ namespace ascension {
 			ASCENSION_LOG_TRIVIAL(debug) << "LexicalPartitioner dump start:\n";
 			BOOST_FOREACH(auto i, partitions_)
 				ASCENSION_LOG_TRIVIAL(debug)
-					<< "\t" << i->contentType << " = ("
+					<< "\t" << reinterpret_cast<std::uintptr_t>(&i->contentType) << " = ("
 					<< static_cast<std::uint32_t>(kernel::line(i->start)) << ", "
 					<< static_cast<std::uint32_t>(kernel::offsetInLine(i->start)) << ")\n";
 #endif
@@ -201,9 +203,9 @@ namespace ascension {
 			// push a default partition if no partition includes the start of the document
 			const kernel::Document& d = *document();
 			if(partitions_.empty() || partitions_[0]->start != *boost::const_begin(d.region())) {
-				if(partitions_.empty() || partitions_[0]->contentType != kernel::DEFAULT_CONTENT_TYPE) {
+				if(partitions_.empty() || partitions_[0]->contentType != kernel::ContentType::DEFAULT_CONTENT) {
 					const kernel::Position bob(*boost::const_begin(d.region()));
-					partitions_.insert(std::begin(partitions_), new Partition(kernel::DEFAULT_CONTENT_TYPE, bob, bob, 0));
+					partitions_.insert(std::begin(partitions_), new Partition(kernel::ContentType::DEFAULT_CONTENT, bob, bob, 0));
 				} else {
 					partitions_[0]->start = partitions_[0]->tokenStart = *boost::const_begin(d.region());
 					partitions_[0]->tokenLength = 0;
@@ -247,7 +249,7 @@ namespace ascension {
 		// returns the transition state (corresponding content type) at the given position.
 		inline kernel::ContentType LexicalPartitioner::transitionStateAt(const kernel::Position& at) const BOOST_NOEXCEPT {
 			if(at == kernel::Position::zero())
-				return kernel::DEFAULT_CONTENT_TYPE;
+				return kernel::ContentType::DEFAULT_CONTENT;
 			auto i(partitionAt(at));
 			if((*i)->start == at)
 				--i;
@@ -259,21 +261,27 @@ namespace ascension {
 		 * @param line The scanning line text
 		 * @param offsetInLine The offset in the line at which match starts
 		 * @param contentType The current content type
-		 * @param[out] destination The type of the transition destination content
-		 * @return The length of the pattern matched or 0 if the all rules did not matched
+		 * @return A tuple of [0] the length of the pattern matched, [1] the type of the transition destination content
+		 *         and [2] @c true if the new partition begins at the end of the transition token. Or  @c boost#none if
+		 *         the all rules did not matched
 		 */
-		inline Index LexicalPartitioner::tryTransition(
-				const StringPiece& line, Index offsetInLine, kernel::ContentType contentType, kernel::ContentType& destination) const BOOST_NOEXCEPT {
+		inline boost::optional<std::tuple<Index, kernel::ContentType, bool>> LexicalPartitioner::tryTransition(
+				const StringPiece& line, Index offsetInLine, const kernel::ContentType& contentType) const BOOST_NOEXCEPT {
+			const auto p(std::next(line.cbegin(), offsetInLine));
 			BOOST_FOREACH(const std::unique_ptr<const TransitionRule>& rule, rules_) {
-				if(rule->contentType() == contentType) {
-					if(const Index c = rule->matches(line, offsetInLine)) {
-						destination = rule->destination();
-						return c;
+				if(rule->contentType() == contentType && rule->destination() != contentType) {
+					if(const auto matchResult = rule->matches(line, p)) {
+						const auto token(boost::get(matchResult));
+						// check the result
+						if(std::next(p, token.length) > line.cend())
+							continue;
+						if(token.bias != TransitionRule::NEW_PARTITION_BEGINS_AT_BEGINNING_OF_TOKEN && token.bias != TransitionRule::NEW_PARTITION_BEGINS_AT_END_OF_TOKEN)
+							continue;
+						return std::make_tuple(token.length, rule->destination(), token.bias == TransitionRule::NEW_PARTITION_BEGINS_AT_END_OF_TOKEN);
 					}
 				}
 			}
-			destination = kernel::UNDETERMINED_CONTENT_TYPE;
-			return 0;
+			return boost::none;
 		}
 
 		/// Diagnoses the partitions.

@@ -9,8 +9,7 @@
 
 #ifndef ASCENSION_HYPERLINK_DETECTOR_HPP
 #define ASCENSION_HYPERLINK_DETECTOR_HPP
-
-#include <ascension/kernel/partition.hpp>	// kernel.ContentType
+#include <ascension/kernel/content-type.hpp>
 #include <map>
 #include <memory>
 
@@ -66,7 +65,7 @@ namespace ascension {
 			class CompositeHyperlinkDetector : public HyperlinkDetector {
 			public:
 				~CompositeHyperlinkDetector() BOOST_NOEXCEPT;
-				void setDetector(kernel::ContentType contentType, std::unique_ptr<HyperlinkDetector> detector);
+				void setDetector(const kernel::ContentType& contentType, std::unique_ptr<HyperlinkDetector> detector);
 				// hyperlink.HyperlinkDetector
 				std::unique_ptr<Hyperlink> nextHyperlink(const kernel::Document& document,
 					Index line, const boost::integer_range<Index>& range) const BOOST_NOEXCEPT override;

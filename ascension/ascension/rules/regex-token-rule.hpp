@@ -21,8 +21,8 @@ namespace ascension {
 		class RegexTokenRule : public TokenRule {
 		public:
 			RegexTokenRule(Token::Identifier identifier, std::unique_ptr<const regex::Pattern> pattern);
-			boost::optional<StringPiece::const_iterator> parse(
-				const StringPiece& text, StringPiece::const_iterator start,
+			boost::optional<Index> matches(
+				const StringPiece& lineString, StringPiece::const_iterator at,
 				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;
 
 		private:

@@ -46,7 +46,7 @@ namespace ascension {
 		 * @param contentType The content type
 		 * @param syntax The identifier syntax to detect identifiers
 		 */
-		IdentifiersProposalProcessor::IdentifiersProposalProcessor(kernel::ContentType contentType,
+		IdentifiersProposalProcessor::IdentifiersProposalProcessor(const kernel::ContentType& contentType,
 				const text::IdentifierSyntax& syntax) BOOST_NOEXCEPT : contentType_(contentType), syntax_(syntax) {
 		}
 

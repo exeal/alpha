@@ -40,15 +40,15 @@ namespace ascension {
 			/// Destructor.
 			virtual ~TokenRule() BOOST_NOEXCEPT {}
 			/**
-			 * Parses and finds a token at the beginning of the given text string.
-			 * @param text The text string to parse. This is a while line in the document
-			 * @param start The start position of the token
+			 * Returns a token starts at the specified position in the line.
+			 * @param lineString The text string of the line
+			 * @param at The start position of the token in @a lineString
 			 * @param identifierSyntax The identifier syntax
-			 * @return The end position of the found token, or @c boost::none if not found
-			 * @note @a text is neither @c null nor empty
+			 * @return The length of the found token, or @c boost::none if not found
+			 * @note @a lineString is neither @c null nor empty
 			 */
-			virtual boost::optional<StringPiece::const_iterator> parse(
-				const StringPiece& text, StringPiece::const_iterator start,
+			virtual boost::optional<Index> matches(
+				const StringPiece& lineString, StringPiece::const_iterator at,
 				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT = 0;
 
 		protected:

@@ -20,10 +20,10 @@ namespace ascension {
 		protected:
 			// constructors
 			IdentifiersProposalProcessor(
-				kernel::ContentType contentType, const text::IdentifierSyntax& syntax) BOOST_NOEXCEPT;
+				const kernel::ContentType& contentType, const text::IdentifierSyntax& syntax) BOOST_NOEXCEPT;
 			virtual ~IdentifiersProposalProcessor() BOOST_NOEXCEPT;
 			// attributes
-			kernel::ContentType contentType() const BOOST_NOEXCEPT;
+			const kernel::ContentType& contentType() const BOOST_NOEXCEPT;
 			const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT;
 			// ContentAssistProcessor
 			virtual std::shared_ptr<const CompletionProposal> activeCompletionProposal(

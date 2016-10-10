@@ -30,30 +30,30 @@ namespace ascension {
 				throw std::invalid_argument("The start sequence is empty.");
 		}
 		
-		/// @see Rule#parse
-		boost::optional<StringPiece::const_iterator> RegionTokenRule::parse(const StringPiece& text,
-				StringPiece::const_iterator start, const text::IdentifierSyntax&) const BOOST_NOEXCEPT {
-			assert(text.cbegin() < text.cend() && start >= text.cbegin() && start < text.cend());
-			const auto eos(text.cend());
+		/// @see TokenRule#matches
+		boost::optional<Index> RegionTokenRule::matches(const StringPiece& lineString,
+				StringPiece::const_iterator at, const text::IdentifierSyntax&) const BOOST_NOEXCEPT {
+			assert(lineString.cbegin() < lineString.cend() && at >= lineString.cbegin() && at < lineString.cend());
+			const auto eol(lineString.cend());
 
 			// match the start sequence
-			if(start[0] != startSequence_[0]
-					|| (escapeCharacter_ != boost::none && start > text.cbegin() && start[-1] == boost::get(escapeCharacter_))
-					|| static_cast<std::size_t>(eos - start) < startSequence_.length() + endSequence_.length()
-					|| (startSequence_.length() > 1 && !std::equal(start + 1, start + startSequence_.length(), startSequence_.cbegin() + 1)))
+			if(at[0] != startSequence_[0]
+					|| (escapeCharacter_ != boost::none && at > lineString.cbegin() && at[-1] == boost::get(escapeCharacter_))
+					|| static_cast<std::size_t>(std::distance(at, eol)) < startSequence_.length() + endSequence_.length()
+					|| (startSequence_.length() > 1 && !std::equal(std::next(at), std::next(at, startSequence_.length()), std::next(startSequence_.cbegin()))))
 				return boost::none;
 
 			if(endSequence_.empty())
-				return eos;
+				return boost::make_optional<Index>(std::distance(at, eol));
 
 			// search the end sequence
-			for(auto p(start + startSequence_.length()); p <= eos - endSequence_.length(); ++p) {
+			for(auto p(std::next(at, startSequence_.length())); p <= std::prev(eol, endSequence_.length()); ++p) {
 				if(escapeCharacter_ != boost::none && *p == boost::get(escapeCharacter_))
 					++p;
 				else if(*p == endSequence_[0]) {
-					if(endSequence_.length() > 1 && !std::equal(endSequence_.cbegin() + 1, endSequence_.cend(), p + 1))
+					if(endSequence_.length() > 1 && !std::equal(std::next(endSequence_.cbegin()), endSequence_.cend(), std::next(p)))
 						continue;
-					return p + endSequence_.length();
+					return boost::make_optional<Index>(std::distance(at, std::next(p, endSequence_.length())));
 				}
 			}
 			return boost::none;

@@ -22,7 +22,7 @@ namespace ascension {
 		 * Constructor.
 		 * @param contentType The content the scanner parses
 		 */
-		LexicalTokenScanner::LexicalTokenScanner(kernel::ContentType contentType) BOOST_NOEXCEPT : contentType_(contentType), current_() {
+		LexicalTokenScanner::LexicalTokenScanner(const kernel::ContentType& contentType) BOOST_NOEXCEPT : contentType_(contentType), current_() {
 		}
 
 		/**
@@ -83,12 +83,12 @@ namespace ascension {
 				}
 
 				assert(line.cbegin() != nullptr && line.cend() != nullptr && line.cbegin() < line.cend());
-				const StringPiece::const_iterator p(line.cbegin() + kernel::offsetInLine(current_.tell()));
+				const StringPiece::const_iterator p(std::next(line.cbegin(), kernel::offsetInLine(current_.tell())));
 				BOOST_FOREACH(const std::unique_ptr<const TokenRule>& rule, rules_) {
-					const boost::optional<StringPiece::const_iterator> endOfToken(rule->parse(line, p, ids));
-					if(endOfToken != boost::none) {
+					const auto tokenLength(rule->matches(line, p, ids));
+					if(tokenLength != boost::none && boost::get(tokenLength) <= static_cast<Index>(std::distance(p, line.cend()))) {
 						const kernel::Position beginningOfToken(current_.tell());
-						current_.seek(kernel::Position(kernel::line(beginningOfToken), boost::get(endOfToken) - line.cbegin()));
+						current_.seek(kernel::Position(kernel::line(beginningOfToken), kernel::offsetInLine(beginningOfToken) + boost::get(tokenLength)));
 						return std::unique_ptr<Token>(new Token(rule->tokenID(), beginningOfToken));
 					}
 				}
@@ -96,7 +96,7 @@ namespace ascension {
 				if(endOfWord > p) {
 					if(!wordRules_.empty()) {
 						BOOST_FOREACH(const std::unique_ptr<const WordTokenRule>& wordRule, wordRules_) {
-							if(wordRule->parse(line, makeStringPiece(p, endOfWord), ids)) {
+							if(wordRule->matches(line, makeStringPiece(p, endOfWord), ids)) {
 								const kernel::Position beginningOfToken(current_.tell());
 								current_.seek(kernel::Position(kernel::line(beginningOfToken), endOfWord - line.cbegin()));
 								return std::unique_ptr<Token>(new Token(wordRule->tokenID(), beginningOfToken));

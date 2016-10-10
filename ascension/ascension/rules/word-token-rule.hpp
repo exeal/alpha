@@ -20,13 +20,14 @@ namespace ascension {
 			/// Destructor.
 			virtual ~WordTokenRule() BOOST_NOEXCEPT {}
 			/**
-			 * Parses and finds a token at the beginning of the given text string.
-			 * @param text The text string to parse. This is a while line in the document
-			 * @param word The word to check if is a token
+			 * Returns a token starts at the specified position in the line.
+			 * @param lineString The text string of the line
+			 * @param word The range representing the word to check if is a token
 			 * @param identifierSyntax The identifier syntax
 			 * @return @c true if @a word is a token
+			 * @note @a lineString is neither @c null nor empty
 			 */
-			virtual bool parse(const StringPiece& text, const StringPiece& word,
+			virtual bool matches(const StringPiece& lineString, const StringPiece& word,
 				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT = 0;
 
 		protected:
