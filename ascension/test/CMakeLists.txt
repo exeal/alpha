@@ -159,6 +159,7 @@ add_executable(
 	${Ascension_SOURCE_DIR}/corelib/text/newline.cpp
 	${Ascension_SOURCE_DIR}/kernel/abstract-point.cpp
 	${Ascension_SOURCE_DIR}/kernel/bookmarker.cpp
+	${Ascension_SOURCE_DIR}/kernel/content-type.cpp
 	${Ascension_SOURCE_DIR}/kernel/document.cpp
 	${Ascension_SOURCE_DIR}/kernel/point.cpp
 	${Ascension_SOURCE_DIR}/kernel/stream.cpp
@@ -175,6 +176,7 @@ add_executable(
 	${Ascension_SOURCE_DIR}/corelib/text/newline.cpp
 	${Ascension_SOURCE_DIR}/kernel/abstract-point.cpp
 	${Ascension_SOURCE_DIR}/kernel/bookmarker.cpp
+	${Ascension_SOURCE_DIR}/kernel/content-type.cpp
 	${Ascension_SOURCE_DIR}/kernel/document.cpp
 	${Ascension_SOURCE_DIR}/kernel/point.cpp
 	${Ascension_SOURCE_DIR}/kernel/undo.cpp)
@@ -190,6 +192,7 @@ add_executable(
 	${Ascension_SOURCE_DIR}/corelib/text/newline.cpp
 	${Ascension_SOURCE_DIR}/kernel/abstract-point.cpp
 	${Ascension_SOURCE_DIR}/kernel/bookmarker.cpp
+	${Ascension_SOURCE_DIR}/kernel/content-type.cpp
 	${Ascension_SOURCE_DIR}/kernel/document.cpp
 	${Ascension_SOURCE_DIR}/kernel/document-character-iterator.cpp
 	${Ascension_SOURCE_DIR}/kernel/point.cpp
@@ -206,6 +209,7 @@ add_executable(
 	${Ascension_SOURCE_DIR}/corelib/text/newline.cpp
 	${Ascension_SOURCE_DIR}/kernel/abstract-point.cpp
 	${Ascension_SOURCE_DIR}/kernel/bookmarker.cpp
+	${Ascension_SOURCE_DIR}/kernel/content-type.cpp
 	${Ascension_SOURCE_DIR}/kernel/document.cpp
 	${Ascension_SOURCE_DIR}/kernel/point.cpp
 	${Ascension_SOURCE_DIR}/kernel/undo.cpp)
@@ -229,6 +233,7 @@ add_executable(
 	${Ascension_SOURCE_DIR}/corelib/text/word-break-iterator.cpp
 	${Ascension_SOURCE_DIR}/kernel/abstract-point.cpp
 	${Ascension_SOURCE_DIR}/kernel/bookmarker.cpp
+	${Ascension_SOURCE_DIR}/kernel/content-type.cpp
 	${Ascension_SOURCE_DIR}/kernel/document.cpp
 	${Ascension_SOURCE_DIR}/kernel/document-character-iterator.cpp
 	${Ascension_SOURCE_DIR}/kernel/locations.cpp
@@ -254,6 +259,7 @@ add_executable(
 	${Ascension_SOURCE_DIR}/corelib/encoding/encoder-implementation.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/character-property.cpp
 	${Ascension_SOURCE_DIR}/corelib/text/identifier-syntax.cpp
+	${Ascension_SOURCE_DIR}/kernel/content-type.cpp
 	${Ascension_SOURCE_DIR}/rules/number-token-rule.cpp
 	${Ascension_SOURCE_DIR}/rules/regex-token-rule.cpp
 	${Ascension_SOURCE_DIR}/rules/region-token-rule.cpp
