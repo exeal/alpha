@@ -17,53 +17,53 @@ namespace {
 }
 
 namespace {
-	void testNumberTokenRule(const char* text, int position, boost::optional<int> expectedResult) {
+	void testNumberTokenRule(const char* text, std::size_t position, boost::optional<std::size_t> expectedLength) {
 		const ascension::rules::NumberTokenRule rule(DUMMY_ID);
 		const auto s(fromLatin1(text));
 		const ascension::StringPiece input(s);
-		const auto result(rule.parse(input, input.cbegin() + position, IDS));
+		const auto length(rule.matches(input, input.cbegin() + position, IDS));
 
-		if(expectedResult == boost::none)
-			BOOST_TEST((result == boost::none));
+		if(expectedLength == boost::none)
+			BOOST_TEST((length == boost::none));
 		else {
-			BOOST_REQUIRE((result != boost::none));
-			BOOST_TEST(boost::get(result) - input.cbegin() == boost::get(expectedResult));
+			BOOST_REQUIRE((length != boost::none));
+			BOOST_TEST(boost::get(length) == boost::get(expectedLength));
 		}
 	}
 }
 
 BOOST_AUTO_TEST_SUITE(number_token_rule)
 	BOOST_AUTO_TEST_CASE(decimal_literal_test1) {
-		testNumberTokenRule("0", 0, 1);
+		testNumberTokenRule("0", 0u, 1u);
 	}
 
 	BOOST_AUTO_TEST_CASE(decimal_literal_test2) {
-		testNumberTokenRule(".", 0, boost::none);
-		testNumberTokenRule(".o", 0, boost::none);
-		testNumberTokenRule(".693147", 0, 7);
-		testNumberTokenRule(".693147i", 0, boost::none);
-		testNumberTokenRule(".e+1", 0, boost::none);
-		testNumberTokenRule(".ea", 0, boost::none);
-		testNumberTokenRule(".314e1", 0, 6);
-		testNumberTokenRule(".314e+1", 0, 7);
-		testNumberTokenRule(".314e-1", 0, 7);
-		testNumberTokenRule(".314e+-0", 0, boost::none);
-		testNumberTokenRule(".602E+24", 0, 8);
-//		testNumberTokenRule(".0.0", 0, boost::none);
-		testNumberTokenRule("0.0", 1, boost::none);
-		testNumberTokenRule("a.0", 1, boost::none);
-		testNumberTokenRule("@.0", 1, 3);
+		testNumberTokenRule(".", 0u, boost::none);
+		testNumberTokenRule(".o", 0u, boost::none);
+		testNumberTokenRule(".693147", 0u, 7u);
+		testNumberTokenRule(".693147i", 0u, boost::none);
+		testNumberTokenRule(".e+1", 0u, boost::none);
+		testNumberTokenRule(".ea", 0u, boost::none);
+		testNumberTokenRule(".314e1", 0u, 6u);
+		testNumberTokenRule(".314e+1", 0u, 7u);
+		testNumberTokenRule(".314e-1", 0u, 7u);
+		testNumberTokenRule(".314e+-0", 0u, boost::none);
+		testNumberTokenRule(".602E+24", 0u, 8u);
+//		testNumberTokenRule(".0.0", 0u, boost::none);
+		testNumberTokenRule("0.0", 1u, boost::none);
+		testNumberTokenRule("a.0", 1u, boost::none);
+		testNumberTokenRule("@.0", 1u, 2u);
 	}
 
 	BOOST_AUTO_TEST_CASE(hex_integer_literal_test) {
-		testNumberTokenRule("0x", 0, boost::none);
-		testNumberTokenRule("0x0", 0, 3);
-		testNumberTokenRule("0XA", 0, 3);
-		testNumberTokenRule("0xDEADBEEF", 0, 10);
-		testNumberTokenRule("0xDEADCODE", 0, boost::none);
-		testNumberTokenRule("0x00e+0", 0, 5);
-		testNumberTokenRule("0x00.0", 0, 4);
-		testNumberTokenRule("00x0", 1, boost::none);
+		testNumberTokenRule("0x", 0u, boost::none);
+		testNumberTokenRule("0x0", 0u, 3u);
+		testNumberTokenRule("0XA", 0u, 3u);
+		testNumberTokenRule("0xDEADBEEF", 0u, 10u);
+		testNumberTokenRule("0xDEADCODE", 0u, boost::none);
+		testNumberTokenRule("0x00e+0", 0u, 5u);
+		testNumberTokenRule("0x00.0", 0u, 4u);
+		testNumberTokenRule("00x0", 1u, boost::none);
 	}
 BOOST_AUTO_TEST_SUITE_END()
 
@@ -72,42 +72,42 @@ BOOST_AUTO_TEST_CASE(regex_token_rule) {
 }
 
 namespace {
-	void testRegionTokenRule(const char* text, std::size_t position, boost::optional<char> escapeCharacter, bool caseSensitive, boost::optional<std::size_t> expectedResult) {
+	void testRegionTokenRule(const char* text, std::size_t position, boost::optional<char> escapeCharacter, bool caseSensitive, boost::optional<std::size_t> expectedLength) {
 		boost::optional<ascension::Char> ec;
 		if(escapeCharacter != boost::none)
 			ec = boost::get(escapeCharacter);
 		const ascension::rules::RegionTokenRule rule(DUMMY_ID, fromLatin1("begin"), fromLatin1("end"), ec, caseSensitive);
 		const auto s(fromLatin1(text));
 		const ascension::StringPiece input(s);
-		const auto result(rule.parse(input, input.cbegin() + position, IDS));
+		const auto length(rule.matches(input, input.cbegin() + position, IDS));
 
-		if(expectedResult == boost::none)
-			BOOST_TEST((result == boost::none));
+		if(expectedLength == boost::none)
+			BOOST_TEST((length == boost::none));
 		else {
-			BOOST_REQUIRE((result != boost::none));
-			BOOST_TEST(boost::get(result) == input.cbegin() + boost::get(expectedResult));
+			BOOST_REQUIRE((length != boost::none));
+			BOOST_TEST(boost::get(length) == boost::get(expectedLength));
 		}
 	}
 }
 
 BOOST_AUTO_TEST_SUITE(region_token_rule)
 	BOOST_AUTO_TEST_CASE(basic_test) {
-		testRegionTokenRule("----begin++++end", 0, boost::none, true, boost::none);
-		testRegionTokenRule("----begin++++end", 4, boost::none, true, 16);
+		testRegionTokenRule("----begin++++end", 0u, boost::none, true, boost::none);
+		testRegionTokenRule("----begin++++end", 4u, boost::none, true, 12u);
 	}
 
 	BOOST_AUTO_TEST_CASE(escape_sequences_test) {
-		testRegionTokenRule("begin++++\\end", 0, '\\', true, boost::none);
-		testRegionTokenRule("\\begin++++end", 0, '\\', true, boost::none);
-		testRegionTokenRule("\\begin++++end", 1, '\\', true, boost::none);
+		testRegionTokenRule("begin++++\\end", 0u, '\\', true, boost::none);
+		testRegionTokenRule("\\begin++++end", 0u, '\\', true, boost::none);
+		testRegionTokenRule("\\begin++++end", 1u, '\\', true, boost::none);
 	}
 
 	BOOST_AUTO_TEST_CASE(nocase_test) {
-		testRegionTokenRule("----bEGIn++++End", 4, boost::none, true, 16);
+		testRegionTokenRule("----bEGIn++++End", 4u, boost::none, true, 12u);
 
-		testRegionTokenRule("begin++++Xend", 0, 'x', true, boost::none);
-		testRegionTokenRule("Xbegin++++end", 0, 'x', true, boost::none);
-		testRegionTokenRule("xbegin++++end", 1, 'X', true, boost::none);
+		testRegionTokenRule("begin++++Xend", 0u, 'x', true, boost::none);
+		testRegionTokenRule("Xbegin++++end", 0u, 'x', true, boost::none);
+		testRegionTokenRule("xbegin++++end", 1u, 'X', true, boost::none);
 	}
 BOOST_AUTO_TEST_SUITE_END()
 
@@ -120,7 +120,7 @@ namespace {
 		const auto s(fromLatin1(text));
 		const ascension::StringPiece input(s);
 		const ascension::StringPiece word(input.substr(wordRange.front(), wordRange.size()));
-		return rule.parse(input, word, IDS);
+		return rule.matches(input, word, IDS);
 	}
 }
 
