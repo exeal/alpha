@@ -56,7 +56,7 @@ namespace ascension {
 			/// I.S.C. for Ainu.
 			class AinuInputSequenceChecker : public InputSequenceChecker {
 			public:
-				bool check(const std::locale& lc, const StringPiece& preceding, CodePoint c) const;
+				bool check(const std::locale& lc, const StringPiece& preceding, CodePoint c) const override;
 			};
 
 			/// I.S.C. for Thai.
@@ -76,12 +76,12 @@ namespace ascension {
 				const Mode mode_;
 				static const CharacterClass charClasses_[];
 				static const char checkMap_[];
-				static CharacterClass getCharacterClass(CodePoint cp) BOOST_NOEXCEPT {
-					if(cp < 0x0020u || cp == 0x007fu)
+				static CharacterClass getCharacterClass(CodePoint c) BOOST_NOEXCEPT {
+					if(c < 0x0020u || c == 0x007fu)
 						return CTRL;
-					else if(cp >= 0x0e00u && cp < 0x0e60u)
-						return charClasses_[cp - 0x0e00u];
-					else if(cp >= 0x0e60u && cp < 0x0e80u)
+					else if(c >= 0x0e00u && c < 0x0e60u)
+						return charClasses_[c - 0x0e00u];
+					else if(c >= 0x0e60u && c < 0x0e80u)
 						return CTRL;
 					else
 						return NON;
@@ -100,7 +100,7 @@ namespace ascension {
 			/// I.S.C. for Vietnamese.
 			class VietnameseInputSequenceChecker : public InputSequenceChecker {
 			public:
-				bool check(const std::locale& lc, const StringPiece& preceding, CodePoint c) const;
+				bool check(const std::locale& lc, const StringPiece& preceding, CodePoint c) const override;
 			};
 		} // namespace isc
 	} // namespace texteditor
