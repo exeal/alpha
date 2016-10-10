@@ -29,7 +29,7 @@ namespace ascension {
 		class LexicalTokenScanner : public TokenScanner, private boost::noncopyable {
 		public:
 			// constructors
-			explicit LexicalTokenScanner(kernel::ContentType contentType) BOOST_NOEXCEPT;
+			explicit LexicalTokenScanner(const kernel::ContentType& contentType) BOOST_NOEXCEPT;
 			// attributes
 			void addRule(std::unique_ptr<const TokenRule> rule);
 			void addWordRule(std::unique_ptr<const WordTokenRule> rule);

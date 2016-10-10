@@ -784,7 +784,7 @@ namespace ascension {
 		// NullPartitioner ////////////////////////////////////////////////////////////////////////////////////////////
 
 		/// Constructor.
-		NullPartitioner::NullPartitioner() BOOST_NOEXCEPT : p_(DEFAULT_CONTENT_TYPE, Region::zero()), changed_(true) {
+		NullPartitioner::NullPartitioner() BOOST_NOEXCEPT : p_(ContentType::DEFAULT_CONTENT, Region::zero()), changed_(true) {
 		}
 
 		/// @see DocumentPartitioner#documentAboutToBeChanged

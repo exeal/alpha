@@ -23,15 +23,15 @@ namespace ascension {
 				: TokenRule(identifier), pattern_(std::move(pattern)) {
 		}
 		
-		/// @see Rule#parse
-		boost::optional<StringPiece::const_iterator> RegexTokenRule::parse(const StringPiece& text,
-				StringPiece::const_iterator start, const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT {
-			assert(text.cbegin() < text.cend() && start >= text.cbegin() && start < text.cend());
+		/// @see TokenRule#matches
+		boost::optional<Index> RegexTokenRule::matches(const StringPiece& lineString,
+				StringPiece::const_iterator at, const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT {
+			assert(lineString.cbegin() < lineString.cend() && at >= lineString.cbegin() && at < lineString.cend());
 
-			const auto b(text::utf::makeCharacterDecodeIterator(text.cbegin(), text.cend()));
-			const auto e(text::utf::makeCharacterDecodeIterator(text.cbegin(), text.cend(), text.cend()));
+			const auto b(text::utf::makeCharacterDecodeIterator(lineString.cbegin(), lineString.cend()));
+			const auto e(text::utf::makeCharacterDecodeIterator(lineString.cbegin(), lineString.cend(), lineString.cend()));
 			std::unique_ptr<regex::Matcher<text::utf::CharacterDecodeIterator<StringPiece::const_iterator>>> matcher(pattern_->matcher(b, e));
-			return matcher->lookingAt() ? boost::make_optional(matcher->end().tell()) : boost::none;
+			return matcher->lookingAt() ? boost::make_optional<Index>(std::distance(at, matcher->end().tell())) : boost::none;
 		}
 	}
 }

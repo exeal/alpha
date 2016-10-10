@@ -19,15 +19,21 @@ namespace ascension {
 		 * @param contentType The content type of the transition source
 		 * @param destination The content type of the transition destination
 		 * @param pattern The compiled regular expression to introduce the transition
+		 * @param tokenBias The @c TokenBias flag
 		 * @throw regex#PatternSyntaxException @a pattern is invalid
+		 * @throw UnknownValueException @a tokenBias is invalid
 		 */
-		RegexTransitionRule::RegexTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
-				std::unique_ptr<const regex::Pattern> pattern) : TransitionRule(contentType, destination), pattern_(std::move(pattern)) {
+		RegexTransitionRule::RegexTransitionRule(
+				const kernel::ContentType& contentType, const kernel::ContentType& destination,
+				std::unique_ptr<const regex::Pattern> pattern, TokenBias tokenBias) :
+				TransitionRule(contentType, destination), pattern_(std::move(pattern)), tokenBias_(tokenBias) {
+			if(tokenBias != NEW_PARTITION_BEGINS_AT_BEGINNING_OF_TOKEN && tokenBias != NEW_PARTITION_BEGINS_AT_END_OF_TOKEN)
+				throw UnknownValueException("tokenBias");
 		}
 		
 		/// Copy-constructor.
 		RegexTransitionRule::RegexTransitionRule(const RegexTransitionRule& other) :
-				TransitionRule(other), pattern_(new regex::Pattern(*other.pattern_.get())) {
+				TransitionRule(other), pattern_(new regex::Pattern(*other.pattern_.get())), tokenBias_(other.tokenBias_) {
 		}
 		
 		/// @see TransitionRule#clone
@@ -36,16 +42,22 @@ namespace ascension {
 		}
 		
 		/// @see TransitionRule#matches
-		Index RegexTransitionRule::matches(const StringPiece& line, Index offsetInLine) const {
+		boost::optional<TransitionRule::TransitionToken> RegexTransitionRule::matches(const StringPiece& lineString, StringPiece::const_iterator at) const {
 			try {
 				typedef text::utf::CharacterDecodeIterator<StringPiece::const_iterator> I;
-				std::unique_ptr<regex::Matcher<I>> matcher(pattern_->matcher(I(std::begin(line), std::end(line)), I(std::begin(line), std::end(line), std::end(line))));
-				matcher->region(I(std::begin(line), std::end(line), std::begin(line) + offsetInLine), matcher->regionEnd());
+				std::unique_ptr<regex::Matcher<I>> matcher(pattern_->matcher(
+					I(std::begin(lineString), std::end(lineString)), I(std::begin(lineString), std::end(lineString), std::end(lineString))));
+				matcher->region(I(std::begin(lineString), std::end(lineString), at), matcher->regionEnd());
 				matcher->useAnchoringBounds(false).useTransparentBounds(true);
-				return matcher->lookingAt() ? std::max(matcher->end().tell() - matcher->start().tell(), 1) : 0;
+				if(matcher->lookingAt()) {
+					TransitionToken token;
+					token.length = std::max<Index>(std::distance(matcher->start().tell(), matcher->end().tell()), 1);
+					token.bias = tokenBias_;
+					return token;
+				}
 			} catch(const std::runtime_error&) {
-				return 0;
 			}
+			return boost::none;
 		}
 	}
 }

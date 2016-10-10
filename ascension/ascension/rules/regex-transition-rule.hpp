@@ -19,14 +19,17 @@ namespace ascension {
 		/// Implementation of @c TransitionRule uses regular expression match.
 		class RegexTransitionRule : public TransitionRule {
 		public:
-			RegexTransitionRule(kernel::ContentType contentType,
-				kernel::ContentType destination, std::unique_ptr<const regex::Pattern> pattern);
+			RegexTransitionRule(
+				const kernel::ContentType& contentType, const kernel::ContentType& destination,
+				std::unique_ptr<const regex::Pattern> pattern, TokenBias tokenBias);
 			RegexTransitionRule(const RegexTransitionRule& other);
 			std::unique_ptr<TransitionRule> clone() const override;
-			Index matches(const StringPiece& line, Index offsetInLine) const override;
+			boost::optional<TransitionToken> matches(
+				const StringPiece& line, StringPiece::const_iterator at) const override;
 
 		private:
-			std::unique_ptr<const regex::Pattern> pattern_;
+			const std::unique_ptr<const regex::Pattern> pattern_;
+			const TokenBias tokenBias_;
 		};
 	}
 } // namespace ascension.rules

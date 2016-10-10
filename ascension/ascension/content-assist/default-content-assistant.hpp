@@ -8,10 +8,10 @@
 
 #ifndef ASCENSION_DEFAULT_CONTENT_ASSISTANT_HPP
 #define ASCENSION_DEFAULT_CONTENT_ASSISTANT_HPP
-
 #include <ascension/platforms.hpp>
 #include <ascension/content-assist/content-assist.hpp>
 #include <ascension/corelib/timer.hpp>
+#include <ascension/kernel/region.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/liststore.h>
@@ -45,7 +45,7 @@ namespace ascension {
 			boost::chrono::milliseconds autoActivationDelay() const BOOST_NOEXCEPT;
 			void enablePrefixCompletion(bool enable);
 			void setAutoActivationDelay(boost::chrono::milliseconds newValue);
-			void setContentAssistProcessor(kernel::ContentType contentType, std::unique_ptr<ContentAssistProcessor> processor);
+			void setContentAssistProcessor(const kernel::ContentType& contentType, std::unique_ptr<ContentAssistProcessor> processor);
 			// operation
 			void showPossibleCompletions();
 
@@ -57,7 +57,7 @@ namespace ascension {
 			// ContentAssistant
 			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const BOOST_NOEXCEPT override;
 			std::shared_ptr<const ContentAssistProcessor>
-				contentAssistProcessor(kernel::ContentType contentType) const BOOST_NOEXCEPT override;
+				contentAssistProcessor(const kernel::ContentType& contentType) const BOOST_NOEXCEPT override;
 			void install(viewer::TextViewer& viewer) override;
 			void uninstall() override;
 			void viewerBoundsChanged() BOOST_NOEXCEPT override;

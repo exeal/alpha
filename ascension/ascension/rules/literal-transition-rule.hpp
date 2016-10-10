@@ -16,13 +16,15 @@ namespace ascension {
 		/// Implementation of @c TransitionRule uses literal string match.
 		class LiteralTransitionRule : public TransitionRule {
 		public:
-			LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
-				const String& pattern, Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
+			LiteralTransitionRule(const kernel::ContentType& contentType, const kernel::ContentType& destination,
+				const String& pattern, TokenBias tokenBias, Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
 			std::unique_ptr<TransitionRule> clone() const override;
-			Index matches(const StringPiece& line, Index offsetInLine) const override;
+			boost::optional<TransitionToken> matches(
+				const StringPiece& lineString, StringPiece::const_iterator at) const override;
 
 		private:
 			const String pattern_;
+			const TokenBias tokenBias_;
 			const Char escapeCharacter_;
 			const bool caseSensitive_;
 		};

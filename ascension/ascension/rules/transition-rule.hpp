@@ -9,8 +9,9 @@
 
 #ifndef ASCENSION_TRANSITION_RULE_HPP
 #define ASCENSION_TRANSITION_RULE_HPP
+#include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/kernel/partition.hpp>
+#include <ascension/kernel/content-type.hpp>
 #include <memory>
 
 namespace ascension {
@@ -21,6 +22,23 @@ namespace ascension {
 		 */
 		class TransitionRule {
 		public:
+			/**
+			 * Flags to specify which edge of the transition token begins the new partition.
+			 * @see #MatchResult, #matches
+			 */
+			enum TokenBias {
+				/// The new partition begins at the beginning of the transition token.
+				NEW_PARTITION_BEGINS_AT_BEGINNING_OF_TOKEN,
+				/// The new partition begins at the end of the transition token.
+				NEW_PARTITION_BEGINS_AT_END_OF_TOKEN
+			};
+
+			/// A transition token which is the result of @c #matches method.
+			struct TransitionToken {
+				Index length;	///< The length of the transition token.
+				TokenBias bias;	///< The @c TokenBias.
+			};
+
 			/// Destructor.
 			virtual ~TransitionRule() BOOST_NOEXCEPT {}
 			/**
@@ -29,19 +47,18 @@ namespace ascension {
 			 */
 			virtual std::unique_ptr<TransitionRule> clone() const = 0;
 			/// Returns the content type.
-			kernel::ContentType contentType() const BOOST_NOEXCEPT {return contentType_;}
+			const kernel::ContentType& contentType() const BOOST_NOEXCEPT {return contentType_;}
 			/// Returns the content type of the transition destination.
-			kernel::ContentType destination() const BOOST_NOEXCEPT {return destination_;}
+			const kernel::ContentType& destination() const BOOST_NOEXCEPT {return destination_;}
 			/**
-			 * Returns @c true if the rule matches the specified text. Note that an implementation can't use the
-			 * partitioning of the document to generate the new partition.
-			 * @param line The target line text
-			 * @param offsetInLine The offset in the line at which match starts
-			 * @return The length of the matched pattern. If and only if the match failed, returns 0. If matched zero
-			 *         width text, returns 1
-			 * @todo This documentation is confusable.
+			 * Returns @c true if the rule matches the specified text.
+			 * @param lineString The text string of the line
+			 * @param at The start position of the token in @a lineString
+			 * @return The found transition token, or @c boost::none if not found
+			 * @note @a lineString is neither @c null nor empty
 			 */
-			virtual Index matches(const StringPiece& line, Index offsetInLine) const = 0;
+			virtual boost::optional<TransitionToken> matches(
+				const StringPiece& lineString, StringPiece::const_iterator at) const = 0;
 
 		protected:
 			/**
@@ -49,7 +66,7 @@ namespace ascension {
 			 * @param contentType The content type of the transition source
 			 * @param destination The content type of the transition destination
 			 */
-			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) BOOST_NOEXCEPT
+			TransitionRule(const kernel::ContentType& contentType, const kernel::ContentType& destination) BOOST_NOEXCEPT
 				: contentType_(contentType), destination_(destination) {}
 		private:
 			const kernel::ContentType contentType_, destination_;

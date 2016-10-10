@@ -10,8 +10,7 @@
 
 #ifndef ASCENSION_PRESENTATION_RECONSTRUCTOR_HPP
 #define ASCENSION_PRESENTATION_RECONSTRUCTOR_HPP
-
-#include <ascension/kernel/partition.hpp>	// kernel.ContentType
+#include <ascension/kernel/content-type.hpp>
 #include <boost/config.hpp>	// BOOST_NOEXCEPT
 #include <map>
 #include <memory>
@@ -51,7 +50,7 @@ namespace ascension {
 			explicit PresentationReconstructor(Presentation& presentation) BOOST_NOEXCEPT;
 			~PresentationReconstructor() BOOST_NOEXCEPT;
 			// attribute
-			void setPartitionReconstructor(kernel::ContentType contentType,
+			void setPartitionReconstructor(const kernel::ContentType& contentType,
 				std::unique_ptr<PartitionPresentationReconstructor> reconstructor);
 
 		private:

@@ -99,8 +99,8 @@ namespace alpha {
 	namespace {
 		class RegexTransitionRuleAdapter : public ascension::rules::RegexTransitionRule {
 		public:
-			RegexTransitionRuleAdapter(ascension::kernel::ContentType contentType,
-				ascension::kernel::ContentType destination, const ascension::String& pattern, bool caseSensitive)
+			RegexTransitionRuleAdapter(const ascension::kernel::ContentType& contentType,
+				const ascension::kernel::ContentType& destination, const ascension::String& pattern, bool caseSensitive)
 				: ascension::rules::RegexTransitionRule(contentType, destination,
 					ascension::regex::Pattern::compile(pattern, caseSensitive ? 0 : ascension::regex::Pattern::CASE_INSENSITIVE)) {
 			}

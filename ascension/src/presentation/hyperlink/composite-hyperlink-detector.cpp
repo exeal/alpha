@@ -44,13 +44,13 @@ namespace ascension {
 			
 			/**
 			 * Sets the hyperlink detector for the specified content type.
-			 * @param contentType The content type. if a detector for this content type was already be set, the
-			 *                    old will be deleted
-			 * @param detector The hyperlink detector to set. Can't be @c null. The ownership will be
-			 *                 transferred to the callee
+			 * @param contentType The content type. if a detector for this content type was already be set, the old
+			 *                    will be deleted
+			 * @param detector The hyperlink detector to set. Can't be @c null. The ownership will be transferred to
+			 *                 the callee
 			 * @throw NullPointerException @a detector is @c null
 			 */
-			void CompositeHyperlinkDetector::setDetector(kernel::ContentType contentType, std::unique_ptr<HyperlinkDetector> detector) {
+			void CompositeHyperlinkDetector::setDetector(const kernel::ContentType& contentType, std::unique_ptr<HyperlinkDetector> detector) {
 				if(detector.get() == nullptr)
 					throw NullPointerException("detector");
 				std::map<kernel::ContentType, HyperlinkDetector*>::iterator old(composites_.find(contentType));

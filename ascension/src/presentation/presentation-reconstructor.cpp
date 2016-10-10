@@ -61,7 +61,7 @@ namespace ascension {
 				if(!boost::empty(currentPartition_.region))
 					break;
 				if(++offsetInLine >= lineLength) {	// rare case...
-					currentPartition_.contentType = kernel::DEFAULT_CONTENT_TYPE;
+					currentPartition_.contentType = kernel::ContentType::DEFAULT_CONTENT;
 					currentPartition_.region = kernel::Region::makeSingleLine(line, boost::irange(static_cast<Index>(0), lineLength));
 					break;
 				}
@@ -96,7 +96,7 @@ namespace ascension {
 					if(!boost::empty(currentPartition_.region))
 						break;
 					if(++offsetInLine >= lineLength) {	// rare case...
-						currentPartition_.contentType = kernel::DEFAULT_CONTENT_TYPE;
+						currentPartition_.contentType = kernel::ContentType::DEFAULT_CONTENT;
 						currentPartition_.region = kernel::Region::makeSingleLine(line_,  boost::irange(offsetInLine, lineLength));
 					}
 				}
@@ -167,7 +167,7 @@ namespace ascension {
 		 * @throw NullPointerException @a reconstructor is @c null
 		 */
 		void PresentationReconstructor::setPartitionReconstructor(
-				kernel::ContentType contentType, std::unique_ptr<PartitionPresentationReconstructor> reconstructor) {
+				const kernel::ContentType& contentType, std::unique_ptr<PartitionPresentationReconstructor> reconstructor) {
 			if(reconstructor.get() == nullptr)
 				throw NullPointerException("reconstructor");
 			const std::map<kernel::ContentType, PartitionPresentationReconstructor*>::iterator old(reconstructors_.find(contentType));

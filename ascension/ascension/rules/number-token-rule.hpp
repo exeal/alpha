@@ -15,8 +15,8 @@ namespace ascension {
 		class NumberTokenRule : public TokenRule {
 		public:
 			explicit NumberTokenRule(Token::Identifier identifier) BOOST_NOEXCEPT;
-			boost::optional<StringPiece::const_iterator> parse(
-				const StringPiece& text, StringPiece::const_iterator start,
+			boost::optional<Index> matches(
+				const StringPiece& lineString, StringPiece::const_iterator at,
 				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;
 		};
 	}

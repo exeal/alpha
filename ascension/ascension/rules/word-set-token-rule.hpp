@@ -19,7 +19,7 @@ namespace ascension {
 				const String* first, const String* last, bool caseSensitive = true);
 			WordSetTokenRule(Token::Identifier identifier,
 				const StringPiece& words, Char separator, bool caseSensitive = true);
-			bool parse(const StringPiece& text, const StringPiece& word,
+			bool matches(const StringPiece& text, const StringPiece& word,
 				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;
 
 		private:

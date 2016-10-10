@@ -18,8 +18,8 @@ namespace ascension {
 		public:
 			URITokenRule(Token::Identifier identifier,
 				std::shared_ptr<const URIDetector> uriDetector) BOOST_NOEXCEPT;
-			boost::optional<StringPiece::const_iterator> parse(
-				const StringPiece& text, StringPiece::const_iterator start,
+			boost::optional<Index> matches(
+				const StringPiece& lineString, StringPiece::const_iterator at,
 				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;
 		private:
 			std::shared_ptr<const URIDetector> uriDetector_;

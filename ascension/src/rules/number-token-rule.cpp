@@ -20,10 +20,10 @@ namespace ascension {
 		NumberTokenRule::NumberTokenRule(Token::Identifier identifier) BOOST_NOEXCEPT : TokenRule(identifier) {
 		}
 		
-		/// @see Rule#parse
-		boost::optional<StringPiece::const_iterator> NumberTokenRule::parse(const StringPiece& text,
-				StringPiece::const_iterator start, const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT {
-			assert(text.cbegin() < text.cend() && start >= text.cbegin() && start < text.cend());
+		/// @see TokenRule#matches
+		boost::optional<Index> NumberTokenRule::matches(const StringPiece& lineString,
+				StringPiece::const_iterator at, const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT {
+			assert(lineString.cbegin() < lineString.cend() && at >= lineString.cbegin() && at < lineString.cend());
 
 			/*
 				This is based on ECMAScript 3 "7.8.3 Numeric Literals" and performs the following regular
@@ -35,58 +35,58 @@ namespace ascension {
 			*/
 			// ISSUE: This implementation accepts some illegal format like as "0.1.2".
 			static const boost::numeric::interval<Char> DIGITS('0', '9'), CAPITAL_LETTERS('A', 'F'), SMALL_LETTERS('a', 'f');
-			if(start > text.cbegin()	// see below
-					&& (boost::numeric::in(start[-1], DIGITS) || boost::numeric::in(start[-1], CAPITAL_LETTERS) || boost::numeric::in(start[-1], SMALL_LETTERS)))
+			if(at > lineString.cbegin()	// see below
+					&& (boost::numeric::in(at[-1], DIGITS) || boost::numeric::in(at[-1], CAPITAL_LETTERS) || boost::numeric::in(at[-1], SMALL_LETTERS)))
 				return boost::none;
 			StringPiece::const_iterator e;
-			if(text.cend() - start > 2 && start[0] == '0' && (start[1] == 'x' || start[1] == 'X')) {	// HexIntegerLiteral?
-				for(e = start + 2; e < text.cend(); ++e) {
+			if(std::distance(at, lineString.cend()) > 2 && at[0] == '0' && (at[1] == 'x' || at[1] == 'X')) {	// HexIntegerLiteral?
+				for(e = std::next(at, 2); e < lineString.cend(); ++e) {
 					if(boost::numeric::in(*e, DIGITS) || boost::numeric::in(*e, CAPITAL_LETTERS) || boost::numeric::in(*e, SMALL_LETTERS))
 						continue;
 					break;
 				}
-				if(e == start + 2)
+				if(e == std::next(at, 2))
 					return boost::none;
 			} else {	// DecimalLiteral?
 				static const auto isNotDigit = [](Char c) {
 					return !boost::numeric::in(c, boost::numeric::interval<Char>('0', '9'));
 				};
 				bool foundDecimalIntegerLiteral = false, foundDot = false;
-				if(boost::numeric::in(start[0], DIGITS)) {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
-					e = start + 1;
+				if(boost::numeric::in(at[0], DIGITS)) {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
+					e = std::next(at);
 					foundDecimalIntegerLiteral = true;
-					if(start[0] != '0')
-						e = std::find_if(e, text.cend(), isNotDigit);
+					if(at[0] != '0')
+						e = std::find_if(e, lineString.cend(), isNotDigit);
 				} else
-					e = start;
-				if(e < text.cend() && *e == '.') {	// . DecimalDigits ::= /\.[0-9]+/
+					e = at;
+				if(e < lineString.cend() && *e == '.') {	// . DecimalDigits ::= /\.[0-9]+/
 					foundDot = true;
-					e = std::find_if(++e, text.cend(), isNotDigit);
+					e = std::find_if(++e, lineString.cend(), isNotDigit);
 					if(e[-1] == '.')
 						return boost::none;
 				}
 				if(!foundDecimalIntegerLiteral && !foundDot)
 					return boost::none;
-				if(e < text.cend() && (*e == 'e' || *e == 'E')) {	// ExponentPart ::= /[e|E][\+\-]?[0-9]+/
-					if(++e == text.cend())
+				if(e < lineString.cend() && (*e == 'e' || *e == 'E')) {	// ExponentPart ::= /[e|E][\+\-]?[0-9]+/
+					if(++e == lineString.cend())
 						return boost::none;
 					if(*e == '+' || *e == '-') {
-						if(++e == text.cend())
+						if(++e == lineString.cend())
 							return boost::none;
 					}
 					if(!boost::numeric::in(*e, DIGITS))
 						return boost::none;
-					e = std::find_if(++e, text.cend(), isNotDigit);
+					e = std::find_if(++e, lineString.cend(), isNotDigit);
 				}
 			}
 		
 			// e points the end of the found token
-			assert(e > start);
+			assert(e > at);
 			// "The source character immediately following a NumericLiteral must not be an IdentifierStart or DecimalDigit."
-			if(e < text.cend() && (boost::numeric::in(*e, DIGITS) || identifierSyntax.isIdentifierStartCharacter(text::utf::decodeFirst(e, text.cend()))))
+			if(e < lineString.cend() && (boost::numeric::in(*e, DIGITS) || identifierSyntax.isIdentifierStartCharacter(text::utf::decodeFirst(e, lineString.cend()))))
 				return boost::none;
 
-			return e;
+			return boost::make_optional<Index>(std::distance(at, e));
 		}
 	}
 }

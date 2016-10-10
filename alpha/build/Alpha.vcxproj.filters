@@ -650,6 +650,9 @@
     <ClCompile Include="..\..\ascension\src\corelib\encoding\encoder-implementation.cpp">
       <Filter>ascension\Source Files\corelib\encoding</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\content-type.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -1500,6 +1503,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\encoding\encoder.hpp">
       <Filter>ascension\Header Files\corelib\encoding</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\content-type.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

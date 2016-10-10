@@ -19,13 +19,14 @@ namespace ascension {
 		 * @param destination The content type of the transition destination
 		 * @param pattern The pattern string to introduce the transition. If empty string is specified, the transition
 		 *                will be occurred at the end of line
+		 * @param tokenBias The @c TokenBias flag
 		 * @param escapeCharacter The character which a character will be ignored. If @c NONCHARACTER is specified, the
 		 *                        escape character will be not set. This is always case-sensitive
 		 * @param caseSensitive Set @c false to enable caseless match
 		 */
-		LiteralTransitionRule::LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
-				const String& pattern, Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */) :
-				TransitionRule(contentType, destination), pattern_(pattern), escapeCharacter_(escapeCharacter), caseSensitive_(caseSensitive) {
+		LiteralTransitionRule::LiteralTransitionRule(const kernel::ContentType& contentType, const kernel::ContentType& destination,
+				const String& pattern, TokenBias tokenBias, Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */) :
+				TransitionRule(contentType, destination), pattern_(pattern), tokenBias_(tokenBias), escapeCharacter_(escapeCharacter), caseSensitive_(caseSensitive) {
 		}
 		
 		/// @see TransitionRule#clone
@@ -34,17 +35,20 @@ namespace ascension {
 		}
 		
 		/// @see TransitionRule#matches
-		Index LiteralTransitionRule::matches(const StringPiece& line, Index offsetInLine) const {
-			if(escapeCharacter_ != text::NONCHARACTER && offsetInLine > 0 && line[offsetInLine - 1] == escapeCharacter_)
-				return 0;
-			else if(pattern_.empty() && offsetInLine == line.length())	// matches EOL
-				return 1;
-			else if(line.length() - offsetInLine < pattern_.length())
-				return 0;
+		boost::optional<TransitionRule::TransitionToken> LiteralTransitionRule::matches(const StringPiece& lineString, StringPiece::const_iterator at) const {
+			if(escapeCharacter_ != text::NONCHARACTER && std::distance(lineString.cbegin(), at) > 0 && at[-1] == escapeCharacter_)
+				return boost::none;
+			else if(std::next(at, pattern_.length()) > lineString.cend())
+				return boost::none;
+			TransitionToken token;
+			token.bias = tokenBias_;
+			if(pattern_.empty() && at == lineString.cend())	// matches EOL
+				token.length = 1;
 			else if(caseSensitive_)
-				return std::equal(pattern_.cbegin(), pattern_.cend(), line.data() + offsetInLine) ? pattern_.length() : 0;
-			return (text::CaseFolder::compare(text::StringCharacterIterator(pattern_),
-				text::StringCharacterIterator(line, std::begin(line) + offsetInLine)) == 0) ? pattern_.length() : 0;
+				token.length = std::equal(pattern_.cbegin(), pattern_.cend(), at) ? pattern_.length() : 0;
+			token.length = (text::CaseFolder::compare(text::StringCharacterIterator(pattern_),
+				text::StringCharacterIterator(lineString.cbegin(), at)) == 0) ? pattern_.length() : 0;
+			return boost::make_optional(token);
 		}
 	}
 }

@@ -16,6 +16,7 @@
 #include <boost/range/algorithm/for_each.hpp>
 #include <forward_list>
 #include <memory>
+#include <tuple>
 
 namespace ascension {
 	namespace rules {
@@ -40,7 +41,7 @@ namespace ascension {
 				kernel::ContentType contentType;
 				kernel::Position start, tokenStart;
 				Index tokenLength;
-				Partition(kernel::ContentType type, const kernel::Position& p,
+				Partition(const kernel::ContentType& type, const kernel::Position& p,
 					const kernel::Position& startOfToken, Index lengthOfToken) BOOST_NOEXCEPT
 					: contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
 				kernel::Position getTokenEnd() const BOOST_NOEXCEPT {
@@ -55,8 +56,8 @@ namespace ascension {
 			void erasePartitions(const kernel::Position& first, const kernel::Position& last);
 			ascension::detail::GapVector<Partition*>::const_iterator partitionAt(const kernel::Position& at) const BOOST_NOEXCEPT;
 			kernel::ContentType transitionStateAt(const kernel::Position& at) const BOOST_NOEXCEPT;
-			Index tryTransition(const StringPiece& line, Index offsetInLine,
-				kernel::ContentType contentType, kernel::ContentType& destination) const BOOST_NOEXCEPT;
+			boost::optional<std::tuple<Index, kernel::ContentType, bool>> tryTransition(
+				const StringPiece& line, Index offsetInLine, const kernel::ContentType& contentType) const BOOST_NOEXCEPT;
 			void verify() const;
 			// DocumentPartitioner
 			void documentAboutToBeChanged() BOOST_NOEXCEPT override;

@@ -64,10 +64,10 @@ namespace ascension {
 			words_.reset(new detail::HashTable(std::begin(wordList), std::end(wordList), caseSensitive));
 		}
 		
-		/// @see Rule#parse
-		bool WordSetTokenRule::parse(const StringPiece& text,
-				const StringPiece& word, const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT {
-			assert(text.cbegin() < text.cend() && word.cbegin() < word.cend() && word >= text.cbegin() && word < text.cend());
+		/// @see WordTokenRule#matches
+		bool WordSetTokenRule::matches(const StringPiece& lineString,
+				const StringPiece& word, const text::IdentifierSyntax&) const BOOST_NOEXCEPT {
+			assert(lineString.cbegin() < lineString.cend() && word.cbegin() < word.cend() && word >= lineString.cbegin() && word < lineString.cend());
 			return words_->matches(word);
 		}
 	}
