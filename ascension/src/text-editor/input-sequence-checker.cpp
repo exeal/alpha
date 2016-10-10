@@ -150,26 +150,26 @@ namespace ascension {
 				// Reference:
 				// - Vietnamese alphabet (http://en.wikipedia.org/wiki/Vietnamese_alphabet)
 				// - Vietnamese Writing System (http://www.cjvlang.com/Writing/writviet.html)
-				static const std::array<CodePoint, 24> VOWELS = {
+				static const std::array<CodePoint, 24> VOWELS = {{
 					'A', 'E', 'I', 'O', 'U', 'Y',
 					'a', 'e', 'i', 'o', 'u', 'y',
 					0x00c2u, 0x00cau, 0x00d4u, 0x00e2u, 0x00eau, 0x00f4u,	// Â Ê Ô â ê ô
 					0x0102u, 0x0103u, 0x01a0u, 0x01a1u, 0x01afu, 0x01b0u	// Ă ă Ơ ơ Ư ư
-				};
+				}};
 				static const std::array<CodePoint, 5> TONE_MARKS = {0x0300u, 0x0301u, 0x0303u, 0x0309u, 0x0323u};
 				static std::pair<std::unique_ptr<std::locale>, bool> vietnamese;
 
 				if(!vietnamese.second) {
-					vietnamese.second = true;
-					static const std::array<const char*, 3> CANDIDATE_NAMES = {"vi_VN", "vi", "VN"};
+					std::get<1>(vietnamese) = true;
+					static const std::array<const char*, 3> CANDIDATE_NAMES = {{"vi_VN", "vi", "VN"}};
 					try {
-						for(std::size_t i = 0; i < CANDIDATE_NAMES.size() && vietnamese.first.get() == nullptr; ++i)
-							vietnamese.first.reset(new std::locale(CANDIDATE_NAMES[i]));
+						for(std::size_t i = 0; i < CANDIDATE_NAMES.size() && std::get<0>(vietnamese).get() == nullptr; ++i)
+							std::get<0>(vietnamese).reset(new std::locale(CANDIDATE_NAMES[i]));
 					} catch(const std::runtime_error&) {
 					}
 				}
 
-				if(vietnamese.first.get() == nullptr && lc != *vietnamese.first)
+				if(std::get<0>(vietnamese).get() == nullptr && lc != *std::get<0>(vietnamese))
 					return true;
 				else if(!preceding.empty() && boost::binary_search(TONE_MARKS, c))
 					return boost::binary_search(VOWELS, preceding.cend()[-1]);
