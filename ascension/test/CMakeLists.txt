@@ -15,7 +15,7 @@ add_definitions(-DASCENSION_TEST)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	add_definitions(-std=c++11 -stdlib=libc++)
 elseif(MSVC)
-	add_definitions(/D_CRT_SECURE_NO_WARNINGS /D_SCL_SECURE_NO_WARNINGS /DNOMINMAX /EHac /GS /MTd /nologo /RTCcus /W4 /wd4127 /wd4510 /wd4512 /wd4706 /Zc:forScope /Zc:wchar_t)
+	add_definitions(/D_CRT_SECURE_NO_WARNINGS /D_SCL_SECURE_NO_WARNINGS /DNOMINMAX /EHac /GS /MTd /nologo /RTCsu /W4 /wd4127 /wd4510 /wd4512 /wd4706 /Zc:forScope /Zc:wchar_t)
 endif()
 
 set(boost_uses_auto_link FALSE)
