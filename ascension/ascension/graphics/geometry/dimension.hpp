@@ -23,6 +23,7 @@
 #include <boost/geometry/geometries/concepts/check.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/operators.hpp>	// boost.equality_comparable
+#include <boost/predef.h>
 #include <boost/parameter.hpp>
 
 namespace ascension {
@@ -102,10 +103,10 @@ namespace ascension {
 				friend Coordinate& dy<Coordinate>(BasicDimension<Coordinate>&);
 				friend Coordinate dy<Coordinate>(const BasicDimension<Coordinate>&);
 #else
-				template<typename T> friend Coordinate& dx(BasicDimension<T>&);
-				template<typename T> friend Coordinate dx(const BasicDimension<T>&);
-				template<typename T> friend Coordinate& dy(BasicDimension<T>&);
-				template<typename T> friend Coordinate dy(const BasicDimension<T>&);
+				template<typename Coordinate> friend Coordinate& dx(BasicDimension<Coordinate>&);
+				template<typename Coordinate> friend Coordinate dx(const BasicDimension<Coordinate>&);
+				template<typename Coordinate> friend Coordinate& dy(BasicDimension<Coordinate>&);
+				template<typename Coordinate> friend Coordinate dy(const BasicDimension<Coordinate>&);
 #endif
 			};
 			/// @}
