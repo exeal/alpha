@@ -71,7 +71,7 @@ namespace ascension {
 		public:
 			DeclaredTextLineStyle();
 			/// Returns the @c DeclaredTextRunStyle of this line element.
-			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextRunStyle> runsStyle() const BOOST_NOEXCEPT {
+			std::shared_ptr<const DeclaredTextRunStyle> runsStyle() const BOOST_NOEXCEPT {
 				return runsStyle_;
 			}
 			void setRunsStyle(std::shared_ptr<const DeclaredTextRunStyle> newStyle) BOOST_NOEXCEPT;

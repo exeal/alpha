@@ -115,11 +115,11 @@ namespace ascension {
 			/// Defines &lt;line-width&gt; keywords.
 			namespace linewidthkeywords {
 				/// The ‘thin’ value.
-				BOOST_STATIC_CONSTEXPR Length THIN(0.05f, Length::EM_HEIGHT);
+				static const Length THIN(0.05f, Length::EM_HEIGHT);
 				/// The ‘medium’ value.
-				BOOST_STATIC_CONSTEXPR Length MEDIUM(0.10f, Length::EM_HEIGHT);
+				static const Length MEDIUM(0.10f, Length::EM_HEIGHT);
 				/// The ‘thick’ value.
-				BOOST_STATIC_CONSTEXPR Length THICK(0.20f, Length::EM_HEIGHT);
+				static const Length THICK(0.20f, Length::EM_HEIGHT);
 			}
 
 			namespace detail {
