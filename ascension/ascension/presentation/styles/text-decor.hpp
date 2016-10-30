@@ -231,7 +231,10 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css-text-decor-3/#text-emphasis-position-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<TextEmphasisPositionEnums, static_cast<int>(TextEmphasisPositionEnums::OVER) | static_cast<int>(TextEmphasisPositionEnums::RIGHT)>,
+				Enumerated<
+					TextEmphasisPositionEnums,
+					static_cast<TextEmphasisPositionEnums>(static_cast<int>(TextEmphasisPositionEnums::OVER) | static_cast<int>(TextEmphasisPositionEnums::RIGHT))
+				>,
 				Inherited<true>
 			> TextEmphasisPosition;
 #if 0

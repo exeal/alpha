@@ -27,7 +27,7 @@
 namespace ascension {
 	namespace presentation {
 		namespace styles {
-			template<typename T, int _initialValue>	// decltype(_initialValue) should be T...
+			template<typename T, T _initialValue>	// decltype(_initialValue) should be T...
 			struct Enumerated : public boost::mpl::identity<T> {
 				static type initialValue() {return static_cast<type>(_initialValue);}
 			};
