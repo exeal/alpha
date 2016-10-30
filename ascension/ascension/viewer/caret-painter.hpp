@@ -36,7 +36,7 @@ namespace ascension {
 
 		protected:
 			CaretPainter();
-			BOOST_CONSTEXPR Caret& caret() BOOST_NOEXCEPT;
+			/* BOOST_CONSTEXPR */ Caret& caret() BOOST_NOEXCEPT;
 			BOOST_CONSTEXPR const Caret& caret() const BOOST_NOEXCEPT;
 			static std::pair<
 				presentation::FlowRelativeFourSides<graphics::Scalar>, presentation::FlowRelativeTwoAxes<graphics::Scalar>
@@ -58,7 +58,7 @@ namespace ascension {
 			void pend() override;
 			void resetTimer() override;
 			void show() override;
-			BOOST_CONSTEXPR bool shows() const BOOST_NOEXCEPT override;
+			bool shows() const BOOST_NOEXCEPT override;
 			void uninstall(Caret& caret) override;
 			void update() override;
 		private:
@@ -70,7 +70,7 @@ namespace ascension {
 		};
 
 		/// Returns the caret.
-		BOOST_CONSTEXPR inline Caret& CaretPainter::caret() BOOST_NOEXCEPT {
+		/* BOOST_CONSTEXPR */ inline Caret& CaretPainter::caret() BOOST_NOEXCEPT {
 			assert(caret_ != nullptr);
 			return *caret_;
 		}

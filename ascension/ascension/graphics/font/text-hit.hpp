@@ -71,11 +71,11 @@ namespace ascension {
 				/// Relational operators of @c TextHit compare the @c #characterIndex.
 				/// @{
 				/** Equality operator. */
-				bool operator==(const TextHit& other) const BOOST_NOEXCEPT {
+				BOOST_CONSTEXPR bool operator==(const TextHit& other) const BOOST_NOEXCEPT {
 					return characterIndex() == other.characterIndex() && isLeadingEdge() == other.isLeadingEdge();
 				}
 				/// Less-than operator.
-				bool operator<(const TextHit& other) const BOOST_NOEXCEPT {
+				BOOST_CONSTEXPR bool operator<(const TextHit& other) const BOOST_NOEXCEPT {
 					return characterIndex() < other.characterIndex()
 						|| (characterIndex() == other.characterIndex() && isLeadingEdge() && !other.isLeadingEdge());
 				}
@@ -87,7 +87,7 @@ namespace ascension {
 				 * Returns the index of the character hit.
 				 * @see #insertionIndex
 				 */
-				const value_type& characterIndex() const BOOST_NOEXCEPT {return characterIndex_;}
+				BOOST_CONSTEXPR const value_type& characterIndex() const BOOST_NOEXCEPT {return characterIndex_;}
 				/**
 				 * Returns the insertion index. This is the character index if the leading edge of the character was
 				 * hit, and one greater than the character index if the trailing edge was hit.
@@ -95,7 +95,7 @@ namespace ascension {
 				 */
 				value_type insertionIndex() const BOOST_NOEXCEPT;
 				/// Returns @c true if the leading edge of the character was hit.
-				bool isLeadingEdge() const BOOST_NOEXCEPT {return isLeadingEdge_;}
+				BOOST_CONSTEXPR bool isLeadingEdge() const BOOST_NOEXCEPT {return isLeadingEdge_;}
 				/// @}
 
 				/// @name Other Factories

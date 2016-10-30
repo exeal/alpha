@@ -317,7 +317,7 @@ namespace ascension {
 		 * See @c kernel#Point#moved.
 		 * @see #aboutToMove, #moveTo
 		 */
-		void VisualPoint::moved(const TextHit& from) {
+		void VisualPoint::moved(const TextHit& from) BOOST_NOEXCEPT {
 			assert(!isDocumentDisposed());
 			const bool fullyAvailable = isFullyAvailable();
 			if(fullyAvailable) {

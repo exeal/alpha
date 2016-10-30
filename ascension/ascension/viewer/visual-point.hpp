@@ -83,7 +83,7 @@ namespace ascension {
 
 			/// @name Visual Positions
 			/// @{
-			const TextHit& hit() const;
+			BOOST_CONSTEXPR const TextHit& hit() const BOOST_NOEXCEPT;
 			Index offsetInVisualLine() const;
 			const graphics::font::VisualLine& visualLine() const;
 			/// @}
@@ -109,10 +109,10 @@ namespace ascension {
 			void updateLineNumberCaches();
 			// layout.VisualLinesListener
 			void visualLinesDeleted(const boost::integer_range<Index>& lines,
-				Index sublines, bool longestLineChanged) override BOOST_NOEXCEPT;
-			void visualLinesInserted(const boost::integer_range<Index>& lines) override BOOST_NOEXCEPT;
+				Index sublines, bool longestLineChanged) BOOST_NOEXCEPT override;
+			void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT override;
 			void visualLinesModified(const boost::integer_range<Index>& lines,
-				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) override BOOST_NOEXCEPT;
+				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT override;
 
 		private:
 			std::shared_ptr<const detail::WeakReferenceForPoints<TextArea>::Proxy> textAreaProxy_;
@@ -162,7 +162,7 @@ namespace ascension {
 		 * Returns the text hit.
 		 * @see kernel#Point#position
 		 */
-		inline const TextHit& VisualPoint::hit() const BOOST_NOEXCEPT {
+		BOOST_CONSTEXPR inline const TextHit& VisualPoint::hit() const BOOST_NOEXCEPT {
 			return hit_;
 		}
 
