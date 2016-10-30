@@ -192,7 +192,7 @@ namespace ascension {
 			const QPainter& native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			explicit RenderingContext2D(win32::Handle<HDC>::Type nativeObject);
-			win32::Handle<HDC>::Type native() const;
+			win32::Handle<HDC>::Type native() const BOOST_NOEXCEPT;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 			explicit RenderingContext2D(Gdiplus::Graphics& nativeObject);	// weak ref.
 			explicit RenderingContext2D(std::shared_ptr<Gdiplus::Graphics> nativeObject);
@@ -214,7 +214,7 @@ namespace ascension {
 			 */
 			std::unique_ptr<const font::FontMetrics<Scalar>> fontMetrics(
 				std::shared_ptr<const font::Font> font = nullptr) const;
-			font::FontRenderContext fontRenderContext() const BOOST_NOEXCEPT;
+			font::FontRenderContext fontRenderContext() const;
 
 			/// @name Back-Reference to the Canvas
 			/// @{
@@ -857,7 +857,7 @@ namespace ascension {
 				std::shared_ptr<const font::Font> font;
 			} currentState_;
 			struct SavedState {
-				SavedState(const State& state, int cookie) BOOST_NOEXCEPT : state(state), cookie(cookie) BOOST_NOEXCEPT {}
+				SavedState(const State& state, int cookie) BOOST_NOEXCEPT : state(state), cookie(cookie) {}
 				const State state;
 				const int cookie;
 			};

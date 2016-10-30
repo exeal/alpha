@@ -39,9 +39,9 @@ namespace ascension {
 #else // ASCENSION_OS_POSIX
 					~SystemErrorSaver() BOOST_NOEXCEPT {errno = code_;}
 #endif
-					std::error_code::value_type code() const BOOST_NOEXCEPT {return code_;}
+					int code() const BOOST_NOEXCEPT {return code_;}
 				private:
-					std::error_code::value_type code_;
+					int code_;
 				};
 			} // namespace @0
 

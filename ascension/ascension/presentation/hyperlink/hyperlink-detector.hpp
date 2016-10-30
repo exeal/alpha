@@ -39,8 +39,8 @@ namespace ascension {
 				 *              the found hyperlink
 				 * @return The found hyperlink, or @c null if not found
 				 */
-				virtual std::unique_ptr<Hyperlink> nextHyperlink(const kernel::Document& document,
-					Index line, const boost::integer_range<Index>& range) const BOOST_NOEXCEPT = 0;
+				virtual std::unique_ptr<Hyperlink> nextHyperlink(
+					const kernel::Document& document, Index line, const boost::integer_range<Index>& range) const = 0;
 			};
 
 			/**
@@ -50,11 +50,11 @@ namespace ascension {
 			 */
 			class URIHyperlinkDetector : public HyperlinkDetector {
 			public:
-				URIHyperlinkDetector(std::shared_ptr<const rules::URIDetector> uriDetector) BOOST_NOEXCEPT;
+				URIHyperlinkDetector(std::shared_ptr<const rules::URIDetector> uriDetector);
 				~URIHyperlinkDetector() BOOST_NOEXCEPT;
 				// HyperlinkDetector
 				std::unique_ptr<Hyperlink> nextHyperlink(const kernel::Document& document,
-					Index line, const boost::integer_range<Index>& range) const BOOST_NOEXCEPT override;
+					Index line, const boost::integer_range<Index>& range) const override;
 			private:
 				std::shared_ptr<const rules::URIDetector> uriDetector_;
 			};

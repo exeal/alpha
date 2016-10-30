@@ -44,7 +44,7 @@ namespace ascension {
 			/// @name Behaviors
 			/// @{
 			Direction gravity() const BOOST_NOEXCEPT;
-			AbstractPoint& setGravity(Direction gravity) BOOST_NOEXCEPT;
+			AbstractPoint& setGravity(Direction gravity);
 			/// @}
 
 			/// @name Signal

@@ -16,8 +16,7 @@ namespace ascension {
 		/// A concrete rule detects URI strings.
 		class URITokenRule : public TokenRule {
 		public:
-			URITokenRule(Token::Identifier identifier,
-				std::shared_ptr<const URIDetector> uriDetector) BOOST_NOEXCEPT;
+			URITokenRule(Token::Identifier identifier, std::shared_ptr<const URIDetector> uriDetector);
 			boost::optional<Index> matches(
 				const StringPiece& lineString, StringPiece::const_iterator at,
 				const text::IdentifierSyntax& identifierSyntax) const BOOST_NOEXCEPT override;

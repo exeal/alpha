@@ -60,7 +60,7 @@ namespace ascension {
 		 * @return This object
 		 * @post #gravity() == gravity
 		 */
-		AbstractPoint& AbstractPoint::setGravity(Direction gravity) BOOST_NOEXCEPT {
+		AbstractPoint& AbstractPoint::setGravity(Direction gravity) {
 			if(isDocumentDisposed())
 				throw DocumentDisposedException();
 			gravity_ = gravity;

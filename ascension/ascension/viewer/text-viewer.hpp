@@ -159,8 +159,8 @@ namespace ascension {
 			std::shared_ptr<const kernel::Document> document() const BOOST_NOEXCEPT;
 			unsigned long scrollRate(bool horizontal) const BOOST_NOEXCEPT;
 			void setConfiguration(const Configuration& newConfiguration, bool synchronizeUI);
-			BOOST_CONSTEXPR std::shared_ptr<TextArea> textArea() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR std::shared_ptr<const TextArea> textArea() const BOOST_NOEXCEPT;
+			std::shared_ptr<TextArea> textArea() BOOST_NOEXCEPT;
+			std::shared_ptr<const TextArea> textArea() const BOOST_NOEXCEPT;
 			/// @}
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
@@ -454,7 +454,7 @@ namespace ascension {
 		 * @param textViewer The text viewer
 		 * @return The document
 		 */
-		BOOST_CONSTEXPR inline std::shared_ptr<kernel::Document> document(TextViewer& textViewer) BOOST_NOEXCEPT {
+		inline std::shared_ptr<kernel::Document> document(TextViewer& textViewer) BOOST_NOEXCEPT {
 			return textViewer.document();
 		}
 		/**
@@ -462,7 +462,7 @@ namespace ascension {
 		 * @param textViewer The text viewer
 		 * @return The document
 		 */
-		BOOST_CONSTEXPR inline std::shared_ptr<const kernel::Document> document(const TextViewer& textViewer) BOOST_NOEXCEPT {
+		inline std::shared_ptr<const kernel::Document> document(const TextViewer& textViewer) BOOST_NOEXCEPT {
 			return textViewer.document();
 		}
 		/// @}
@@ -552,12 +552,12 @@ namespace ascension {
 		}
 
 		/// Returns the @c TextArea of this text viewer.
-		inline BOOST_CONSTEXPR std::shared_ptr<TextArea> TextViewer::textArea() BOOST_NOEXCEPT {
+		inline std::shared_ptr<TextArea> TextViewer::textArea() BOOST_NOEXCEPT {
 			return textArea_;
 		}
 
 		/// Returns the @c TextArea of this text viewer.
-		inline BOOST_CONSTEXPR std::shared_ptr<const TextArea> TextViewer::textArea() const BOOST_NOEXCEPT {
+		inline std::shared_ptr<const TextArea> TextViewer::textArea() const BOOST_NOEXCEPT {
 			return textArea_;
 		}
 	}

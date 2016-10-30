@@ -81,15 +81,15 @@ namespace ascension {
 			ASCENSION_SCOPED_ENUM_DECLARE_END(WhiteSpaceEnums)
 
 			inline BOOST_CONSTEXPR bool collapsesNewLines(WhiteSpaceEnums value) BOOST_NOEXCEPT {
-				return (boost::native_value(value) & (1 << 0)) != 0;
+				return (boost::underlying_cast<int>(value) & (1 << 0)) != 0;
 			}
 
 			inline BOOST_CONSTEXPR bool collapsesSpacesAndTabs(WhiteSpaceEnums value) BOOST_NOEXCEPT {
-				return (boost::native_value(value) & (1 << 1)) != 0;
+				return (boost::underlying_cast<int>(value) & (1 << 1)) != 0;
 			}
 
 			inline BOOST_CONSTEXPR bool wrapsText(WhiteSpaceEnums value) BOOST_NOEXCEPT {
-				return (boost::native_value(value) & (1 << 2)) != 0;
+				return (boost::underlying_cast<int>(value) & (1 << 2)) != 0;
 			}
 
 			/**
@@ -248,7 +248,7 @@ namespace ascension {
 				LEFT = graphics::font::TextAlignment::LEFT,
 				RIGHT = graphics::font::TextAlignment::RIGHT,
 				JUSTIFY = graphics::font::TextAlignment::JUSTIFY,
-				AUTO = graphics::font::TextAlignment::START_END + 1
+				AUTO = static_cast<int>(graphics::font::TextAlignment::START_END) + 1
 			ASCENSION_SCOPED_ENUM_DECLARE_END(TextAlignmentLastEnums)
 
 			/**

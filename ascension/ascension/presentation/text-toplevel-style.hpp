@@ -50,7 +50,7 @@ namespace ascension {
 		public:
 			DeclaredTextToplevelStyle();
 			/// Returns the @c DeclaredTextLineStyle of this toplevel element.
-			BOOST_CONSTEXPR std::shared_ptr<const DeclaredTextLineStyle> linesStyle() const BOOST_NOEXCEPT {
+			std::shared_ptr<const DeclaredTextLineStyle> linesStyle() const BOOST_NOEXCEPT {
 				return linesStyle_;
 			}
 			void setLinesStyle(std::shared_ptr<const DeclaredTextLineStyle> newStyle) BOOST_NOEXCEPT;

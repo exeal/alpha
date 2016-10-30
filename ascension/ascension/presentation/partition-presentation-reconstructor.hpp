@@ -36,9 +36,9 @@ namespace ascension {
 			 * Returns the styled text segments for the specified document region.
 			 * @param region The region to reconstruct the new presentation
 			 * @return The presentation or @c null (filled by the presentation's default style)
+			 * @throw kernel#BadRegionException @a region intersects with outside of the document
 			 */
-			virtual std::unique_ptr<DeclaredStyledTextRunIterator>
-				presentation(const kernel::Region& region) const BOOST_NOEXCEPT = 0;
+			virtual std::unique_ptr<DeclaredStyledTextRunIterator> presentation(const kernel::Region& region) const = 0;
 		};
 
 		/// Reconstructs document presentation with single text style.

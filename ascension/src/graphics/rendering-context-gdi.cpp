@@ -404,7 +404,7 @@ namespace ascension {
 						fail(dc, cookie);
 				}
 				Unit ascent() const BOOST_NOEXCEPT override {return ascent_;}
-				Unit averageCharacterWidth() BOOST_NOEXCEPT const override {return averageCharacterWidth_;}
+				Unit averageCharacterWidth() const BOOST_NOEXCEPT override {return averageCharacterWidth_;}
 				Unit descent() const BOOST_NOEXCEPT override {return descent_;}
 				Unit externalLeading() const BOOST_NOEXCEPT override {return externalLeading_;}
 				Unit internalLeading() const BOOST_NOEXCEPT override {return internalLeading_;}
@@ -427,7 +427,7 @@ namespace ascension {
 			return std::unique_ptr<const font::FontMetrics<Scalar>>(new GdiFontMetrics(nativeObject_, font->native()));
 		}
 
-		font::FontRenderContext RenderingContext2D::fontRenderContext() const BOOST_NOEXCEPT {
+		font::FontRenderContext RenderingContext2D::fontRenderContext() const {
 			XFORM xf;
 			if(!win32::boole(::GetWorldTransform(nativeObject_.get(), &xf)))
 				throw makePlatformError();

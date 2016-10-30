@@ -38,7 +38,7 @@ namespace ascension {
 			const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT override;
 			std::unique_ptr<Token> nextToken() override;
 			void parse(const kernel::Document& document, const kernel::Region& region) override;
-			kernel::Position position() const BOOST_NOEXCEPT override;
+			kernel::Position position() const override;
 
 		private:
 			kernel::ContentType contentType_;

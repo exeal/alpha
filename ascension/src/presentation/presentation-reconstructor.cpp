@@ -141,7 +141,7 @@ namespace ascension {
 		 * Constructor.
 		 * @param presentation The presentation
 		 */
-		PresentationReconstructor::PresentationReconstructor(Presentation& presentation) : presentation_(presentation) {
+		PresentationReconstructor::PresentationReconstructor(Presentation& presentation) BOOST_NOEXCEPT : presentation_(presentation) {
 			presentation_.setTextRunStyleDeclarator(std::shared_ptr<TextRunStyleDeclarator>(this));	// TODO: danger call (may delete this).
 		}
 		

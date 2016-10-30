@@ -227,7 +227,7 @@ namespace ascension {
 				LastResult() BOOST_NOEXCEPT : document(nullptr), direction(Direction::forward()) {}
 				~LastResult() BOOST_NOEXCEPT {reset();}
 				bool checkDocumentRevision(const kernel::Document& current) const BOOST_NOEXCEPT;
-				bool matched() const BOOST_NOEXCEPT {return matchedRegion;}
+				bool matched() const BOOST_NOEXCEPT {return matchedRegion != boost::none;}
 				void reset() BOOST_NOEXCEPT {matchedRegion = boost::none;}
 				void updateDocumentRevision(const kernel::Document& document) BOOST_NOEXCEPT;
 			} lastResult_;

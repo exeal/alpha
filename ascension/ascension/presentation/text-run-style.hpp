@@ -142,7 +142,7 @@ namespace ascension {
 			typename Transformation<TextRunStyleParts::WritingModes>::type writingModes;
 			typename Transformation<TextRunStyleParts::Auxiliary>::type auxiliary;
 
-			bool operator==(const BasicTextRunStyle<Transformation>& other) const {
+			BOOST_CONSTEXPR bool operator==(const BasicTextRunStyle<Transformation>& other) const {
 				return colors == other.colors
 					&& backgroundsAndBorders == other.backgroundsAndBorders
 					&& basicBoxModel == other.basicBoxModel
