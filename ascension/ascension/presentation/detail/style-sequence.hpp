@@ -34,13 +34,7 @@ namespace ascension {
 	namespace presentation {
 		namespace detail {
 			template<typename Sequence, std::size_t size>
-			class FindDuplicateImpl;
-			template<typename Sequence>
-			class FindDuplicateImpl<Sequence, 0> : public boost::fusion::result_of::end<Sequence> {};
-			template<typename Sequence>
-			class FindDuplicateImpl<Sequence, 1> : public FindDuplicateImpl<Sequence, 0> {};
-			template<typename Sequence, std::size_t size>
-			class FindDuplicateImpl<Sequence, size> {
+			class FindDuplicateImpl {
 				typedef typename boost::fusion::result_of::value_at_c<Sequence, 0>::type Car;
 				typedef typename boost::fusion::iterator_range<
 					typename boost::fusion::result_of::next<
@@ -57,6 +51,10 @@ namespace ascension {
 			public:
 				typedef typename std::conditional<found, typename boost::fusion::result_of::value_of<Found>::type, typename FindNext<found, Cdr>::type>::type type;
 			};
+			template<typename Sequence>
+			class FindDuplicateImpl<Sequence, 0> : public boost::fusion::result_of::end<Sequence> {};
+			template<typename Sequence>
+			class FindDuplicateImpl<Sequence, 1> : public FindDuplicateImpl<Sequence, 0> {};
 
 			template<typename Sequence>
 			struct FindDuplicate : FindDuplicateImpl<Sequence, boost::fusion::result_of::size<Sequence>::type::value> {};
