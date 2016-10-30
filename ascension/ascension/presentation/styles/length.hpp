@@ -203,7 +203,7 @@ namespace ascension {
 				/// @{
 				Unit unitType() const BOOST_NOEXCEPT;
 				graphics::Scalar value(const Context& context) const;
-				Number valueInSpecifiedUnits() const;
+				Number valueInSpecifiedUnits() const BOOST_NOEXCEPT;
 //				String valueAsString() const;
 				/// @}
 

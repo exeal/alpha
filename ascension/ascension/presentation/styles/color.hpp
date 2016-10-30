@@ -30,8 +30,14 @@ namespace ascension {
 			 *                  @c TypedColor&lt;...&gt; should be unique in a @c boost#fusion#vector
 			 */
 #ifndef BOOST_NO_TEMPLATE_ALIASES
-			template<typename TypeSpec> using TypedColor =
-				StyleProperty<Complex<boost::optional<graphics::Color>>, InheritedOrNot, graphics::Color>;
+			template<typename TypeSpec> using TypedColor = StyleProperty<
+				Complex<
+					boost::optional<graphics::Color>,
+					&TypeSpec::initialValue
+				>,
+				Inherited<TypeSpec::INHERITED>,
+				graphics::Color
+			>;
 #else
 			template<typename TypeSpec>
 			class TypedColor : public StyleProperty<
@@ -86,7 +92,7 @@ namespace ascension {
 			 * @see CSS Color Module Level 3, 4.4. ecurrentColorf color keyword
 			 *      (http://www.w3.org/TR/css3-color/#currentcolor)
 			 */
-			BOOST_CONSTEXPR inline SpecifiedValue<Color>::type currentColor() BOOST_NOEXCEPT {
+			inline SpecifiedValue<Color>::type currentColor() BOOST_NOEXCEPT {
 				return boost::none;
 			}
 			/// @}
