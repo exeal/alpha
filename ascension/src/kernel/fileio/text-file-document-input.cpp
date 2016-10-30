@@ -540,7 +540,7 @@ private:
 			}
 
 			/// @see DocumentInput#isChangeable
-			bool TextFileDocumentInput::isChangeable(const Document&) const {
+			bool TextFileDocumentInput::isChangeable(const Document&) const BOOST_NOEXCEPT {
 				if(isBoundToFile()) {
 					// check the time stamp if this is the first modification
 					if(timeStampDirector_ != nullptr && !document().isModified()) {

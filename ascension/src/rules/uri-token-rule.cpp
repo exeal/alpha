@@ -18,7 +18,7 @@ namespace ascension {
 		 * @param uriDetector The URI detector. Can't be @c null
 		 * @throw NullPointerException @a uriDetector is @c null
 		 */
-		URITokenRule::URITokenRule(Token::Identifier identifier, std::shared_ptr<const URIDetector> uriDetector) BOOST_NOEXCEPT
+		URITokenRule::URITokenRule(Token::Identifier identifier, std::shared_ptr<const URIDetector> uriDetector)
 				: TokenRule(identifier), uriDetector_(uriDetector) {
 			if(uriDetector.get() == nullptr)
 				throw NullPointerException("uriDetector");

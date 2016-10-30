@@ -202,7 +202,7 @@ namespace ascension {
 		}
 
 		/// Returns @c false if caseless match is enabled. This setting is obtained from the pattern.
-		bool TextSearcher::isCaseSensitive() const {
+		bool TextSearcher::isCaseSensitive() const BOOST_NOEXCEPT {
 			if(literalPattern_.get() != nullptr)
 				return literalPattern_->isCaseSensitive();
 #ifndef ASCENSION_NO_REGEX

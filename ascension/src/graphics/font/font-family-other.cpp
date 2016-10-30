@@ -13,7 +13,7 @@ namespace ascension {
 		namespace font {
 			namespace {
 				template<std::size_t length>
-				inline String&& makeString(const char (&s)[length]) {
+				inline String makeString(const char (&s)[length]) {
 					return String(std::begin(s), std::end(s) - 1);
 				}
 			}

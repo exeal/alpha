@@ -368,9 +368,9 @@ namespace ascension {
 				const Pixels medium(boost::get_optional_value_or(mediumFontSize, GlobalFontSettings::instance().size()));
 				if(const AbsoluteFontSize* const absoluteFontSize = boost::get<AbsoluteFontSize>(&computedValue)) {
 					// TODO: AbsoluteFontSize should be double constant, not enum?
-					static const std::array<Number, AbsoluteFontSize::XX_LARGE - AbsoluteFontSize::XX_SMALL + 1>
+					static const std::array<Number, static_cast<int>(AbsoluteFontSize::XX_LARGE) - static_cast<int>(AbsoluteFontSize::XX_SMALL) + 1>
 						ABSOLUTE_SIZE_RATIOS = {3.f / 5.f, 3.f / 4.f, 8.f / 9.f, 1.f, 6.f / 5.f, 3.f / 2.f, 2.f / 1.f};
-					static_assert(AbsoluteFontSize::XX_SMALL == 0, "");
+					static_assert(static_cast<int>(AbsoluteFontSize::XX_SMALL) == 0, "");
 					if(*absoluteFontSize >= AbsoluteFontSize::XX_SMALL && *absoluteFontSize <= AbsoluteFontSize::XX_LARGE)
 						return medium * ABSOLUTE_SIZE_RATIOS[boost::underlying_cast<std::size_t>(*absoluteFontSize)];
 				} else if(const RelativeFontSize* const relativeFontSize = boost::get<RelativeFontSize>(&computedValue)) {

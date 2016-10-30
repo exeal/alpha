@@ -66,7 +66,7 @@ namespace ascension {
 				DOUBLE = BorderStyleEnums::DOUBLE,	///< Same meaning as for @c Border#Style.
 				DOTTED = BorderStyleEnums::DOTTED,	///< Same meaning as for @c Border#Style.
 				DAHSED = BorderStyleEnums::DASHED,	///< Same meaning as for @c Border#Style.
-				WAVY = BorderStyleEnums::OUTSET + 1	///< A wavy line.
+				WAVY = static_cast<int>(BorderStyleEnums::OUTSET) + 1	///< A wavy line.
 			ASCENSION_SCOPED_ENUM_DECLARE_END(TextDecorationStyleEnums)
 
 			/**
@@ -231,7 +231,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css-text-decor-3/#text-emphasis-position-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<TextEmphasisPositionEnums, TextEmphasisPositionEnums::OVER | TextEmphasisPositionEnums::RIGHT>,
+				Enumerated<TextEmphasisPositionEnums, static_cast<int>(TextEmphasisPositionEnums::OVER) | static_cast<int>(TextEmphasisPositionEnums::RIGHT)>,
 				Inherited<true>
 			> TextEmphasisPosition;
 #if 0

@@ -54,7 +54,7 @@ namespace ascension {
 
 			protected:
 				/// Returns the installed @c RulerAllocationWidthSink object, or @c null if not installed.
-				BOOST_CONSTEXPR RulerAllocationWidthSink* allocationWidthSink() BOOST_NOEXCEPT {
+				BOOST_CONSTEXPR RulerAllocationWidthSink* allocationWidthSink() const BOOST_NOEXCEPT {
 					return allocationWidthSink_;
 				}
 				/// Implements @c Ruler#install method.

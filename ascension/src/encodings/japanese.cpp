@@ -750,7 +750,7 @@ namespace ascension {
 									ASCENSION_HANDLE_UNMAPPABLE()
 								++fromNext;
 							} else if(state.g0 == EncodingState::GB2312 || state.g0 == EncodingState::KS_C_5601) {	// GB2312:1980 or KSC5601:1987
-								const Byte buffer[2] = {*fromNext | 0x80, fromNext[1] | 0x80};
+								const Byte buffer[2] = {static_cast<Byte>(fromNext[0] | 0x80), static_cast<Byte>(fromNext[1] | 0x80)};
 								const Byte* next;
 								Char* temp;
 								Encoder::State internalState;

@@ -110,7 +110,7 @@ namespace ascension {
 			typedef StyleProperty<
 				Enumerated<
 					graphics::font::LineBoxContain,
-					graphics::font::LineBoxContain::BLOCK | graphics::font::LineBoxContain::INLINE | graphics::font::LineBoxContain::REPLACED
+					static_cast<int>(graphics::font::LineBoxContain::BLOCK) | static_cast<int>(graphics::font::LineBoxContain::INLINE) | static_cast<int>(graphics::font::LineBoxContain::REPLACED)
 				>, Inherited<true>
 			> LineBoxContain;
 

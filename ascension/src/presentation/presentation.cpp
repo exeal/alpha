@@ -378,7 +378,7 @@ namespace ascension {
 				void next() override {
 					return declaration_->next();
 				}
-				kernel::Position position() const override {
+				kernel::Position position() const BOOST_NOEXCEPT override {
 					return declaration_->position();
 				}
 				const ComputedTextRunStyle& style() const override {

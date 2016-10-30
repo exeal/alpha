@@ -867,7 +867,7 @@ namespace ascension {
 				if(boost::empty(visualSelection))
 					return std::swap(result, ranges);
 
-				std::list<const TextHit<>> hits;
+				std::list<TextHit<>> hits;
 				hits.push_back(std::min(*boost::const_begin(visualSelection), *boost::const_end(visualSelection)));
 				hits.push_back(std::max(*boost::const_begin(visualSelection), *boost::const_end(visualSelection)));
 				if(hits.back().characterIndex() == numberOfCharacters()) {	// handle EOL
@@ -891,8 +891,8 @@ namespace ascension {
 						// there are four patterns
 						if(boost::size(hits) == 2) {
 							std::size_t foundHits = 0;
-							std::list<const TextHit<>>::iterator foundHit;
-							for(std::list<const TextHit<>>::iterator hit(std::begin(hits)), e(std::end(hits)); hit != e; ++hit) {
+							std::list<TextHit<>>::iterator foundHit;
+							for(std::list<TextHit<>>::iterator hit(std::begin(hits)), e(std::end(hits)); hit != e; ++hit) {
 								if(includes(runRange, hit->characterIndex())) {
 									++foundHits;
 									foundHit = hit;
@@ -1062,7 +1062,7 @@ namespace ascension {
 					if(p >= boost::const_begin((*run)->characterRange()) && p < boost::const_end((*run)->characterRange()))
 						return run;
 				}
-				ASCENSION_ASSERT_NOT_REACHED();
+				return boost::const_end(runs_);	// unreachable
 			}
 
 			/**

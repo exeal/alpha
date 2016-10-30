@@ -123,7 +123,7 @@ namespace ascension {
 			}
 
 			namespace detail {
-				BOOST_CONSTEXPR inline Length makeMediumBorderWidth() {
+				inline Length makeMediumBorderWidth() {
 					return linewidthkeywords::MEDIUM;
 				}
 			}

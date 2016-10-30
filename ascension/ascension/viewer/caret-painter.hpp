@@ -87,7 +87,7 @@ namespace ascension {
 		}
 
 		/// @see CaretPainterBase#shows
-		BOOST_CONSTEXPR inline bool CaretPainter::shows() const BOOST_NOEXCEPT {
+		inline bool CaretPainter::shows() const BOOST_NOEXCEPT {
 			return visible_ != boost::none;
 		}
 	}

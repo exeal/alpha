@@ -44,7 +44,7 @@ namespace ascension {
 
 			/// @defgroup writing_modes_of_text_layout Writing Modes of @c TextLayout
 			/// @{
-			BOOST_CONSTEXPR bool isLeftToRight(const TextLayout& layout) BOOST_NOEXCEPT;
+			bool isLeftToRight(const TextLayout& layout) BOOST_NOEXCEPT;
 			bool isVertical(const TextLayout& layout) BOOST_NOEXCEPT;
 			presentation::WritingMode writingMode(const TextLayout& textLayout) BOOST_NOEXCEPT;
 			namespace detail {
@@ -260,7 +260,7 @@ namespace ascension {
 				/// @name Painting
 				/// @{
 				void draw(PaintContext& context, const Point& origin,
-					const std::vector<const OverriddenSegment>& overriddenSegments = std::vector<const OverriddenSegment>(),
+					const std::vector<OverriddenSegment>& overriddenSegments = std::vector<OverriddenSegment>(),
 					const InlineObject* endOfLine = nullptr,
 					const InlineObject* lineWrappingMark = nullptr) const BOOST_NOEXCEPT;
 				/// @}
@@ -316,8 +316,8 @@ namespace ascension {
 					Styles(
 						const presentation::ComputedTextToplevelStyle& forToplevel,
 						const presentation::ComputedTextLineStyle& forLine,
-						const presentation::ComputedTextRunStyle& forRun)
-						: forToplevel(forToplevel), forLine(forLine), forRun(forRun) BOOST_NOEXCEPT {}
+						const presentation::ComputedTextRunStyle& forRun) BOOST_NOEXCEPT
+						: forToplevel(forToplevel), forLine(forLine), forRun(forRun) {}
 				} styles_;
 				RunVector runs_;
 				Index numberOfLines_;	// TODO: The following 3 std.unique_ptr<T[]> members can be packed for compaction.
@@ -443,9 +443,11 @@ namespace ascension {
 			 * @internal Returns iterator range addresses the all text runs belong to the specified visual line.
 			 * @param line The visual line
 			 * @return An iterator range addresses the all text runs belong to @a line
+			 * @throw IndexOutOfBoundsException @a line is invalid
 			 */
-			inline boost::iterator_range<TextLayout::RunVector::const_iterator> TextLayout::runsForLine(Index line) const BOOST_NOEXCEPT {
-				assert(line < numberOfLines());
+			inline boost::iterator_range<TextLayout::RunVector::const_iterator> TextLayout::runsForLine(Index line) const {
+				if(line >= numberOfLines())
+					throw IndexOutOfBoundsException("line");
 				if(firstRunsInLines_.get() == nullptr) {
 					assert(numberOfLines() == 1);
 					return boost::make_iterator_range(runs_);
@@ -578,7 +580,7 @@ namespace ascension {
 			 * @param layout The @c TextLayout object
 			 * @return @c true if the base direction of @a layout is left-to-right; @c false otherwise
 			 */
-			inline BOOST_CONSTEXPR bool isLeftToRight(const TextLayout& layout) BOOST_NOEXCEPT {
+			inline bool isLeftToRight(const TextLayout& layout) BOOST_NOEXCEPT {
 				return layout.characterLevel() % 2 == 0;
 			}
 		}

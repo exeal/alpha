@@ -223,13 +223,13 @@ namespace ascension {
 					&VisualLinesListener::visualLinesDeleted, lines, sublines, measureChanged);
 			}
 
-			void LineLayoutVector::fireVisualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
+			void LineLayoutVector::fireVisualLinesInserted(const boost::integer_range<Index>& lines) {
 				numberOfVisualLines_ += boost::size(lines);
 				listeners_.notify<const boost::integer_range<Index>&>(&VisualLinesListener::visualLinesInserted, lines);
 			}
 
 			void LineLayoutVector::fireVisualLinesModified(const boost::integer_range<Index>& lines,
-					Index newSublines, Index oldSublines, bool documentChanged) BOOST_NOEXCEPT {
+					Index newSublines, Index oldSublines, bool documentChanged) {
 				numberOfVisualLines_ += newSublines;
 				numberOfVisualLines_ -= oldSublines;
 
@@ -258,7 +258,7 @@ namespace ascension {
 			}
 
 			/// @internal Only called by constructor.
-			void LineLayoutVector::initialize() BOOST_NOEXCEPT {
+			void LineLayoutVector::initialize() {
 				pendingCacheClearance_ = boost::none;
 				if(bufferSize_ == 0)
 					throw std::invalid_argument("size of the buffer can't be zero.");

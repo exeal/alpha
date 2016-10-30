@@ -84,7 +84,7 @@ namespace ascension {
 		}
 
 		/// @see TextRenderer#newDefaultFont
-		std::shared_ptr<const graphics::font::Font> PresentativeTextRenderer::newDefaultFont() const {
+		std::shared_ptr<const graphics::font::Font> PresentativeTextRenderer::newDefaultFont() const BOOST_NOEXCEPT {
 			const auto& styles = presentation_->computedTextRunStyle();
 			// TODO: Use ActualFontSpecification.
 			const graphics::font::FontProperties properties(
@@ -132,7 +132,6 @@ namespace ascension {
 				case graphics::font::TextAlignment::CENTER:
 					return graphics::font::TextAnchor::MIDDLE;
 			}
-			ASCENSION_ASSERT_NOT_REACHED();
 		}
 
 		/// @see TextRenderer#textOrientation

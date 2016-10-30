@@ -167,7 +167,7 @@ namespace ascension {
 			class DragContext {
 			public:
 				explicit DragContext(Widget::reference source) BOOST_NOEXCEPT : source_(source) {}
-				DropAction defaultAction() const BOOST_NOEXCEPT;
+				DropAction defaultAction() const;
 				DropAction execute(DropAction supportedActions
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 					, int mouseButton, GdkEvent* event
@@ -175,7 +175,7 @@ namespace ascension {
 				);
 				void setImage(const graphics::Image& image, const boost::geometry::model::d2::point_xy<std::uint32_t>& hotspot);
 				void setMimeData(std::shared_ptr<const MimeData> data);
-				DropAction supportedActions() const BOOST_NOEXCEPT;
+				DropAction supportedActions() const;
 			private:
 				Widget::reference source_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
