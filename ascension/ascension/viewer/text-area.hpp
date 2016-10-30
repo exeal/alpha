@@ -44,14 +44,14 @@ namespace ascension {
 
 			/// @name Text Viewer
 			/// @{
-			BOOST_CONSTEXPR TextViewer& textViewer() BOOST_NOEXCEPT;
+			/* BOOST_CONSTEXPR */ TextViewer& textViewer() BOOST_NOEXCEPT;
 			BOOST_CONSTEXPR const TextViewer& textViewer() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Caret
 			/// @{
-			BOOST_CONSTEXPR std::shared_ptr<Caret> caret() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR std::shared_ptr<const Caret> caret() const BOOST_NOEXCEPT;
+			std::shared_ptr<Caret> caret() BOOST_NOEXCEPT;
+			std::shared_ptr<const Caret> caret() const BOOST_NOEXCEPT;
 			void hideCaret() BOOST_NOEXCEPT;
 			void setCaretPainter(std::unique_ptr<CaretPainter> newCaretPainter) BOOST_NOEXCEPT;
 			void showCaret() BOOST_NOEXCEPT;
@@ -70,14 +70,14 @@ namespace ascension {
 			/// @name Text Renderer
 			/// @{
 			void setTextRenderer(std::unique_ptr<graphics::font::TextRenderer> newTextRenderer);
-			BOOST_CONSTEXPR std::shared_ptr<graphics::font::TextRenderer> textRenderer() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR std::shared_ptr<const graphics::font::TextRenderer> textRenderer() const BOOST_NOEXCEPT;
+			std::shared_ptr<graphics::font::TextRenderer> textRenderer() BOOST_NOEXCEPT;
+			std::shared_ptr<const graphics::font::TextRenderer> textRenderer() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Text Viewport
 			/// @{
-			std::shared_ptr<graphics::font::TextViewport> viewport();
-			std::shared_ptr<const graphics::font::TextViewport> viewport() const;
+			std::shared_ptr<graphics::font::TextViewport> viewport() BOOST_NOEXCEPT;
+			std::shared_ptr<const graphics::font::TextViewport> viewport() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Redraw
@@ -171,12 +171,12 @@ namespace ascension {
 
 		
 		/// Returns the caret, or @c nullptr if not installed.
-		inline BOOST_CONSTEXPR std::shared_ptr<Caret> TextArea::caret() BOOST_NOEXCEPT {
+		inline std::shared_ptr<Caret> TextArea::caret() BOOST_NOEXCEPT {
 			return caret_;
 		}
 		
 		/// Returns the caret, or @c nullptr if not installed.
-		inline BOOST_CONSTEXPR std::shared_ptr<const Caret> TextArea::caret() const BOOST_NOEXCEPT {
+		inline std::shared_ptr<const Caret> TextArea::caret() const BOOST_NOEXCEPT {
 			return caret_;
 		}
 
@@ -189,17 +189,17 @@ namespace ascension {
 		}
 		
 		/// Returns the text renderer, or @c nullptr if not installed.
-		inline BOOST_CONSTEXPR std::shared_ptr<graphics::font::TextRenderer> TextArea::textRenderer() BOOST_NOEXCEPT {
+		inline std::shared_ptr<graphics::font::TextRenderer> TextArea::textRenderer() BOOST_NOEXCEPT {
 			return renderer_;
 		}
 		
 		/// Returns the text renderer, or @c nullptr if not installed.
-		inline BOOST_CONSTEXPR std::shared_ptr<const graphics::font::TextRenderer> TextArea::textRenderer() const BOOST_NOEXCEPT {
+		inline std::shared_ptr<const graphics::font::TextRenderer> TextArea::textRenderer() const BOOST_NOEXCEPT {
 			return renderer_;
 		}
 		
 		/// Returns the text viewer.
-		inline BOOST_CONSTEXPR TextViewer& TextArea::textViewer() BOOST_NOEXCEPT {
+		inline /* BOOST_CONSTEXPR */ TextViewer& TextArea::textViewer() BOOST_NOEXCEPT {
 			return *viewer_;
 		}
 		
@@ -209,12 +209,12 @@ namespace ascension {
 		}
 		
 		/// Returns the text viewport, or @c nullptr if not installed.
-		inline BOOST_CONSTEXPR std::shared_ptr<graphics::font::TextViewport> TextArea::viewport() BOOST_NOEXCEPT {
+		inline std::shared_ptr<graphics::font::TextViewport> TextArea::viewport() BOOST_NOEXCEPT {
 			return viewport_;
 		}
 		
 		/// Returns the text viewport, or @c nullptr if not installed.
-		inline BOOST_CONSTEXPR std::shared_ptr<const graphics::font::TextViewport> TextArea::viewport() const BOOST_NOEXCEPT {
+		inline std::shared_ptr<const graphics::font::TextViewport> TextArea::viewport() const BOOST_NOEXCEPT {
 			return viewport_;
 		}
 	}

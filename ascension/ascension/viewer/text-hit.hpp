@@ -27,7 +27,7 @@ namespace ascension {
 		 */
 		typedef graphics::font::TextHit<kernel::Position> TextHit;
 
-		graphics::font::TextHit<> inlineHit(const TextHit& hit);
+		graphics::font::TextHit<> inlineHit(const TextHit& hit) BOOST_NOEXCEPT;
 		kernel::Position insertionPosition(const kernel::Document& document, const TextHit& hit);
 		TextHit otherHit(const kernel::Document& document, const TextHit& hit);
 
