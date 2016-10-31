@@ -110,7 +110,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#tab-size-property)
 			 */
 			typedef StyleProperty<
-				Multiple<
+				MultipleWithInitialInteger<
 					boost::variant<Integer, Length>,
 					Integer, 8
 				>,

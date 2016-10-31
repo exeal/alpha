@@ -90,14 +90,14 @@ namespace ascension {
 			 * @see XSL 1.1, 7.9.4 "font-size" (http://www.w3.org/TR/xsl/#font-size)
 			 */
 			typedef StyleProperty<
-				Multiple<
+				MultipleWithInitialInteger<
 					boost::variant<
 						AbsoluteFontSize,
 						RelativeFontSize,
 						Length,
 						Percentage
 					>,
-					AbsoluteFontSize, AbsoluteFontSize::MEDIUM
+					BOOST_SCOPED_ENUM_NATIVE(AbsoluteFontSize), AbsoluteFontSize::MEDIUM
 				>,
 				Inherited<true>
 			> FontSize;

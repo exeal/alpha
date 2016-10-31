@@ -27,9 +27,9 @@
 namespace ascension {
 	namespace presentation {
 		namespace styles {
-			template<typename T, T _initialValue>	// decltype(_initialValue) should be T...
+			template<typename T, T initialIntegralValue>
 			struct Enumerated : public boost::mpl::identity<T> {
-				static type initialValue() {return static_cast<type>(_initialValue);}
+				static type initialValue() {return initialIntegralValue;}
 			};
 
 			template<int _initialValue, Length::Unit initialUnit>
@@ -42,9 +42,14 @@ namespace ascension {
 				static type initialValue() {return (initialValueGenerator != nullptr) ? (*initialValueGenerator)() : type();}
 			};
 
-			template<typename Variant, typename InitialType, int _initialValue>	// decltype(_initialValue) should be InitialType...
+			template<typename Variant, typename InitialType>
 			struct Multiple : public boost::mpl::identity<Variant> {
-				static InitialType initialValue() {return static_cast<InitialType>(_initialValue);}
+				static InitialType initialValue() {return InitialType();}
+			};
+
+			template<typename Variant, typename InitialType, InitialType initialIntegralValue>
+			struct MultipleWithInitialInteger : public boost::mpl::identity<Variant> {
+				static InitialType initialValue() {return initialIntegralValue;}
 			};
 
 			template<typename Variant, typename N>
