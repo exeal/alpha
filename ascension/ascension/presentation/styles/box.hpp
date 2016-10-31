@@ -40,7 +40,7 @@ namespace ascension {
 			typedef StyleProperty<
 				Multiple<
 					boost::variant<Length, Percentage, PaddingEnums>,
-					Length, 0
+					Length
 				>,
 				Inherited<false>,
 				boost::variant<Length, Percentage, std::tuple<>>
@@ -76,7 +76,7 @@ namespace ascension {
 			typedef StyleProperty<
 				Multiple<
 					boost::variant<Length, Percentage, MarginEnums>,
-					Length, 0
+					Length
 				>,
 				Inherited<false>,
 				boost::variant<Length, Percentage, std::tuple<>>

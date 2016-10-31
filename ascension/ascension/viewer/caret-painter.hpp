@@ -71,14 +71,12 @@ namespace ascension {
 
 		/// Returns the caret.
 		/* BOOST_CONSTEXPR */ inline Caret& CaretPainter::caret() BOOST_NOEXCEPT {
-			assert(caret_ != nullptr);
-			return *caret_;
+			return assert(caret_ != nullptr), *caret_;
 		}
 
 		/// Returns the caret.
 		BOOST_CONSTEXPR inline const Caret& CaretPainter::caret() const BOOST_NOEXCEPT {
-			assert(caret_ != nullptr);
-			return *caret_;
+			return assert(caret_ != nullptr), *caret_;
 		}
 
 		/// @see CaretPainterBase#isVisible

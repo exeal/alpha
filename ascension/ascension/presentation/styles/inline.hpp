@@ -50,9 +50,9 @@ namespace ascension {
 			 *      (http://dev.w3.org/csswg/css-inline/#inline1)
 			 */
 			typedef StyleProperty<
-				Multiple<
+				MultipleWithInitialInteger<
 					boost::variant<TextHeightEnums, Number>,
-					TextHeightEnums, TextHeightEnums::AUTO
+					BOOST_SCOPED_ENUM_NATIVE(TextHeightEnums), TextHeightEnums::AUTO
 				>, Inherited<true>
 			> TextHeight;
 
@@ -79,9 +79,9 @@ namespace ascension {
 			 * @see XSL 1.1, 7.16.4 "line-height" (http://www.w3.org/TR/xsl/#line-height)
 			 */
 			typedef StyleProperty<
-				Multiple<
+				MultipleWithInitialInteger<
 					boost::variant<LineHeightEnums, Number, Length, Percentage>,
-					LineHeightEnums, LineHeightEnums::NORMAL
+					BOOST_SCOPED_ENUM_NATIVE(LineHeightEnums), LineHeightEnums::NORMAL
 				>,
 				Inherited<true>,
 				boost::variant<
@@ -109,8 +109,8 @@ namespace ascension {
 			/// @see graphics#font#LineBoxContain
 			typedef StyleProperty<
 				Enumerated<
-					graphics::font::LineBoxContain,
-					static_cast<int>(graphics::font::LineBoxContain::BLOCK) | static_cast<int>(graphics::font::LineBoxContain::INLINE) | static_cast<int>(graphics::font::LineBoxContain::REPLACED)
+					BOOST_SCOPED_ENUM_NATIVE(graphics::font::LineBoxContain),
+					static_cast<graphics::font::LineBoxContain>(static_cast<int>(graphics::font::LineBoxContain::BLOCK) | static_cast<int>(graphics::font::LineBoxContain::INLINE) | static_cast<int>(graphics::font::LineBoxContain::REPLACED))
 				>, Inherited<true>
 			> LineBoxContain;
 
@@ -151,9 +151,9 @@ namespace ascension {
 			 * @see XSL 1.1, 7.14.1 "alignment-adjust" (http://www.w3.org/TR/xsl/#alignment-adjust)
 			 */
 			typedef StyleProperty<
-				Multiple<
+				MultipleWithInitialInteger<
 					boost::variant<AlignmentAdjustEnums, Percentage, Length>,
-					AlignmentAdjustEnums, AlignmentAdjustEnums::AUTO
+					BOOST_SCOPED_ENUM_NATIVE(AlignmentAdjustEnums), AlignmentAdjustEnums::AUTO
 				>,
 				Inherited<false>
 				// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
@@ -177,9 +177,9 @@ namespace ascension {
 			 * @see XSL 1.1, 7.14.3 "baseline-shift" (http://www.w3.org/TR/xsl/#baseline-shift)
 			 */
 			typedef StyleProperty<
-				Multiple<
+				MultipleWithInitialInteger<
 					boost::variant<BaselineShiftEnums, Percentage, Length>,
-					BaselineShiftEnums, BaselineShiftEnums::BASELINE
+					BOOST_SCOPED_ENUM_NATIVE(BaselineShiftEnums), BaselineShiftEnums::BASELINE
 				>,
 				Inherited<false>
 				// TODO: [CSS3TEXT] does not describe the computed value for other than <percentage>.
@@ -200,9 +200,9 @@ namespace ascension {
 			 *      (http://dev.w3.org/csswg/css-inline/#inline-box-align-prop)
 			 */
 			typedef StyleProperty<
-				Multiple<
+				MultipleWithInitialInteger<
 					boost::variant<InlineBoxAlignmentEnums, Integer>,
-					InlineBoxAlignmentEnums, InlineBoxAlignmentEnums::LAST
+					BOOST_SCOPED_ENUM_NATIVE(InlineBoxAlignmentEnums), InlineBoxAlignmentEnums::LAST
 				>, Inherited<false>
 			> InlineBoxAlignment;
 			/// @}
