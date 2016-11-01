@@ -130,11 +130,11 @@ namespace ascension {
 			/// Specialization of @c boost#hash_value function template for @c ActualTextDecoration.
 			inline std::size_t hash_value(const ActualTextDecoration& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
-				boost::hash_combine(seed, boost::native_value(boost::fusion::at_key<presentation::styles::TextDecorationLine>(object)));
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextDecorationLine>(object));
 				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextDecorationColor>(object));
-				boost::hash_combine(seed, boost::native_value(boost::fusion::at_key<presentation::styles::TextDecorationStyle>(object)));
-				boost::hash_combine(seed, boost::native_value(boost::fusion::at_key<presentation::styles::TextDecorationSkip>(object)));
-				boost::hash_combine(seed, boost::native_value(boost::fusion::at_key<presentation::styles::TextUnderlinePosition>(object)));
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextDecorationStyle>(object));
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextDecorationSkip>(object));
+				boost::hash_combine(seed, boost::fusion::at_key<presentation::styles::TextUnderlinePosition>(object));
 				return seed;
 			}
 

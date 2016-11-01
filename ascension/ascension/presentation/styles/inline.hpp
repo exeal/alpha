@@ -51,7 +51,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				MultipleWithInitialInteger<
-					boost::variant<TextHeightEnums, Number>,
+					boost::variant<BOOST_SCOPED_ENUM_NATIVE(TextHeightEnums), Number>,
 					BOOST_SCOPED_ENUM_NATIVE(TextHeightEnums), TextHeightEnums::AUTO
 				>, Inherited<true>
 			> TextHeight;
@@ -80,7 +80,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				MultipleWithInitialInteger<
-					boost::variant<LineHeightEnums, Number, Length, Percentage>,
+					boost::variant<BOOST_SCOPED_ENUM_NATIVE(LineHeightEnums), Number, Length, Percentage>,
 					BOOST_SCOPED_ENUM_NATIVE(LineHeightEnums), LineHeightEnums::NORMAL
 				>,
 				Inherited<true>,
@@ -101,7 +101,7 @@ namespace ascension {
 				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
 					return *percentage;
 				else if(const std::tuple<>* const none = boost::get<std::tuple<>>(&computedValue))
-					return LineHeightEnums(LineHeightEnums::NONE);
+					return LineHeightEnums::NONE;
 				else
 					throw UnknownValueException("computedValue");
 			}
@@ -110,19 +110,19 @@ namespace ascension {
 			typedef StyleProperty<
 				Enumerated<
 					BOOST_SCOPED_ENUM_NATIVE(graphics::font::LineBoxContain),
-					static_cast<graphics::font::LineBoxContain>(static_cast<int>(graphics::font::LineBoxContain::BLOCK) | static_cast<int>(graphics::font::LineBoxContain::INLINE) | static_cast<int>(graphics::font::LineBoxContain::REPLACED))
+					static_cast<BOOST_SCOPED_ENUM_NATIVE(graphics::font::LineBoxContain)>(static_cast<int>(graphics::font::LineBoxContain::BLOCK) | static_cast<int>(graphics::font::LineBoxContain::INLINE) | static_cast<int>(graphics::font::LineBoxContain::REPLACED))
 				>, Inherited<true>
 			> LineBoxContain;
 
 			/// @see graphics#font#DominantBaseline
 			typedef StyleProperty<
-				Enumerated<graphics::font::DominantBaseline, graphics::font::DominantBaseline::AUTO>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::DominantBaseline), graphics::font::DominantBaseline::AUTO>,
 				Inherited<false>
 			> DominantBaseline;
 
 			/// @see graphics#font#AlignmentBaseline
 			typedef StyleProperty<
-				Enumerated<graphics::font::AlignmentBaseline, graphics::font::AlignmentBaseline::BASELINE>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::AlignmentBaseline), graphics::font::AlignmentBaseline::BASELINE>,
 				Inherited<false>
 			> AlignmentBaseline;
 
@@ -152,7 +152,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				MultipleWithInitialInteger<
-					boost::variant<AlignmentAdjustEnums, Percentage, Length>,
+					boost::variant<BOOST_SCOPED_ENUM_NATIVE(AlignmentAdjustEnums), Percentage, Length>,
 					BOOST_SCOPED_ENUM_NATIVE(AlignmentAdjustEnums), AlignmentAdjustEnums::AUTO
 				>,
 				Inherited<false>
@@ -178,7 +178,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				MultipleWithInitialInteger<
-					boost::variant<BaselineShiftEnums, Percentage, Length>,
+					boost::variant<BOOST_SCOPED_ENUM_NATIVE(BaselineShiftEnums), Percentage, Length>,
 					BOOST_SCOPED_ENUM_NATIVE(BaselineShiftEnums), BaselineShiftEnums::BASELINE
 				>,
 				Inherited<false>
@@ -201,7 +201,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				MultipleWithInitialInteger<
-					boost::variant<InlineBoxAlignmentEnums, Integer>,
+					boost::variant<BOOST_SCOPED_ENUM_NATIVE(InlineBoxAlignmentEnums), Integer>,
 					BOOST_SCOPED_ENUM_NATIVE(InlineBoxAlignmentEnums), InlineBoxAlignmentEnums::LAST
 				>, Inherited<false>
 			> InlineBoxAlignment;

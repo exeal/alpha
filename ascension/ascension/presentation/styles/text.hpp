@@ -57,7 +57,7 @@ namespace ascension {
 			 * @see XSL 1.1, 7.17.6 "text-transform" (http://www.w3.org/TR/xsl/#text-transform)
 			 */
 			typedef StyleProperty<
-				Enumerated<TextTransformEnums, TextTransformEnums::NONE>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextTransformEnums), TextTransformEnums::NONE>,
 				Inherited<true>
 			> TextTransform;
 
@@ -99,7 +99,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#white-space)
 			 */			
 			typedef StyleProperty<
-				Enumerated<WhiteSpaceEnums, WhiteSpaceEnums::NORMAL>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(WhiteSpaceEnums), WhiteSpaceEnums::NORMAL>,
 				Inherited<true>
 			> WhiteSpace;
 
@@ -147,7 +147,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#line-break-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<LineBreakEnums, LineBreakEnums::AUTO>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(LineBreakEnums), LineBreakEnums::AUTO>,
 				Inherited<true>
 			> LineBreak;
 
@@ -174,7 +174,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#word-break-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<WordBreakEnums, WordBreakEnums::NORMAL>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(WordBreakEnums), WordBreakEnums::NORMAL>,
 				Inherited<true>
 			> WordBreak;
 
@@ -202,7 +202,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/xsl/#common-hyphenation-properties)
 			 */
 			typedef StyleProperty<
-				Enumerated<HyphensEnums, HyphensEnums::MANUAL>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(HyphensEnums), HyphensEnums::MANUAL>,
 				Inherited<true>
 			> Hyphens;
 			
@@ -228,13 +228,13 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#overflow-wrap-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<OverflowWrapEnums, OverflowWrapEnums::NORMAL>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(OverflowWrapEnums), OverflowWrapEnums::NORMAL>,
 				Inherited<true>
 			> OverflowWrap;
 
 			/// @see graphics#font#TextAlignment
 			typedef StyleProperty<
-				Enumerated<graphics::font::TextAlignment, graphics::font::TextAlignment::START>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextAlignment), graphics::font::TextAlignment::START>,
 				Inherited<true>
 			> TextAlignment;
 
@@ -266,7 +266,7 @@ namespace ascension {
 			 * @note The name of this type is @c TextAlignmentLast, not @c TextAlignLast.
 			 */
 			typedef StyleProperty<
-				Enumerated<TextAlignmentLastEnums, TextAlignmentLastEnums::AUTO>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextAlignmentLastEnums), TextAlignmentLastEnums::AUTO>,
 				Inherited<true>
 			> TextAlignmentLast;
 
@@ -275,7 +275,7 @@ namespace ascension {
 			
 			/// @see graphics#font#TextJustification
 			typedef StyleProperty<
-				Enumerated<graphics::font::TextJustification, graphics::font::TextJustification::AUTO>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextJustification), graphics::font::TextJustification::AUTO>,
 				Inherited<true>
 			> TextJustification;
 
@@ -490,7 +490,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-text/#hanging-punctuation-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<HangingPunctuationEnums, HangingPunctuationEnums::NONE>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(HangingPunctuationEnums), HangingPunctuationEnums::NONE>,
 				Inherited<true>
 			> HangingPunctuation;
 			/// @}

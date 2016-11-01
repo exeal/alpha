@@ -15,7 +15,7 @@ namespace ascension {
 			inline void computeLineHeight(
 					const styles::SpecifiedValue<styles::LineHeight>::type& specifiedValue,
 					styles::ComputedValue<styles::LineHeight>::type& computedValue) {
-				if(const styles::LineHeightEnums* const keyword = boost::get<styles::LineHeightEnums>(&specifiedValue)) {
+				if(const auto* const keyword = boost::get<BOOST_SCOPED_ENUM_NATIVE(styles::LineHeightEnums)>(&specifiedValue)) {
 					if(*keyword == styles::LineHeightEnums::NONE) {
 						computedValue = std::make_tuple();
 						return;

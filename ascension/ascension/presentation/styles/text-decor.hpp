@@ -45,7 +45,7 @@ namespace ascension {
 			 * @see XSL 1.1, 7.17.4 "text-decoration" (http://www.w3.org/TR/xsl/#text-decoration)
 			 */
 			typedef StyleProperty<
-				Enumerated<TextDecorationLineEnums, TextDecorationLineEnums::NONE>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextDecorationLineEnums), TextDecorationLineEnums::NONE>,
 				Inherited<false>
 			> TextDecorationLine;
 
@@ -76,7 +76,7 @@ namespace ascension {
 			 *      property (http://www.w3.org/TR/css-text-decor-3/#text-decoration-style-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<TextDecorationStyleEnums, TextDecorationStyleEnums::SOLID>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextDecorationStyleEnums), TextDecorationStyleEnums::SOLID>,
 				Inherited<false>
 			> TextDecorationStyle;
 
@@ -112,7 +112,7 @@ namespace ascension {
 			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-decoration-skip-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<TextDecorationSkipEnums, TextDecorationSkipEnums::OBJECTS>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextDecorationSkipEnums), TextDecorationSkipEnums::OBJECTS>,
 				Inherited<true>
 			> TextDecorationSkip;
 
@@ -145,7 +145,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css-text-decor-3/#text-underline-position-property)
 			 */
 			typedef StyleProperty<
-				Enumerated<TextUnderlinePositionEnums, TextUnderlinePositionEnums::AUTO>,
+				Enumerated<BOOST_SCOPED_ENUM_NATIVE(TextUnderlinePositionEnums), TextUnderlinePositionEnums::AUTO>,
 				Inherited<true>
 			> TextUnderlinePosition;
 
@@ -190,7 +190,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				MultipleWithInitialIndex<
-					boost::variant<std::tuple<>, TextEmphasisStyleEnums, CodePoint>,
+					boost::variant<std::tuple<>, BOOST_SCOPED_ENUM_NATIVE(TextEmphasisStyleEnums), CodePoint>,
 					boost::mpl::int_<0>
 				>,
 				Inherited<true>,
@@ -232,8 +232,8 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Enumerated<
-					TextEmphasisPositionEnums,
-					static_cast<TextEmphasisPositionEnums>(static_cast<int>(TextEmphasisPositionEnums::OVER) | static_cast<int>(TextEmphasisPositionEnums::RIGHT))
+					BOOST_SCOPED_ENUM_NATIVE(TextEmphasisPositionEnums),
+					static_cast<BOOST_SCOPED_ENUM_NATIVE(TextEmphasisPositionEnums)>(static_cast<int>(TextEmphasisPositionEnums::OVER) | static_cast<int>(TextEmphasisPositionEnums::RIGHT))
 				>,
 				Inherited<true>
 			> TextEmphasisPosition;

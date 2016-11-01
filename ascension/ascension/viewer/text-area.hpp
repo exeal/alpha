@@ -144,7 +144,7 @@ namespace ascension {
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			// graphics.font.LineRenderingOptions
 			std::unique_ptr<const graphics::font::InlineObject> endOfLine(Index line) const BOOST_NOEXCEPT override;
-			void overrideTextPaint(Index line, std::vector<const graphics::font::OverriddenSegment>& segments) const BOOST_NOEXCEPT override;
+			void overrideTextPaint(Index line, std::vector<graphics::font::OverriddenSegment>& segments) const BOOST_NOEXCEPT override;
 			std::unique_ptr<const graphics::font::InlineObject> textWrappingMark(Index line) const BOOST_NOEXCEPT override;
 		private:
 			TextViewer* viewer_;

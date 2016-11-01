@@ -39,7 +39,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<Length, Percentage, PaddingEnums>,
+					boost::variant<Length, Percentage, BOOST_SCOPED_ENUM_NATIVE(PaddingEnums)>,
 					Length
 				>,
 				Inherited<false>,
@@ -53,7 +53,7 @@ namespace ascension {
 				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
 					return *percentage;
 				else if(const std::tuple<>* const autoValue = boost::get<std::tuple<>>(&computedValue))
-					return PaddingEnums(PaddingEnums::AUTO);
+					return PaddingEnums::AUTO;
 				else
 					throw UnknownValueException("computedValue");
 			}
@@ -75,7 +75,7 @@ namespace ascension {
 			 */
 			typedef StyleProperty<
 				Multiple<
-					boost::variant<Length, Percentage, MarginEnums>,
+					boost::variant<Length, Percentage, BOOST_SCOPED_ENUM_NATIVE(MarginEnums)>,
 					Length
 				>,
 				Inherited<false>,
@@ -89,7 +89,7 @@ namespace ascension {
 				else if(const Percentage* const percentage = boost::get<Percentage>(&computedValue))
 					return *percentage;
 				else if(const std::tuple<>* const autoValue = boost::get<std::tuple<>>(&computedValue))
-					return MarginEnums(MarginEnums::AUTO);
+					return MarginEnums::AUTO;
 				else
 					throw UnknownValueException("computedValue");
 			}

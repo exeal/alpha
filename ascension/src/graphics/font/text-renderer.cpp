@@ -414,7 +414,7 @@ namespace ascension {
 			inline void TextRenderer::paint(const TextLayout& layout, Index line,
 					PaintContext& context, const Point& alignmentPoint, const LineRenderingOptions* options) const {
 //				if(!enablesDoubleBuffering_) {
-					std::vector<const OverriddenSegment> overriddenSegments;
+					std::vector<OverriddenSegment> overriddenSegments;
 					if(options != nullptr)
 						options->overrideTextPaint(line, overriddenSegments);
 					layout.draw(context, alignmentPoint, overriddenSegments,
