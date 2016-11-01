@@ -112,7 +112,7 @@ namespace alpha {
 	}
 
 	/// Returns the singleton @c EditorPanes object.
-	inline EditorPanes& EditorPanes::instance() {
+	inline EditorPanes& EditorPanes::instance() BOOST_NOEXCEPT {
 		static EditorPanes singleton;
 		return singleton;
 	}

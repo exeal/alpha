@@ -262,7 +262,7 @@ namespace ascension {
 				void draw(PaintContext& context, const Point& origin,
 					const std::vector<OverriddenSegment>& overriddenSegments = std::vector<OverriddenSegment>(),
 					const InlineObject* endOfLine = nullptr,
-					const InlineObject* lineWrappingMark = nullptr) const BOOST_NOEXCEPT;
+					const InlineObject* lineWrappingMark = nullptr) const;
 				/// @}
 
 				/// @name Miscellaneous

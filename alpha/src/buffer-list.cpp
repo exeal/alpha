@@ -876,7 +876,7 @@ namespace alpha {
 		readOnlySignChangedConnection.disconnect();
 	}
 
-	BufferList::BufferEntry& BufferList::BufferEntry::operator=(BufferList::BufferEntry&& other) {
+	BufferList::BufferEntry& BufferList::BufferEntry::operator=(BufferList::BufferEntry&& other) BOOST_NOEXCEPT {
 		buffer = std::move(other.buffer);
 		modificationSignChangedConnection = other.modificationSignChangedConnection;
 		readOnlySignChangedConnection = other.readOnlySignChangedConnection;
