@@ -54,8 +54,8 @@ namespace alpha {
 		/// @name Selection
 		/// @{
 		void select(Buffer& buffer);
-		Buffer& selected() BOOST_NOEXCEPT;
-		const Buffer& selected() const BOOST_NOEXCEPT;
+		Buffer& selected();
+		const Buffer& selected() const;
 		/// @}
 
 		/// @name Open and Save

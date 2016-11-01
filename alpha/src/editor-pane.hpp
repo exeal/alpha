@@ -38,8 +38,8 @@ namespace alpha {
 		void remove(const EditorView& viewer);
 		void removeAll() BOOST_NOEXCEPT;
 		void select(const EditorView& viewer);
-		EditorView& selectedView() BOOST_NOEXCEPT;
-		const EditorView& selectedView() const BOOST_NOEXCEPT;
+		EditorView& selectedView();
+		const EditorView& selectedView() const;
 		/// @}
 
 		/// @name Splitting Panes

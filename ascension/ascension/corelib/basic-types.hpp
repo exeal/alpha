@@ -43,7 +43,7 @@ namespace ascension {
 	 * (for example, received @c WM_SETTINGCHANGE window message on Win32 platform).
 	 * @deprecated 0.8
 	 */
-	void updateSystemSettings() BOOST_NOEXCEPT;
+	void updateSystemSettings();
 
 	// see session.hpp
 	namespace texteditor {

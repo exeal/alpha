@@ -99,8 +99,8 @@ namespace alpha {
 			/// @name Access Control
 			/// @{
 			bool isLocked() const BOOST_NOEXCEPT;
-			void lock() BOOST_NOEXCEPT;
-			void unlock() BOOST_NOEXCEPT;
+			void lock();
+			void unlock();
 			/// @}
 
 		private:

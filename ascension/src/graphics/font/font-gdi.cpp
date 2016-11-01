@@ -22,6 +22,7 @@
 #include <boost/mpl/string.hpp>
 #include <boost/range/algorithm/binary_search.hpp>
 #include <boost/range/algorithm/sort.hpp>
+#include <boost/range/algorithm_ext/copy_n.hpp>
 #include <vector>
 #if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE)
 #	include <usp10.h>
@@ -71,7 +72,7 @@ namespace ascension {
 				lf.lfEscapement = lf.lfOrientation = orientation;
 				lf.lfWeight = boost::underlying_cast<LONG>(description.properties().weight);
 				lf.lfItalic = (description.properties().style == font::FontStyle::ITALIC) || (description.properties().style == font::FontStyle::OBLIQUE);
-				std::wcscpy(lf.lfFaceName, familyName.c_str());
+				boost::copy_n(familyName.c_str(), familyName.length() + 1, lf.lfFaceName);
 
 				// handle 'font-size-adjust'
 				if(sizeAdjust != boost::none && boost::get(sizeAdjust) > 0.0) {
@@ -179,7 +180,7 @@ namespace ascension {
 			Font::Font(win32::Handle<HFONT>::Type handle) BOOST_NOEXCEPT : nativeObject_(std::move(handle)) {
 			}
 
-			void Font::buildDescription() BOOST_NOEXCEPT {
+			void Font::buildDescription() {
 				assert(description_.get() == nullptr);
 
 				LOGFONTW lf;
@@ -381,7 +382,10 @@ namespace ascension {
 
 			LOGFONTW toNative(const font::FontDescription& object, const LOGFONTW* /* = nullptr */) {
 //				fillLogFont(win32::detail::screenDC(), object, geometry::makeIdentityTransform(), boost::none);
+				const auto& familyName = object.family().name();
 				win32::AutoZero<LOGFONT> result;
+				if(familyName.length() >= std::extent<decltype(result.lfFaceName)>::value)
+					throw std::length_error("object");
 				LONG orientation = 0;
 #if 0
 				if(object.properties().orientation == font::FontOrientation::VERTICAL)
@@ -390,7 +394,7 @@ namespace ascension {
 				result.lfHeight = static_cast<LONG>(-object.pointSize() * defaultDpiY() / 72);
 				result.lfWeight = boost::underlying_cast<LONG>(object.properties().weight);
 				result.lfItalic = object.properties().style != font::FontStyle::ITALIC || object.properties().style != font::FontStyle::OBLIQUE;
-				std::wcsncpy(result.lfFaceName, object.family().name().c_str(), std::extent<decltype(result.lfFaceName)>::value);
+				boost::copy_n(familyName.c_str(), familyName.length() + 1, result.lfFaceName);
 				return result;
 			}
 		}
