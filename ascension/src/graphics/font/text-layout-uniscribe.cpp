@@ -2809,7 +2809,7 @@ namespace ascension {
 			 * @param lineWrappingMark The inline object which paints line-wrapping-mark. Can be @c null
 			 */
 			void TextLayout::draw(PaintContext& context,
-					const Point& origin, const std::vector<const OverriddenSegment>& overriddenSegments /* = empty */,
+					const Point& origin, const std::vector<OverriddenSegment>& overriddenSegments /* = empty */,
 					const InlineObject* endOfLine/* = nullptr */, const InlineObject* lineWrappingMark /* = nullptr */) const {
 #if defined(_DEBUG) && defined(ASCENSION_DIAGNOSE_INHERENT_DRAWING)
 				ASCENSION_LOG_TRIVIAL(debug) << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";

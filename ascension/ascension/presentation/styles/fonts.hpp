@@ -92,8 +92,8 @@ namespace ascension {
 			typedef StyleProperty<
 				MultipleWithInitialInteger<
 					boost::variant<
-						AbsoluteFontSize,
-						RelativeFontSize,
+						BOOST_SCOPED_ENUM_NATIVE(AbsoluteFontSize),
+						BOOST_SCOPED_ENUM_NATIVE(RelativeFontSize),
 						Length,
 						Percentage
 					>,

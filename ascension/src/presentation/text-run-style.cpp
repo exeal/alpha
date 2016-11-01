@@ -136,8 +136,8 @@ namespace ascension {
 					const graphics::Color& foregroundColor, styles::ComputedValuesOfParts<TextRunStyleParts::TextDecoration>::type& computedValues) {
 				const auto& specifiedStyle = boost::fusion::at_key<styles::TextEmphasisStyle>(specifiedValues);
 				auto& computedStyle = boost::fusion::at_key<styles::TextEmphasisStyle>(computedValues);
-				if(const styles::TextEmphasisStyleEnums* const keyword = boost::get<styles::TextEmphasisStyleEnums>(&specifiedStyle))
-					computedStyle = boost::underlying_cast<CodePoint>(*keyword);
+				if(const auto* const keyword = boost::get<BOOST_SCOPED_ENUM_NATIVE(styles::TextEmphasisStyleEnums)>(&specifiedStyle))
+					computedStyle = static_cast<CodePoint>(*keyword);
 				else if(const CodePoint* const codePoint = boost::get<CodePoint>(&specifiedStyle))
 					computedStyle = *codePoint;
 				else
@@ -270,7 +270,7 @@ namespace ascension {
 			}
 
 			inline void combineHashedTextEmphasisStyle(std::size_t& seed, const styles::SpecifiedValue<styles::TextEmphasisStyle>::type& style) {
-				if(const styles::TextEmphasisStyleEnums* const enums = boost::get<styles::TextEmphasisStyleEnums>(&style))
+				if(const auto* const enums = boost::get<BOOST_SCOPED_ENUM_NATIVE(styles::TextEmphasisStyleEnums)>(&style))
 					boost::hash_combine(seed, *enums);
 				else if(const CodePoint* const codePoint = boost::get<CodePoint>(&style))
 					boost::hash_combine(seed, *codePoint);
@@ -366,16 +366,16 @@ namespace ascension {
 			inline Pixels _useFontSize(const ComputedValue<FontSize>::type& computedValue,
 					const Length::Context& context, boost::optional<Pixels> computedParentFontSize, boost::optional<Pixels> mediumFontSize) {
 				const Pixels medium(boost::get_optional_value_or(mediumFontSize, GlobalFontSettings::instance().size()));
-				if(const AbsoluteFontSize* const absoluteFontSize = boost::get<AbsoluteFontSize>(&computedValue)) {
+				if(const auto* const absoluteFontSize = boost::get<BOOST_SCOPED_ENUM_NATIVE(AbsoluteFontSize)>(&computedValue)) {
 					// TODO: AbsoluteFontSize should be double constant, not enum?
 					static const std::array<Number, static_cast<int>(AbsoluteFontSize::XX_LARGE) - static_cast<int>(AbsoluteFontSize::XX_SMALL) + 1>
 						ABSOLUTE_SIZE_RATIOS = {3.f / 5.f, 3.f / 4.f, 8.f / 9.f, 1.f, 6.f / 5.f, 3.f / 2.f, 2.f / 1.f};
 					static_assert(static_cast<int>(AbsoluteFontSize::XX_SMALL) == 0, "");
 					if(*absoluteFontSize >= AbsoluteFontSize::XX_SMALL && *absoluteFontSize <= AbsoluteFontSize::XX_LARGE)
-						return medium * ABSOLUTE_SIZE_RATIOS[boost::underlying_cast<std::size_t>(*absoluteFontSize)];
-				} else if(const RelativeFontSize* const relativeFontSize = boost::get<RelativeFontSize>(&computedValue)) {
+						return medium * ABSOLUTE_SIZE_RATIOS[static_cast<std::size_t>(*absoluteFontSize)];
+				} else if(const auto* const relativeFontSize = boost::get<BOOST_SCOPED_ENUM_NATIVE(RelativeFontSize)>(&computedValue)) {
 					static const Number RELATIVE_FACTOR = 1.2f;	// TODO: Is this right ?
-					switch(boost::native_value(*relativeFontSize)) {
+					switch(*relativeFontSize) {
 						case RelativeFontSize::LARGER:
 							return boost::get_optional_value_or(computedParentFontSize, medium) * RELATIVE_FACTOR;
 						case RelativeFontSize::SMALLER:

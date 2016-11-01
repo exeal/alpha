@@ -42,7 +42,7 @@ namespace ascension {
 				 * @param[out] segments The result. Empty if there is no overrides
 				 */
 				virtual void overrideTextPaint(Index line,
-					std::vector<const OverriddenSegment>& segments) const BOOST_NOEXCEPT = 0;
+					std::vector<OverriddenSegment>& segments) const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns the inline object renders the mark of text wrapping.
 				 * @param line The line to render

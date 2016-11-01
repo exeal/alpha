@@ -480,7 +480,7 @@ namespace ascension {
 		}
 
 		/// @see graphics#font#LineRenderingOptions#overrideTextPaint
-		void TextArea::overrideTextPaint(Index line, std::vector<const graphics::font::OverriddenSegment>& segments) const BOOST_NOEXCEPT {
+		void TextArea::overrideTextPaint(Index line, std::vector<graphics::font::OverriddenSegment>& segments) const BOOST_NOEXCEPT {
 			segments.clear();
 			if(!isSelectionEmpty(*caret())) {
 				std::vector<boost::integer_range<Index>> selectedRanges;
