@@ -69,8 +69,8 @@ namespace alpha {
 		void removeOthers(const EditorPane* pane, Gtk::Paned* root = nullptr);
 		/// @}
 
-		Buffer& selectedBuffer() BOOST_NOEXCEPT;
-		const Buffer& selectedBuffer() const BOOST_NOEXCEPT;
+		Buffer& selectedBuffer();
+		const Buffer& selectedBuffer() const;
 
 		/// @name Signals
 		/// @{

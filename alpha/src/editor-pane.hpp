@@ -27,8 +27,8 @@ namespace alpha {
 		/// @{
 		void removeBuffer(const Buffer& buffer);
 		void selectBuffer(const Buffer& buffer);
-		Buffer& selectedBuffer() BOOST_NOEXCEPT;
-		const Buffer& selectedBuffer() const BOOST_NOEXCEPT;
+		Buffer& selectedBuffer();
+		const Buffer& selectedBuffer() const;
 		/// @}
 
 		/// @name Viewer

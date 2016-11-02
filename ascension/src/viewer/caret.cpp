@@ -210,10 +210,14 @@ namespace ascension {
 		 *                    clipboard
 		 * @return true if the clipboard data is pastable
 		 */
-		bool Caret::canPaste(bool useKillRing) const {
-			if(!useKillRing)
-				return canPastePlatformData();
-			else if(const texteditor::Session* const session = document().session())
+		bool Caret::canPaste(bool useKillRing) const BOOST_NOEXCEPT {
+			if(!useKillRing) {
+				try {
+					return canPastePlatformData();
+				} catch(...) {
+					return false;
+				}
+			} else if(const texteditor::Session* const session = document().session())
 				return session->killRing().numberOfKills() != 0;
 			return false;
 		}

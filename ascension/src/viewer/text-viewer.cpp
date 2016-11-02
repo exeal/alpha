@@ -229,7 +229,7 @@ namespace ascension {
 		}
 
 		/// Returns the @c FrozenStateChangedSignal signal connector.
-		SignalConnector<TextViewer::FrozenStateChangedSignal> TextViewer::frozenStateChangedSignal() {
+		SignalConnector<TextViewer::FrozenStateChangedSignal> TextViewer::frozenStateChangedSignal() BOOST_NOEXCEPT {
 			return SignalConnector<FrozenStateChangedSignal>(frozenStateChangedSignal_);
 		}
 
