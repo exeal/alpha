@@ -178,7 +178,7 @@ namespace ascension {
 			void updateVisualAttributes();
 			// VisualPoint
 			void aboutToMove(TextHit& to) override;
-			void moved(const TextHit& from) override BOOST_NOEXCEPT;
+			void moved(const TextHit& from) override;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			void onChar(CodePoint c, bool& consumed);
@@ -377,7 +377,7 @@ namespace ascension {
 		 * @param mode the tracking mode
 		 * @return this caret
 		 */
-		inline Caret& Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) BOOST_NOEXCEPT {
+		inline Caret& Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) {
 			if(mode != matchBracketsTrackingMode_) {
 				matchBracketsTrackingMode_ = mode;
 				checkMatchBrackets();

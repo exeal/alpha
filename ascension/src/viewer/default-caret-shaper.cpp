@@ -245,7 +245,7 @@ namespace ascension {
 		}
 
 		/// @see CaretShaper#install
-		void LocaleSensitiveCaretShaper::install(Caret& caret) {
+		void LocaleSensitiveCaretShaper::install(Caret& caret) BOOST_NOEXCEPT {
 			DefaultCaretShaper::install(caret);
 			assert(inputModeChangedConnections_.find(&caret) == std::end(inputModeChangedConnections_));
 			inputModeChangedConnections_.insert(std::make_pair(&caret,
@@ -278,7 +278,7 @@ namespace ascension {
 		}
 
 		/// @see CaretShapeProvider#uninstall
-		void LocaleSensitiveCaretShaper::uninstall(Caret& caret) {
+		void LocaleSensitiveCaretShaper::uninstall(Caret& caret) BOOST_NOEXCEPT {
 			const auto i(inputModeChangedConnections_.find(&caret));
 			if(i != std::end(inputModeChangedConnections_)) {
 				i->second.disconnect();

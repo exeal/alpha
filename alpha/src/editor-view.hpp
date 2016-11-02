@@ -46,7 +46,7 @@ namespace alpha {
 #endif
 		// ascension.viewer.TextViewer (overrides)
 		void drawIndicatorMargin(ascension::Index line, ascension::graphics::PaintContext& context, const ascension::graphics::Rectangle& rect) override;
-		void initialized() override BOOST_NOEXCEPT;
+		void initialized() BOOST_NOEXCEPT override;
 		void keyPressed(ascension::viewer::widgetapi::event::KeyInput& input) override;
 		void focusAboutToBeLost(ascension::viewer::widgetapi::event::Event& event) override;
 		void focusGained(ascension::viewer::widgetapi::event::Event& event) override;
