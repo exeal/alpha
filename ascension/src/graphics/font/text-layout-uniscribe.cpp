@@ -45,9 +45,9 @@
 #include <boost/flyweight.hpp>
 #include <boost/flyweight/key_value.hpp>
 #include <boost/foreach.hpp>
+#include <boost/range/algorithm/copy.hpp>
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/algorithm/for_each.hpp>
-#include <boost/range/algorithm_ext/copy_n.hpp>
 #include <boost/range/numeric.hpp>	// boost.accumulate
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
@@ -287,8 +287,10 @@ namespace ascension {
 								LOGFONTW lf;
 								std::memset(&lf, 0, sizeof(LOGFONTW));
 								for(std::size_t i = 0; i < 4; ++i) {
+									assert(std::get<1>(fonts[i]).length() < LF_FACESIZE);
 									lf.lfCharSet = std::get<0>(fonts[i]);
-									boost::copy_n(std::get<1>(fonts[i]), lf.lfFaceName, std::get<1>(fonts[i]).length() + 1);
+									boost::copy(std::get<1>(fonts[i]), lf.lfFaceName);
+									lf.lfFaceName[std::get<1>(fonts[i]).length()] = 0;
 									::EnumFontFamiliesExW(dc.get(), &lf, reinterpret_cast<FONTENUMPROCW>(checkFontInstalled), reinterpret_cast<LPARAM>(&installed), 0);
 									if(installed)
 										associations.insert(std::make_pair(Script::HAN, String(lf.lfFaceName, lf.lfFaceName + std::wcslen(lf.lfFaceName))));
