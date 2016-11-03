@@ -525,7 +525,7 @@ namespace ascension {
 		/// @see MouseInputStrategy#TargetLocker#lockMouseInputTarget
 		bool TextViewer::lockMouseInputTarget(std::weak_ptr<MouseInputStrategy> strategy) {
 			if(strategy.expired())
-				throw std::bad_weak_ptr("strategy");
+				throw std::bad_weak_ptr();
 			if(lockedMouseInputStrategy_.expired()) {
 				lockedMouseInputStrategy_ = strategy;
 				return true;

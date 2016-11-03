@@ -561,7 +561,7 @@ namespace ascension {
 		}
 
 		/// @see VisualPoint#moved
-		void Caret::moved(const TextHit& from) {
+		void Caret::moved(const TextHit& from) BOOST_NOEXCEPT {
 			context_.regionBeforeMoved = SelectedRegion(
 				_document = document(),
 				_anchor = anchor_->isInternalUpdating() ? anchor_->positionBeforeInternalUpdate() : insertionPosition(*anchor_),

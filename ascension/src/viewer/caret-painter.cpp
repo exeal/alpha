@@ -39,7 +39,7 @@ namespace ascension {
 			inline boost::optional<boost::chrono::milliseconds> systemBlinkTime(const Caret& caret) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #ifndef GTKMM_DISABLE_DEPRECATED
-				const Glib::RefPtr<const Gtk::Settings> settings(caret.textArea().textViewer().get_settings());
+				const Glib::RefPtr<const Gtk::Settings> settings(const_cast<TextViewer&>(caret.textArea().textViewer()).get_settings());
 				if(settings->property_gtk_cursor_blink().get_value())
 					return boost::chrono::milliseconds(settings->property_gtk_cursor_blink_time().get_value());
 				return boost::none;
@@ -61,7 +61,7 @@ namespace ascension {
 			inline boost::optional<boost::chrono::milliseconds> systemBlinkTimeout(const Caret& caret) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #ifndef GTKMM_DISABLE_DEPRECATED
-				const Glib::RefPtr<const Gtk::Settings> settings(caret.textArea().textViewer().get_settings());
+				const Glib::RefPtr<const Gtk::Settings> settings(const_cast<TextViewer&>(caret.textArea().textViewer()).get_settings());
 				if(settings->property_gtk_cursor_blink_timeout().get_value()) {
 					const int seconds = settings->property_gtk_cursor_blink_time().get_value();
 					if(seconds > 0)
@@ -156,7 +156,7 @@ namespace ascension {
 		 * This @c CaretPainter was installed into the @c TextArea.
 		 * @note The default implementation does nothing.
 		 */
-		void CaretPainter::installed() {
+		void CaretPainter::installed() BOOST_NOEXCEPT {
 		}
 
 		/// @see CaretPainterBase#paintIfShows
@@ -244,7 +244,7 @@ namespace ascension {
 		 * This @c CaretPainter was uninstalled from the @c TextArea.
 		 * @note The default implementation does nothing.
 		 */
-		void CaretPainter::uninstalled() {
+		void CaretPainter::uninstalled() BOOST_NOEXCEPT {
 		}
 
 		/// @see CaretPainterBase#update

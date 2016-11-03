@@ -746,7 +746,7 @@ namespace ascension {
 			}
 
 			/// @see TextRenderer#DefaultFontChangedSignal
-			void TextViewport::defaultFontChanged(const TextRenderer&) BOOST_NOEXCEPT {
+			void TextViewport::defaultFontChanged(const TextRenderer&) {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				updateDefaultLineExtent();
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD

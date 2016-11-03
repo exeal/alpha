@@ -655,7 +655,7 @@ private:
 				timeStampDirector_ = unexpectedTimeStampDirector;
 				// TODO: "String" type may change. The following code is as if wchar_t.
 #if BOOST_OS_WINDOWS
-				document_.setProperty(Document::TITLE_PROPERTY, fileName().native());
+				document_.setProperty(Document::TITLE_PROPERTY, fileName().generic_string<String>());
 #else // ASCENSION_OS_POSIX
 #	ifndef ASCENSION_ABANDONED_AT_VERSION_08
 				document_.setProperty(Document::TITLE_PROPERTY, fileName().wstring(std::codecvt_utf8_utf16()));

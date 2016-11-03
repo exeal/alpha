@@ -196,7 +196,7 @@ wstring KeyStroke::format(py::object keys) {
 		std::pair<KeyMap&, const KeyStroke&> KeyMap::lookupKeyMapAndKeyStroke(boost::python::object key) const {
 			const boost::python::extract<const KeyStroke&> singleStroke(key);
 			if(singleStroke.check())
-				return std::make_pair<KeyMap&, const KeyStroke&>(const_cast<KeyMap&>(*this), singleStroke);
+				return std::make_pair(std::ref(const_cast<KeyMap&>(*this)), std::cref(singleStroke));
 
 			const boost::python::ssize_t numberOfStrokes = boost::python::len(key);
 			if(::PySequence_Check(key.ptr()) == 0 || numberOfStrokes < 1) {
@@ -211,7 +211,7 @@ wstring KeyStroke::format(py::object keys) {
 				const KeyStroke& keyStroke = boost::python::extract<const KeyStroke&>(key[i]);
 
 				if(i == numberOfStrokes - 1)
-					return std::make_pair<KeyMap&, const KeyStroke&>(const_cast<KeyMap&>(keyMap), keyStroke);
+					return std::make_pair(std::ref(const_cast<KeyMap&>(keyMap)), std::cref(keyStroke));
 				v = keyMap.lookupKey(keyStroke);
 			}
 

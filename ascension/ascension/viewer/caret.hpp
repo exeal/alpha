@@ -178,7 +178,7 @@ namespace ascension {
 			void updateVisualAttributes();
 			// VisualPoint
 			void aboutToMove(TextHit& to) override;
-			void moved(const TextHit& from) override;
+			void moved(const TextHit& from) BOOST_NOEXCEPT override;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			void onChar(CodePoint c, bool& consumed);

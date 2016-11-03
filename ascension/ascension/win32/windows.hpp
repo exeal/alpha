@@ -62,6 +62,16 @@
 
 namespace ascension {
 	namespace win32 {
+		/**
+		 * Converts the given 16-bit character string into `const WCHAR*`.
+		 * @param p The source
+		 * @return The converted pointer
+		 */
+		template<typename Character>
+		inline const WCHAR* asWideString(const Character* p) BOOST_NOEXCEPT {
+			static_assert(sizeof(Character) == sizeof(WCHAR), "This function can't use on current configuration.");
+			return reinterpret_cast<const WCHAR*>(p);
+		}
 
 		/**
 		 * Converts Win32 @c BOOL value to C++ standard @c bool one.
