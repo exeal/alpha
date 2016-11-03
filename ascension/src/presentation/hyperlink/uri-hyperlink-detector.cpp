@@ -32,7 +32,7 @@ namespace ascension {
 				}
 				void invoke() const BOOST_NOEXCEPT {
 #if BOOST_OS_WINDOWS
-					::ShellExecuteW(nullptr, nullptr, uri_.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+					::ShellExecuteW(nullptr, nullptr, win32::asWideString(uri_.c_str()), nullptr, nullptr, SW_SHOWNORMAL);
 #else
 #endif
 				}

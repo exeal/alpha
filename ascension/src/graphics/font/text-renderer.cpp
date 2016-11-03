@@ -433,7 +433,7 @@ namespace ascension {
 			 *       the layout
 			 */
 			void TextRenderer::paint(Index line, PaintContext& context,
-					const Point& alignmentPoint, const LineRenderingOptions* options /* = nullptr */) const BOOST_NOEXCEPT {
+					const Point& alignmentPoint, const LineRenderingOptions* options /* = nullptr */) const {
 				return paint(const_cast<TextRenderer*>(this)->layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT), line, context, alignmentPoint, options);
 
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08

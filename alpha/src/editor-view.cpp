@@ -140,7 +140,7 @@ namespace alpha {
 		}
 
 		if(messageIsFormat) {
-			message = Glib::ustring::compose(message, isearch.pattern());
+			message = Glib::ustring::compose(message, ascension::toGlibUstring(isearch.pattern()));
 			std::string temp(message);
 			boost::replace_if(temp, std::bind(std::equal_to<std::string::value_type>(), '\t', std::placeholders::_1), ' ');
 			message = temp;

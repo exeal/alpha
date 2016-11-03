@@ -47,6 +47,7 @@
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/algorithm/for_each.hpp>
+#include <boost/range/algorithm_ext/copy_n.hpp>
 #include <boost/range/numeric.hpp>	// boost.accumulate
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
@@ -223,80 +224,76 @@ namespace ascension {
 				String fallback(int script) {
 					using text::ucd::Script;
 					if(script <= Script::FIRST_VALUE || script == Script::INHERITED
-							|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::LAST_VALUE)
+						|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::LAST_VALUE)
 						throw UnknownValueException("script");
 
 					static std::map<int, const String> associations;
-					static const WCHAR MS_P_GOTHIC[] = L"\xff2d\xff33 \xff30\x30b4\x30b7\x30c3\x30af";	// "ＭＳ Ｐゴシック"
+					static const Char MS_P_GOTHIC[] = {0xff2du, 0xff33u, 0x0020u, 0xff30u, 0x30b4u, 0x30b7u, 0x30c3u, 0x30afu, 0};	// "ＭＳ Ｐゴシック"
 					if(boost::empty(associations)) {
-						associations.insert(std::make_pair(Script::ARABIC, L"Microsoft Sans Serif"));
-						associations.insert(std::make_pair(Script::CYRILLIC, L"Microsoft Sans Serif"));
-						associations.insert(std::make_pair(Script::GREEK, L"Microsoft Sans Serif"));
-						associations.insert(std::make_pair(Script::HANGUL, L"Gulim"));
-						associations.insert(std::make_pair(Script::HEBREW, L"Microsoft Sans Serif"));
+						associations.insert(std::make_pair(Script::ARABIC, fromLatin1("Microsoft Sans Serif")));
+						associations.insert(std::make_pair(Script::CYRILLIC, fromLatin1("Microsoft Sans Serif")));
+						associations.insert(std::make_pair(Script::GREEK, fromLatin1("Microsoft Sans Serif")));
+						associations.insert(std::make_pair(Script::HANGUL, fromLatin1("Gulim")));
+						associations.insert(std::make_pair(Script::HEBREW, fromLatin1("Microsoft Sans Serif")));
 //						associations.insert(std::make_pair(Script::HIRAGANA, MS_P_GOTHIC));
 //						associations.insert(std::make_pair(Script::KATAKANA, MS_P_GOTHIC));
-						associations.insert(std::make_pair(Script::LATIN, L"Tahoma"));
-						associations.insert(std::make_pair(Script::THAI, L"Tahoma"));
+						associations.insert(std::make_pair(Script::LATIN, fromLatin1("Tahoma")));
+						associations.insert(std::make_pair(Script::THAI, fromLatin1("Tahoma")));
 						// Windows 2000
-						associations.insert(std::make_pair(Script::ARMENIAN, L"Sylfaen"));
-						associations.insert(std::make_pair(Script::DEVANAGARI, L"Mangal"));
-						associations.insert(std::make_pair(Script::GEORGIAN, L"Sylfaen"));	// partial support?
-						associations.insert(std::make_pair(Script::TAMIL, L"Latha"));
+						associations.insert(std::make_pair(Script::ARMENIAN, fromLatin1("Sylfaen")));
+						associations.insert(std::make_pair(Script::DEVANAGARI, fromLatin1("Mangal")));
+						associations.insert(std::make_pair(Script::GEORGIAN, fromLatin1("Sylfaen")));	// partial support?
+						associations.insert(std::make_pair(Script::TAMIL, fromLatin1("Latha")));
 						// Windows XP
-						associations.insert(std::make_pair(Script::GUJARATI, L"Shruti"));
-						associations.insert(std::make_pair(Script::GURMUKHI, L"Raavi"));
-						associations.insert(std::make_pair(Script::KANNADA, L"Tunga"));
-						associations.insert(std::make_pair(Script::SYRIAC, L"Estrangelo Edessa"));
-						associations.insert(std::make_pair(Script::TELUGU, L"Gautami"));
-						associations.insert(std::make_pair(Script::THAANA, L"MV Boli"));
+						associations.insert(std::make_pair(Script::GUJARATI, fromLatin1("Shruti")));
+						associations.insert(std::make_pair(Script::GURMUKHI, fromLatin1("Raavi")));
+						associations.insert(std::make_pair(Script::KANNADA, fromLatin1("Tunga")));
+						associations.insert(std::make_pair(Script::SYRIAC, fromLatin1("Estrangelo Edessa")));
+						associations.insert(std::make_pair(Script::TELUGU, fromLatin1("Gautami")));
+						associations.insert(std::make_pair(Script::THAANA, fromLatin1("MV Boli")));
 						// Windows XP SP2
-						associations.insert(std::make_pair(Script::BENGALI, L"Vrinda"));
-						associations.insert(std::make_pair(Script::MALAYALAM, L"Kartika"));
+						associations.insert(std::make_pair(Script::BENGALI, fromLatin1("Vrinda")));
+						associations.insert(std::make_pair(Script::MALAYALAM, fromLatin1("Kartika")));
 						// Windows Vista
-						associations.insert(std::make_pair(Script::CANADIAN_ABORIGINAL, L"Euphemia"));
-						associations.insert(std::make_pair(Script::CHEROKEE, L"Plantagenet Cherokee"));
-						associations.insert(std::make_pair(Script::ETHIOPIC, L"Nyala"));
-						associations.insert(std::make_pair(Script::KHMER, L"DaunPenh"));	// or "MoolBoran"
-						associations.insert(std::make_pair(Script::LAO, L"DokChampa"));
-						associations.insert(std::make_pair(Script::MONGOLIAN, L"Mongolian Baiti"));
-						associations.insert(std::make_pair(Script::ORIYA, L"Kalinga"));
-						associations.insert(std::make_pair(Script::SINHALA, L"Iskoola Pota"));
-						associations.insert(std::make_pair(Script::TIBETAN, L"Microsoft Himalaya"));
-						associations.insert(std::make_pair(Script::YI, L"Microsoft Yi Baiti"));
+						associations.insert(std::make_pair(Script::CANADIAN_ABORIGINAL, fromLatin1("Euphemia")));
+						associations.insert(std::make_pair(Script::CHEROKEE, fromLatin1("Plantagenet Cherokee")));
+						associations.insert(std::make_pair(Script::ETHIOPIC, fromLatin1("Nyala")));
+						associations.insert(std::make_pair(Script::KHMER, fromLatin1("DaunPenh")));	// or "MoolBoran"
+						associations.insert(std::make_pair(Script::LAO, fromLatin1("DokChampa")));
+						associations.insert(std::make_pair(Script::MONGOLIAN, fromLatin1("Mongolian Baiti")));
+						associations.insert(std::make_pair(Script::ORIYA, fromLatin1("Kalinga")));
+						associations.insert(std::make_pair(Script::SINHALA, fromLatin1("Iskoola Pota")));
+						associations.insert(std::make_pair(Script::TIBETAN, fromLatin1("Microsoft Himalaya")));
+						associations.insert(std::make_pair(Script::YI, fromLatin1("Microsoft Yi Baiti")));
 						// CJK
 						const LANGID uiLang = userCJKLanguage();
 						switch(PRIMARYLANGID(uiLang)) {	// yes, this is not enough...
 							case LANG_CHINESE:
-								associations.insert(std::make_pair(Script::HAN, (SUBLANGID(uiLang) == SUBLANG_CHINESE_TRADITIONAL
-									&& SUBLANGID(uiLang) == SUBLANG_CHINESE_HONGKONG) ? L"PMingLiu" : L"SimSun")); break;
+								associations.insert(std::make_pair(Script::HAN, fromLatin1(
+									(SUBLANGID(uiLang) == SUBLANG_CHINESE_TRADITIONAL && SUBLANGID(uiLang) == SUBLANG_CHINESE_HONGKONG) ? "PMingLiu" : "SimSun"))); break;
 							case LANG_JAPANESE:
 								associations.insert(std::make_pair(Script::HAN, MS_P_GOTHIC)); break;
 							case LANG_KOREAN:
-								associations.insert(std::make_pair(Script::HAN, L"Gulim")); break;
-							default:
-								{
-									win32::Handle<HDC>::Type dc(win32::detail::screenDC());
-									bool installed = false;
-									LOGFONTW lf;
-									std::memset(&lf, 0, sizeof(LOGFONTW));
-#define ASCENSION_SELECT_INSTALLED_FONT(charset, fontname)					\
-	lf.lfCharSet = charset;													\
-	std::wcscpy(lf.lfFaceName, fontname);									\
-	::EnumFontFamiliesExW(dc.get(), &lf,									\
-		reinterpret_cast<FONTENUMPROCW>(checkFontInstalled),				\
-		reinterpret_cast<LPARAM>(&installed), 0);							\
-	if(installed) {															\
-		associations.insert(std::make_pair(Script::HAN, lf.lfFaceName));	\
-		break;																\
-	}
-									ASCENSION_SELECT_INSTALLED_FONT(GB2312_CHARSET, L"SimSun")
-									ASCENSION_SELECT_INSTALLED_FONT(SHIFTJIS_CHARSET, MS_P_GOTHIC)
-									ASCENSION_SELECT_INSTALLED_FONT(HANGUL_CHARSET, L"Gulim")
-									ASCENSION_SELECT_INSTALLED_FONT(CHINESEBIG5_CHARSET, L"PMingLiu")
-#undef ASCENSION_SELECT_INSTALLED_FONT
+								associations.insert(std::make_pair(Script::HAN, fromLatin1("Gulim"))); break;
+							default: {
+								static const std::pair<BYTE, String> fonts[] = {
+									std::make_pair(GB2312_CHARSET, fromLatin1("SimSun")),
+									std::make_pair(SHIFTJIS_CHARSET, MS_P_GOTHIC),
+									std::make_pair(HANGUL_CHARSET, fromLatin1("Gulim")),
+									std::make_pair(CHINESEBIG5_CHARSET, fromLatin1("PMingLiu"))
+								};
+								win32::Handle<HDC>::Type dc(win32::detail::screenDC());
+								bool installed = false;
+								LOGFONTW lf;
+								std::memset(&lf, 0, sizeof(LOGFONTW));
+								for(std::size_t i = 0; i < 4; ++i) {
+									lf.lfCharSet = std::get<0>(fonts[i]);
+									boost::copy_n(std::get<1>(fonts[i]), lf.lfFaceName, std::get<1>(fonts[i]).length() + 1);
+									::EnumFontFamiliesExW(dc.get(), &lf, reinterpret_cast<FONTENUMPROCW>(checkFontInstalled), reinterpret_cast<LPARAM>(&installed), 0);
+									if(installed)
+										associations.insert(std::make_pair(Script::HAN, String(lf.lfFaceName, lf.lfFaceName + std::wcslen(lf.lfFaceName))));
+								}
 							}
-							break;
 						}
 						if(associations.find(Script::HAN) != boost::const_end(associations)) {
 							associations.insert(make_pair(Script::HIRAGANA, associations[Script::HAN]));
@@ -451,9 +448,9 @@ namespace ascension {
 					return supports;
 				}
 
-				LANGID userCJKLanguage() {
+				LANGID userCJKLanguage() BOOST_NOEXCEPT {
 					// this code is preliminary...
-					static const std::array<WORD, 3> CJK_LANGUAGES = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
+					static const std::array<WORD, 3> CJK_LANGUAGES = {{LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN}};	// sorted by numeric values
 					LANGID result = win32::userDefaultUILanguage();
 					if(boost::find(CJK_LANGUAGES, PRIMARYLANGID(result)) != boost::end(CJK_LANGUAGES))
 						return result;
@@ -581,7 +578,7 @@ namespace ascension {
 						assertNotDone();
 						LogicalCluster lc(current_);
 						if(readingDirection() == presentation::LEFT_TO_RIGHT) {
-							const WORD nextGlyph = (boost::const_end(current_) < boost::const_end(clusters_)) ? *boost::const_end(current_) : boost::size(glyphIndices_);
+							const WORD nextGlyph = (boost::const_end(current_) < boost::const_end(clusters_)) ? *boost::const_end(current_) : static_cast<WORD>(boost::size(glyphIndices_));
 							lc.glyphs = boost::make_iterator_range(boost::const_begin(glyphIndices_) + current_.front(), boost::const_begin(glyphIndices_) + nextGlyph);
 						} else {
 							const WORD first = (boost::const_end(current_) < boost::const_end(clusters_)) ? *boost::const_end(current_) + 1 : 0;
@@ -724,7 +721,7 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 					std::uint8_t characterLevel() const BOOST_NOEXCEPT override;
 					StringPiece characterRange() const BOOST_NOEXCEPT override;
-					TextHit<> hitTestCharacter(Scalar ipd, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const override;
+					TextHit<> hitTestCharacter(Scalar ipd, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const BOOST_NOEXCEPT override;
 					Scalar hitToLogicalPosition(const TextHit<>& hit) const override;
 					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT override {return nullptr;}
 					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT override {return nullptr;}
@@ -1181,7 +1178,7 @@ namespace ascension {
 				}
 
 				/// @see GlyphVector#fontRenderContext
-				const FontRenderContext& GlyphVectorImpl::fontRenderContext() const BOOST_NOEXCEPT {
+				const FontRenderContext& GlyphVectorImpl::fontRenderContext() const {
 					return glyphs_->font.get().fontRenderContext();
 				}
 
@@ -1273,7 +1270,7 @@ namespace ascension {
 						indices.reset(new WORD[numberOfGlyphs]);
 						visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
 						hr = ::ScriptShape(dc.get(), &fontCache,
-							boost::const_begin(text), static_cast<int>(boost::size(text)),
+							win32::asWideString(boost::const_begin(text)), static_cast<int>(boost::size(text)),
 							numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis),
 							indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
 						if(hr != E_OUTOFMEMORY)
@@ -1455,7 +1452,7 @@ namespace ascension {
 #endif
 
 				/// @see TextRun#hitTestCharacter
-				TextHit<> GlyphVectorImpl::hitTestCharacter(Scalar position, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const {
+				TextHit<> GlyphVectorImpl::hitTestCharacter(Scalar position, const boost::optional<NumericRange<Scalar>>& bounds, bool* outOfBounds) const BOOST_NOEXCEPT {
 					bool beyondLineLeft = false, beyondLineRight = false;
 					if(bounds != boost::none) {
 						const auto b(boost::get(bounds));
@@ -1470,7 +1467,8 @@ namespace ascension {
 						const HRESULT hr = ::ScriptXtoCP(static_cast<int>(position), static_cast<int>(length()), numberOfGlyphs(),
 							boost::const_begin(clusters()), boost::const_begin(visualAttributes()), boost::const_begin(effectiveAdvances()), &analysis_, &cp, &trailing);
 						if(FAILED(hr))
-							throw makePlatformError(hr);
+							// throw makePlatformError(hr);
+							return TextHit<>::leading(0);	// this method can't throw...
 						if(cp == -1)
 							beyondLineLeft = true;	// 'trailing' should be 0
 						else if(cp == length() && trailing == 1)
@@ -1486,7 +1484,8 @@ namespace ascension {
 						return (direction() == presentation::LEFT_TO_RIGHT) ? TextHit<>::leading(0) : TextHit<>::beforeOffset(length());
 					else if(beyondLineRight)
 						return (direction() == presentation::LEFT_TO_RIGHT) ? TextHit<>::beforeOffset(length()) : TextHit<>::leading(0);
-					ASCENSION_ASSERT_NOT_REACHED();
+//					ASCENSION_ASSERT_NOT_REACHED();
+					return TextHit<>::leading(0);	// this method can't throw...
 				}
 
 				/// @see TextRun#hitToLogicalPosition
@@ -1525,7 +1524,7 @@ namespace ascension {
 
 				inline HRESULT GlyphVectorImpl::logicalAttributes(SCRIPT_LOGATTR attributes[]) const {
 					raiseIfNull(attributes, "attributes");
-					return ::ScriptBreak(boost::const_begin(*this), static_cast<int>(length()), &analysis_, attributes);
+					return ::ScriptBreak(win32::asWideString(boost::const_begin(*this)), static_cast<int>(length()), &analysis_, attributes);
 				}
 
 				/// @see GlyphVector#logicalBounds
@@ -2318,7 +2317,7 @@ namespace ascension {
 					while(true) {
 						scriptRuns.reallocate(estimatedNumberOfScriptRuns);
 						scriptTags.reallocate(estimatedNumberOfScriptRuns);
-						hr = Uniscribe16::instance().itemize(std::begin(textString), static_cast<int>(textString.length()),
+						hr = Uniscribe16::instance().itemize(win32::asWideString(std::begin(textString)), static_cast<int>(textString.length()),
 							estimatedNumberOfScriptRuns, control, initialState, scriptRuns.get(), scriptTags.get(), numberOfScriptRuns);
 						if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
 							break;

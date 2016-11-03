@@ -273,17 +273,17 @@ namespace ascension {
 				inline void mapDimensions(const WritingMode& writingMode, const graphics::PhysicalFourSides<T>& from, FlowRelativeFourSides<T>& to) {
 					const bool ltr = writingMode.blockFlowDirection == LEFT_TO_RIGHT;
 					if(isHorizontal(writingMode.blockFlowDirection))
-						to = FlowRelativeFourSides<T>(
+						to = makeFlowRelativeFourSides((
 							_blockStart = from.top(), _blockEnd = from.bottom(),
-							_inlineStart = ltr ? from.left() : from.right(), _inlineEnd = ltr ? from.right() : from.left());
+							_inlineStart = ltr ? from.left() : from.right(), _inlineEnd = ltr ? from.right() : from.left()));
 					else {
 						const bool verticalRl = writingMode.blockFlowDirection == VERTICAL_RL;
 						bool ttb = ltr;
 						if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
 							ttb = !ttb;
-						to = FlowRelativeFourSides<T>(
+						to = makeFlowRelativeFourSides((
 							_blockStart = verticalRl ? from.right() : from.left(), _blockEnd = verticalRl ? from.left() : from.right(),
-							_inlineStart = ttb ? from.top() : from.bottom(), _inlineEnd = ttb ? from.bottom() : from.top());
+							_inlineStart = ttb ? from.top() : from.bottom(), _inlineEnd = ttb ? from.bottom() : from.top()));
 					}
 				}
 

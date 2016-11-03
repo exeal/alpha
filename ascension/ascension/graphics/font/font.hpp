@@ -173,7 +173,7 @@ namespace ascension {
 					const StringPiece& text, const FontRenderContext& frc) const;
 				AffineTransform&& transform() const BOOST_NOEXCEPT;
 			private:
-				void buildDescription() BOOST_NOEXCEPT;
+				void buildDescription();
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CAIRO)
 				Cairo::RefPtr<Cairo::ScaledFont> nativeObject_;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(CORE_GRAPHICS)

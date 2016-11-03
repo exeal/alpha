@@ -23,7 +23,7 @@
 #	include <gtkmm/tooltip.h>
 #	include <gtkmm/window.h>
 #	if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-#		include <gdk/win32/gdkwin32.h>
+#		include <gdk/gdkwin32.h>
 #	endif
 
 namespace ascension {

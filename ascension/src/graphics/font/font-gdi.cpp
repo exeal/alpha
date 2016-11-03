@@ -22,7 +22,6 @@
 #include <boost/mpl/string.hpp>
 #include <boost/range/algorithm/binary_search.hpp>
 #include <boost/range/algorithm/sort.hpp>
-#include <boost/range/algorithm_ext/copy_n.hpp>
 #include <vector>
 #if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE)
 #	include <usp10.h>
@@ -72,7 +71,8 @@ namespace ascension {
 				lf.lfEscapement = lf.lfOrientation = orientation;
 				lf.lfWeight = boost::underlying_cast<LONG>(description.properties().weight);
 				lf.lfItalic = (description.properties().style == font::FontStyle::ITALIC) || (description.properties().style == font::FontStyle::OBLIQUE);
-				boost::copy_n(familyName.c_str(), familyName.length() + 1, lf.lfFaceName);
+				std::copy(familyName.cbegin(), familyName.cend(), lf.lfFaceName);
+				lf.lfFaceName[familyName.length()] = 0;
 
 				// handle 'font-size-adjust'
 				if(sizeAdjust != boost::none && boost::get(sizeAdjust) > 0.0) {
@@ -340,7 +340,7 @@ namespace ascension {
 					::OutputDebugStringW(L"[SystemFonts.cache] Created font '");
 					::OutputDebugStringW(lf2.lfFaceName);
 					::OutputDebugStringW(L"' for request '");
-					::OutputDebugStringW(description.family().name().c_str());
+					::OutputDebugStringW(win32::asWideString(description.family().name().c_str()));
 					::OutputDebugStringW(L"'.\n");
 				}
 #endif
@@ -356,7 +356,7 @@ namespace ascension {
 				if(familyName.empty()) {
 					LOGFONT lf;
 					win32::systemDefaultFont(lf);
-					familyName = lf.lfFaceName;
+					familyName.assign(lf.lfFaceName, lf.lfFaceName + std::wcslen(lf.lfFaceName));
 				}
 
 				const FontDescription description(FontFamily(familyName), pointSize, properties);
@@ -375,7 +375,8 @@ namespace ascension {
 	namespace graphics {
 		namespace detail {
 			template<> font::FontDescription fromNative<font::FontDescription>(const LOGFONTW& object) {
-				return font::FontDescription(font::FontFamily(object.lfFaceName), -object.lfHeight * 72 / defaultDpiY(),
+				const String familyName(object.lfFaceName, object.lfFaceName + std::wcslen(object.lfFaceName));
+				return font::FontDescription(font::FontFamily(familyName), -object.lfHeight * 72 / defaultDpiY(),
 					font::FontProperties(static_cast<font::FontWeight>(object.lfWeight),
 						font::FontStretch::NORMAL, win32::boole(object.lfItalic) ? font::FontStyle::ITALIC : font::FontStyle::NORMAL));
 			}
@@ -394,7 +395,8 @@ namespace ascension {
 				result.lfHeight = static_cast<LONG>(-object.pointSize() * defaultDpiY() / 72);
 				result.lfWeight = boost::underlying_cast<LONG>(object.properties().weight);
 				result.lfItalic = object.properties().style != font::FontStyle::ITALIC || object.properties().style != font::FontStyle::OBLIQUE;
-				boost::copy_n(familyName.c_str(), familyName.length() + 1, result.lfFaceName);
+				std::copy(familyName.cbegin(), familyName.cend(), result.lfFaceName);
+				result.lfFaceName[familyName.length()] = 0;
 				return result;
 			}
 		}
