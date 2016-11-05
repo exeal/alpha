@@ -204,6 +204,14 @@ namespace ascension {
 			FlowRelativeFourSides(const U& other, typename std::enable_if<std::is_convertible<U, T>::value>::type* = nullptr)
 #endif
 				: FlowRelativeFourSidesBase<T>((_blockStart = other, _blockEnd = other, _inlineStart = other, _inlineEnd = other)) {}
+			/// Copy-assignment operator.
+			FlowRelativeFourSides& operator=(const FlowRelativeFourSides<T>& other) {
+				blockStart() = other.blockStart();
+				blockEnd() = other.blockEnd();
+				inlineStart() = other.inlineStart();
+				inlineEnd() = other.inlineEnd();
+				return *this;
+			}
 			/// Compound-add operator calls same operators of @c T for the all elements.
 			FlowRelativeFourSides& operator+=(const FlowRelativeTwoAxes<T>& other) {
 				this->blockStart() += other.bpd();

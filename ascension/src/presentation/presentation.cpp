@@ -224,7 +224,7 @@ namespace ascension {
 				}
 				const CascadedValues& cascadedValues;
 				const ParentComputedValues& parentComputedValues;
-				mutable SpecifiedValues& specifiedValues;	// mutable because of boost.fusion.for_each
+				SpecifiedValues& specifiedValues;	// mutable because of boost.fusion.for_each
 			private:
 				template<typename Property, typename SpecifiedValue, typename P>
 				void handle(boost::fusion::pair<Property, SpecifiedValue>& p,
