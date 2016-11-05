@@ -2700,7 +2700,7 @@ namespace ascension {
 			} // namespace @0
 
 			namespace {
-				inline AffineTransform&& fontRotationForWritingMode(presentation::BlockFlowDirection blockFlowDirection) {
+				inline AffineTransform fontRotationForWritingMode(presentation::BlockFlowDirection blockFlowDirection) {
 					switch(blockFlowDirection) {
 						case presentation::HORIZONTAL_TB:
 							return AffineTransform();

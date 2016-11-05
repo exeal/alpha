@@ -98,9 +98,7 @@ namespace ascension {
 		
 			/// @see StyledTextRunIterator#position
 			kernel::Position StyledTextRunIteratorImpl::position() const BOOST_NOEXCEPT {
-				if(isDone())
-					throw NoSuchElementException();
-				return position_;
+				return !isDone() ? position_ : *boost::const_end(region_);
 			}
 		
 			/// @see StyledTextRunIterator#style
