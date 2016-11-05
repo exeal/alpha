@@ -16,7 +16,13 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
-#include <ascension/text-editor/command.hpp>
+#include <ascension/text-editor/commands/caret-motions.hpp>
+#include <ascension/text-editor/commands/conversions.hpp>
+#include <ascension/text-editor/commands/deletions.hpp>
+#include <ascension/text-editor/commands/inputs.hpp>
+#include <ascension/text-editor/commands/modals.hpp>
+#include <ascension/text-editor/commands/rollbacks.hpp>
+#include <ascension/text-editor/commands/yanks.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-area.hpp>

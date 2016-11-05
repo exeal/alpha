@@ -14,7 +14,7 @@
 #include <ascension/graphics/image.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document.hpp>
-#include <ascension/text-editor/command.hpp>
+#include <ascension/text-editor/commands/inputs.hpp>
 #include <ascension/text-editor/input-sequence-checker.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>

@@ -168,6 +168,12 @@
     <Filter Include="ascension\Source Files\corelib\encoding">
       <UniqueIdentifier>{74dd688c-cac9-4b35-a344-37456323612a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\text-editor\commands">
+      <UniqueIdentifier>{3ae83f40-364b-4b02-801d-04d665c238f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\text-editor\commands">
+      <UniqueIdentifier>{fb489c70-5bd7-4bdd-a038-30bd33559801}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -652,6 +658,36 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\kernel\content-type.cpp">
       <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\commands\transpositions.cpp">
+      <Filter>ascension\Source Files\text-editor\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\commands\indentations.cpp">
+      <Filter>ascension\Source Files\text-editor\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\commands\conversions.cpp">
+      <Filter>ascension\Source Files\text-editor\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\commands\modals.cpp">
+      <Filter>ascension\Source Files\text-editor\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\commands\searches.cpp">
+      <Filter>ascension\Source Files\text-editor\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\commands\deletions.cpp">
+      <Filter>ascension\Source Files\text-editor\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\commands\inputs.cpp">
+      <Filter>ascension\Source Files\text-editor\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\commands\rollbacks.cpp">
+      <Filter>ascension\Source Files\text-editor\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\commands\yanks.cpp">
+      <Filter>ascension\Source Files\text-editor\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\commands\caret-motions.cpp">
+      <Filter>ascension\Source Files\text-editor\commands</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1506,6 +1542,36 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\kernel\content-type.hpp">
       <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\commands\caret-motions.hpp">
+      <Filter>ascension\Header Files\text-editor\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\commands\modals.hpp">
+      <Filter>ascension\Header Files\text-editor\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\commands\searches.hpp">
+      <Filter>ascension\Header Files\text-editor\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\commands\conversions.hpp">
+      <Filter>ascension\Header Files\text-editor\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\commands\inputs.hpp">
+      <Filter>ascension\Header Files\text-editor\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\commands\deletions.hpp">
+      <Filter>ascension\Header Files\text-editor\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\commands\rollbacks.hpp">
+      <Filter>ascension\Header Files\text-editor\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\commands\yanks.hpp">
+      <Filter>ascension\Header Files\text-editor\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\commands\transpositions.hpp">
+      <Filter>ascension\Header Files\text-editor\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\commands\indentations.hpp">
+      <Filter>ascension\Header Files\text-editor\commands</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
