@@ -21,7 +21,7 @@
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/log.hpp>
 #include <ascension/presentation/presentative-text-renderer.hpp>
-#include <ascension/text-editor/command.hpp>	// ascension.texteditor.commands.IncrementalSearchCommand
+#include <ascension/text-editor/commands/searches.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-area-rendering-strategy.hpp>
