@@ -416,7 +416,7 @@ namespace ascension {
 				static const int DEFAULT_VALUE;
 				static const char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp,
-					const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
+					const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::unicodeDefaultCharacterClassification()),
 					const std::locale& lc = std::locale::classic()) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyValueName NAMES_[];
