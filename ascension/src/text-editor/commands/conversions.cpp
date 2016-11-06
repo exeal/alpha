@@ -16,6 +16,8 @@
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
+#include <boost/format.hpp>
+#include <boost/range/algorithm/copy.hpp>
 
 namespace ascension {
 	namespace texteditor {
@@ -44,18 +46,17 @@ namespace ascension {
 
 				const auto caret(viewer.textArea()->caret());
 				const String& lineString = document->lineString(kernel::line(eos));
-				const CodePoint c = text::utf::decodeLast(std::begin(lineString), std::begin(lineString) + kernel::offsetInLine(eos));
-				std::array<Char, 7> buffer;
-#if(_MSC_VER < 1400)
-				if(std::swprintf(buffer.data(), L"%lX", c) < 0)
-#else
-				if(std::swprintf(buffer.data(), buffer.size(), L"%lX", c) < 0)
-#endif // _MSC_VER < 1400
-					return false;
-				viewer::AutoFreeze af(&viewer);
-				caret->select(viewer::_anchor = kernel::Position(kernel::line(eos), kernel::offsetInLine(eos) - ((c > 0xffff) ? 2 : 1)), viewer::_caret = peos.hit());
+				const CodePoint c = text::utf::decodeLast(lineString.cbegin(), lineString.cbegin() + kernel::offsetInLine(eos));
+				String hex;
 				try {
-					caret->replaceSelection(buffer.data(), false);
+					hex = (boost::basic_format<Char>(fromLatin1("%lX")) % c).str();
+				} catch(...) {
+					return false;
+				}
+				viewer::AutoFreeze af(&viewer);
+				caret->select(viewer::_anchor = kernel::Position(kernel::line(eos), kernel::offsetInLine(eos) - ((c > 0xffffu) ? 2 : 1)), viewer::_caret = peos.hit());
+				try {
+					caret->replaceSelection(hex, false);
 				} catch(const kernel::DocumentInput::ChangeRejectedException&) {
 					return false;
 				}
@@ -75,6 +76,7 @@ namespace ascension {
 			 *               to convert
 			 */
 			bool CodePointToCharacterConversionCommand::perform() {
+				static const std::string XDIGITS("0123456789ABCDEFabcdef");
 				throwIfTargetIsReadOnly();
 				abortModes();
 				const auto document(viewer::document(target()));
@@ -89,30 +91,38 @@ namespace ascension {
 				const Index offsetInLine = kernel::offsetInLine(eos);
 
 				// accept /(?:[Uu]\+)?[0-9A-Fa-f]{1,6}/
-				if(iswxdigit(lineString[offsetInLine - 1]) != 0) {
-					Index i = offsetInLine - 1;
-					while(i != 0) {
-						if(offsetInLine - i == 7)
-							return false;	// too long string
-						else if(iswxdigit(lineString[i - 1]) == 0)
-							break;
-						--i;
-					}
-
-					const CodePoint c = wcstoul(lineString.substr(i, offsetInLine - i).c_str(), nullptr, 16);
-					if(text::isValidCodePoint(c)) {
-						String s;
-						text::utf::encode(c, std::back_inserter(s));
-						if(i >= 2 && lineString[i - 1] == L'+' && (lineString[i - 2] == L'U' || lineString[i - 2] == L'u'))
-							i -= 2;
-						viewer::AutoFreeze af(&target());
-						caret->select(viewer::_anchor = kernel::Position(kernel::line(eos), i), viewer::_caret = peos.hit());
-						try {
-							caret->replaceSelection(s, false);
-						} catch(const kernel::DocumentInput::ChangeRejectedException&) {
-							return false;
+				std::string s;
+				if(lineString[offsetInLine - 1] < 0x100u) {
+					s.push_back(static_cast<char>(lineString[offsetInLine - 1] & 0xffu));
+					if(XDIGITS.find(s.back()) != std::string::npos) {
+						Index i = offsetInLine - 1;
+						while(i != 0) {
+							if(offsetInLine - i == 7)
+								return false;	// too long string
+							else if(lineString[i - 1] > 0xffu)
+								break;
+							s.push_back(static_cast<char>(lineString[i - 1] & 0xffu));
+							if(XDIGITS.find(s.back()) == std::string::npos)
+								break;
+							--i;
 						}
-						return true;
+
+						const CodePoint c = std::stoi(s, nullptr, 16);
+						if(text::isValidCodePoint(c)) {
+							String s;
+							text::utf::encode(c, std::back_inserter(s));
+							if(i >= 2 && lineString[i - 1] == L'+' && (lineString[i - 2] == L'U' || lineString[i - 2] == L'u'))
+								i -= 2;
+							viewer::AutoFreeze af(&target());
+							caret->select(viewer::_anchor = kernel::Position(kernel::line(eos), i), viewer::_caret = peos.hit());
+							try {
+								caret->replaceSelection(s, false);
+							}
+							catch(const kernel::DocumentInput::ChangeRejectedException&) {
+								return false;
+							}
+							return true;
+						}
 					}
 				}
 				return false;	// invalid code point string and can't convert
