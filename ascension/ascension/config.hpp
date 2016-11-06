@@ -37,16 +37,6 @@
 // about ascension.text //////////////////////////////////////////////////
 
 /**
- * @def ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
- * Default character set for @c ascension#text#IdentifierSyntax. This value is used by default
- * character classification (such as the partitioner which does not have scanners). This must be
- * one of @c ascension#text#CharacterDetector#CharacterClassification enumeration.
- */
-#ifndef ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
-#	define ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION ascension::text::IdentifierSyntax::UNICODE_DEFAULT
-#endif	// !ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
-
-/**
  * @def ASCENSION_NO_UNICODE_NORMALIZATION
  * Define the symbol if you do not use Unicode normalization features. If defined,
  * @c ascension#text#Normalizer class and @c ascension#text#CanonicalCombiningClass class

@@ -21,20 +21,16 @@ namespace ascension {
 	namespace text {
 		class IdentifierSyntax {
 		public:
-			/// Types of character classification used by @c IdentifierSyntax.
-			enum CharacterClassification {
-				/// Uses only 7-bit ASCII characters.
-				ASCII,
-				/// Classifies using @c text#ucd#legacyctype namespace functions.
-				LEGACY_POSIX,
-				/// Conforms to the default identifier syntax of UAX #31.
-				UNICODE_DEFAULT,
-				/// Conforms to the alternative identifier syntax of UAX #31.
-				UNICODE_ALTERNATIVE
-			};
+			/// Default character classification used by @c IdentifierSyntax.
+			struct DefaultCharacterClassification;
+			static const DefaultCharacterClassification& asciiCharacterClassification() BOOST_NOEXCEPT;
+			static const DefaultCharacterClassification& legacyPosixCharacterClassification() BOOST_NOEXCEPT;
+			static const DefaultCharacterClassification& unicodeDefaultCharacterClassification() BOOST_NOEXCEPT;
+			static const DefaultCharacterClassification& unicodeAlternativeCharacterClassification() BOOST_NOEXCEPT;
+
 		public:
 			IdentifierSyntax() BOOST_NOEXCEPT;
-			explicit IdentifierSyntax(CharacterClassification type, bool ignoreCase = false
+			explicit IdentifierSyntax(const DefaultCharacterClassification& ctypes, bool ignoreCase = false
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 				, Decomposition equivalenceType = NO_DECOMPOSITION
 #endif // !ASCENSION_NO_UNICODE_NORMALIZATION
@@ -110,7 +106,7 @@ namespace ascension {
 			/// @}
 
 		private:
-			CharacterClassification type_;
+			const DefaultCharacterClassification* ctypes_;
 			bool caseSensitive_;
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 			Decomposition equivalenceType_;

@@ -83,11 +83,17 @@ namespace ascension {
 			}
 		} // namespace @0
 
+		struct IdentifierSyntax::DefaultCharacterClassification {
+			virtual bool isDefaultIdentifierContinueCharacter(CodePoint c) const BOOST_NOEXCEPT = 0;
+			virtual bool isDefaultIdentifierStartCharacter(CodePoint c) const BOOST_NOEXCEPT = 0;
+			virtual bool isDefaultWhiteSpaceCharacter(CodePoint c) const BOOST_NOEXCEPT = 0;
+		};
+
 		/**
 		 * Default constructor. The character classification type is initialized to
 		 * @c ASCENSION_DEFAULT_CHARACTER_DETECTION_TYPE.
 		 */
-		IdentifierSyntax::IdentifierSyntax() BOOST_NOEXCEPT : type_(ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION), caseSensitive_(true)
+		IdentifierSyntax::IdentifierSyntax() BOOST_NOEXCEPT : ctypes_(&unicodeDefaultCharacterClassification()), caseSensitive_(true)
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 				, equivalenceType_(NO_DECOMPOSITION)
 #endif // !ASCENSION_NO_UNICODE_NORMALIZATION
@@ -95,12 +101,12 @@ namespace ascension {
 		}
 
 		/// Copy-constructor.
-		IdentifierSyntax::IdentifierSyntax(const IdentifierSyntax& rhs) BOOST_NOEXCEPT : type_(rhs.type_), caseSensitive_(rhs.caseSensitive_),
+		IdentifierSyntax::IdentifierSyntax(const IdentifierSyntax& other) BOOST_NOEXCEPT : ctypes_(other.ctypes_), caseSensitive_(other.caseSensitive_),
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-				equivalenceType_(rhs.equivalenceType_),
+				equivalenceType_(other.equivalenceType_),
 #endif // !ASCENSION_NO_UNICODE_NORMALIZATION
-				addedIDStartCharacters_(rhs.addedIDStartCharacters_), addedIDNonStartCharacters_(rhs.addedIDNonStartCharacters_),
-				subtractedIDStartCharacters_(rhs.subtractedIDStartCharacters_), subtractedIDNonStartCharacters_(rhs.subtractedIDNonStartCharacters_)
+				addedIDStartCharacters_(other.addedIDStartCharacters_), addedIDNonStartCharacters_(other.addedIDNonStartCharacters_),
+				subtractedIDStartCharacters_(other.subtractedIDStartCharacters_), subtractedIDNonStartCharacters_(other.subtractedIDNonStartCharacters_)
 		{
 		}
 
@@ -110,15 +116,31 @@ namespace ascension {
 		 * @param ignoreCase Set @c true to perform caseless match
 		 * @param equivalenceType The decomposition type for canonical/compatibility equivalents
 		 */
-		IdentifierSyntax::IdentifierSyntax(CharacterClassification type, bool ignoreCase /* = false */
+		IdentifierSyntax::IdentifierSyntax(const DefaultCharacterClassification& ctypes, bool ignoreCase /* = false */
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 				, Decomposition equivalenceType /* = NO_DECOMPOSITION */
 #endif // !ASCENSION_NO_UNICODE_NORMALIZATION
-		) BOOST_NOEXCEPT : type_(type), caseSensitive_(ignoreCase)
+		) BOOST_NOEXCEPT : ctypes_(&ctypes), caseSensitive_(ignoreCase)
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 				, equivalenceType_(equivalenceType)
 #endif // !ASCENSION_NO_UNICODE_NORMALIZATION
 		{
+		}
+
+		/// Returns @c DefaultCharacterClassification implementation which uses only 7-bit ASCII characters.
+		const IdentifierSyntax::DefaultCharacterClassification& IdentifierSyntax::asciiCharacterClassification() BOOST_NOEXCEPT {
+			static const struct Ascii : DefaultCharacterClassification {
+				bool isDefaultIdentifierContinueCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+				}
+				bool isDefaultIdentifierStartCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+				}
+				bool isDefaultWhiteSpaceCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return c == 0x0020u;
+				}
+			} instance;
+			return instance;
 		}
 
 		/**
@@ -126,7 +148,7 @@ namespace ascension {
 		 * classification type.
 		 */
 		const IdentifierSyntax& IdentifierSyntax::defaultInstance() BOOST_NOEXCEPT {
-			static const IdentifierSyntax instance(UNICODE_DEFAULT);
+			static const IdentifierSyntax instance(unicodeDefaultCharacterClassification());
 			return instance;
 		}
 
@@ -140,18 +162,7 @@ namespace ascension {
 				return true;
 			else if(boost::binary_search(subtractedIDStartCharacters_, c) || boost::binary_search(subtractedIDNonStartCharacters_, c))
 				return false;
-			switch(type_) {
-				case ASCII:
-					return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
-				case LEGACY_POSIX:
-					return ucd::legacyctype::isword(c);
-				case UNICODE_DEFAULT:
-					return ucd::BinaryProperty::is<ucd::BinaryProperty::ID_CONTINUE>(c);
-				case UNICODE_ALTERNATIVE:
-					return !ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_SYNTAX>(c)
-						&& !ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_WHITE_SPACE>(c);
-			}
-			ASCENSION_ASSERT_NOT_REACHED();
+			return ctypes_->isDefaultIdentifierContinueCharacter(c);
 		}
 
 		/**
@@ -164,18 +175,7 @@ namespace ascension {
 				return true;
 			else if(boost::binary_search(subtractedIDStartCharacters_, c))
 				return false;
-			switch(type_) {
-				case ASCII:
-					return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-				case LEGACY_POSIX:
-					return ucd::legacyctype::isalpha(c);
-				case UNICODE_DEFAULT:
-					return ucd::BinaryProperty::is<ucd::BinaryProperty::ID_START>(c);
-				case UNICODE_ALTERNATIVE:
-					return !ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_SYNTAX>(c)
-						&& !ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_WHITE_SPACE>(c);
-			}
-			ASCENSION_ASSERT_NOT_REACHED();
+			return ctypes_->isDefaultIdentifierStartCharacter(c);
 		}
 
 		/**
@@ -187,16 +187,23 @@ namespace ascension {
 		bool IdentifierSyntax::isWhiteSpace(CodePoint c, bool includeTab) const BOOST_NOEXCEPT {
 			if(includeTab && c == 0x0009u)
 				return true;
-			switch(type_) {
-				case ASCII:
-					return c == 0x0020u;
-				case LEGACY_POSIX:
+			return ctypes_->isDefaultWhiteSpaceCharacter(c);
+		}
+
+		/// Returns @c DefaultCharacterClassification implementation which classifies using @c text#ucd#legacyctype namespace functions.
+		const IdentifierSyntax::DefaultCharacterClassification& IdentifierSyntax::legacyPosixCharacterClassification() BOOST_NOEXCEPT {
+			static const struct LegacyPosix : DefaultCharacterClassification {
+				bool isDefaultIdentifierContinueCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return ucd::legacyctype::isword(c);
+				}
+				bool isDefaultIdentifierStartCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return ucd::legacyctype::isalpha(c);
+				}
+				bool isDefaultWhiteSpaceCharacter(CodePoint c) const BOOST_NOEXCEPT override {
 					return ucd::legacyctype::isspace(c);
-				case UNICODE_DEFAULT:
-				case UNICODE_ALTERNATIVE:
-					return ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_WHITE_SPACE>(c);
-			}
-			ASCENSION_ASSERT_NOT_REACHED();
+				}
+			} instance;
+			return instance;
 		}
 
 		/**
@@ -273,6 +280,40 @@ namespace ascension {
 			if(isolatedSurrogate != boost::const_end(subtracting))
 				throw InvalidScalarValueException(*isolatedSurrogate);
 			implementOverrides(adding, subtracting, addedIDNonStartCharacters_, subtractedIDNonStartCharacters_);
+		}
+
+		/// Returns @c DefaultCharacterClassification implementation which conforms to the alternative identifier syntax of UAX #31.
+		const IdentifierSyntax::DefaultCharacterClassification& IdentifierSyntax::unicodeAlternativeCharacterClassification() BOOST_NOEXCEPT {
+			static const struct UnicodeAlternative : DefaultCharacterClassification {
+				bool isDefaultIdentifierContinueCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return !ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_SYNTAX>(c)
+						&& !ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_WHITE_SPACE>(c);
+				}
+				bool isDefaultIdentifierStartCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return !ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_SYNTAX>(c)
+						&& !ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_WHITE_SPACE>(c);
+				}
+				bool isDefaultWhiteSpaceCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_WHITE_SPACE>(c);
+				}
+			} instance;
+			return instance;
+		}
+
+		/// Returns @c DefaultCharacterClassification implementation which conforms to the default identifier syntax of UAX #31.
+		const IdentifierSyntax::DefaultCharacterClassification& IdentifierSyntax::unicodeDefaultCharacterClassification() BOOST_NOEXCEPT {
+			static const struct UnicodeDefault : DefaultCharacterClassification {
+				bool isDefaultIdentifierContinueCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return ucd::BinaryProperty::is<ucd::BinaryProperty::ID_CONTINUE>(c);
+				}
+				bool isDefaultIdentifierStartCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return ucd::BinaryProperty::is<ucd::BinaryProperty::ID_START>(c);
+				}
+				bool isDefaultWhiteSpaceCharacter(CodePoint c) const BOOST_NOEXCEPT override {
+					return ucd::BinaryProperty::is<ucd::BinaryProperty::PATTERN_WHITE_SPACE>(c);
+				}
+			} instance;
+			return instance;
 		}
 	}
 }
