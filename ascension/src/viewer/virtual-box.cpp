@@ -99,6 +99,7 @@ namespace ascension {
 			graphics::Scalar ipd = graphics::font::inlineProgressionOffsetInViewerGeometry(*textArea_.viewport());
 			switch(textArea_.textRenderer()->lineRelativeAlignment()) {
 				case TextRenderer::LEFT:
+				default:
 					ipd = geometry::x(p) - geometry::left(textArea_.contentRectangle());
 					break;
 				case TextRenderer::RIGHT:
@@ -116,8 +117,8 @@ namespace ascension {
 				case TextRenderer::VERTICAL_CENTER:
 					ipd = geometry::y(p) - (geometry::top(textArea_.contentRectangle())) + geometry::bottom(textArea_.contentRectangle()) / 2;
 					break;
-				default:
-					ASCENSION_ASSERT_NOT_REACHED();
+//				default:
+//					ASCENSION_ASSERT_NOT_REACHED();
 			}
 			if(!ascension::includes(ipds_, ipd))
 				return false;
