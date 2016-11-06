@@ -450,6 +450,7 @@ namespace ascension {
 					Scalar spaceBefore, spaceAfter;
 					switch(blockFlowDirection) {
 						case presentation::HORIZONTAL_TB:
+						default:
 							spaceBefore = physicalSpaces.top();
 							spaceAfter = physicalSpaces.bottom();
 							break;
@@ -461,8 +462,8 @@ namespace ascension {
 							spaceBefore = physicalSpaces.left();
 							spaceAfter = physicalSpaces.right();
 							break;
-						default:
-							ASCENSION_ASSERT_NOT_REACHED();
+//						default:
+//							ASCENSION_ASSERT_NOT_REACHED();
 					}
 					const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;	// TODO: Not implemented.
 					const Scalar before = spaceBefore + borderBefore + paddingBefore;

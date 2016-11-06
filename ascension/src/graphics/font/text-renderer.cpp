@@ -263,20 +263,19 @@ namespace ascension {
 							std::tie(start, end) = std::make_pair(LEFT, RIGHT);
 							if(inlineFlowDirection() == presentation::RIGHT_TO_LEFT)
 								std::swap(start, end);
-						} else if(presentation::isVertical(blockFlowDirection())) {
+						} else {
+							assert(presentation::isVertical(blockFlowDirection()));
 							std::tie(start, end) = std::make_pair(TOP, BOTTOM);
 							if(inlineFlowDirection() == presentation::RIGHT_TO_LEFT)
 								std::swap(start, end);
 							if(presentation::resolveTextOrientation(writingModes()) == presentation::SIDEWAYS_LEFT)
 								std::swap(start, end);
-						} else
-							ASCENSION_ASSERT_NOT_REACHED();
+						}
 						return (anchor != TextAnchor::END) ? start : end;
 					}
 					case TextAnchor::MIDDLE:
 						return presentation::isHorizontal(blockFlowDirection()) ? HORIZONTAL_CENTER : VERTICAL_CENTER;
 				}
-				ASCENSION_ASSERT_NOT_REACHED();
 			}
 
 			/**
