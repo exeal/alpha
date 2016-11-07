@@ -11,6 +11,7 @@
 #include <ascension/kernel/fileio/text-file-stream-buffer.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/range/algorithm/copy.hpp>
 #if ASCENSION_OS_POSIX
 #	include <cstdio>		// std.tempnam
 #	include <fcntl.h>		// fcntl
@@ -653,9 +654,19 @@ private:
 				// set the new properties of the document
 				savedDocumentRevision_ = document().revisionNumber();
 				timeStampDirector_ = unexpectedTimeStampDirector;
-				// TODO: "String" type may change. The following code is as if wchar_t.
+				{
+					String titleString;
+#ifndef BOOST_NO_CXX11_CHAR16_T
+					const auto title(fileName().u16string());
+#elif BOOST_OS_WINDOWS
+					const auto& title(fileName().native());
+#else // ASCENSION_OS_POSIX
+#	error Not implemented.
+#endif
+					boost::copy(title, std::back_inserter(titleString));
+					document_.setProperty(Document::TITLE_PROPERTY, titleString);
+				}
 #if BOOST_OS_WINDOWS
-				document_.setProperty(Document::TITLE_PROPERTY, fileName().generic_string<String>());
 #else // ASCENSION_OS_POSIX
 #	ifndef ASCENSION_ABANDONED_AT_VERSION_08
 				document_.setProperty(Document::TITLE_PROPERTY, fileName().wstring(std::codecvt_utf8_utf16()));
