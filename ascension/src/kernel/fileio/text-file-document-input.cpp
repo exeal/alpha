@@ -656,35 +656,18 @@ private:
 				timeStampDirector_ = unexpectedTimeStampDirector;
 				{
 					String titleString;
-#ifndef BOOST_NO_CXX11_CHAR16_T
-					const auto title(fileName().u16string());
-#elif BOOST_OS_WINDOWS
+#if BOOST_OS_WINDOWS
+					static_assert(sizeof(wchar_t) == 2, "");
 					const auto& title(fileName().native());
+#elif !defined(BOOST_NO_CXX11_CHAR16_T)
+#	error Not implemented.
 #else // ASCENSION_OS_POSIX
 #	error Not implemented.
 #endif
 					boost::copy(title, std::back_inserter(titleString));
 					document_.setProperty(Document::TITLE_PROPERTY, titleString);
 				}
-#if BOOST_OS_WINDOWS
-#else // ASCENSION_OS_POSIX
-#	ifndef ASCENSION_ABANDONED_AT_VERSION_08
-				document_.setProperty(Document::TITLE_PROPERTY, fileName().wstring(std::codecvt_utf8_utf16()));
-#	else
-				const PathString title(fileName());
-				const std::locale lc("");
-				const std::codecvt<Char, PathCharacter, std::mbstate_t>& conv = std::use_facet<std::codecvt<Char, PathCharacter, std::mbstate_t>>(lc);
-				std::mbstate_t state;
-				const PathCharacter* fromNext;
-				Char* ucsNext;
-				std::unique_ptr<Char[]> ucs(new Char[title.length() * 2]);
-				if(std::codecvt_base::ok == conv.in(state,
-						title.data(), title.data() + title.length(), fromNext, ucs.get(), ucs.get() + title.length() * 2, ucsNext)) {
-					*ucsNext = L'0';
-					document_.setProperty(Document::TITLE_PROPERTY, ucs.get());
-				}
-#	endif
-#endif
+
 				newline_ = document().lineContent(0).newline();	// use the newline of the first line
 				listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileEncodingChanged, *this);
 				listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);
