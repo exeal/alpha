@@ -116,17 +116,20 @@ namespace ascension {
 		 * @see #freeze, #frozenStateChangedSignal, #unfreeze, #unfrozen
 		 */
 
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && defined(ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
+		namespace {
+			static const char GLIBMM_CUSTOM_TYPE_NAME[] = "ascension.viewer.TextViewer";
+		}
+#endif
+
 		/**
 		 * Creates a @c TextViewer instance.
 		 * @param document The document
 		 * @throw NullPointerException @a document is @c null
 		 */
 		TextViewer::TextViewer(std::shared_ptr<kernel::Document> document) :
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-#	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
-//				Glib::ObjectBase("ascension.viewer.TextViewer"),
-//				Gtk::Widget(),
-#	endif
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && defined(ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
+				Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME),
 #endif
 				document_(document) {
 			if(document_.get() == nullptr)
@@ -141,8 +144,8 @@ namespace ascension {
 		 * more details, see the description of @c TextViewer.
 		 */
 		TextViewer::TextViewer(const TextViewer& other)
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-//				: Glib::ObjectBase("ascension.viewer.TextViewer"),
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && defined(ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
+				: Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME)
 #endif
 		{
 			initialize(&other);

@@ -29,10 +29,14 @@
 #include <glibmm/i18n.h>
 
 namespace alpha {
+	namespace {
+		static const char GLIBMM_CUSTOM_TYPE_NAME[] = "alpha.EditorView";
+	}
+
 	/// Default constructor.
 	EditorView::EditorView(std::shared_ptr<Buffer> buffer) :
 #ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
-			Glib::ObjectBase("alpha.EditorView"),
+			Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME),
 #endif
 			ascension::viewer::TextViewer(buffer),
 			buffer_(buffer), visualColumnStartValue_(1) {
@@ -41,7 +45,11 @@ namespace alpha {
 	}
 
 	/// Copy-constructor.
-	EditorView::EditorView(const EditorView& other) : ascension::viewer::TextViewer(other), buffer_(other.buffer_), visualColumnStartValue_(other.visualColumnStartValue_) {
+	EditorView::EditorView(const EditorView& other) :
+#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+			Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME),
+#endif
+			ascension::viewer::TextViewer(other), buffer_(other.buffer_), visualColumnStartValue_(other.visualColumnStartValue_) {
 	}
 
 	/// Destructor.

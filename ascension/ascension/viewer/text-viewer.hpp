@@ -104,10 +104,10 @@ namespace ascension {
 				// QPlainTextEdit and QTextEdit inherit QAbstractScrollArea.
 				// NSTextView inherits NSText (which inherits NSView).
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				public Gtk::Container,
 #	ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 				public Gtk::Scrollable,
 #	endif
+				public Gtk::Container,
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				public QAbstractScrollArea,
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
