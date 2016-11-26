@@ -724,9 +724,9 @@ namespace ascension {
 				selectionShapeChangedConnection_.disconnect();
 				matchBracketsChangedConnection_.disconnect();
 				caret()->document().removeListener(*this);
-				renderer_.reset();
 				caretPainter_.reset();
 				caret_.reset();
+				renderer_.reset();
 				locator_ = nullptr;
 				viewer_ = nullptr;
 			}
