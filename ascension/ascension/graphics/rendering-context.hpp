@@ -35,6 +35,8 @@
 #	include <stack>
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 #	include <GdiPlus.h>
+#else
+	ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 
 namespace ascension {
