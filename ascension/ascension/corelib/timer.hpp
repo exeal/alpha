@@ -80,7 +80,7 @@ namespace ascension {
 			interval_ = interval;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			connection_ = Glib::signal_timeout().connect(sigc::mem_fun(*this, &Timer::function), static_cast<unsigned int>(interval.count()));
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM_(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 			setSingleShot(false);
 			start(interval.count());
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
