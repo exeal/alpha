@@ -7,6 +7,7 @@
  * @date 2014-11-16 Separated from token-rules.cpp
  */
 
+#include <ascension/corelib/detail/fastcall.hpp>
 #include <ascension/corelib/text/utf.hpp>
 #include <ascension/rules/hash-table.hpp>
 #include <ascension/rules/uri-detector.hpp>
@@ -79,10 +80,10 @@ namespace ascension {
 			//             / [ *4( h16 ":" ) h16 ] "::"              ls32
 			//             / [ *5( h16 ":" ) h16 ] "::"              h16
 			//             / [ *6( h16 ":" ) h16 ] "::"
-			StringPiece::const_iterator ASCENSION_FASTCALL handleIPv6address(const StringPiece& s) {return nullptr;}
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleIPv6address(const StringPiece& s) {return nullptr;}
 		
 			// IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
-			StringPiece::const_iterator ASCENSION_FASTCALL handleIPvFuture(const StringPiece& s) {
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleIPvFuture(const StringPiece& s) {
 				if(s.length() >= 4 && s.front() == 'v') {
 					auto p(std::next(s.cbegin()));
 					if(isHEXDIG(*p)) {
@@ -132,7 +133,7 @@ namespace ascension {
 			//           / "1" 2DIGIT        ; 100-199
 			//           / "2" %x30-34 DIGIT ; 200-249
 			//           / "25" %x30-35      ; 250-255
-			StringPiece::const_iterator ASCENSION_FASTCALL handleDecOctet(const StringPiece& s) {
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleDecOctet(const StringPiece& s) {
 				if(s.cbegin() < s.cend()) {
 					if(s.front() == '0')
 						return std::next(s.cbegin());
@@ -173,7 +174,7 @@ namespace ascension {
 			}
 		
 			// h16 = 1*4HEXDIG
-			StringPiece::const_iterator ASCENSION_FASTCALL handleH16(const StringPiece& s) {
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleH16(const StringPiece& s) {
 				if(s.cbegin() < s.cend() && isHEXDIG(s.front())) {
 					auto p(std::next(s.cbegin()));
 					const auto e(std::min(p + 3, s.cend()));
@@ -192,7 +193,7 @@ namespace ascension {
 			}
 		
 			// scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
-			StringPiece::const_iterator ASCENSION_FASTCALL handleScheme(const StringPiece& s) {
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleScheme(const StringPiece& s) {
 				if(isALPHA(s.front())) {
 					for(auto p(std::next(s.cbegin())); p != s.cend(); ++p) {
 						if(!isALPHA(*p) && !isDIGIT(*p) && *p != '+' && *p != '-' && *p != '.')
@@ -288,12 +289,12 @@ namespace ascension {
 			}
 		
 			// ipath-empty = 0<ipchar>
-			StringPiece::const_iterator ASCENSION_FASTCALL handlePathEmpty(const StringPiece& s) {	// [nullable]
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handlePathEmpty(const StringPiece& s) {	// [nullable]
 				return s.cbegin();
 			}
 		
 			// ipath-abempty = *( "/" isegment )
-			StringPiece::const_iterator ASCENSION_FASTCALL handlePathAbempty(const StringPiece& s) {	// [nullable]
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handlePathAbempty(const StringPiece& s) {	// [nullable]
 				auto p(s.cbegin());
 				while(p < s.cend() && *p == '/')
 					p = handleSegment(s.substr(p + 1 - s.cbegin()));
@@ -337,7 +338,7 @@ namespace ascension {
 			}
 		
 			// iuserinfo = *( iunreserved / pct-encoded / sub-delims / ":" )
-			StringPiece::const_iterator ASCENSION_FASTCALL handleUserinfo(const StringPiece& s) {	// [nullable]
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleUserinfo(const StringPiece& s) {	// [nullable]
 				auto p(s.cbegin());
 				for(StringPiece::const_iterator eop; p < s.cend(); ) {
 					if(nullptr != (eop = handleUnreserved(s.substr(p - s.cbegin())))
@@ -353,7 +354,7 @@ namespace ascension {
 			}
 		
 			// iauthority = [ iuserinfo "@" ] ihost [ ":" port ]
-			StringPiece::const_iterator ASCENSION_FASTCALL handleAuthority(const StringPiece& s) {	// [nullable]
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleAuthority(const StringPiece& s) {	// [nullable]
 				auto p(handleUserinfo(s));
 				assert(p != nullptr);
 				if(p > s.cbegin()) {
@@ -373,7 +374,7 @@ namespace ascension {
 			}
 		
 			// ihier-part = ("//" iauthority ipath-abempty) / ipath-absolute / ipath-rootless / ipath-empty
-			StringPiece::const_iterator ASCENSION_FASTCALL handleHierPart(const StringPiece& s) {
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleHierPart(const StringPiece& s) {
 				static const StringPiece::value_type DOUBLE_SLASH[] = {'/', '/'};
 				StringPiece::const_iterator eop;
 				(s.length() > 2 && boost::equal(s.substr(0, 2), DOUBLE_SLASH)
@@ -385,7 +386,7 @@ namespace ascension {
 			}
 		
 			// iquery = *( ipchar / iprivate / "/" / "?" )
-			StringPiece::const_iterator ASCENSION_FASTCALL handleQuery(const StringPiece& s) {	// [nullable]
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleQuery(const StringPiece& s) {	// [nullable]
 				auto p(s.cbegin());
 				for(StringPiece::const_iterator eop; p < s.cend(); ) {
 					if(nullptr != (eop = handlePchar(s.substr(p - s.cbegin()))) || nullptr != (eop = handlePrivate(s.substr(p - s.cbegin()))))
@@ -399,7 +400,7 @@ namespace ascension {
 			}
 		
 			// ifragment = *( ipchar / "/" / "?" )
-			StringPiece::const_iterator ASCENSION_FASTCALL handleFragment(const StringPiece& s) {	// [nullable]
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleFragment(const StringPiece& s) {	// [nullable]
 				auto p(s.cbegin());
 				for(StringPiece::const_iterator eop; p < s.cend(); ) {
 					if(nullptr != (eop = handlePchar(s.substr(p - s.cbegin()))))
@@ -413,7 +414,7 @@ namespace ascension {
 			}
 		
 			// IRI = scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]
-			StringPiece::const_iterator ASCENSION_FASTCALL handleIRI(const StringPiece& s) {
+			StringPiece::const_iterator ASCENSION_DETAIL_FASTCALL handleIRI(const StringPiece& s) {
 				if(auto p = handleScheme(s)) {
 					if(*p == ':') {
 						if(nullptr != (p = handleHierPart(s.substr(++p - s.cbegin())))) {
