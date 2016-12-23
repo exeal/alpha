@@ -39,8 +39,6 @@ namespace ascension {
 	 * @see ASCENSION_UNICODE_VERSION
 	 */
 	namespace text {
-		// TODO: The following code ignores ASCENSION_USE_INTRINSIC_WCHAR_T configuration symbol.
-
 		/// UTF-16 character type.
 #ifdef BOOST_NO_CXX11_CHAR16_T
 		typedef std::conditional<

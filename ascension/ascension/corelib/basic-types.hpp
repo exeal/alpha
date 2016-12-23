@@ -9,7 +9,6 @@
 
 #ifndef ASCENSION_BASIC_TYPES_HPP
 #define ASCENSION_BASIC_TYPES_HPP
-#include <ascension/platforms.hpp>	// ASCENSION_USE_INTRINSIC_WCHAR_T
 #include <boost/config.hpp>	// BOOST_NOEXCEPT
 #include <cstddef>
 

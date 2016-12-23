@@ -26,7 +26,7 @@ namespace ascension {
 			}
 		}
 
-		LANGID ASCENSION_FASTCALL ascension::win32::userDefaultUILanguage() {
+		LANGID ascension::win32::userDefaultUILanguage() {
 			// references (from Global Dev)
 			// - Writing Win32 Multilingual User Interface Applications (http://www.microsoft.com/globaldev/handson/dev/muiapp.mspx)
 			// - Ask Dr. International Column #9 (http://www.microsoft.com/globaldev/drintl/columns/009/default.mspx#EPD)

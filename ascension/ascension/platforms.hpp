@@ -1,7 +1,47 @@
 /**
  * @file platforms.hpp
+ * Detects the platforms and defines several symbols.
+ *
+ * <h3>Window System</h3>
+ * Checked by @c ASCENSION_SUPPORTS_WINDOW_SYSTEM and @c ASCENSION_SELECTS_WINDOW_SYSTEM macros.
+ * <table>
+ *   <tr><th>Window System</th><th>Symbol</th><th>Notes</th></tr>
+ *   <tr><td>GTK3+ (gtkmm 3.x)</td><td>@c ASCENSION_WINDOW_SYSTEM_GTK</td></tr>
+ *   <tr><td>Quartz Compositor of Mac OS X</td><td>@c ASCENSION_WINDOW_SYSTEM_QUARTZ</td><td>Default if @c BOOST_OS_MACOS is defined</td></tr>
+ *   <tr><td>Nokia Qt</td><td>@c ASCENSION_WINDOW_SYSTEM_QT</td></tr>
+ *   <tr><td>Windows Win32</td><td>@c ASCENSION_WINDOW_SYSTEM_WIN32</td><td>Default if @c BOOST_OS_WINDOWS is defined</td></tr>
+ *   <tr><td>X Window System</td><td>@c ASCENSION_WINDOW_SYSTEM_X</td></tr>
+ * </table>
+ *
+ * <h3>Graphics System</h3>
+ * Checked by @c ASCENSION_SUPPORTS_GRAPHICS_SYSTEM and @c ASCENSION_SELECTS_GRAPHICS_SYSTEM macros.
+ * <table>
+ *   <tr><th>Graphics System</th><th>Symbol</th><th>Notes</th></tr>
+ *   <tr><td>Cairo</td><td>@c ASCENSION_GRAPHICS_SYSTEM_CAIRO</td><td>Default if @c ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)</td></tr>
+ *   <tr><td>Mac OS X Core Graphics</td><td>@c ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS</td><td>Default if @c ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)</td></tr>
+ *   <tr><td>Windows Direct2D</td><td>@c ASCENSION_GRAPHICS_SYSTEM_DIRECT2D</td><td></td></tr>
+ *   <tr><td>Nokia Qt</td><td>@c ASCENSION_GRAPHICS_SYSTEM_QT</td><td>Default if @c ASCENSION_SELECTS_WINDOW_SYSTEM(QT)</td></tr>
+ *   <tr><td>Windows GDI</td><td>@c ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI</td><td>Default if @c ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)</td></tr>
+ *   <tr><td>Windows GDI+</td><td>@c ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS</td><td></td></tr>
+ * </table>
+ *
+ * <h3>Text/Glyph Shaping Engine</h3>
+ * Checked by @c ASCENSION_SUPPORTS_SHAPING_ENGINE and @c ASCENSION_SELECTS_SHAPING_ENGINE macros.
+ * <table>
+ *   <tr><th>Shaping Engine</th><th>Symbol</th><th>Notes</th></tr>
+ *   <tr><td>Mac OS X Core Graphics</td><td>@c ASCENSION_SHAPING_ENGINE_CORE_GRAPHICS</td><td></td></tr>
+ *   <tr><td>Mac OS X Core Text</td><td>@c ASCENSION_SHAPING_ENGINE_CORE_TEXT</td><td>Default if @c ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)</td></tr>
+ *   <tr><td>Windows DirectWrite</td><td>@c ASCENSION_SHAPING_ENGINE_DIRECT_WRITE</td><td></td></tr>
+ *   <tr><td>HarfBuzz</td><td>@c ASCENSION_SHAPING_ENGINE_HARF_BUZZ</td><td></td></tr>
+ *   <tr><td>Pango</td><td>@c ASCENSION_SHAPING_ENGINE_PANGO</td><td>Default if @c ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)</td></tr>
+ *   <tr><td>Nokia Qt</td><td>@c ASCENSION_SHAPING_ENGINE_QT</td><td>Default if @c ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)</td></tr>
+ *   <tr><td>Windows Uniscribe</td><td>@c ASCENSION_SHAPING_ENGINE_UNISCRIBE</td><td>Default if @c ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)</td></tr>
+ *   <tr><td>Windows GDI</td><td>@c ASCENSION_SHAPING_ENGINE_WIN32_GDI</td><td></td></tr>
+ *   <tr><td>Windows GDI+</td><td>@c ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS</td><td></td></tr>
+ * </table>
+ *
  * @author exeal
- * @date 2010-11-06 separated from common.hpp
+ * @date 2010-11-06 Separated from common.hpp.
  */
 
 #ifndef ASCENSION_PLATFORMS_HPP
@@ -12,97 +52,6 @@
 #define ASCENSION_CANT_DETECT_PLATFORM()	\
 	static_assert(false, "Platform can't detect.")
 
-// use BOOST_OS_* instead. however see ASCENSION_OS_POSIX.
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-/*
-	Operating system (ASCENSION_OS_*)
-	- AIX : AIX
-	- BSD4 : Any BSD 4.4 system
-	- DARWIN : Darwin OS
-	- HPUX : HP-UX
-	- LINUX : Linux
-	- SOLARIS : Sun Solaris
-	- UNIX : Any Unix-like system
-	- WINDOWS : Windows
- */
-#if defined(__APPLE__) && defined(__GNUC__)
-#	define ASCENSION_OS_DARWIN
-#	define ASCENSION_OS_BSD4
-#	ifdef __LP64__
-#		define ASCENSION_OS_DARWIN64
-#	else
-#		define ASCENSION_OS_DARWIN32
-#	endif
-#elif defined(__CYGWIN__)
-#	define ASCENSION_OS_WINDOWS
-#elif defined(_WIN64) || defined(WIN64)
-#	define ASCENSION_OS_WIN64
-#	define ASCENSION_OS_WIN32
-#elif defined(_WIN32) || defined(WIN32)
-#	if defined(WINCE) || defined(_WIN32_WCE)
-#		define ASCENSION_OS_WINCE
-#	else
-#		define ASCENSION_OS_WIN32
-#	endif
-#elif defined(__sun) || defined(sun)
-#	define ASCENSION_OS_SOLARIS
-#elif defined(__hpux) || defined(hpux)
-#	define ASCENSION_OS_HPUX
-#elif defined(__linux) || defined(__linux__)
-#	define ASCENSION_OS_LINUX
-#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-#	define ASCENSION_OS_BSD4
-#elif defined(_AIX)
-#	define ASCENSION_OS_AIX
-#elif defined(ANDROID)
-/*#	define ASCENSION_OS_ANDROID*/
-#elif defined(__HAIKU__)
-/*#	define ASCENSION_OS_HAIKU*/
-#elif defined(__QNXNTO__)
-/*#	define ASCENSION_OS_QNX*/
-#elif defined(__SYMBIAN32__)
-/*#	define ASCENSION_OS_SYMBIAN*/
-#else
-#	define ASCENSION_OS_POSIX BOOST_VERSION_NUMBER_AVAILABLE
-#endif
-
-#ifdef ASCENSION_OS_DARWIN
-#	define ASCENSION_OS_MACOSX
-#	if ASCENSION_OS(DARWIN64)
-#		define ASCENSION_OS_MAC64
-#	elif ASCENSION_OS(DARWIN32)
-#		define ASCENSION_OS_MAC32
-#	endif
-#endif // ASCENSION_OS_DARWIN
-
-#if defined(ASCENSION_OS_AIX)			\
-/*	|| defined(ASCENSION_OS_ANDROID)*/	\
-	|| defined(ASCENSION_OS_BSD4)		\
-	|| defined(ASCENSION_OS_DARWIN)		\
-/*	|| defined(ASCENSION_OS_HAIKU)*/	\
-	|| defined(ASCENSION_OS_LINUX)		\
-/*	|| defined(ASCENSION_OS_QNX)*/		\
-	|| defined(ASCENSION_OS_SOLARIS)	\
-/*	|| defined(ASCENSION_OS_SYMBIAN)*/	\
-	|| defined(unix)					\
-	|| defined(__unix)					\
-	|| defined(__unix__)
-#	define ASCENSION_OS_UNIX
-#endif
-
-#if defined(ASCENSION_OS_WIN64) || defined(ASCENSION_OS_WIN32) || defined(ASCENSION_OS_WINCE)
-#	define ASCENSION_OS_WINDOWS
-#endif
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
-/*
-	Window system (ASCENSION_WINDOW_SYSTEM_*)
-	- GTK : GTK+ 3 (gtkmm 3.x)
-	- QUARTZ : Quartz Compositor of Mac OS X
-	- QT : Nokia Qt
-	- WIN32 : Windows Win32
-	- X : X Window System (not supported directly)
- */
 #define ASCENSION_SUPPORTS_WINDOW_SYSTEM(name) defined( ASCENSION_WINDOW_SYSTEM_##name )
 #define ASCENSION_SELECTS_WINDOW_SYSTEM(name) (ASCENSION_SUPPORTS_WINDOW_SYSTEM(name) && ASCENSION_WINDOW_SYSTEM_##name)
 
@@ -135,15 +84,6 @@
 #endif // !ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS
 
 
-/*
-	Graphics system (ASCENSION_GRAPHICS_SYSTEM_*)
-	- CAIRO : Cairo
-	- CORE_GRAPHICS : Mac OS X Core Graphics
-	- DIRECT2D : Windows Direct2D
-	- QT : Nokia Qt
-	- WIN32_GDI : Windows GDI
-	- WIN32_GDIPLUS : Windows GDI+
- */
 #define ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(name) defined( ASCENSION_GRAPHICS_SYSTEM_##name )
 #define ASCENSION_SELECTS_GRAPHICS_SYSTEM(name) (ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(name) && ASCENSION_GRAPHICS_SYSTEM_##name)
 
@@ -188,18 +128,6 @@
 #endif // !ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS
 
 
-/*
-	Text/Glyph shaping engine (ASCENSION_SHAPING_ENGINE_*)
-	- CORE_GRAPHICS : Mac OS X Core Graphics
-	- CORE_TEXT : Mac OS X Core Text
-	- DIRECT_WRITE : Windows DirectWrite
-	- HARFBUZZ : HarfBuzz
-	- PANGO : Pango
-	- QT : Nokia Qt
-	- UNISCRIBE : Windows Uniscribe
-	- WIN32_GDI : Windows GDI
-	- WIN32_GDIPLUS : Windows GDI+
- */
 #define ASCENSION_SUPPORTS_SHAPING_ENGINE(name) defined( ASCENSION_SHAPING_ENGINE_##name )
 #define ASCENSION_SELECTS_SHAPING_ENGINE(name) (ASCENSION_SUPPORTS_SHAPING_ENGINE(name) && ASCENSION_SHAPING_ENGINE_##name)
 
@@ -258,31 +186,6 @@
 #endif // !ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS
 
 
-// use BOOST_COMP_* instead.
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-/*
-	!DEPRECATED! I can't list all compilers!
-	C++ compiler (ASCENSION_COMPILER_*)
-	- CLANG : Clang
-	- COMEAU : Comeau C++
-	- GCC : GNU C++
-	- MSVC : Microsoft Visual C++
-	- WATCOM : Watcom C++
- */
-#if defined(BOOST_CLANG)
-#	define ASCENSION_COMPILER_CLANG
-#elif defined(__COMO__)
-#	define ASCENSION_COMPILER_COMEAU
-#elif defined(BOOST_GCC)
-#	define ASCENSION_COMPILER_GCC
-#elif defined(BOOST_MSVC)
-#	define ASCENSION_COMPILER_MSVC
-#elif defined(__WATCOMC__)
-#	define ASCENSION_COMPILER_WATCOM
-#endif
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
-
 // ASCENSION_HAS_CSTDINT and ASCENSION_HAS_UNISTD_H
 
 #if BOOST_OS_AIX
@@ -333,9 +236,5 @@
 #		define _GLIBCXX_USE_WSTRING 1
 #	endif
 #endif // BOOST_OS_WINDOWS
-
-#if BOOST_OS_WINDOWS
-#	define ASCENSION_USE_INTRINSIC_WCHAR_T
-#endif
 
 #endif // !ASCENSION_PLATFORMS_HPP
