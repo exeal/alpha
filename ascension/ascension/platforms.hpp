@@ -283,20 +283,6 @@
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 
-// ASCENSION_FASTCALL
-
-#if defined(__i386__) || defined(_WIN32) || defined(_WIN32_WCE)
-#	if defined(BOOST_COMP_GNUC) && (BOOST_COMP_GNUC >= BOOST_VERSION_NUMBER(3, 3, 2))
-#		define ASCENSION_FASTCALL __attribute__((regparm(3)))
-#	elif defined(BOOST_COMP_MSVC) && (BOOST_COMP_MSVC > BOOST_VERSION_NUMBER(7, 0, 0))
-#		define ASCENSION_FASTCALL __fastcall
-#	endif
-#endif
-#ifndef ASCENSION_FASTCALL
-#	define ASCENSION_FASTCALL
-#endif
-
-
 // ASCENSION_HAS_CSTDINT and ASCENSION_HAS_UNISTD_H
 
 #if BOOST_OS_AIX

@@ -85,7 +85,7 @@ namespace ascension {
 		 * Returns the default UI language.
 		 * Wrapper for Win32 @c GetUserDefaultUILanguage API.
 		 */
-		LANGID ASCENSION_FASTCALL userDefaultUILanguage();
+		LANGID userDefaultUILanguage();
 
 		inline LONG_PTR getWindowLong(HWND window, int index) {
 			const DWORD lastError = ::GetLastError();
