@@ -20,7 +20,7 @@
 #	include <QWidget>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#	include <ascension/win32/window.hpp>	// win32.Window
+#	include <ascension/win32/window/window.hpp>	// win32.Window
 #	include <ObjIdl.h>	// IDataObject
 #endif
 #include <boost/optional.hpp>
@@ -385,20 +385,24 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			template<typename Point>
 			Point mapFromGlobal(Proxy<const Widget> widget, const Point& position,
-					typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
-				Point temp(position);
-				if(!win32::boole(::ScreenToClient(widget.handle().get(), &temp)))
+					typename graphics::geometry::detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
+				POINT temp;
+				temp.x = static_cast<LONG>(boost::geometry::get<0>(position));
+				temp.y = static_cast<LONG>(boost::geometry::get<1>(position));
+				if(!win32::boole(::ScreenToClient(widget.get()->handle().get(), &temp)))
 					throw makePlatformError();
-				return temp;
+				return boost::geometry::make<Point>(temp.x, temp.y);
 			}
 
 			template<typename Point>
 			Point mapToGlobal(Proxy<const Widget> widget, const Point& position,
-					typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
-				Point temp(position);
-				if(!win32::boole(::ClientToScreen(widget.handle().get(), &temp)))
+					typename graphics::geometry::detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
+				POINT temp;
+				temp.x = static_cast<LONG>(boost::geometry::get<0>(position));
+				temp.y = static_cast<LONG>(boost::geometry::get<1>(position));
+				if(!win32::boole(::ClientToScreen(widget.get()->handle().get(), &temp)))
 					throw makePlatformError();
-				return temp;
+				return boost::geometry::make<Point>(temp.x, temp.y);
 			}
 #else
 			ASCENSION_CANT_DETECT_PLATFORM();

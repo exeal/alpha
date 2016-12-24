@@ -7,7 +7,6 @@
 
 #ifndef ASCENSION_WIN32_UNKNOWN_IMPL_HPP
 #define ASCENSION_WIN32_UNKNOWN_IMPL_HPP
-
 #include <ascension/win32/com/com.hpp>
 #include <ascension/corelib/type-list.hpp>
 
@@ -20,12 +19,12 @@ namespace ascension {
 			 * @tparam I The interface type
 			 * @tparam iid The GUID of @a Interface
 			 */
-			template<typename I, const IID* iid> struct Interface {
-				typedef I Type;
-			};
+			template<typename I, const IID* iid> struct Interface : boost::mpl::identity<I> {};
 
-			// Threading policy for IUnknownImpl ////////////////////////////////
-
+			/**
+			 * @defgroup iunknownimpl_threading_policy Threading Policies for @c IUnknownImpl
+			 * @{
+			 */
 			/// A policy for @c IUnknownImpl does not manage the reference count.
 			struct NoReferenceCounting {};
 			/// A policy for @c IUnknownImpl uses C++ standard operators for @c long type to manage
@@ -34,84 +33,78 @@ namespace ascension {
 			/// A policy for @c IUnknownImpl uses Win32 @c InterlockedXxcrement functions to manage
 			/// the reference count.
 			struct MultiThreaded {};
-		}
-	}
+			/// @}
 
-	namespace detail {
-		template<typename Car, typename Cdr>
-		class GenerateInterfaceHierarchy : virtual public Car,
-			public GenerateInterfaceHierarchy<
-				typename typelist::Car<Cdr>::Type, typename typelist::Cdr<Cdr>::Type> {};
-		template<typename I>
-		class GenerateInterfaceHierarchy<I, void> : virtual public I {};
+			namespace detail {
+				template<typename Car, typename Cdr>
+				class GenerateInterfaceHierarchy : virtual public Car,
+					public GenerateInterfaceHierarchy<
+						typename typelist::Car<Cdr>::type, typename typelist::Cdr<Cdr>::type> {};
+				template<typename I>
+				class GenerateInterfaceHierarchy<I, void> : virtual public I {};
 
-		template<typename Interfaces> struct TypelistFromInterfaces;
-		template<typename I, const IID* iid, typename Cdr>
-		struct TypelistFromInterfaces<typelist::Cat<win32::com::Interface<I, iid>, Cdr>> {
-			typedef typelist::Cat<I, typename TypelistFromInterfaces<Cdr>::Type> Type;
-		};
-		template<typename I, const IID* iid>
-		struct TypelistFromInterfaces<win32::com::Interface<I, iid>> {
-//			typedef I Type;
-			typedef typelist::Cat<I> Type;
-		};
-		template<> struct TypelistFromInterfaces<void> {typedef void Type;};
+				template<typename Interfaces> struct TypelistFromInterfaces;
+				template<typename I, const IID* iid, typename Cdr>
+				struct TypelistFromInterfaces<typelist::Cat<win32::com::Interface<I, iid>, Cdr>> : boost::mpl::identity<
+					typelist::Cat<I, typename TypelistFromInterfaces<Cdr>::type>
+				> {};
+				template<typename I, const IID* iid>
+				struct TypelistFromInterfaces<win32::com::Interface<I, iid>> : boost::mpl::identity<typelist::Cat<I>> {};
+				template<> struct TypelistFromInterfaces<void> : boost::mpl::identity<void> {};
 
-		template<typename Interfaces>
-		struct ImplementsAllBase : public GenerateInterfaceHierarchy<
-			typename typelist::Car<Interfaces>::Type, typename typelist::Cdr<Interfaces>::Type> {};
+				template<typename Interfaces>
+				struct ImplementsAllBase : public GenerateInterfaceHierarchy<
+					typename typelist::Car<Interfaces>::type, typename typelist::Cdr<Interfaces>::type> {};
 
-		template<typename Interfaces> struct ImplementsAll :
-			public detail::ImplementsAllBase<typename typelist::RemoveBases<Interfaces>::Type> {};
+				template<typename Interfaces> struct ImplementsAll :
+					public detail::ImplementsAllBase<typename typelist::RemoveBases<Interfaces>::type> {};
 
-		template<typename Self, typename Interfaces> struct ChainQueryInterface;
-		template<typename Self, typename Car, const IID* iid, typename Cdr>
-		struct ChainQueryInterface<Self, typelist::Cat<win32::com::Interface<Car, iid>, Cdr>> {
-			HRESULT operator()(Self& self, const IID& riid, void** ppv) {
-				if(win32::boole(::InlineIsEqualGUID(riid, *iid)))
-					return (*ppv = static_cast<Car*>(&self)), self.AddRef(), S_OK;
-				return ChainQueryInterface<Self, Cdr>()(self, riid, ppv);
+				template<typename Self, typename Interfaces> struct ChainQueryInterface;
+				template<typename Self, typename Car, const IID* iid, typename Cdr>
+				struct ChainQueryInterface<Self, typelist::Cat<win32::com::Interface<Car, iid>, Cdr>> {
+					HRESULT operator()(Self& self, const IID& riid, void** ppv) {
+						if(win32::boole(::InlineIsEqualGUID(riid, *iid)))
+							return (*ppv = static_cast<Car*>(&self)), self.AddRef(), S_OK;
+						return ChainQueryInterface<Self, Cdr>()(self, riid, ppv);
+					}
+				};
+				template<typename Self, typename I, const IID* iid>
+				struct ChainQueryInterface<Self, win32::com::Interface<I, iid>> {
+					HRESULT operator()(Self& self, const IID& riid, void** ppv) {
+						return ChainQueryInterface<Self,
+							typelist::Cat<win32::com::Interface<I, iid>>>()(self, riid, ppv);
+					}
+				};
+				template<typename Self> struct ChainQueryInterface<Self, void> {
+					HRESULT operator()(Self& self, const IID& iid, void** ppv) {
+						return (*ppv = 0), E_NOINTERFACE;
+					}
+				};
+
+				template<typename ThreadingPolicy> class ReferenceCounter;
+				template<> class ReferenceCounter<win32::com::NoReferenceCounting> {
+				public:
+					ULONG increment() {return 2;}
+					ULONG decrement() {return 1;}
+				};
+				template<> class ReferenceCounter<win32::com::SingleThreaded> {
+				public:
+					ReferenceCounter() BOOST_NOEXCEPT : c_(0) {}
+					ULONG increment() BOOST_NOEXCEPT {return ++c_;}
+					ULONG decrement() BOOST_NOEXCEPT{return --c_;}
+				private:
+					ULONG c_;
+				};
+				template<> class ReferenceCounter<win32::com::MultiThreaded> {
+				public:
+					ReferenceCounter() BOOST_NOEXCEPT : c_(0) {}
+					ULONG increment() BOOST_NOEXCEPT {return ::InterlockedIncrement(&c_);}
+					ULONG decrement() BOOST_NOEXCEPT{return ::InterlockedDecrement(&c_);}
+				private:
+					long c_;
+				};
 			}
-		};
-		template<typename Self, typename I, const IID* iid>
-		struct ChainQueryInterface<Self, win32::com::Interface<I, iid>> {
-			HRESULT operator()(Self& self, const IID& riid, void** ppv) {
-				return ChainQueryInterface<Self,
-					typelist::Cat<win32::com::Interface<I, iid>>>()(self, riid, ppv);
-			}
-		};
-		template<typename Self> struct ChainQueryInterface<Self, void> {
-			HRESULT operator()(Self& self, const IID& iid, void** ppv) {
-				return (*ppv = 0), E_NOINTERFACE;
-			}
-		};
 
-		template<typename ThreadingPolicy> class ReferenceCounter;
-		template<> class ReferenceCounter<win32::com::NoReferenceCounting> {
-		public:
-			ULONG increment() {return 2;}
-			ULONG decrement() {return 1;}
-		};
-		template<> class ReferenceCounter<win32::com::SingleThreaded> {
-		public:
-			ReferenceCounter() BOOST_NOEXCEPT : c_(0) {}
-			ULONG increment() BOOST_NOEXCEPT {return ++c_;}
-			ULONG decrement() BOOST_NOEXCEPT{return --c_;}
-		private:
-			ULONG c_;
-		};
-		template<> class ReferenceCounter<win32::com::MultiThreaded> {
-		public:
-			ReferenceCounter() BOOST_NOEXCEPT : c_(0) {}
-			ULONG increment() BOOST_NOEXCEPT {return ::InterlockedIncrement(&c_);}
-			ULONG decrement() BOOST_NOEXCEPT{return ::InterlockedDecrement(&c_);}
-		private:
-			long c_;
-		};
-	}
-
-	namespace win32 {
-		namespace com {
 			/// Generates @c Interface code from interface's @a name.
 			#define ASCENSION_WIN32_COM_INTERFACE(name)	\
 				ascension::win32::com::Interface<name, &IID_##name>
@@ -125,7 +118,7 @@ namespace ascension {
 			 * @note This class must be base of the other interface implementing classes.
 			 */
 			template<typename Interfaces, typename ThreadingPolicy = MultiThreaded>
-			class IUnknownImpl : public detail::ImplementsAll<typename detail::TypelistFromInterfaces<Interfaces>::Type> {
+			class IUnknownImpl : public detail::ImplementsAll<typename detail::TypelistFromInterfaces<Interfaces>::type> {
 			public:
 				IUnknownImpl() /*throw()*/ {}
 				virtual ~IUnknownImpl() throw() {}
@@ -139,7 +132,7 @@ namespace ascension {
 				STDMETHODIMP QueryInterface(REFIID iid, void** ppv) {
 					ASCENSION_WIN32_VERIFY_COM_POINTER(ppv);
 					if(boole(::InlineIsEqualGUID(iid, IID_IUnknown))) {
-						*ppv = static_cast<typename typelist::Car<Interfaces>::Type::Type*>(this);
+						*ppv = static_cast<typename typelist::Car<Interfaces>::type::type*>(this);
 						return AddRef(), S_OK;
 					}
 					return detail::ChainQueryInterface<
