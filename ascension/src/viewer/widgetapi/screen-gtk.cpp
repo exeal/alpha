@@ -28,8 +28,8 @@ namespace ascension {
 			std::unique_ptr<graphics::RenderingContext2D> Screen::createRenderingContext() const {
 				if(const Glib::RefPtr<Gdk::Window> window = Glib::RefPtr<Gdk::Window>::cast_const(native()->get_root_window())) {
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-					win32::Handle<HWND>::Type hwnd(::gdk_win32_window_get_impl_hwnd(window->gobj()), boost::null_deleter());
-					win32::Handle<HDC>::Type dc(::GetDC(hwnd.get()), std::bind(&::ReleaseDC, hwnd.get(), std::placeholders::_1));
+					auto hwnd(win32::borrowed(::gdk_win32_window_get_impl_hwnd(window->gobj())));
+					auto dc(win32::makeHandle(::GetDC(hwnd.get()), std::bind(&::ReleaseDC, hwnd.get(), std::placeholders::_1)));
 					return std::unique_ptr<graphics::RenderingContext2D>(new graphics::RenderingContext2D(dc));
 #else
 					if(const Cairo::RefPtr<Cairo::Context> context = window->create_cairo_context())

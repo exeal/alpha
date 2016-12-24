@@ -76,7 +76,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				NSCursor???
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				win32::Handle<HCURSOR>::Type
+				win32::Handle<HCURSOR>
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif
@@ -114,7 +114,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				NSCursor
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				win32::Handle<HCURSOR>::Type
+				win32::Handle<HCURSOR>
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif

@@ -115,8 +115,8 @@ namespace ascension {
 				std::shared_ptr<QFont> native();
 				std::shared_ptr<const QFont> native() const;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
-				explicit Font(win32::Handle<HFONT>::Type nativeObject) BOOST_NOEXCEPT;
-				win32::Handle<HFONT>::Type native() const BOOST_NOEXCEPT;
+				explicit Font(win32::Handle<HFONT> nativeObject) BOOST_NOEXCEPT;
+				win32::Handle<HFONT> native() const BOOST_NOEXCEPT;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				explicit Font(std::shared_ptr<Gdiplus::Font> nativeObject);
 				std::shared_ptr<Gdiplus::Font> native();
@@ -191,7 +191,7 @@ namespace ascension {
 //				std::shared_ptr<QRawFont> nativeObject_;
 				std::shared_ptr<QFont> nativeObject_;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
-				win32::Handle<HFONT>::Type nativeObject_;
+				win32::Handle<HFONT> nativeObject_;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				std::shared_ptr<detail::IdeographicVariationSequences> ivs_;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND

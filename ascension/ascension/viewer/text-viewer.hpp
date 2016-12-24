@@ -34,6 +34,7 @@
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/com/smart-pointer.hpp>
 #	include <ascension/win32/com/unknown-impl.hpp>
+#	include <ascension/win32/window/custom-control.hpp>
 #	include <shlobj.h>	// IDropTargetHelper
 
 #	ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
@@ -311,21 +312,21 @@ namespace ascension {
 			virtual void timerEvent(QTimerEvent* event) override;
 			virtual void wheelEvent(QWheelEvent* event) override;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			virtual void onCaptureChanged(const win32::Handle<HWND>::Type& newWindow, bool& consumed);
-			virtual void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>::Type& control, bool& consumed);
+			virtual void onCaptureChanged(const win32::Handle<HWND>& newWindow, bool& consumed);
+			virtual void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>& control, bool& consumed);
 			virtual void onDestroy(bool& consumed);
-			virtual void onEraseBkgnd(const win32::Handle<HDC>::Type& dc, bool& consumed);
-			virtual const win32::Handle<HFONT>::Type onGetFont() const;
-			virtual void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>::Type& scrollBar);
+			virtual void onEraseBkgnd(const win32::Handle<HDC>& dc, bool& consumed);
+			virtual const win32::Handle<HFONT> onGetFont() const;
+			virtual void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
 			virtual bool onNcCreate(CREATESTRUCTW& cs);
 			virtual void onNotify(int id, NMHDR& nmhdr, bool& consumed);
-			virtual void onSetCursor(const win32::Handle<HWND>::Type& window, UINT hitTest, UINT message, bool& consumed);
+			virtual void onSetCursor(const win32::Handle<HWND>& window, UINT hitTest, UINT message, bool& consumed);
 			virtual void onStyleChanged(int type, const STYLESTRUCT& style);
 			virtual void onStyleChanging(int type, STYLESTRUCT& style);
 			virtual void onSysColorChange();
 			virtual void onThemeChanged();
 			virtual void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
-			virtual void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>::Type& scrollBar);
+			virtual void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
 			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			// IDropTarget
 			virtual STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
@@ -378,7 +379,7 @@ namespace ascension {
 			Configuration configuration_;
 			std::weak_ptr<MouseInputStrategy> lockedMouseInputStrategy_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			win32::Handle<HWND>::Type toolTip_;
+			win32::Handle<HWND> toolTip_;
 			std::basic_string<WCHAR> tipText_;
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// strategies and listeners

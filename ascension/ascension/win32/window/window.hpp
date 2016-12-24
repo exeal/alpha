@@ -20,13 +20,13 @@ namespace ascension {
 			static const DWORD DEFAULT_STYLE = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE;
 		public:
 			/// Constructor takes a borrowed window handle.
-			explicit Window(const Handle<HWND>::Type& handle) BOOST_NOEXCEPT : handle_(handle.get()) {}
+			explicit Window(const Handle<HWND>& handle) BOOST_NOEXCEPT : handle_(handle.get()) {}
 			/// Move-constructor.
 			Window(Window&& other) BOOST_NOEXCEPT : handle_(std::move(other.handle_)) {}
 			/// Move-assignment operator.
 			Window& operator=(Window&& other) BOOST_NOEXCEPT {std::swap(*this, Window(other));}
 			/// Returns the held window handle.
-			Handle<HWND>::Type handle() const {return handle_;}
+			Handle<HWND> handle() const {return handle_;}
 
 		protected:
 			/// Constructor takes a window handle.
@@ -36,7 +36,7 @@ namespace ascension {
 			}
 
 		private:
-			Handle<HWND>::Type handle_;
+			Handle<HWND> handle_;
 		};
 	}
 }

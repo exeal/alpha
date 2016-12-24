@@ -41,7 +41,7 @@ namespace ascension {
 			 * @param style The window style
 			 * @param extendedStyle The extended window style
 			 */
-			SubclassedWindow(const Handle<HWND>::Type& parent, const std::basic_string<WCHAR>& className,
+			SubclassedWindow(const Handle<HWND>& parent, const std::basic_string<WCHAR>& className,
 					const boost::optional<graphics::Point>& position = boost::none, const boost::optional<graphics::Dimension>& size = boost::none,
 					const boost::optional<DWORD>& style = boost::none, const boost::optional<DWORD>& extendedStyle = boost::none) : Window(::CreateWindowExW(
 						boost::get_optional_value_or(extendedStyle, 0), className.c_str(), nullptr, boost::get_optional_value_or(style, 0),

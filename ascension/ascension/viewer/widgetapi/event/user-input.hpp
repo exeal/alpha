@@ -104,7 +104,7 @@ namespace ascension {
 			}
 		}
 	}
-
+/*
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	namespace win32 {
 		template<typename Point>
@@ -142,6 +142,6 @@ namespace ascension {
 		}
 	}
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-}
+*/}
 
 #endif // !ASCENSION_USER_INPUT_HPP

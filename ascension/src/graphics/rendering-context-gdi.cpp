@@ -25,11 +25,11 @@ namespace ascension {
 		 * Constructor.
 		 * @param nativeObject The Win32 @c HDC value to hold
 		 */
-		RenderingContext2D::RenderingContext2D(win32::Handle<HDC>::Type nativeObject) : nativeObject_(nativeObject), hasCurrentSubpath_(false) {
+		RenderingContext2D::RenderingContext2D(win32::Handle<HDC> nativeObject) : nativeObject_(nativeObject), hasCurrentSubpath_(false) {
 			setFillStyle(std::make_shared<SolidColor>(Color::OPAQUE_BLACK));
 			setStrokeStyle(std::make_shared<SolidColor>(Color::OPAQUE_BLACK));
 
-			win32::Handle<HFONT>::Type fontHandle(static_cast<HFONT>(::GetCurrentObject(nativeObject.get(), OBJ_FONT)), boost::null_deleter());
+			auto fontHandle(win32::borrowed(static_cast<HFONT>(::GetCurrentObject(nativeObject.get(), OBJ_FONT))));
 			if(fontHandle.get() == nullptr)
 				fontHandle.reset(static_cast<HFONT>(::GetStockObject(DEVICE_DEFAULT_FONT)), boost::null_deleter());
 			assert(fontHandle.get() != nullptr);
@@ -88,9 +88,9 @@ namespace ascension {
 			return *this;
 		}
 
-		RenderingContext2D& RenderingContext2D::changePen(win32::Handle<HPEN>::Type newPen) {
+		RenderingContext2D& RenderingContext2D::changePen(win32::Handle<HPEN> newPen) {
 			assert(newPen.get() != nullptr);
-			win32::Handle<HPEN>::Type oldPen(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())), boost::null_deleter());
+			auto oldPen(win32::borrowed(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get()))));
 			if(oldPen.get() == nullptr)
 				throw makePlatformError();
 			currentState_.pen = newPen;
@@ -137,7 +137,7 @@ namespace ascension {
 			return std::unique_ptr<ImageData>(new ImageData(std::move(bytes), dx, dy));
 		}
 
-		win32::Handle<HPEN>::Type RenderingContext2D::createModifiedPen(const LOGBRUSH* patternBrush,
+		win32::Handle<HPEN> RenderingContext2D::createModifiedPen(const LOGBRUSH* patternBrush,
 				boost::optional<Scalar> lineWidth, boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) const {
 			if(HGDIOBJ oldPen = ::GetCurrentObject(nativeObject_.get(), OBJ_PEN)) {
 				DWORD style = PS_GEOMETRIC | PS_SOLID;
@@ -205,7 +205,7 @@ namespace ascension {
 					}
 				}
 
-				return win32::Handle<HPEN>::Type(::ExtCreatePen(style, static_cast<DWORD>(width), &brush, 0, nullptr), &::DeleteObject);
+				return win32::makeHandle(::ExtCreatePen(style, static_cast<DWORD>(width), &brush, 0, nullptr), &::DeleteObject);
 			}
 			throw makePlatformError();
 		}
@@ -274,7 +274,7 @@ namespace ascension {
 		namespace {
 			class SubpathsSaver : private boost::noncopyable {
 			public:
-				explicit SubpathsSaver(win32::Handle<HDC>::Type deviceContext)
+				explicit SubpathsSaver(win32::Handle<HDC> deviceContext)
 						: deviceContext_(deviceContext), numberOfPoints_(::GetPath(deviceContext.get(), nullptr, nullptr, 0)) {
 					// backup subpaths
 					if(numberOfPoints_ == 0)
@@ -296,7 +296,7 @@ namespace ascension {
 					}
 				}
 			private:
-				const win32::Handle<HDC>::Type deviceContext_;
+				const win32::Handle<HDC> deviceContext_;
 				const int numberOfPoints_;
 				std::unique_ptr<POINT[]> points_;
 				std::unique_ptr<BYTE[]> types_;
@@ -304,7 +304,7 @@ namespace ascension {
 
 			class FontSaver : private boost::noncopyable {
 			public:
-				explicit FontSaver(win32::Handle<HDC>::Type deviceContext) :
+				explicit FontSaver(win32::Handle<HDC> deviceContext) :
 						deviceContext_(deviceContext),
 						savedFont_(static_cast<HFONT>(::GetCurrentObject(deviceContext_.get(), OBJ_FONT))) {
 					if(savedFont_.get() == nullptr)
@@ -313,20 +313,20 @@ namespace ascension {
 				~FontSaver() BOOST_NOEXCEPT {
 					::SelectObject(deviceContext_.get(), savedFont_.get());
 				}
-				win32::Handle<HFONT>::Type savedFont() const BOOST_NOEXCEPT {
+				win32::Handle<HFONT> savedFont() const BOOST_NOEXCEPT {
 					return savedFont_;
 				}
 			private:
-				const win32::Handle<HDC>::Type deviceContext_;
-				win32::Handle<HFONT>::Type savedFont_;
+				const win32::Handle<HDC> deviceContext_;
+				win32::Handle<HFONT> savedFont_;
 			};
 
 			RenderingContext2D& paintText(RenderingContext2D& context, const StringPiece& text,
 					const Point& origin, boost::optional<Scalar> maximumMeasure, bool onlyStroke) {
 				const SubpathsSaver sb(context.native());
-				const win32::Handle<HDC>::Type dc(context.native());
+				const auto dc(context.native());
 				std::unique_ptr<const FontSaver> fontSaver;
-				win32::Handle<HFONT>::Type condensedFont;
+				win32::Handle<HFONT> condensedFont;
 				if(maximumMeasure) {
 					fontSaver.reset(new FontSaver(context.native()));
 					const Scalar measure = geometry::dx(context.measureText(text));
@@ -368,7 +368,7 @@ namespace ascension {
 		namespace {
 			class GdiFontMetrics : public font::FontMetrics<Scalar> {
 			public:
-				explicit GdiFontMetrics(win32::Handle<HDC>::Type dc, win32::Handle<HFONT>::Type font) {
+				explicit GdiFontMetrics(win32::Handle<HDC> dc, win32::Handle<HFONT> font) {
 					const int cookie = ::SaveDC(dc.get());
 					if(font.get() != nullptr)
 						::SelectObject(dc.get(), font.get());
@@ -412,7 +412,7 @@ namespace ascension {
 				Unit xHeight() const BOOST_NOEXCEPT override {return xHeight_;}
 
 			private:
-				static void fail(win32::Handle<HDC>::Type dc, int savedContext) {
+				static void fail(win32::Handle<HDC> dc, int savedContext) {
 					::RestoreDC(dc.get(), savedContext);
 					throw makePlatformError();
 				}
@@ -466,7 +466,7 @@ namespace ascension {
 			const SubpathsSaver sb(nativeObject_);
 			if(!win32::boole(::EndPath(nativeObject_.get())))
 				throw makePlatformError();
-			win32::Handle<HRGN>::Type region(::PathToRegion(nativeObject_.get()), &::DeleteObject);
+			auto region(win32::makeHandle(::PathToRegion(nativeObject_.get()), &::DeleteObject));
 			if(region.get() == nullptr)
 				throw makePlatformError();
 			return win32::boole(::PtInRegion(region.get(), static_cast<int>(geometry::x(point)), static_cast<int>(geometry::y(point))));
@@ -585,13 +585,13 @@ namespace ascension {
 		}
 
 		/// Returns the internal Win32 @c HDC value.
-		win32::Handle<HDC>::Type RenderingContext2D::native() const BOOST_NOEXCEPT {
+		win32::Handle<HDC> RenderingContext2D::native() const BOOST_NOEXCEPT {
 			return nativeObject_;
 		}
 
 		RenderingContext2D& RenderingContext2D::putImageData(
 				const ImageData& image, const Point& destination, const graphics::Rectangle& dirtyRectangle) {
-			win32::Handle<HDC>::Type dc(::CreateCompatibleDC(nativeObject_.get()), &::DeleteDC);
+			auto dc(win32::makeHandle(::CreateCompatibleDC(nativeObject_.get()), &::DeleteDC));
 			if(dc.get() != nullptr) {
 				static_assert(sizeof(DWORD) == 4, "");
 				const std::size_t dx = std::min(static_cast<std::size_t>(geometry::dx(dirtyRectangle)), image.width());
@@ -607,8 +607,8 @@ namespace ascension {
 				header.bV5BlueMask = 0x000000ffu;
 				header.bV5AlphaMask = 0xff000000u;
 				void* pixels;
-				win32::Handle<HBITMAP>::Type bitmap(::CreateDIBSection(nativeObject_.get(),
-					reinterpret_cast<BITMAPINFO*>(&header), DIB_RGB_COLORS, &pixels, nullptr, 0), &::DeleteObject);
+				auto bitmap(win32::makeHandle(::CreateDIBSection(nativeObject_.get(),
+					reinterpret_cast<BITMAPINFO*>(&header), DIB_RGB_COLORS, &pixels, nullptr, 0), &::DeleteObject));
 				if(bitmap.get() != nullptr) {
 					const std::uint8_t* const imageData = boost::begin(image.data());
 					DWORD* pixel = static_cast<DWORD*>(pixels);
@@ -658,8 +658,8 @@ namespace ascension {
 				currentState_ = savedStates_.top().state;
 				savedStates_.pop();
 				updatePenAndBrush();
-				win32::Handle<HPEN>::Type currentPen(static_cast<HPEN>(::GetCurrentObject(nativeObject_.get(), OBJ_PEN)), boost::null_deleter());
-				win32::Handle<HBRUSH>::Type currentBrush(static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH)), boost::null_deleter());
+				auto currentPen(win32::borrowed(static_cast<HPEN>(::GetCurrentObject(nativeObject_.get(), OBJ_PEN))));
+				auto currentBrush(win32::borrowed(static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH))));
 				if(currentPen.get() != currentState_.pen.get())
 					::SelectObject(nativeObject_.get(), currentState_.pen.get());
 				if(currentBrush.get() != currentState_.brush.get())
@@ -686,9 +686,9 @@ namespace ascension {
 		RenderingContext2D& RenderingContext2D::setFillStyle(std::shared_ptr<const Paint> fillStyle) {
 			if(fillStyle.get() == nullptr)
 				throw NullPointerException("fillStyle");
-			win32::Handle<HBRUSH>::Type newBrush(::CreateBrushIndirect(&fillStyle->native()), &::DeleteObject);
+			auto newBrush(win32::makeHandle(::CreateBrushIndirect(&fillStyle->native()), &::DeleteObject));
 			if(newBrush.get() != nullptr) {
-				win32::Handle<HBRUSH>::Type oldBrush(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())), boost::null_deleter());
+				auto oldBrush(win32::borrowed(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get()))));
 				if(oldBrush.get() != nullptr) {
 					std::swap(currentState_.brush, newBrush);
 					std::swap(currentState_.previousBrush, oldBrush);
@@ -900,15 +900,15 @@ namespace ascension {
 		}
 
 		void RenderingContext2D::updatePenAndBrush() {
-			win32::Handle<HPEN>::Type newPen;
-			win32::Handle<HBRUSH>::Type newBrush;
+			win32::Handle<HPEN> newPen;
+			win32::Handle<HBRUSH> newBrush;
 			if(currentState_.strokeStyle.second != currentState_.strokeStyle.first->revisionNumber())
 				newPen = createModifiedPen(nullptr, boost::none, boost::none, boost::none);
 			if(currentState_.fillStyle.second != currentState_.fillStyle.first->revisionNumber())
 				newBrush.reset(::CreateBrushIndirect(&currentState_.fillStyle.first->native()), &::DeleteObject);
 
-			win32::Handle<HPEN>::Type oldPen;
-			win32::Handle<HBRUSH>::Type oldBrush;
+			win32::Handle<HPEN> oldPen;
+			win32::Handle<HBRUSH> oldBrush;
 			if(newPen.get() != nullptr) {
 				oldPen.reset(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())), boost::null_deleter());
 				if(oldPen.get() == nullptr)

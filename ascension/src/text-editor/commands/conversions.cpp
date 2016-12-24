@@ -151,7 +151,7 @@ namespace ascension {
 					if(const auto caret = textArea->caret()) {
 						if(!caret->isSelectionRectangle()) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-							if(win32::Handle<HIMC>::Type imc = win32::inputMethod(target())) {
+							if(auto imc = win32::inputMethod(target())) {
 								if(!win32::boole(::ImmGetOpenStatus(imc.get())))	// without this, IME may ignore us?
 									::ImmSetOpenStatus(imc.get(), true);
 

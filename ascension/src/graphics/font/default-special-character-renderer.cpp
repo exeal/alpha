@@ -100,7 +100,7 @@ DefaultSpecialCharacterRenderer::DefaultSpecialCharacterRenderer() /*throw()*/ :
 
 /// @see ISpecialCharacterRenderer#drawControlCharacter
 void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext& context, CodePoint c) const {
-	const win32::Handle<HDC>& dc = context.renderingContext.nativeHandle();
+	const auto& dc = context.renderingContext.nativeHandle();
 	shared_ptr<const Font> primaryFont(renderer_->primaryFont());
 	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), primaryFont->nativeHandle().get()));
 	::SetTextColor(dc.get(), controlColor_.asCOLORREF());
@@ -113,7 +113,7 @@ void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext&
 /// @see ISpecialCharacterRenderer#drawLineTerminator
 void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& context, k::Newline) const {
 	if(showsEOLs_ && glyphs_[LINE_TERMINATOR] != 0xffffu) {
-		const win32::Handle<HDC>& dc = context.renderingContext.nativeHandle();
+		const auto& dc = context.renderingContext.nativeHandle();
 		shared_ptr<const Font> primaryFont(renderer_->primaryFont());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
 			(((glyphWidths_[LINE_TERMINATOR] & 0x80000000ul) != 0) ? font_ : primaryFont)->nativeHandle().get()));
@@ -150,7 +150,7 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 		const int id = (context.readingDirection == LEFT_TO_RIGHT) ? LTR_HORIZONTAL_TAB : RTL_HORIZONTAL_TAB;
 		const WCHAR glyph = glyphs_[id];
 		if(glyph != 0xffffu) {
-			const win32::Handle<HDC>& dc = context.renderingContext.nativeHandle();
+			const auto& dc = context.renderingContext.nativeHandle();
 			shared_ptr<const Font> primaryFont(renderer_->primaryFont());
 			HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
 				(win32::boole(glyphWidths_[id] & 0x80000000ul) ? font_ : primaryFont)->nativeHandle().get()));
@@ -166,7 +166,7 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 			::SelectObject(dc.get(), oldFont);
 		}
 	} else if(glyphs_[WHITE_SPACE] != 0xffffu) {
-		const win32::Handle<HDC>& dc = context.renderingContext.nativeHandle();
+		const auto& dc = context.renderingContext.nativeHandle();
 		shared_ptr<const Font> primaryFont(renderer_->primaryFont());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
 			(win32::boole(glyphWidths_[WHITE_SPACE] & 0x80000000ul) ? font_ : primaryFont)->nativeHandle().get()));
@@ -184,7 +184,7 @@ void DefaultSpecialCharacterRenderer::defaultFontChanged() {
 	static const Char codes[] = {0x2192u, 0x2190u, 0x2193u, 0x21a9u, 0x21aau, 0x00b7u};
 
 	// using the primary font
-	win32::Handle<HDC> dc(::GetDC(nullptr), bind1st(ptr_fun(&::ReleaseDC), static_cast<HWND>(nullptr)));
+	auto dc(win32::makeHandle(::GetDC(nullptr), bind1st(ptr_fun(&::ReleaseDC), static_cast<HWND>(nullptr))));
 	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), renderer_->primaryFont()->nativeHandle().get()));
 	::GetGlyphIndicesW(dc.get(), codes, ASCENSION_COUNTOF(codes), glyphs_, GGI_MARK_NONEXISTING_GLYPHS);
 	::GetCharWidthI(dc.get(), 0, ASCENSION_COUNTOF(codes), glyphs_, glyphWidths_);
@@ -221,7 +221,7 @@ void DefaultSpecialCharacterRenderer::defaultFontChanged() {
 int DefaultSpecialCharacterRenderer::getControlCharacterWidth(const LayoutContext& context, CodePoint c) const {
 	Char buffer[2];
 	getControlPresentationString(c, buffer);
-	const win32::Handle<HDC>& dc = context.renderingContext.nativeHandle();
+	const auto& dc = context.renderingContext.nativeHandle();
 	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), renderer_->primaryFont()->nativeHandle().get()));
 	SIZE temp;
 	::GetTextExtentPoint32W(dc.get(), buffer, 2, &temp);

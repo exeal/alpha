@@ -55,7 +55,7 @@ namespace ascension {
 					if(message == WM_PAINT) {
 						PAINTSTRUCT ps;
 						::BeginPaint(handle().get(), &ps);
-						RenderingContext2D temp(win32::Handle<HDC>::Type(ps.hdc));
+						RenderingContext2D temp(win32::borrowed(ps.hdc));
 						paint(PaintContext(move(temp), ps.rcPaint));
 						::EndPaint(handle().get(), &ps);
 						consumed = true;
@@ -179,7 +179,7 @@ namespace ascension {
 					andBits, xorBits,
 					geometry::make<boost::geometry::model::d2::point_xy<std::uint16_t>>((geometry::_x = 16, geometry::_y = 16)));
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				instances[type].reset(new widgetapi::Cursor(win32::Handle<HCURSOR>::Type(
+				instances[type].reset(new widgetapi::Cursor(win32::makeHandle(
 					::CreateCursor(::GetModuleHandleW(nullptr), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
 #else
 				instances[type].reset(new widgetapi::Cursor(bitmap));
@@ -256,7 +256,7 @@ namespace ascension {
 			::SetWindowLongW(handle().get(), GWL_EXSTYLE,
 				::GetWindowLongW(handle().get(), GWL_EXSTYLE) | WS_EX_LAYERED);
 			::SetLayeredWindowAttributes(handle().get(), maskColor_ = ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
-//			win32::Handle<HRGN>::Type rgn(::CreateEllipticRgn(0, 0, width_ + 1, width_ + 1), &::DeleteObject);
+//			win32::Handle<HRGN> rgn(::CreateEllipticRgn(0, 0, width_ + 1, width_ + 1), &::DeleteObject);
 //			::SetWindowRgn(asNativeObject().get(), rgn.get(), true);
 #endif
 		}
