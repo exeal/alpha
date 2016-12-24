@@ -336,7 +336,7 @@ namespace ascension {
 			const LRESULT listItemHeight = ::SendMessageW(proposalsPopup_->handle().get(), LB_GETITEMHEIGHT, 0, 0);
 			if(listItemHeight == LB_ERR)
 				throw makePlatformError();
-			const graphics::Scalar itemHeight = listItemHeight;
+			const auto itemHeight = static_cast<graphics::Scalar>(listItemHeight);
 #endif
 			if(isHorizontal(writingMode.blockFlowDirection)) {
 				graphics::geometry::dx(size) = graphics::geometry::dx(screenBounds) / 4;

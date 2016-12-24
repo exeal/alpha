@@ -822,9 +822,12 @@ namespace ascension {
 #endif
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-					::ScrollWindowEx(handle().get(),
-						graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels),
-						nullptr, &static_cast<RECT>(boundsToScroll), nullptr, nullptr, SW_INVALIDATE);
+					{
+						const auto temp(graphics::toNative<RECT>(boundsToScroll));
+						::ScrollWindowEx(textViewer().handle().get(),
+							graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels),
+							nullptr, &temp, nullptr, nullptr, SW_INVALIDATE);
+					}
 #else
 					ASCENSION_CANT_DETECT_PLATFORM();
 #endif

@@ -22,7 +22,7 @@
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #	include <QListView>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#	include <ascension/win32/window.hpp>
+#	include <ascension/win32/window/subclassed-window.hpp>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(X)
 #	include <???>
 #endif

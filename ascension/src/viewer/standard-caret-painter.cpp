@@ -35,7 +35,7 @@ namespace ascension {
 				DWORD width;
 				if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 					width = 1;	// NT4 does not support SPI_GETCARETWIDTH
-				return static_cast<std::uint32_t>(width);
+				return static_cast<T>(width);
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif

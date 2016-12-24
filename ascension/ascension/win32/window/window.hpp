@@ -24,7 +24,7 @@ namespace ascension {
 			/// Move-constructor.
 			Window(Window&& other) BOOST_NOEXCEPT : handle_(std::move(other.handle_)) {}
 			/// Move-assignment operator.
-			Window& operator=(Window&& other) BOOST_NOEXCEPT {std::swap(*this, Window(other));}
+			Window& operator=(Window&& other) BOOST_NOEXCEPT {std::swap(*this, Window(std::move(other)));}
 			/// Returns the held window handle.
 			Handle<HWND> handle() const {return handle_;}
 

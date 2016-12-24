@@ -580,11 +580,12 @@ namespace ascension {
 #		error Not implemented.
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				static boost::optional<CLIPFORMAT> registered;
-				if(!registered) {
-					if(0 == (registered = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT))))
+				if(registered == boost::none) {
+					registered = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT));
+					if(boost::get(registered) == 0)
 						throw makePlatformError();
 				}
-				return registered;
+				return boost::get(registered);
 #endif
 			}
 		}
