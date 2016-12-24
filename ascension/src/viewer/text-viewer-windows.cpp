@@ -690,7 +690,7 @@ void TextViewer::initializeNativeObjects(const TextViewer* other) {
 }
 
 /// @see WM_CAPTURECHANGED
-void TextViewer::onCaptureChanged(const win32::Handle<HWND>::Type&, bool& consumed) {
+void TextViewer::onCaptureChanged(const win32::Handle<HWND>&, bool& consumed) {
 	if(consumed = (mouseInputStrategy_.get() != nullptr))
 		mouseInputStrategy_->captureChanged();
 }
@@ -756,7 +756,7 @@ namespace {
 }
 
 /// @see Window#onCommand
-void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>::Type&, bool& consumed) {
+void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>&, bool& consumed) {
 	using namespace ascension::texteditor::commands;
 	switch(id) {
 	case WM_UNDO:	// "Undo"
@@ -874,17 +874,17 @@ void TextViewer::onDestroy(bool& consumed) {
 }
 
 /// @see WM_ERASEGKGND
-void TextViewer::onEraseBkgnd(const win32::Handle<HDC>::Type&, bool& consumed) {
+void TextViewer::onEraseBkgnd(const win32::Handle<HDC>&, bool& consumed) {
 	consumed = false;
 }
 
 /// @see WM_GETFONT
-const win32::Handle<HFONT>::Type TextViewer::onGetFont() const {
+const win32::Handle<HFONT> TextViewer::onGetFont() const {
 	return textRenderer().defaultFont()->asNativeObject();
 }
 
 /// @see WM_HSCROLL
-void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>::Type&) {
+void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	switch(sbCode) {
 		case SB_LINELEFT:	// 1 óÒï™ç∂
@@ -951,7 +951,7 @@ void TextViewer::onNotify(int, NMHDR& nmhdr, bool& consumed) {
 }
 
 /// @see WM_SETCURSOR
-void TextViewer::onSetCursor(const win32::Handle<HWND>::Type&, UINT, UINT, bool& consumed) {
+void TextViewer::onSetCursor(const win32::Handle<HWND>&, UINT, UINT, bool& consumed) {
 	cursorVanisher_.restore();
 	if(consumed = (mouseInputStrategy_.get() != nullptr))
 		mouseInputStrategy_->showCursor(widgetapi::mapFromGlobal(*this, widgetapi::Cursor::position()));
@@ -997,7 +997,7 @@ void TextViewer::onTimer(UINT_PTR eventID, TIMERPROC) {
 }
 
 /// @see Window#onVScroll
-void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>::Type&) {
+void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	switch(sbCode) {
 		case SB_LINEUP:		// 1 çsè„
@@ -1109,7 +1109,7 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 			// dispatch message into handler
 		case WM_CAPTURECHANGED:
-			onCaptureChanged(win32::Handle<HWND>::Type(reinterpret_cast<HWND>(lp)), consumed);
+			onCaptureChanged(win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
 			return consumed ? 0 : 1;
 		case WM_CHAR:
 		case WM_SYSCHAR:
@@ -1127,7 +1127,7 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			return consumed ? 0 : 1;
 		}
 		case WM_COMMAND:
-			onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>::Type(reinterpret_cast<HWND>(lp)), consumed);
+			onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
 			return consumed ? 0 : 1;
 		case WM_CONTEXTMENU: {
 			const widgetapi::LocatedUserInput input(makeMouseLocation<graphics::Point>(lp), makeModifiers());
@@ -1138,12 +1138,12 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			onDestroy(consumed);
 			return consumed ? 0 : 1;
 		case WM_ERASEBKGND:
-			onEraseBkgnd(win32::Handle<HDC>::Type(reinterpret_cast<HDC>(wp)), consumed);
+			onEraseBkgnd(win32::Handle<HDC>(reinterpret_cast<HDC>(wp)), consumed);
 			return consumed ? TRUE : FALSE;
 		case WM_GETFONT:
 			return (consumed = true), reinterpret_cast<LRESULT>(onGetFont().get());
 		case WM_HSCROLL:
-			return (consumed = true), onHScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>::Type(reinterpret_cast<HWND>(lp))), 0;
+			return (consumed = true), onHScroll(LOWORD(wp), HIWORD(wp), win32::borrowed(reinterpret_cast<HWND>(lp))), 0;
 		case WM_IME_CHAR:
 		case WM_IME_COMPOSITION:
 		case WM_IME_COMPOSITIONFULL:
@@ -1196,9 +1196,9 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			PAINTSTRUCT ps;
 			::BeginPaint(handle().get(), &ps);
 			consumed = true;
-			const win32::Handle<HDC>::Type dc(ps.hdc);
+			const auto dc(win32::borrowed(ps.hdc));
 			RenderingContext2D context(dc);
-			paint(PaintContext(move(context), ps.rcPaint));
+			paint(PaintContext(std::move(context), ps.rcPaint));
 			::EndPaint(handle().get(), &ps);
 			return 0;
 		}
@@ -1209,7 +1209,7 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 		case WM_RBUTTONUP:
 			return (consumed = true), fireMouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
 		case WM_SETCURSOR:
-			onSetCursor(win32::Handle<HWND>::Type(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
+			onSetCursor(win32::borrowed(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
 			return consumed ? TRUE : FALSE;
 		case WM_SETFOCUS:
 			return (consumed = true), focusGained(), 0;
@@ -1226,7 +1226,7 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 		case WM_TIMER:
 			return (consumed = true), onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<TIMERPROC>(lp)), 0;
 		case WM_VSCROLL:
-			return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>::Type(reinterpret_cast<HWND>(lp))), 0;
+			return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::borrowed(reinterpret_cast<HWND>(lp))), 0;
 		case WM_XBUTTONDBLCLK:
 			return (consumed = true), fireMouseDoubleClicked(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
 		case WM_XBUTTONDOWN:
@@ -1255,7 +1255,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void*
 	const bool readOnly = doc.isReadOnly();
 	const bool japanese = PRIMARYLANGID(win32::userDefaultUILanguage()) == LANG_JAPANESE;
 
-	static win32::Handle<HMENU>::Type toplevelPopup(::CreatePopupMenu(), &::DestroyMenu);
+	static auto toplevelPopup(win32::makeHandle(::CreatePopupMenu(), &::DestroyMenu));
 	if(::GetMenuItemCount(toplevelPopup.get()) == 0) {	// first initialization
 		// under "Insert Unicode control character"
 		static const pair<UINT, const basic_string<WCHAR>> insertUnicodeControlCharacterItems[] = {
@@ -1282,7 +1282,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void*
 			make_pair(ID_INSERT_IAT, L"IAT\tInterlinear Annotation Terminator"),
 			make_pair(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator")
 		};
-		win32::Handle<HMENU>::Type insertUnicodeControlCharacterPopup(::CreatePopupMenu(), &::DestroyMenu);
+		auto insertUnicodeControlCharacterPopup(win32::makeHandle(::CreatePopupMenu(), &::DestroyMenu));
 		win32::AutoZeroSize<MENUITEMINFOW> item;
 		for(size_t i = 0; i < ASCENSION_COUNTOF(insertUnicodeControlCharacterItems); ++i) {
 			if(!insertUnicodeControlCharacterItems[i].second.empty()) {
@@ -1322,7 +1322,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void*
 			make_pair(ID_INSERT_LS, L"LS\tLine Separator"),
 			make_pair(ID_INSERT_PS, L"PS\tParagraph Separator")
 		};
-		win32::Handle<HMENU>::Type insertUnicodeWhiteSpaceCharacterPopup(::CreatePopupMenu(), &::DestroyMenu);
+		auto insertUnicodeWhiteSpaceCharacterPopup(win32::makeHandle(::CreatePopupMenu(), &::DestroyMenu));
 		for(size_t i = 0; i < ASCENSION_COUNTOF(insertUnicodeWhiteSpaceCharacterItems); ++i) {
 			if(!insertUnicodeWhiteSpaceCharacterItems[i].second.empty()) {
 				item.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
@@ -1397,7 +1397,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void*
 	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
 	if(//win32::boole(::ImmIsIME(keyboardLayout)) &&
 			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
-		win32::Handle<HIMC>::Type imc(win32::inputMethod(*this));
+		auto imc(win32::inputMethod(*this));
 		const basic_string<WCHAR> openIme(japanese ? L"IME \x3092\x958b\x304f(&O)" : L"&Open IME");
 		const basic_string<WCHAR> closeIme(japanese ? L"IME \x3092\x9589\x3058\x308b(&L)" : L"C&lose IME");
 		const basic_string<WCHAR> openSoftKeyboard(japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x958b\x304f(&E)" : L"Op&en soft keyboard");

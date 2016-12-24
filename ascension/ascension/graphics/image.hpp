@@ -55,7 +55,7 @@ namespace ascension {
 			QImage& asNative();
 			const QImage& asNative() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-			win32::Handle<HBITMAP>::Type asNative() const BOOST_NOEXCEPT;
+			win32::Handle<HBITMAP> asNative() const BOOST_NOEXCEPT;
 #endif
 
 			static std::uint8_t depth(Format format);
@@ -89,7 +89,7 @@ namespace ascension {
 			QImage impl_;
 			std::unique_ptr<std::uint8_t[]> buffer_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-			win32::Handle<HBITMAP>::Type impl_;
+			win32::Handle<HBITMAP> impl_;
 			std::unique_ptr<std::uint8_t[], boost::null_deleter> buffer_;
 #endif
 		};

@@ -409,9 +409,9 @@ namespace ascension {
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	namespace win32 {
-		inline Handle<HIMC>::Type inputMethod(const viewer::widgetapi::Proxy<Widget> widget) {
-			return Handle<HIMC>::Type(::ImmGetContext(widget.handle().get()),
-				std::bind(&::ImmReleaseContext, widget.handle().get(), std::placeholders::_1));
+		inline Handle<HIMC> inputMethod(const viewer::widgetapi::Proxy<viewer::widgetapi::Widget> widget) {
+			return Handle<HIMC>(::ImmGetContext(widget.get()->handle().get()),
+				std::bind(&::ImmReleaseContext, widget.get()->handle().get(), std::placeholders::_1));
 		}
 	}
 #endif

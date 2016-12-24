@@ -23,7 +23,7 @@ namespace ascension {
 					/// Constructor makes @c null @c HBRUSH value.
 					Background() BOOST_NOEXCEPT : brush_(nullptr) {}
 					/// Constructor takes a brush handle.
-					Background(Handle<HBRUSH>::Type handle) BOOST_NOEXCEPT : brush_(handle) {}
+					Background(Handle<HBRUSH> handle) BOOST_NOEXCEPT : brush_(handle) {}
 					/// Constructor takes a @c COLORREF value used to make the brush handle.
 					Background(int systemColor) BOOST_NOEXCEPT
 						: brush_(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(systemColor + 1))) {}
@@ -34,9 +34,9 @@ namespace ascension {
 						return (brush_ = std::move(other.brush_)), *this;
 					}
 					/// Returns the brush handle.
-					Handle<HBRUSH>::Type get() const BOOST_NOEXCEPT {return brush_;}
+					Handle<HBRUSH> get() const BOOST_NOEXCEPT {return brush_;}
 				private:
-					Handle<HBRUSH>::Type brush_;
+					Handle<HBRUSH> brush_;
 				} background;
 				Handle<HICON> icon, smallIcon;
 				/// Makes a cursor handle parameter from either a cursor handle or numeric identifier.
@@ -45,7 +45,7 @@ namespace ascension {
 					/// Constructor makes @c null @c HCURSOR value.
 					CursorHandleOrID() BOOST_NOEXCEPT : cursor_(nullptr) {}
 					/// Constructor takes a cursor handle.
-					CursorHandleOrID(Handle<HCURSOR>::Type handle) BOOST_NOEXCEPT : cursor_(handle) {}
+					CursorHandleOrID(Handle<HCURSOR> handle) BOOST_NOEXCEPT : cursor_(handle) {}
 					/// Constructor takes a numeric identifier for system cursor.
 					CursorHandleOrID(const WCHAR* systemCursorID) BOOST_NOEXCEPT : cursor_(::LoadCursorW(nullptr, systemCursorID)) {}
 					/// Move-constructor.
@@ -55,9 +55,9 @@ namespace ascension {
 						return (cursor_ = std::move(other.cursor_)), *this;
 					}
 					/// Returns the cursor handle.
-					Handle<HCURSOR>::Type get() const BOOST_NOEXCEPT {return cursor_;}
+					Handle<HCURSOR> get() const BOOST_NOEXCEPT {return cursor_;}
 				private:
-					Handle<HCURSOR>::Type cursor_;
+					Handle<HCURSOR> cursor_;
 				} cursor;
 				ClassInformation() : style(0) {}
 			};

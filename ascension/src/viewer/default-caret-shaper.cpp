@@ -258,8 +258,8 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			const bool inputMethodIsOpen = static_cast<Glib::ustring>(
 				const_cast<TextViewer&>(caret.textArea().textViewer()).get_settings()->property_gtk_im_module()) != nullptr;
-#elif ASCENSION_WINDOW_SYSTEM(WIN32)
-			win32::Handle<HIMC>::Type imc(win32::inputMethod(caret.textViewer()));
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			auto imc(win32::inputMethod(caret.textArea().textViewer()));
 			const bool inputMethodIsOpen = win32::boole(::ImmGetOpenStatus(imc.get()));
 #else
 			ASCENSION_CANT_DETECT_PLATFORM();

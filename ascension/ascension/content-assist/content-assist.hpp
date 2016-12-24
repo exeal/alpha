@@ -15,6 +15,8 @@
 #include <set>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gdkmm/pixbuf.h>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#	include <ascension/win32/handle.hpp>
 #endif
 
 namespace ascension {
@@ -45,7 +47,7 @@ namespace ascension {
 				QIcon
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				win32::Handle<HICON>::Type
+				win32::Handle<HICON>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(X)
 #endif
 				Icon;

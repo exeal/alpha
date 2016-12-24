@@ -48,8 +48,8 @@ namespace ascension {
 				const Glib::RefPtr<const Gdk::Window> window(widget->get_window());
 				if(!window)
 					throw NullPointerException("widget");
-				win32::Handle<HWND>::Type hwnd(::gdk_win32_window_get_impl_hwnd(const_cast<GdkWindow*>(window->gobj())), boost::null_deleter());
-				win32::Handle<HDC>::Type dc(::GetDC(hwnd.get()), std::bind(&::ReleaseDC, hwnd.get(), std::placeholders::_1));
+				auto hwnd(win32::borrowed(::gdk_win32_window_get_impl_hwnd(const_cast<GdkWindow*>(window->gobj()))));
+				auto dc(win32::makeHandle(::GetDC(hwnd.get()), std::bind(&::ReleaseDC, hwnd.get(), std::placeholders::_1)));
 				return std::unique_ptr<graphics::RenderingContext2D>(new graphics::RenderingContext2D(dc));
 #endif
 			}

@@ -392,7 +392,7 @@ void Caret::adjustInputMethodCompositionWindow() {
 	assert(win32::boole(::IsWindow(textViewer().handle().get())));
 	if(!context_.inputMethodCompositionActivated)
 		return;
-	if(win32::Handle<HIMC>::Type imc = inputMethod(textViewer())) {
+	if(auto imc = inputMethod(textViewer())) {
 		// composition window placement
 		COMPOSITIONFORM cf;
 		cf.rcArea = textViewer().textAreaContentRectangle();
@@ -475,7 +475,7 @@ void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
 	if(document().isReadOnly())
 		return;
 	else if(/*event.lParam == 0 ||*/ win32::boole(lp & GCS_RESULTSTR)) {	// completed
-		win32::Handle<HIMC>::Type imc(inputMethod(textViewer()));
+		auto imc(inputMethod(textViewer()));
 		if(imc.get() != nullptr) {
 			if(const Index len = ::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, nullptr, 0) / sizeof(WCHAR)) {
 				// this was not canceled

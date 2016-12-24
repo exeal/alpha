@@ -282,7 +282,7 @@ namespace ascension {
 									std::make_pair(HANGUL_CHARSET, fromLatin1("Gulim")),
 									std::make_pair(CHINESEBIG5_CHARSET, fromLatin1("PMingLiu"))
 								};
-								win32::Handle<HDC>::Type dc(win32::detail::screenDC());
+								auto dc(win32::detail::screenDC());
 								bool installed = false;
 								LOGFONTW lf;
 								std::memset(&lf, 0, sizeof(LOGFONTW));
@@ -317,7 +317,7 @@ namespace ascension {
 				 * @param[out] strikethroughThickness The thickness of linethrough in pixels
 				 * @return Succeeded or not
 				 */
-				bool getDecorationLineMetrics(const win32::Handle<HDC>::Type& dc, int* baselineOffset,
+				bool getDecorationLineMetrics(const win32::Handle<HDC>& dc, int* baselineOffset,
 						int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) BOOST_NOEXCEPT {
 					OUTLINETEXTMETRICW* otm = nullptr;
 					TEXTMETRICW tm;
@@ -741,8 +741,8 @@ namespace ascension {
 						const presentation::styles::Length::Context& lengthContext,
 						const String& layoutString, Scalar ipd, boost::optional<Scalar> maximumMeasure);
 					HRESULT justify(int width);
-					void shape(win32::Handle<HDC>::Type dc);
-					void positionGlyphs(win32::Handle<HDC>::Type dc);
+					void shape(win32::Handle<HDC> dc);
+					void positionGlyphs(win32::Handle<HDC> dc);
 					void reserveJustification();
 					template<typename SinglePassReadableRange>
 					static void substituteGlyphs(const SinglePassReadableRange& runs);
@@ -809,9 +809,9 @@ namespace ascension {
 						}
 						return boost::make_iterator_range<const int*>(nullptr, nullptr);
 					}
-					static std::size_t generateDefaultGlyphs(win32::Handle<HDC>::Type dc,
+					static std::size_t generateDefaultGlyphs(win32::Handle<HDC> dc,
 						const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs);
-					static std::pair<std::size_t, HRESULT> generateGlyphs(win32::Handle<HDC>::Type dc,
+					static std::pair<std::size_t, HRESULT> generateGlyphs(win32::Handle<HDC> dc,
 						const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs);
 					Scalar glyphLogicalPosition(std::size_t index) const;
 					boost::iterator_range<const WORD*> glyphs() const BOOST_NOEXCEPT {
@@ -890,7 +890,7 @@ namespace ascension {
 					assert(advances.get() == nullptr);
 					assert(at != nullptr);
 					assert(at >= position);
-					win32::Handle<HDC>::Type dc(win32::detail::screenDC());
+					auto dc(win32::detail::screenDC());
 					HFONT oldFont = nullptr;
 					WORD blankGlyph;
 					HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
@@ -1207,7 +1207,7 @@ namespace ascension {
 				 * @param[out] glyphs The result
 				 * @return The number of generated glyphs
 				 */
-				inline std::size_t GlyphVectorImpl::generateDefaultGlyphs(win32::Handle<HDC>::Type dc,
+				inline std::size_t GlyphVectorImpl::generateDefaultGlyphs(win32::Handle<HDC> dc,
 						const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs) {
 					SCRIPT_CACHE fontCache(nullptr);
 					SCRIPT_FONTPROPERTIES fp;
@@ -1252,7 +1252,7 @@ namespace ascension {
 				 * @retval HRESULT other Uniscribe error
 				 * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
 				 */
-				std::pair<std::size_t, HRESULT> GlyphVectorImpl::generateGlyphs(win32::Handle<HDC>::Type dc,
+				std::pair<std::size_t, HRESULT> GlyphVectorImpl::generateGlyphs(win32::Handle<HDC> dc,
 						const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs) {
 #ifdef _DEBUG
 					if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(dc.get(), OBJ_FONT))) {
@@ -1610,7 +1610,7 @@ namespace ascension {
 				 * @see #substituteGlyphs, TextRunImpl#positionGlyphs
 				 * @note This method should be called after shaping and before breaking.
 				 */
-				void GlyphVectorImpl::positionGlyphs(win32::Handle<HDC>::Type dc) {
+				void GlyphVectorImpl::positionGlyphs(win32::Handle<HDC> dc) {
 					assert(glyphs_.get() != nullptr);
 					assert(glyphs_.unique());
 					assert(glyphs_->indices.get() != nullptr);
@@ -1697,7 +1697,7 @@ namespace ascension {
 					}
 				} // namespace @0
 
-				void GlyphVectorImpl::shape(win32::Handle<HDC>::Type dc) {
+				void GlyphVectorImpl::shape(win32::Handle<HDC> dc) {
 					assert(glyphs_.unique());
 
 					// TODO: check if the requested style (or the default one) disables shaping.
@@ -2154,7 +2154,7 @@ namespace ascension {
 						vector<TextRunImpl*>& textRuns, vector<const ComputedTextRunStyle>& computedStyles,
 						vector<vector<const ComputedTextRunStyle>::size_type>& computedStylesIndices);
 #endif
-					void positionGlyphs(win32::Handle<HDC>::Type dc, const presentation::ComputedTextRunStyle& style);
+					void positionGlyphs(win32::Handle<HDC> dc, const presentation::ComputedTextRunStyle& style);
 					// drawing and painting
 					void drawGlyphs(PaintContext& context, const Point& p, const boost::integer_range<Index>& range) const;
 					void paintLineDecorations() const;
@@ -2619,7 +2619,7 @@ namespace ascension {
 				 * @param style The computed text run style
 				 * @see #generate, GlyphVectorImpl#positionGlyphs, GlyphVectorImpl#substituteGlyphs
 				 */
-				void TextRunImpl::positionGlyphs(win32::Handle<HDC>::Type dc, const presentation::ComputedTextRunStyle& style) {
+				void TextRunImpl::positionGlyphs(win32::Handle<HDC> dc, const presentation::ComputedTextRunStyle& style) {
 					return positionGlyphs(dc);
 
 					// apply text run styles
@@ -2677,7 +2677,7 @@ namespace ascension {
 			// helpers for TextLayout.draw
 			namespace {
 				const std::size_t MAXIMUM_RUN_LENGTH = 1024;
-				inline win32::Handle<HPEN>::Type createPen(const Color& color, int width, int style) {
+				inline win32::Handle<HPEN> createPen(const Color& color, int width, int style) {
 					if(color.alpha() < 0xff)
 						throw std::invalid_argument("color");
 					LOGBRUSH brush;
@@ -2695,7 +2695,7 @@ namespace ascension {
 					}
 					if(pen == nullptr)
 						throw UnknownValueException("style");
-					return win32::Handle<HPEN>::Type(pen, &::DeleteObject);
+					return win32::makeHandle(pen, &::DeleteObject);
 				}
 			} // namespace @0
 

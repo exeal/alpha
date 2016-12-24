@@ -71,7 +71,7 @@ namespace ascension {
 			 */
 			bool InputMethodOpenStatusToggleCommand::perform() {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				if(win32::Handle<HIMC>::Type imc = win32::inputMethod(target()))
+				if(auto imc = win32::inputMethod(target()))
 					return win32::boole(::ImmSetOpenStatus(imc.get(), !win32::boole(::ImmGetOpenStatus(imc.get()))));
 #else
 				// TODO: Not implemented.
@@ -92,7 +92,7 @@ namespace ascension {
 			 */
 			bool InputMethodSoftKeyboardModeToggleCommand::perform() {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				if(win32::Handle<HIMC>::Type imc = win32::inputMethod(target())) {
+				if(auto imc = win32::inputMethod(target())) {
 					DWORD conversionMode, sentenceMode;
 					if(win32::boole(::ImmGetConversionStatus(imc.get(), &conversionMode, &sentenceMode))) {
 						conversionMode = win32::boole(conversionMode & IME_CMODE_SOFTKBD) ?

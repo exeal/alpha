@@ -40,7 +40,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
-				explicit FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT;
+				explicit FontCollection(win32::Handle<HDC> deviceContext) BOOST_NOEXCEPT;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 #endif
 				/// Returns a set of font families available in this collection.
@@ -80,7 +80,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
 				std::shared_ptr<QFontDatabase> nativeObject_;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
-				win32::Handle<HDC>::Type deviceContext_;
+				win32::Handle<HDC> deviceContext_;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				std::shared_ptr<Gdiplus::FontCollection> nativeObject_;
 #endif

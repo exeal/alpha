@@ -193,8 +193,8 @@ namespace ascension {
 			QPainter& native();
 			const QPainter& native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-			explicit RenderingContext2D(win32::Handle<HDC>::Type nativeObject);
-			win32::Handle<HDC>::Type native() const BOOST_NOEXCEPT;
+			explicit RenderingContext2D(win32::Handle<HDC> nativeObject);
+			win32::Handle<HDC> native() const BOOST_NOEXCEPT;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 			explicit RenderingContext2D(Gdiplus::Graphics& nativeObject);	// weak ref.
 			explicit RenderingContext2D(std::shared_ptr<Gdiplus::Graphics> nativeObject);
@@ -851,11 +851,11 @@ namespace ascension {
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 			std::shared_ptr<QPainter> nativeObject_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-			win32::Handle<HDC>::Type nativeObject_;
+			win32::Handle<HDC> nativeObject_;
 			struct State {
 				std::pair<std::shared_ptr<const Paint>, std::size_t> fillStyle, strokeStyle;
-				win32::Handle<HPEN>::Type pen, previousPen;
-				win32::Handle<HBRUSH>::Type brush, previousBrush;
+				win32::Handle<HPEN> pen, previousPen;
+				win32::Handle<HBRUSH> brush, previousBrush;
 				std::shared_ptr<const font::Font> font;
 			} currentState_;
 			struct SavedState {
@@ -865,8 +865,8 @@ namespace ascension {
 			};
 			std::stack<SavedState> savedStates_;
 			bool hasCurrentSubpath_;
-			RenderingContext2D& changePen(win32::Handle<HPEN>::Type newPen);
-			win32::Handle<HPEN>::Type createModifiedPen(
+			RenderingContext2D& changePen(win32::Handle<HPEN> newPen);
+			win32::Handle<HPEN> createModifiedPen(
 				const LOGBRUSH* patternBrush, boost::optional<Scalar> lineWidth,
 				boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) const;
 			bool endPath();

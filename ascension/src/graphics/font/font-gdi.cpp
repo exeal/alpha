@@ -31,7 +31,7 @@
 namespace ascension {
 	namespace graphics {
 		namespace {
-			void fillLogFont(win32::Handle<HDC>::Type deviceContext,
+			void fillLogFont(win32::Handle<HDC> deviceContext,
 					const font::FontDescription& description, const AffineTransform& transform, boost::optional<Scalar> sizeAdjust, LOGFONT& out) {
 				const String& familyName = description.family().name();
 				if(familyName.length() >= LF_FACESIZE)
@@ -76,8 +76,8 @@ namespace ascension {
 
 				// handle 'font-size-adjust'
 				if(sizeAdjust != boost::none && boost::get(sizeAdjust) > 0.0) {
-					win32::Handle<HFONT>::Type font(::CreateFontIndirectW(&lf), &::DeleteObject);
-					win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(deviceContext.get(), font.get())), boost::null_deleter());
+					win32::Handle<HFONT> font(::CreateFontIndirectW(&lf), &::DeleteObject);
+					auto oldFont(win32::borrowed(static_cast<HFONT>(::SelectObject(deviceContext.get(), font.get()))));
 					TEXTMETRICW tm;
 					if(win32::boole(::GetTextMetricsW(deviceContext.get(), &tm))) {
 						GLYPHMETRICS gm;
@@ -97,7 +97,7 @@ namespace ascension {
 				// handle 'font-stretch'
 				if(description.properties().stretch != font::FontStretch::NORMAL) {
 					// TODO: this implementation is too simple...
-					win32::Handle<HFONT>::Type font(::CreateFontIndirectW(&lf), &::DeleteObject);
+					win32::Handle<HFONT> font(::CreateFontIndirectW(&lf), &::DeleteObject);
 					if(::GetObjectW(font.get(), sizeof(decltype(lf)), &lf) > 0) {
 						static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
 						lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[boost::underlying_cast<std::size_t>(description.properties().stretch)], 1000);
@@ -177,7 +177,7 @@ namespace ascension {
 			} // namespace @0
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
-			Font::Font(win32::Handle<HFONT>::Type handle) BOOST_NOEXCEPT : nativeObject_(std::move(handle)) {
+			Font::Font(win32::Handle<HFONT> handle) BOOST_NOEXCEPT : nativeObject_(std::move(handle)) {
 			}
 
 			void Font::buildDescription() {
@@ -191,7 +191,7 @@ namespace ascension {
 			}
 #if 0
 			std::unique_ptr<const GlyphVector> Font::createGlyphVector(const FontRenderContext& frc, const StringPiece& text) const {
-				const win32::Handle<HDC>::Type dc(win32::detail::screenDC());
+				const auto dc(win32::detail::screenDC());
 				const int cookie = ::SaveDC(dc.get());
 				::SelectObject(dc.get(), native().get());
 				static_assert(sizeof(WORD) == sizeof(GlyphCode), "");
@@ -225,8 +225,8 @@ namespace ascension {
 					return boost::none;
 				if(ivs_.get() == nullptr) {
 					const_cast<Font*>(this)->ivs_.reset(new detail::IdeographicVariationSequences);
-					win32::Handle<HDC>::Type dc(win32::detail::screenDC());
-					win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(dc.get(), nativeObject_.get())));
+					auto dc(win32::detail::screenDC());
+					auto oldFont(win32::borrowed(static_cast<HFONT>(::SelectObject(dc.get(), nativeObject_.get())));
 					static const OpenTypeLayoutTag CMAP_TAG = MakeOpenTypeLayoutTag<boost::mpl::string<'cmap'>>::value;
 					const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, nullptr, 0);
 					if(bytes != GDI_ERROR) {
@@ -263,7 +263,7 @@ namespace ascension {
 					std::tuple<Scalar, Scalar> strikeThrough, underline;
 				};
 
-				win32::Handle<HDC>::Type dc(win32::detail::screenDC());
+				auto dc(win32::detail::screenDC());
 				const int cookie = ::SaveDC(dc.get());
 				const XFORM xform(graphics::toNative<XFORM>(frc.transform()));
 				std::unique_ptr<LineMetricsImpl> lm;
@@ -302,11 +302,11 @@ namespace ascension {
 				return std::move(lm);
 			}
 
-			win32::Handle<HFONT>::Type Font::native() const BOOST_NOEXCEPT {
+			win32::Handle<HFONT> Font::native() const BOOST_NOEXCEPT {
 				return nativeObject_;
 			}
 
-			FontCollection::FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT : deviceContext_(deviceContext) {
+			FontCollection::FontCollection(win32::Handle<HDC> deviceContext) BOOST_NOEXCEPT : deviceContext_(deviceContext) {
 				assert(::GetCurrentObject(deviceContext_.get(), OBJ_FONT) != nullptr);
 			}
 
@@ -333,7 +333,7 @@ namespace ascension {
 				if(cache != cachedFonts.end())
 					return cache->second;
 
-				win32::Handle<HFONT>::Type font(::CreateFontIndirectW(&lf), &::DeleteObject);
+				win32::Handle<HFONT> font(::CreateFontIndirectW(&lf), &::DeleteObject);
 #ifdef _DEBUG
 				LOGFONT lf2;
 				if(::GetObjectW(font.get(), sizeof(decltype(lf2)), &lf2) > 0) {

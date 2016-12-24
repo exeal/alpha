@@ -17,13 +17,13 @@
 namespace ascension {
 	namespace graphics {
 		/// Returns the platform-native underlying @c HBITMAP handle.
-		win32::Handle<HBITMAP>::Type Image::asNative() const BOOST_NOEXCEPT {
+		win32::Handle<HBITMAP> Image::asNative() const BOOST_NOEXCEPT {
 			return impl_;
 		}
 
 		namespace {
 			template<typename T>
-			inline T&& win32Object(const win32::Handle<HBITMAP>::Type& deviceContext) {
+			inline T&& win32Object(const win32::Handle<HBITMAP>& deviceContext) {
 				T temp;
 				if(::GetObjectW(deviceContext.get(), sizeof(T), &temp) == 0)
 					throw makePlatformError();
@@ -38,7 +38,7 @@ namespace ascension {
 				::DeleteDC(dc);
 				throw makePlatformError();
 			}
-			return std::unique_ptr<RenderingContext2D>(new RenderingContext2D(win32::Handle<HDC>::Type(dc, [&oldBitmap](HDC p) {
+			return std::unique_ptr<RenderingContext2D>(new RenderingContext2D(win32::Handle<HDC>(dc, [&oldBitmap](HDC p) {
 				::SelectObject(p, oldBitmap);
 				::DeleteDC(p);
 			})));
@@ -105,7 +105,7 @@ namespace ascension {
 //			const auto stride = ((header.bV5Width * header.bV5BitCount + 31) >> 5 ) * 4;
 
 			void* pixels;
-			win32::Handle<HBITMAP>::Type bitmap(::CreateDIBSection(nullptr, reinterpret_cast<const BITMAPINFO*>(&header), DIB_RGB_COLORS, &pixels, nullptr, 0), &::DeleteObject);
+			auto bitmap(win32::makeHandle(::CreateDIBSection(nullptr, reinterpret_cast<const BITMAPINFO*>(&header), DIB_RGB_COLORS, &pixels, nullptr, 0), &::DeleteObject));
 			if(bitmap.get() == nullptr)
 				throw makePlatformError();
 
