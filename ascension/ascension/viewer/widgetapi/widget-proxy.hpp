@@ -14,7 +14,7 @@
 #	include <QWidget>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#	include <ascension/win32/window.hpp>	// win32.Window
+#	include <ascension/win32/window/window.hpp>	// win32.Window
 #endif
 
 namespace ascension {

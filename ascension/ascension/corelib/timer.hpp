@@ -84,7 +84,7 @@ namespace ascension {
 			setSingleShot(false);
 			start(interval.count());
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			identifier_ = ::SetTimer(nullptr, 0, static_cast<UINT>(interval.count()), &function);
+			identifier_ = ::SetTimer(nullptr, reinterpret_cast<UINT_PTR>(this), static_cast<UINT>(interval.count()), &function);
 			if(identifier_ == 0)
 				throw makePlatformError();
 #else
@@ -111,18 +111,20 @@ namespace ascension {
 	private:
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		bool function() {
+			return object_->timeElapsed(*this), true;
+		}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 		void timerEvent(QTimerEvent* event) override {
+			object_->timeElapsed(*this);
+		}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		static void CALLBACK function(HWND, UINT, UINT_PTR, DWORD) {
+		static void CALLBACK function(HWND, UINT, UINT_PTR id, DWORD) {
+			auto& self = *reinterpret_cast<Timer<T>*>(id);
+			self.object_->timeElapsed(self);
+		}
 #else
 		ASCENSION_CANT_DETECT_PLATFORM();
 #endif
-			object_->timeElapsed(*this);
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			return true;
-#endif
-		}
 	private:
 		HasTimer<T>* object_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
