@@ -27,7 +27,7 @@ using namespace std;
  * @param ui The user interface
  */
 DefaultContentAssistant::CompletionProposalsPopup::CompletionProposalsPopup(
-		TextViewer& parent, ContentAssistant::CompletionProposalsUI& ui) BOOST_NOEXCEPT
+		TextViewer& parent, ContentAssistant::CompletionProposalsUI& ui)
 		: win32::SubclassedWindow(parent.handle(), L"LISTBOX"), ui_(ui) {
 	::SetWindowLongPtrW(handle().get(), GWL_STYLE, WS_CHILD | WS_TABSTOP | WS_VSCROLL | LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY);
 	::SetWindowLongPtrW(handle().get(), GWL_EXSTYLE, WS_EX_DLGMODALFRAME | WS_EX_NOPARENTNOTIFY | WS_EX_TOOLWINDOW);
@@ -160,7 +160,7 @@ void DefaultContentAssistant::CompletionProposalsPopup::setFont(const HFONT font
 
 void DefaultContentAssistant::CompletionProposalsPopup::setWritingMode(const presentation::WritingMode& writingMode) {
 	LONG_PTR style = ::GetWindowLongPtrW(handle().get(), GWL_EXSTYLE);
-	if(direction == presentation::LEFT_TO_RIGHT) {
+	if(writingMode.inlineFlowDirection == presentation::LEFT_TO_RIGHT) {
 		style &= ~(WS_EX_LAYOUTRTL | WS_EX_RTLREADING);
 		style |= WS_EX_LTRREADING;
 	} else {

@@ -42,7 +42,7 @@ namespace ascension {
 			const DropAction DROP_ACTION_GTK_PRIVATE = Gdk::ACTION_PRIVATE;
 			const DropAction DROP_ACTION_GTK_ASK = Gdk::ACTION_ASK;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-			typedef Gdk::DragAction DropAction;
+			typedef ??? DropAction;
 			const DropAction DROP_ACTION_IGNORE = Qt::IgnoreAction;
 			const DropAction DROP_ACTION_COPY = Qt::CopyAction;
 			const DropAction DROP_ACTION_MOVE = Qt::MoveAction;
@@ -50,7 +50,7 @@ namespace ascension {
 			const DropAction DROP_ACTION_QT_MASK = Qt::ActionMask;
 			const DropAction DROP_ACTION_QT_TARGET_MOVE = Qt::TargetMoveAction;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-			typedef Gdk::DragAction DropAction;
+			typedef ??? DropAction;
 			const DropAction DROP_ACTION_IGNORE = NSDragOperationNone;
 			const DropAction DROP_ACTION_COPY = NSDragOperationCopy;
 			const DropAction DROP_ACTION_MOVE = NSDragOperationMove;
@@ -60,7 +60,7 @@ namespace ascension {
 			const DropAction DROP_ACTION_OSX_DELETE = NSDragOperationDelete;
 			const DropAction DROP_ACTION_OSX_EVERY = NSDragOperationEvery;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			typedef Gdk::DragAction DropAction;
+			typedef DWORD DropAction;
 			const DropAction DROP_ACTION_IGNORE = DROPEFFECT_NONE;
 			const DropAction DROP_ACTION_COPY = DROPEFFECT_COPY;
 			const DropAction DROP_ACTION_MOVE = DROPEFFECT_MOVE;

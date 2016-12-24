@@ -34,13 +34,13 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			win32::Handle<HBRUSH> brush(reinterpret_cast<HBRUSH>(::GetClassLongPtrW(textViewer_.handle(), GCW_HBRBACKGROUND)));
+			auto brush(win32::borrowed(reinterpret_cast<HBRUSH>(::GetClassLongPtrW(textViewer_.handle().get(), GCLP_HBRBACKGROUND))));
 			if(brush.get() != nullptr) {
 				LOGBRUSH lb;
 				if(::GetObject(brush.get(), sizeof(decltype(lb)), &lb) != 0 && lb.lbStyle == BS_SOLID)
 					return graphics::fromNative<graphics::Color>(lb.lbColor);
 			}
-			return ::GetSystemColor(COLOR_WINDOW);
+			return graphics::fromNative<graphics::Color>(::GetSysColor(COLOR_WINDOW));
 #endif
 			return graphics::Color::OPAQUE_WHITE;
 		}
@@ -92,10 +92,10 @@ namespace ascension {
 				}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				const auto style = ::GetWindowLongPtrW(widget->handle(), GWL_EXSTYLE);
+				const auto style = ::GetWindowLongPtrW(widget->handle().get(), GWL_EXSTYLE);
 				if(style != 0) {
 					static_assert(WS_EX_LTRREADING == 0, "");
-					static_assert(WS_EX_LAYOUTLTR == 0, "");
+//					static_assert(WS_EX_LAYOUTLTR == 0, "");
 					presentation::ReadingDirection direction = presentation::LEFT_TO_RIGHT;
 					if((style & WS_EX_RTLREADING) != 0)
 						direction = !direction;
@@ -164,8 +164,15 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			assert(blockFlowDirection() == presentation::HORIZONTAL_TB);
-			const auto = ::GetWindowLongPtrW(textViewer_.handle(), GWL_EXSTYLE);
-			return (style & WS_EX_RIGHT) != 0;
+			const auto style = ::GetWindowLongPtrW(textViewer_.handle().get(), GWL_EXSTYLE);
+			bool normal = 0;
+			if((style & WS_EX_RIGHT) != 0)
+				normal = !normal;
+			if((style & WS_EX_RTLREADING) != 0)
+				normal = !normal;
+			if((style & WS_EX_LAYOUTRTL) != 0)
+				normal = !normal;
+			return normal ? graphics::font::TextAnchor::START : graphics::font::TextAnchor::END;
 #endif
 		}
 

@@ -52,7 +52,7 @@ namespace ascension {
 				const UINT ms = ::GetCaretBlinkTime();
 				if(ms == 0)
 					throw makePlatformError();
-				return (ms != INFINITE) ? boost::chrono::milliseconds(ms) : boost::none;
+				return (ms != INFINITE) ? boost::make_optional(boost::chrono::milliseconds(ms)) : boost::none;
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif

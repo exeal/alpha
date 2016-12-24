@@ -8,7 +8,7 @@
  */
 
 #ifndef ASCENSION_MESSAGE_DISPATCHER_HPP
-#define ASCENSION_MESSAGE_HPP
+#define ASCENSION_MESSAGE_DISPATCHER_HPP
 #include <ascension/win32/windows.hpp>
 #include <map>
 
