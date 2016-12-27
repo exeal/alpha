@@ -24,6 +24,7 @@
 #	include <ShlObj.h>	// IDragSourceHelper
 #endif
 #include <boost/optional.hpp>
+#include <vector>
 
 namespace ascension {
 
@@ -124,17 +125,56 @@ namespace ascension {
 
 			class MimeData : public MimeDataFormats {
 			public:
+				class UnsupportedFormatException : public UnknownValueException {
+				public:
+					UnsupportedFormatException() : UnknownValueException("This format is not supported by this MimeData.") {}
+				};
+			public:
 				/// Default constructor creates an empty MIME data.
 				MimeData();
 
+				/**
+				 * Returns the data stored in the object in the specified format.
+				 * @param format The format
+				 * @param[out] out The result data
+				 * @throw UnsupportedFormatException @a format is not supported
+				 */
 				void data(Format format, std::vector<std::uint8_t>& out) const;
 //				graphics::Image image() const;
+				/**
+				 * Returns the text data.
+				 * @throw UnsupportedFormatException textual format is not supported
+				 */
 				String text() const;
+				/**
+				 * Returns the URI data.
+				 * @tparam OutputIterator The type of @a out
+				 * @param[out] out The result data
+				 * @throw UnsupportedFormatException URI format is not supported
+				*/
 				template<typename OutputIterator> void uris(OutputIterator out) const;
 
-				void setData(Format format, const boost::iterator_range<const std::uint8_t*>& range);
+				/**
+				 * Sets the data associated with the specified format.
+				 * @param format The format
+				 * @param bytes The byte sequence
+				 * @throw UnsupportedFormatException @a format is not supported
+				 */
+				void setData(Format format, const boost::iterator_range<const std::uint8_t*>& bytes);
 //				void setImage(const graphics::Image& image);
+				/**
+				 * Sets the textual data.
+				 * @param text The text data
+				 * @throw NullPointerException @a text is @c null
+				 * @throw UnsupportedFormatException textual format is not supported
+				 */
 				void setText(const StringPiece& text);
+				/**
+				 * Sets the URI data.
+				 * @tparam SinglePassReadableRange The type of @a uris
+				 * @param uris The URI data
+				 * @throw UnsupportedFormatException URI format is not supported
+				 */
 				template<typename SinglePassReadableRange> void setURIs(const SinglePassReadableRange& uris);
 
 				// MimeDataFormats
