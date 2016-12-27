@@ -655,7 +655,7 @@ namespace ascension {
 //						set_placement();
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 						LONG style = ::GetWindowLongW(handle().get(), GWL_EXSTYLE);
-						if(direction == LEFT_TO_RIGHT) {
+						if(direction == presentation::LEFT_TO_RIGHT) {
 							style &= ~(WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
 							style |= WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR;
 						} else {
@@ -694,7 +694,7 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			if(timeToWait == -1)
 				timeToWait = ::GetDoubleClickTime();
-			tipText_.assign(text);
+			tipText_.assign(text.cbegin(), text.cend());
 			::SetTimer(handle().get(), TIMERID_CALLTIP, timeToWait, nullptr);
 #endif
 		}

@@ -33,7 +33,7 @@ namespace ascension {
 				AutoScrollOriginMarkBase;
 
 			/// Circled window displayed at which the auto scroll started.
-			class AutoScrollOriginMark : public AutoScrollOriginMarkBase, private boost::noncopyable {
+			class AutoScrollOriginMark : public AutoScrollOriginMarkBase {
 			public:
 				/// Defines the type of the cursors obtained by @c #cursorForScrolling method.
 				enum CursorType {
@@ -55,8 +55,8 @@ namespace ascension {
 					if(message == WM_PAINT) {
 						PAINTSTRUCT ps;
 						::BeginPaint(handle().get(), &ps);
-						RenderingContext2D temp(win32::borrowed(ps.hdc));
-						paint(PaintContext(move(temp), ps.rcPaint));
+						graphics::RenderingContext2D temp(win32::borrowed(ps.hdc));
+						paint(graphics::PaintContext(std::move(temp), ps.rcPaint));
 						::EndPaint(handle().get(), &ps);
 						consumed = true;
 					}
@@ -67,7 +67,7 @@ namespace ascension {
 					classInformation.background = COLOR_WINDOW;
 					classInformation.cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
 				}
-				basic_string<WCHAR> provideClassName() const {return L"AutoScrollOriginMark";}
+				std::basic_string<WCHAR> provideClassName() const override {return L"AutoScrollOriginMark";}
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			private:
 				graphics::Scalar width_;
