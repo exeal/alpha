@@ -157,7 +157,7 @@ namespace ascension {
 
 								// from NotePadView.pas of TNotePad (http://wantech.ikuto.com/)
 								const bool multilineSelection = kernel::line(*caret) != kernel::line(caret->anchor());
-								const String s(multilineSelection ? selectedString(*caret) : viewer::document(target()).line(kernel::line(*caret)));
+								const String s(multilineSelection ? selectedString(*caret) : viewer::document(target())->lineString(kernel::line(*caret)));
 								const DWORD bytes = static_cast<DWORD>(sizeof(RECONVERTSTRING) + sizeof(Char) * s.length());
 								RECONVERTSTRING* const rcs = static_cast<RECONVERTSTRING*>(::operator new(bytes));
 								rcs->dwSize = bytes;
@@ -174,8 +174,8 @@ namespace ascension {
 									// IME selects the composition target automatically if no selection
 									if(win32::boole(::ImmSetCompositionStringW(imc.get(), SCS_QUERYRECONVERTSTRING, rcs, rcs->dwSize, nullptr, 0))) {
 										caret->select(
-											Position(kernel::line(*caret), rcs->dwCompStrOffset / sizeof(Char)),
-											Position(kernel::line(*caret), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+											viewer::_anchor = kernel::Position(kernel::line(*caret), rcs->dwCompStrOffset / sizeof(Char)),
+											viewer::_caret = viewer::TextHit::leading(kernel::Position(kernel::line(*caret), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen)));
 										if(win32::boole(::ImmSetCompositionStringW(imc.get(), SCS_SETRECONVERTSTRING, rcs, rcs->dwSize, nullptr, 0)))
 											succeeded = true;
 									}

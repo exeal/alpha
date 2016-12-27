@@ -560,10 +560,10 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_SHIFT:
 					if(input.hasModifier(widgetapi::event::CONTROL_DOWN)) {
-						if(::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == RIGHT_TO_LEFT)
-							presentation().setDefaultDirection(LEFT_TO_RIGHT);
-						else if(::GetKeyState(VK_RSHIFT) < 0 && configuration_.readingDirection == LEFT_TO_RIGHT)
-							presentation().setDefaultDirection(RIGHT_TO_LEFT);
+						if(::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == presentation::RIGHT_TO_LEFT)
+							presentation().setDefaultDirection(presentation::LEFT_TO_RIGHT);
+						else if(::GetKeyState(VK_RSHIFT) < 0 && configuration_.readingDirection == presentation::LEFT_TO_RIGHT)
+							presentation().setDefaultDirection(presentation::RIGHT_TO_LEFT);
 						}
 					break;
 #endif
@@ -652,7 +652,7 @@ namespace ascension {
 			const graphics::Rectangle viewerBounds(widgetapi::bounds(*this, false));
 			ti.hwnd = handle().get();
 			ti.uId = 1;
-			ti.rect = viewerBounds;
+			ti.rect = graphics::toNative<RECT>(viewerBounds);
 			::SendMessageW(toolTip_.get(), TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			if(contentAssistant() != 0)

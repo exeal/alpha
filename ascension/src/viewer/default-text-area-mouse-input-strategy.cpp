@@ -408,7 +408,7 @@ namespace ascension {
 				assert(isStateNeutral());
 				dragAndDrop_ = DragAndDrop();
 				// retrieve number of lines if text is rectangle
-				dragAndDrop_->numberOfRectangleLines = 0;
+				boost::get(dragAndDrop_).numberOfRectangleLines = 0;
 				if(isMimeDataAcceptable(input.mimeDataFormats(), true)) {
 					// TODO: Not implemented.
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -419,7 +419,7 @@ namespace ascension {
 						return input.ignore(boost::none);	// TODO: support alignments other than ALIGN_LEFT.
 					try {
 						std::pair<String, bool> text(utils::getTextFromMimeData(input.mimeData()));
-						dragAndDrop_.numberOfRectangleLines = text::calculateNumberOfLines(text.first) - 1;
+						boost::get(dragAndDrop_).numberOfRectangleLines = text::calculateNumberOfLines(text.first) - 1;
 					} catch(...) {
 						return input.ignore(boost::none);
 					}
@@ -816,8 +816,8 @@ namespace ascension {
 				uninstall();
 			textArea_ = &textArea;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			if(dnd_.dragSourceHelper.get() == nullptr)
-				dnd_.dragSourceHelper = win32::com::SmartPointer<IDragSourceHelper>::create(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
+			if(boost::get(dragAndDrop_).dragSourceHelper.get() == nullptr)
+				boost::get(dragAndDrop_).dragSourceHelper = win32::com::SmartPointer<IDragSourceHelper>::create(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			interruptMouseReaction(false);
 
@@ -907,20 +907,24 @@ namespace ascension {
 
 		/// @see MouseInputStrategy#mouseMoved
 		void DefaultTextAreaMouseInputStrategy::mouseMoved(widgetapi::event::LocatedUserInput& input, TargetLocker& targetLocker) {
-			if((autoScroll_ != boost::none && autoScroll_->state == AutoScroll::APPROACHING)
-					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ dragAndDrop_ != boost::none && dragAndDrop_->state == DragAndDrop::APPROACHING)) {	// dragging starts?
+			if((autoScroll_ != boost::none && boost::get(autoScroll_).state == AutoScroll::APPROACHING)
+					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ dragAndDrop_ != boost::none && boost::get(dragAndDrop_).state == DragAndDrop::APPROACHING)) {	// dragging starts?
 				if(dragAndDrop_ != boost::none && isSelectionEmpty(*textArea_->caret())) {
 					dragAndDrop_ = boost::none;	// approaching... => cancel
 					input.consume();
 				} else {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					// the following code can be replaced with DragDetect in user32.lib
-					const int cxDragBox = ::GetSystemMetrics(SM_CXDRAG);
-					const int cyDragBox = ::GetSystemMetrics(SM_CYDRAG);
-					if((graphics::geometry::x(input.location()) > graphics::geometry::x(dragApproachedPosition_) + cxDragBox / 2)
-							|| (graphics::geometry::x(input.location()) < graphics::geometry::x(dragApproachedPosition_) - cxDragBox / 2)
-							|| (graphics::geometry::y(input.location()) > graphics::geometry::y(dragApproachedPosition_) + cyDragBox / 2)
-							|| (graphics::geometry::y(input.location()) < graphics::geometry::y(dragApproachedPosition_) - cyDragBox / 2)) {
+					const graphics::geometry::BasicDimension<int> dragBox(::GetSystemMetrics(SM_CXDRAG), ::GetSystemMetrics(SM_CYDRAG));
+					const graphics::Point* approachedPosition = nullptr;
+					if(autoScroll_ != boost::none)
+						approachedPosition = &boost::get(autoScroll_).approachedPosition;
+					else if(dragAndDrop_ != boost::none)
+						approachedPosition = &boost::get(dragAndDrop_).approachedPosition;
+					if((graphics::geometry::x(input.location()) > graphics::geometry::x(*approachedPosition) + graphics::geometry::dx(dragBox) / 2)
+							|| (graphics::geometry::x(input.location()) < graphics::geometry::x(*approachedPosition) - graphics::geometry::dx(dragBox) / 2)
+							|| (graphics::geometry::y(input.location()) > graphics::geometry::y(*approachedPosition) + graphics::geometry::dy(dragBox) / 2)
+							|| (graphics::geometry::y(input.location()) < graphics::geometry::y(*approachedPosition) - graphics::geometry::dy(dragBox) / 2)) {
 						if(dragAndDrop_ != boost::none)
 							beginDragAndDrop(input);
 						else {

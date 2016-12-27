@@ -329,10 +329,10 @@ namespace ascension {
 			virtual void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
 			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			// IDropTarget
-			virtual STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
-			virtual STDMETHODIMP DragOver(DWORD keyState, POINTL location, DWORD* effect);
-			virtual STDMETHODIMP DragLeave();
-			virtual STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
+			virtual STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect) override;
+			virtual STDMETHODIMP DragOver(DWORD keyState, POINTL location, DWORD* effect) override;
+			virtual STDMETHODIMP DragLeave() override;
+			virtual STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect) override;
 #endif
 			/// @}
 

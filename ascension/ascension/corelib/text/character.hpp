@@ -51,7 +51,7 @@ namespace ascension {
 			>::type
 		>::type Char;
 #else
-		typedef std::uint16_t Char;
+		typedef char16_t Char;
 #endif
 		static_assert(sizeof(Char) == 2, "Failed to define text.Char type.");
 
@@ -88,6 +88,12 @@ namespace ascension {
 	using text::Char;
 	using text::String;
 } // namespace ascension.text
+
+#ifndef BOOST_NO_CXX11_CHAR16_T
+namespace boost {
+	std::size_t hash_value(char16_t c);
+}
+#endif
 
 #ifdef ASCENSION_TEST
 namespace std {

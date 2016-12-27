@@ -475,6 +475,9 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				return std::make_pair(
+					graphics::fromNative<graphics::Color>(::GetSysColor(COLOR_HIGHLIGHTTEXT)),
+					graphics::fromNative<graphics::Color>(::GetSysColor(COLOR_HIGHLIGHT)));
 #endif
 			}
 		}

@@ -41,7 +41,7 @@ namespace ascension {
 
 				// forward to GetUserDefaultUILanguage (kernel32.dll) if after 2000/XP/Server 2003
 				if(version.dwMajorVersion >= 5) {
-					const Handle<HMODULE>::Type dll(::LoadLibraryW(L"kernel32.dll"), std::bind(&::FreeLibrary, std::placeholders::_1));
+					const Handle<HMODULE> dll(::LoadLibraryW(L"kernel32.dll"), std::bind(&::FreeLibrary, std::placeholders::_1));
 					if(dll.get() != nullptr) {
 						if(LANGID(WINAPI *function)(void) = reinterpret_cast<LANGID(WINAPI*)(void)>(::GetProcAddress(dll.get(), "GetUserDefaultUILanguage")))
 							id = (*function)();
@@ -50,7 +50,7 @@ namespace ascension {
 
 				// use language of version information of ntdll.dll if on NT 3.51-4.0
 				else {
-					const Handle<HMODULE>::Type dll(::LoadLibraryW(L"ntdll.dll"), std::bind(&::FreeLibrary, std::placeholders::_1));
+					const Handle<HMODULE> dll(::LoadLibraryW(L"ntdll.dll"), std::bind(&::FreeLibrary, std::placeholders::_1));
 					::EnumResourceLanguagesW(dll.get(), MAKEINTRESOURCEW(16)/*RT_VERSION*/,
 						MAKEINTRESOURCEW(1), enumResLangProc, reinterpret_cast<LONG_PTR>(&id));
 					if(*id == MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)) {	// special cases

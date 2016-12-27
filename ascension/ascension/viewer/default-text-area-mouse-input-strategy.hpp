@@ -113,11 +113,6 @@ namespace ascension {
 			// IDropSource
 			STDMETHODIMP QueryContinueDrag(BOOL escapePressed, DWORD keyState) override;
 			STDMETHODIMP GiveFeedback(DWORD effect) override;
-			// IDropTarget
-			STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) override;
-			STDMETHODIMP DragOver(DWORD keyState, POINTL pt, DWORD* effect) override;
-			STDMETHODIMP DragLeave() override;
-			STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) override;
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		private:
 			TextArea* textArea_;

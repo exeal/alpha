@@ -226,7 +226,7 @@ namespace ascension {
 				if(ivs_.get() == nullptr) {
 					const_cast<Font*>(this)->ivs_.reset(new detail::IdeographicVariationSequences);
 					auto dc(win32::detail::screenDC());
-					auto oldFont(win32::borrowed(static_cast<HFONT>(::SelectObject(dc.get(), nativeObject_.get())));
+					auto oldFont(win32::borrowed(static_cast<HFONT>(::SelectObject(dc.get(), nativeObject_.get()))));
 					static const OpenTypeLayoutTag CMAP_TAG = MakeOpenTypeLayoutTag<boost::mpl::string<'cmap'>>::value;
 					const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, nullptr, 0);
 					if(bytes != GDI_ERROR) {
