@@ -6,15 +6,14 @@
 
 #ifndef ASCENSION_BASIC_EXCEPTIONS_HPP
 #define ASCENSION_BASIC_EXCEPTIONS_HPP
-
-#include <ascension/platforms.hpp>
+#include <boost/predef.h>
 #include <stdexcept>
 #include <sstream>	// std.ostringstream
 #include <string>	// std.string
 #include <system_error>
 #if BOOST_OS_WINDOWS
 #	include <windows.h>	// DWORD, GetLastError
-#elif ASCENSION_OS_POSIX
+#else	//  defined(ASCENSION_OS_POSIX)
 #	include <cerrno>
 #	include <cstring>	// std.strerror
 #endif
@@ -77,7 +76,7 @@ namespace ascension {
 		}
 		return std::system_error(std::error_code(code, std::system_category()), message);
 	}
-#elif ASCENSION_OS_POSIX
+#else // defined(ASCENSION_OS_POSIX)
 	inline std::system_error makePlatformError(int code = errno) {
 		const char* const s = std::strerror(code);
 		return std::system_error(std::error_code(code, std::system_category()), std::string((s != nullptr) ? s : ""));
