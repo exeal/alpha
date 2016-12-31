@@ -423,11 +423,6 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			std::shared_ptr<GtkIMContext> inputMethodContext_;
 			friend std::shared_ptr<GtkIMContext> detail::inputMethodContext(TextViewer&);
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			win32::com::SmartPointer<IDropTargetHelper> dropTargetHelper_;
-			win32::com::SmartPointer<IDataObject> draggingData_;
-#else
-//			const NativeMimeData* draggingData_;
 #endif
 			// signals
 			FocusChangedSignal focusChangedSignal_;

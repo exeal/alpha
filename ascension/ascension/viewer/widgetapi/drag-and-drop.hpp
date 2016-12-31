@@ -7,31 +7,21 @@
 
 #ifndef ASCENSION_DRAG_AND_DROP_HPP
 #define ASCENSION_DRAG_AND_DROP_HPP
-#include <ascension/viewer/widgetapi/event/located-user-input.hpp>
+#include <ascension/corelib/interprocess-data.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
+#include <ascension/viewer/widgetapi/event/located-user-input.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gdkmm/dragcontext.h>
-#	include <gtkmm/selectiondata.h>
-#	include <gtkmm/targetlist.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-#	include <QMimeData>
+#	include <QDrag>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-#	include <NSDragging.h>	// NSDragOperation
-#	include <NSPasteboard.h>
+#	include <NSDragging.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#	include <ascension/win32/com/smart-pointer.hpp>
-#	include <ObjIdl.h>
 #	include <ShlObj.h>	// IDragSourceHelper
 #endif
 #include <boost/optional.hpp>
-#include <vector>
 
 namespace ascension {
-
-	namespace graphics {
-		class Image;
-	}
-
 	namespace viewer {
 		namespace widgetapi {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -73,137 +63,6 @@ namespace ascension {
 			DropAction resolveDefaultDropAction(DropAction possibleActions,
 				event::LocatedUserInput::MouseButton buttons, const event::KeyboardModifiers& modifiers);
 
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			typedef Glib::RefPtr<Gtk::TargetList> NativeMimeData;
-			typedef Glib::RefPtr<const Gtk::TargetList> ConstNativeMimeData;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-			typedef std::shared_ptr<QMimeData> NativeMimeData;
-			typedef std::shared_ptr<const QMimeData> ConstNativeMimeData;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-			typedef std::shared_ptr<NSPasteboard> NativeMimeData;
-			typedef std::shared_ptr<const NSPasteboard> ConstNativeMimeData;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			typedef win32::com::SmartPointer<IDataObject> NativeMimeData;
-			typedef win32::com::SmartPointer<IDataObject> ConstNativeMimeData;
-#else
-			ASCENSION_CANT_DETECT_PLATFORM();
-#endif
-			class MimeDataFormats {
-			public:
-				typedef
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-					std::string
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-					QString
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-					CLIPFORMAT
-#else
-					ASCENSION_CANT_DETECT_PLATFORM();
-#endif
-					Format;
-				/// Returns a list of formats supported by the object.
-				virtual void formats(std::vector<Format>& out) const;
-				/// Returns @c true if this object can return data for the MIME type specified by @a format.
-				virtual bool hasFormat(Format format) const BOOST_NOEXCEPT;
-//				/// Returns @c true if this object can return an image.
-//				virtual bool hasImage() const BOOST_NOEXCEPT;
-				/// Returns @c true if this object can return plain text.
-				virtual bool hasText() const BOOST_NOEXCEPT;
-				/// Returns @c true if this object can return a list of URI.
-				virtual bool hasURIs() const BOOST_NOEXCEPT;
-
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			public:
-				explicit MimeDataFormats(std::vector<std::string>&& targets);
-			private:
-				const std::vector<std::string> targets_;
-#endif
-			protected:
-				MimeDataFormats() BOOST_NOEXCEPT {}
-			};
-
-			class MimeData : public MimeDataFormats {
-			public:
-				class UnsupportedFormatException : public UnknownValueException {
-				public:
-					UnsupportedFormatException() : UnknownValueException("This format is not supported by this MimeData.") {}
-				};
-			public:
-				/// Default constructor creates an empty MIME data.
-				MimeData();
-
-				/**
-				 * Returns the data stored in the object in the specified format.
-				 * @param format The format
-				 * @param[out] out The result data
-				 * @throw UnsupportedFormatException @a format is not supported
-				 */
-				void data(Format format, std::vector<std::uint8_t>& out) const;
-//				graphics::Image image() const;
-				/**
-				 * Returns the text data.
-				 * @throw UnsupportedFormatException textual format is not supported
-				 */
-				String text() const;
-				/**
-				 * Returns the URI data.
-				 * @tparam OutputIterator The type of @a out
-				 * @param[out] out The result data
-				 * @throw UnsupportedFormatException URI format is not supported
-				*/
-				template<typename OutputIterator> void uris(OutputIterator out) const;
-
-				/**
-				 * Sets the data associated with the specified format.
-				 * @param format The format
-				 * @param bytes The byte sequence
-				 * @throw UnsupportedFormatException @a format is not supported
-				 */
-				void setData(Format format, const boost::iterator_range<const std::uint8_t*>& bytes);
-//				void setImage(const graphics::Image& image);
-				/**
-				 * Sets the textual data.
-				 * @param text The text data
-				 * @throw NullPointerException @a text is @c null
-				 * @throw UnsupportedFormatException textual format is not supported
-				 */
-				void setText(const StringPiece& text);
-				/**
-				 * Sets the URI data.
-				 * @tparam SinglePassReadableRange The type of @a uris
-				 * @param uris The URI data
-				 * @throw UnsupportedFormatException URI format is not supported
-				 */
-				template<typename SinglePassReadableRange> void setURIs(const SinglePassReadableRange& uris);
-
-				// MimeDataFormats
-				void formats(std::vector<Format>& out) const override;
-				virtual bool hasFormat(Format format) const BOOST_NOEXCEPT override;
-//				bool hasImage() const BOOST_NOEXCEPT override;
-				bool hasText() const BOOST_NOEXCEPT override;
-				bool hasURIs() const BOOST_NOEXCEPT override;
-
-			public:
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				explicit MimeData(Gtk::SelectionData& impl);
-			private:
-				std::shared_ptr<Gtk::SelectionData> impl_;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				explicit MimeData(QMimeData& impl);
-			private:
-				std::shared_ptr<QMimeData> impl_;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				explicit MimeData(win32::com::SmartPointer<IDataObject> impl);
-			private:
-				win32::com::SmartPointer<IDataObject> impl_;
-#else
-				ASCENSION_CANT_DETECT_PLATFORM();
-#endif
-			};
-
-
 			class DragContext {
 			public:
 				explicit DragContext(Widget::reference source) BOOST_NOEXCEPT : source_(source) {}
@@ -213,14 +72,14 @@ namespace ascension {
 					, int mouseButton, GdkEvent* event
 #endif
 				);
+				void setData(std::shared_ptr<const InterprocessData> data);
 				void setImage(const graphics::Image& image, const boost::geometry::model::d2::point_xy<std::uint32_t>& hotspot);
-				void setMimeData(std::shared_ptr<const MimeData> data);
 				DropAction supportedActions() const;
 			private:
 				Widget::reference source_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Glib::RefPtr<Gdk::DragContext> context_;
-				std::shared_ptr<const MimeData> mimeData_;
+				std::shared_ptr<const InterprocessData> data_;
 				Glib::RefPtr<Gdk::Pixbuf> icon_;
 				int iconHotspotX_, iconHotspotY_;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
@@ -234,45 +93,130 @@ namespace ascension {
 #endif
 			};
 
+			/**
+			 * An event when a drag and drop action leaves the target.
+			 * @see DragEnterInput, DragMoveInput, DropInput, DropTarget#dragLeft
+			 */
 			class DragLeaveInput : public event::Event {};
 
+			/// The base class of @c DropInput and @c DragMoveInput classes.
 			class DragInputBase : public event::LocatedUserInput {
 			public:
+				/**
+				 * Sets the drop action to be the proposed action.
+				 * @see #proposedAction, #setDropAction, Event#consume
+				 */
+				void acceptProposedAction() {setDropAction(proposedAction());}
+				/**
+				 * Returns the action to be performed on the data by the target.
+				 * @see #setDropAction
+				 */
+				DropAction dropAction() const BOOST_NOEXCEPT {return action_;}
+				/**
+				 * Returns the possible drop actions.
+				 * @see #dropAction
+				 */
+				DropAction possibleActions() const BOOST_NOEXCEPT {return possibleActions_;}
+				/**
+				 * Returns the proposed drop action.
+				 * @see #dropAction
+				 */
+				DropAction proposedAction() const BOOST_NOEXCEPT {return defaultAction_;}
+				/**
+				 * Sets the specified @a action to be performed on the data by the target.
+				 * @see #dropAction
+				 */
+				void setDropAction(DropAction action) {action_ = action;}
+
+			protected:
+				/**
+				 * Constructs a @c DropInputBase object.
+				 * @param userInput The base input information
+				 * @param possibleActions The possible drop actions
+				 */
 				DragInputBase(const LocatedUserInput& userInput, DropAction possibleActions) :
 					event::LocatedUserInput(userInput), possibleActions_(possibleActions),
 					defaultAction_(resolveDefaultDropAction(possibleActions, userInput.buttons(), userInput.modifiers())) {}
-				void acceptProposedAction() {setDropAction(proposedAction());}
-				DropAction dropAction() const BOOST_NOEXCEPT {return action_;}
-				DropAction possibleActions() const BOOST_NOEXCEPT {return possibleActions_;}
-				DropAction proposedAction() const BOOST_NOEXCEPT {return defaultAction_;}
-				void setDropAction(DropAction action) {action_ = action;}
+
 			private:
 				const DropAction possibleActions_, defaultAction_;
 				DropAction action_;
 			};
 
+			/**
+			 * An event when a drag and drop action is completed.
+			 * @see InterprocessdData, DropTarget#dropped
+			 */
 			class DropInput : public DragInputBase {
 			public:
-				DropInput(const LocatedUserInput& userInput, DropAction possibleActions, std::shared_ptr<const MimeData> data) :
-					DragInputBase(userInput, possibleActions), mimeData_(data) {}
-				std::shared_ptr<const MimeData> mimeData() const BOOST_NOEXCEPT {return mimeData_;}
+				/**
+				 * Creates a @c DropInput object.
+				 * @param userInput The base input information
+				 * @param possibleActions The possible drop actions
+				 * @param data The data that was dropped on the target
+				 * @throw NullPointerException @a data is @c null
+				 */
+				DropInput(const LocatedUserInput& userInput, DropAction possibleActions, std::shared_ptr<const InterprocessData> data) : DragInputBase(userInput, possibleActions), data_(data) {
+					if(data.get() == nullptr)
+						throw NullPointerException("data");
+				}
+				/// Returns the data that was dropped on the target.
+				const InterprocessData& data() const BOOST_NOEXCEPT {return *data_;}
+
 			private:
-				std::shared_ptr<const MimeData> mimeData_;
+				const std::shared_ptr<const InterprocessData> data_;
 			};
 
+			/**
+			 * An event while a drag and drop action is in progress.
+			 * @see DragEnterInput, DragLeaveInput, DropInput, DropTarget#dragMoved
+			 */
 			class DragMoveInput : public DragInputBase {
 			public:
-				DragMoveInput(const LocatedUserInput& userInput, DropAction possibleActions, const MimeDataFormats& formats) : DragInputBase(userInput, possibleActions), formats_(formats) {}
+				/**
+				 * Creates a @c DragMoveInput object.
+				 * @param userInput The base input information
+				 * @param possibleActions The possible drop actions
+				 * @param formats The formats of the data that was moved on the target
+				 * @throw NullPointerException @a formats is @c null
+				 */
+				DragMoveInput(const LocatedUserInput& userInput, DropAction possibleActions,
+						std::shared_ptr<const InterprocessDataFormats> formats) : DragInputBase(userInput, possibleActions), formats_(formats) {
+					if(formats.get() == nullptr)
+						throw NullPointerException("formats");
+				}
+				/**
+				 * Notifies that future motions will also be accepted if they remain within the specified rectangle.
+				 * @param rectangle The rectangle on the target
+				 */
 				void accept(boost::optional<const graphics::Rectangle> rectangle) {}	// TODO: Not implemented.
+				/**
+				 * Notifies that future motions within the specified rectangle are not acceptable.
+				 * @param rectangle The rectangle on the target
+				 */
 				void ignore(boost::optional<const graphics::Rectangle> rectangle) {}	// TODO: Not implemented.
-				const MimeDataFormats& mimeDataFormats() const BOOST_NOEXCEPT {return formats_;}
+				/// Returns the formats of the data that was moved on the target.
+				const InterprocessDataFormats& dataFormats() const BOOST_NOEXCEPT {return *formats_;}
+
 			private:
-				const MimeDataFormats& formats_;
+				const std::shared_ptr<const InterprocessDataFormats> formats_;
 			};
 
+			/**
+			 * An event when a drag and drop action entered the target.
+			 * @see DropTarget#dragEntered
+			 */
 			class DragEnterInput : public DragMoveInput {
 			public:
-				DragEnterInput(const LocatedUserInput& userInput, DropAction possibleActions, const MimeDataFormats& formats) : DragMoveInput(userInput, possibleActions, formats) {}
+				/**
+				 * Creates a @c DragEnterInput object.
+				 * @param userInput The base input information
+				 * @param possibleActions The possible drop actions
+				 * @param formats The formats of the data that was moved on the target
+				 * @throw NullPointerException @a formats is @c null
+				 */
+				DragEnterInput(const LocatedUserInput& userInput, DropAction possibleActions,
+					std::shared_ptr<const InterprocessDataFormats> formats) : DragMoveInput(userInput, possibleActions, formats) {}
 			};
 
 			/**
@@ -287,35 +231,34 @@ namespace ascension {
 				virtual void dropped(DropInput& input) = 0;
 			};
 
-		}
-
-		namespace detail {
-			class DragEventAdapter {
-			public:
-				explicit DragEventAdapter(viewer::widgetapi::DropTarget& target) : target_(target) {}
+			namespace detail {
+				class DragEventAdapter {
+				public:
+					DragEventAdapter(DropTarget& target, Proxy<Widget>& widget) : target_(target), widget_(widget) {}
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				void adaptDragLeaveEvent(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
-				bool adaptDragMoveEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
-				bool adaptDropEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
+					void adaptDragLeaveEvent(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
+					bool adaptDragMoveEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
+					bool adaptDropEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				void adaptDragEnterEvent(QDragEnterEvent* event);
-				void adaptDragLeaveEvent(QDragLeaveEvent* event);
-				void adaptDragMoveEvent(QDragMoveEvent* event);
-				void adaptDropEvent(QDropEvent* event);
+					void adaptDragEnterEvent(QDragEnterEvent* event);
+					void adaptDragLeaveEvent(QDragLeaveEvent* event);
+					void adaptDragMoveEvent(QDragMoveEvent* event);
+					void adaptDropEvent(QDropEvent* event);
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				HRESULT adaptDragEnterEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
-				HRESULT adaptDragLeaveEvent();
-				HRESULT adaptDragMoveEvent(DWORD keyState, POINTL location, DWORD* effect);
-				HRESULT adaptDropEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
+					HRESULT adaptDragEnterEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
+					HRESULT adaptDragLeaveEvent();
+					HRESULT adaptDragMoveEvent(DWORD keyState, POINTL location, DWORD* effect);
+					HRESULT adaptDropEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
 #else
-				ASCENSION_CANT_DETECT_PLATFORM();
+					ASCENSION_CANT_DETECT_PLATFORM();
 #endif
-			private:
-				viewer::widgetapi::DropTarget& target_;
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-#endif
-			};
+				private:
+					DropTarget& target_;
+					Proxy<Widget> widget_;
+					std::shared_ptr<const InterprocessData> data_;
+				};
+			}
 		}
 	}
 }
