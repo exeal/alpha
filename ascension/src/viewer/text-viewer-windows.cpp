@@ -464,127 +464,23 @@ void TextViewer::doBeep() BOOST_NOEXCEPT {
 	::MessageBeep(MB_OK);
 }
 
-namespace {
-	inline widgetapi::DropAction translateDropActions(DWORD effect) {
-		widgetapi::DropAction result = widgetapi::DROP_ACTION_IGNORE;
-		if(win32::boole(effect & DROPEFFECT_COPY))
-			result |= widgetapi::DROP_ACTION_COPY;
-		if(win32::boole(effect & DROPEFFECT_MOVE))
-			result |= widgetapi::DROP_ACTION_MOVE;
-		if(win32::boole(effect & DROPEFFECT_LINK))
-			result |= widgetapi::DROP_ACTION_LINK;
-		if(win32::boole(effect & DROPEFFECT_SCROLL))
-			result |= widgetapi::DROP_ACTION_WIN32_SCROLL;
-		return result;
-	}
-	inline DWORD translateDropAction(widgetapi::DropAction dropAction) {
-		DWORD effect = DROPEFFECT_NONE;
-		if((dropAction & widgetapi::DROP_ACTION_COPY) != 0)
-			effect |= DROPEFFECT_COPY;
-		if((dropAction & widgetapi::DROP_ACTION_MOVE) != 0)
-			effect |= DROPEFFECT_MOVE;
-		if((dropAction & widgetapi::DROP_ACTION_LINK) != 0)
-			effect |= DROPEFFECT_LINK;
-		if((dropAction & widgetapi::DROP_ACTION_WIN32_SCROLL) != 0)
-			effect |= DROPEFFECT_SCROLL;
-		return effect;
-	}
-	template<typename Point>
-	inline widgetapi::MouseButtonInput makeMouseButtonInput(DWORD keyState, const Point& location) {
-		widgetapi::UserInput::MouseButton buttons = 0;
-		if(win32::boole(keyState & MK_LBUTTON))
-			buttons |= widgetapi::UserInput::BUTTON1_DOWN;
-		if(win32::boole(keyState & MK_MBUTTON))
-			buttons |= widgetapi::UserInput::BUTTON2_DOWN;
-		if(win32::boole(keyState & MK_RBUTTON))
-			buttons |= widgetapi::UserInput::BUTTON3_DOWN;
-		if(win32::boole(keyState & MK_XBUTTON1))
-			buttons |= widgetapi::UserInput::BUTTON4_DOWN;
-		if(win32::boole(keyState & MK_XBUTTON2))
-			buttons |= widgetapi::UserInput::BUTTON5_DOWN;
-		widgetapi::UserInput::ModifierKey modifiers = 0;
-		if(win32::boole(keyState & MK_CONTROL))
-			modifiers |= widgetapi::UserInput::CONTROL_DOWN;
-		if(win32::boole(keyState & MK_SHIFT))
-			modifiers |= widgetapi::UserInput::SHIFT_DOWN;
-		if(win32::boole(keyState & MK_ALT))
-			modifiers |= widgetapi::UserInput::ALT_DOWN;
-		return widgetapi::MouseButtonInput(
-			Point(
-				geometry::_x = static_cast<typename boost::geometry::coordinate_type<Point>::type>(geometry::x(location)),
-				geometry::_y = static_cast<typename boost::geometry::coordinate_type<Point>::type>(geometry::y(location))),
-			buttons, modifiers);
-	}
-}
-
 /// Implements @c IDropTarget#DragEnter method.
 STDMETHODIMP TextViewer::DragEnter(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect) {
-	if(data == nullptr)
-		return E_INVALIDARG;
-	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
-	*effect = DROPEFFECT_NONE;
-
-	HRESULT hr;
-
-#ifdef _DEBUG
-	{
-		win32::com::SmartPointer<IEnumFORMATETC> formats;
-		if(SUCCEEDED(hr = data->EnumFormatEtc(DATADIR_GET, formats.initialize()))) {
-			FORMATETC format;
-			ULONG fetched;
-			ASCENSION_LOG_TRIVIAL(debug) << L"DragEnter received a data object exposes the following formats.\n";
-			for(formats->Reset(); formats->Next(1, &format, &fetched) == S_OK; ) {
-				std::array<WCHAR, 256> name;
-				if(::GetClipboardFormatNameW(format.cfFormat, name.data(), name.size() - 1) != 0)
-					ASCENSION_LOG_TRIVIAL(debug) << L"\t" << name.data() << L"\n";
-				else
-					ASCENSION_LOG_TRIVIAL(debug) << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
-				if(format.ptd != nullptr)
-					::CoTaskMemFree(format.ptd);
-			}
+	if(auto mouseInputStrategy = textArea()->mouseInputStrategy().lock()) {
+		if(const auto dropTarget = mouseInputStrategy->handleDropTarget()) {
+			widgetapi::detail::DragEventAdapter adapter(*dropTarget);
+			return adapter.adaptDragEnterEvent(data, keyState, location, effect);
 		}
 	}
-#endif // _DEBUG
-
-	if(mouseInputStrategy_.get() != nullptr) {
-		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
-			widgetapi::DragEnterInput input(
-				makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, Point(location))),
-				translateDropActions(*effect), *data);
-			try {
-				dropTarget->dragEntered(input);
-			} catch(const bad_alloc&) {
-				return E_OUTOFMEMORY;
-			} catch(...) {
-				return E_UNEXPECTED;
-			}
-
-			draggingData_.reset(data);
-			*effect = translateDropAction(input.dropAction());
-			if(dropTargetHelper_.get() != nullptr) {
-				POINT pt = {location.x, location.y};
-				dropTargetHelper_->DragEnter(handle().get(), data, &pt, *effect);
-			}
-		}
-	}
-
 	return S_OK;
 }
 
 /// Implements @c IDropTarget#DragLeave method.
 STDMETHODIMP TextViewer::DragLeave() {
-	draggingData_.reset();
-	if(mouseInputStrategy_.get() != nullptr) {
-		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
-			if(dropTargetHelper_.get() != nullptr)
-				dropTargetHelper_->DragLeave();
-			try {
-				dropTarget->dragLeft(widgetapi::DragLeaveInput());
-			} catch(const bad_alloc&) {
-				return E_OUTOFMEMORY;
-			} catch(...) {
-				return E_UNEXPECTED;
-			}
+	if(auto mouseInputStrategy = textArea()->mouseInputStrategy().lock()) {
+		if(const auto dropTarget = mouseInputStrategy->handleDropTarget()) {
+			widgetapi::detail::DragEventAdapter adapter(*dropTarget);
+			return adapter.adaptDragLeaveEvent();
 		}
 	}
 	return S_OK;
@@ -592,26 +488,14 @@ STDMETHODIMP TextViewer::DragLeave() {
 
 /// Implements @c IDropTarget#DragOver method.
 STDMETHODIMP TextViewer::DragOver(DWORD keyState, POINTL location, DWORD* effect) {
-	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
-
-	if(mouseInputStrategy_.get() != nullptr) {
-		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
-			try {
-				dropTarget->dragMoved(widgetapi::DragMoveInput(
-					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, Point(location))),
-					translateDropActions(*effect), *draggingData_));
-			} catch(const bad_alloc&) {
-				return E_OUTOFMEMORY;
-			} catch(...) {
-				return E_UNEXPECTED;
-			}
-			if(dropTargetHelper_.get() != nullptr) {
-				const shared_ptr<TextViewport> viewport(textRenderer().viewport());
-				viewport->lockScroll();
-				POINT pt = {location.x, location.y};
-				dropTargetHelper_->DragOver(&pt, *effect);	// damn! IDropTargetHelper scrolls the view
-				viewport->unlockScroll();
-			}
+	if(auto mouseInputStrategy = textArea()->mouseInputStrategy().lock()) {
+		if(const auto dropTarget = mouseInputStrategy->handleDropTarget()) {
+			widgetapi::detail::DragEventAdapter adapter(*dropTarget);
+			const auto viewport(textRenderer().viewport());
+			viewport->lockScroll();
+			const auto hr = adapter.adaptDragMoveEvent(keyState, location, effect);	// damn! IDropTargetHelper scrolls the view
+			viewport->unlockScroll();
+			return hr;
 		}
 	}
 	return S_OK;
@@ -619,39 +503,13 @@ STDMETHODIMP TextViewer::DragOver(DWORD keyState, POINTL location, DWORD* effect
 
 /// Implements @c IDropTarget#Drop method.
 STDMETHODIMP TextViewer::Drop(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect) {
-	if(data == nullptr)
-		return E_INVALIDARG;
-	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
-	*effect = DROPEFFECT_NONE;
-	draggingData_.reset();
-/*
-	FORMATETC fe = {::RegisterClipboardFormatA("Rich Text Format"), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-	STGMEDIUM stg;
-	data->GetData(&fe, &stg);
-	const char* bytes = static_cast<char*>(::GlobalLock(stg.hGlobal));
-	ASCENSION_LOG_TRIVIAL(debug) << bytes;
-	::GlobalUnlock(stg.hGlobal);
-	::ReleaseStgMedium(&stg);
-*/
-	HRESULT hr = S_OK;
-	if(mouseInputStrategy_.get() != nullptr) {
-		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
-			try {
-				dropTarget->dropped(widgetapi::DropInput(
-					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, Point(location))),
-					translateDropActions(*effect), *data));
-			} catch(const bad_alloc&) {
-				hr = E_OUTOFMEMORY;
-			} catch(...) {
-				hr = E_UNEXPECTED;
-			}
+	if(auto mouseInputStrategy = textArea()->mouseInputStrategy().lock()) {
+		if(const auto dropTarget = mouseInputStrategy->handleDropTarget()) {
+			widgetapi::detail::DragEventAdapter adapter(*dropTarget);
+			return adapter.adaptDropEvent(data, keyState, location, effect);
 		}
 	}
-	if(dropTargetHelper_.get() != nullptr) {
-		POINT pt = {location.x, location.y};
-		dropTargetHelper_->DragOver(&pt, *effect);
-	}
-	return hr;
+	return S_OK;
 }
 
 /// Hides the tool tip.
@@ -686,7 +544,6 @@ void TextViewer::initializeNativeObjects(const TextViewer* other) {
 	}
 
 	::RegisterDragDrop(handle().get(), this);
-	dropTargetHelper_ = win32::com::SmartPointer<IDropTargetHelper>::create(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER);
 }
 
 /// @see WM_CAPTURECHANGED
