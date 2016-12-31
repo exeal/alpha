@@ -29,9 +29,9 @@ namespace ascension {
 		class Caret;
 
 		namespace utils {
-			std::unique_ptr<widgetapi::MimeData> createMimeDataForSelectedString(const Caret& caret, bool rtf);
-			std::pair<String, bool> getTextFromMimeData(const widgetapi::MimeData& data);
-			widgetapi::MimeDataFormats::Format rectangleTextMimeDataFormat();
+			std::unique_ptr<InterprocessData> createMimeDataForSelectedString(const Caret& caret, bool rtf);
+			std::pair<String, bool> getTextFromMimeData(const InterprocessData& data);
+			InterprocessDataFormats::Format rectangleTextMimeDataFormat();
 		}
 
 		class VirtualBox;
