@@ -7,13 +7,13 @@
 
 #include <ascension/graphics/rendering-context.hpp>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
+#include <ascension/corelib/native-conversion.hpp>
 #include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <ascension/graphics/geometry/rectangle-odxdy.hpp>
 #include <ascension/graphics/geometry/rectangle-sides.hpp>
-#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/math/constants/constants.hpp>		// boost.math.constants.pi

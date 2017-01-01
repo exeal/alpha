@@ -36,9 +36,17 @@ namespace ascension {
 				/// Indicates the state of mouse buttons.
 				typedef Combination<MouseButton, NUMBER_OF_MOUSE_BUTTONS> MouseButtons;
 
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(GTK)
+				// TODO: Not implemented.
+#endif
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(QT)
+				// TODO: Not implemented.
+#endif
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(QUARTZ)
+				// TODO: Not implemented.
+#endif
 #if ASCENSION_SUPPORTS_WINDOW_SYSTEM(WIN32)
-				template<typename Model>
-				inline Model fromNative(WORD native, typename std::enable_if<std::is_same<Model, MouseButtons>::value>::type* = nullptr) {
+				inline MouseButtons _fromNative(DWORD native, const MouseButtons* = nullptr) {
 					MouseButtons buttons;
 					if((native & MK_LBUTTON) != 0)
 						buttons.set(BUTTON1_DOWN);
@@ -53,8 +61,8 @@ namespace ascension {
 					return buttons;
 				}
 
-				inline WORD toNative(const MouseButtons& buttons, WORD* = nullptr) {
-					WORD native = 0;
+				inline DWORD _toNative(const MouseButtons& buttons, DWORD* = nullptr) {
+					DWORD native = 0;
 					native |= buttons.test(BUTTON1_DOWN) ? MK_LBUTTON : 0;
 					native |= buttons.test(BUTTON2_DOWN) ? MK_RBUTTON : 0;
 					native |= buttons.test(BUTTON3_DOWN) ? MK_MBUTTON : 0;

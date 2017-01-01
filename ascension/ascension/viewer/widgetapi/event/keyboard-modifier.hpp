@@ -40,8 +40,7 @@ namespace ascension {
 				typedef Combination<KeyboardModifier, NUMBER_OF_KEYBOARD_MODIFIERS> KeyboardModifiers;
 
 #if ASCENSION_SUPPORTS_WINDOW_SYSTEM(GTK)
-				template<typename Model>
-				inline Model fromNative(const Gdk::ModifierType& source, typename std::enable_if<std::is_same<Model, KeyboardModifiers>::value>::type* = nullptr) BOOST_NOEXCEPT {
+				inline KeyboardModifiers _fromNative(const Gdk::ModifierType& source, const KeyboardModifiers* = nullptr) BOOST_NOEXCEPT {
 					KeyboardModifiers value;
 					value.set(SHIFT_DOWN, (source & Gdk::SHIFT_MASK) != 0);
 					value.set(CONTROL_DOWN, (source & Gdk::CONTROL_MASK) != 0);
@@ -62,8 +61,7 @@ namespace ascension {
 #	error Not implemented.
 #endif
 #if ASCENSION_SUPPORTS_WINDOW_SYSTEM(QT)
-				template<typename Model>
-				inline Model fromNative(const Qt::KeyboardModifiers& source, typename std::enable_if<std::is_same<Model, KeyboardModifiers>::value>::type* = nullptr) BOOST_NOEXCEPT {
+				inline KeyboardModifiers _fromNative(const Qt::KeyboardModifiers& source, const KeyboardModifiers* = nullptr) BOOST_NOEXCEPT {
 					KeyboardModifiers value;
 					value.set(SHIFT_DOWN, source.testFlag(Qt::ShiftModifier));
 					value.set(CONTROL_DOWN, source.testFlag(Qt::ControlModifier));
@@ -71,7 +69,7 @@ namespace ascension {
 					value.set(META_DOWN, source.testFlag(Qt::MetaModifier));
 				}
 
-				inline Qt::KeyboardModifiers toNative(const KeyboardModifiers& from, const Qt::KeyboardModifiers* = nullptr) BOOST_NOEXCEPT {
+				inline Qt::KeyboardModifiers _toNative(const KeyboardModifiers& from, const Qt::KeyboardModifiers* = nullptr) BOOST_NOEXCEPT {
 					Qt::KeyboardModifiers value = Qt::NoModifier;
 					value |= from.test(SHIFT_DOWN) ? Qt::ShiftModifier : Qt::NoModifier;
 					value |= from.test(CONTROL_DOWN) ? Qt::ControlModifier : Qt::NoModifier;
@@ -81,8 +79,7 @@ namespace ascension {
 				}
 #endif
 #if ASCENSION_SUPPORTS_WINDOW_SYSTEM(WIN32)
-				template<typename Model>
-				inline Model fromNative(WORD source, typename std::enable_if<std::is_same<Model, KeyboardModifiers>::value>::type* = nullptr) BOOST_NOEXCEPT {
+				inline KeyboardModifiers _fromNative(DWORD source, const KeyboardModifiers* = nullptr) BOOST_NOEXCEPT {
 					KeyboardModifiers value;
 					value.set(SHIFT_DOWN, (source & MK_SHIFT) != 0);
 					value.set(CONTROL_DOWN, (source & MK_CONTROL) != 0);
@@ -90,8 +87,8 @@ namespace ascension {
 					return value;
 				}
 
-				inline WORD toNative(const KeyboardModifiers& from, const WORD* = nullptr) BOOST_NOEXCEPT {
-					WORD value = 0;
+				inline DWORD _toNative(const KeyboardModifiers& from, const DWORD* = nullptr) BOOST_NOEXCEPT {
+					DWORD value = 0;
 					value |= from.test(SHIFT_DOWN) ? MK_SHIFT : 0;
 					value |= from.test(CONTROL_DOWN) ? MK_CONTROL : 0;
 					value |= from.test(META_DOWN) ? MK_ALT : 0;	// for D&D

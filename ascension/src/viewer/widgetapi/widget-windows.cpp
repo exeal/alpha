@@ -7,7 +7,7 @@
 #include <ascension/viewer/widgetapi/widget.hpp>
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#include <ascension/graphics/native-conversion.hpp>
+#include <ascension/corelib/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
@@ -37,7 +37,7 @@ namespace ascension {
 					if(!win32::boole(::GetClientRect(widget->handle().get(), &temp)))
 						throw makePlatformError();
 				}
-				return graphics::fromNative<graphics::Rectangle>(temp);
+				return fromNative<graphics::Rectangle>(temp);
 			}
 
 			void close(Proxy<Widget> widget) {
@@ -54,7 +54,7 @@ namespace ascension {
 			}
 
 			void forcePaint(Proxy<Widget> widget, const graphics::Rectangle& bounds) {
-				const auto temp(graphics::toNative<RECT>(bounds));
+				const auto temp(toNative<RECT>(bounds));
 				if(!win32::boole(::RedrawWindow(widget->handle().get(), &temp, nullptr, RDW_INTERNALPAINT | RDW_INVALIDATE)))
 					throw makePlatformError();
 			}
@@ -140,7 +140,7 @@ namespace ascension {
 			}
 
 			void scheduleRedraw(Proxy<Widget> widget, const graphics::Rectangle& rect, bool eraseBackground) {
-				const auto temp(graphics::toNative<RECT>(rect));
+				const auto temp(toNative<RECT>(rect));
 				if(!win32::boole(::InvalidateRect(widget->handle().get(), &temp, eraseBackground)))
 					throw makePlatformError();
 			}

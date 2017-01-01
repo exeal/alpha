@@ -8,7 +8,8 @@
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
-#include <ascension/graphics/native-conversion.hpp>
+#include <ascension/corelib/native-conversion.hpp>
+#include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-button-input.hpp>
 #include <ascension/win32/com/com.hpp>
 #ifdef _DEBUG
@@ -88,7 +89,7 @@ namespace ascension {
 						}
 					}
 #endif // _DEBUG
-					const auto p(graphics::fromNative<graphics::Point>(location));
+					const auto p(fromNative<graphics::Point>(location));
 					widgetapi::DragEnterInput input(
 						win32::makeLocatedUserInput(keyState, widgetapi::mapFromGlobal(widget_, p)),
 						translateDropActions(*effect), makeInterprocessData(data));
@@ -102,7 +103,7 @@ namespace ascension {
 					data_ = makeInterprocessData(data);
 					*effect = translateDropAction(input.dropAction());
 					if(auto helper = dropTargetHelper()) {
-						auto p2(graphics::toNative<POINT>(p));
+						auto p2(toNative<POINT>(p));
 						helper->DragEnter(widget_.get()->handle().get(), data, &p2, *effect);
 					}
 
@@ -128,7 +129,7 @@ namespace ascension {
 					if(data_.get() == nullptr)
 						return E_UNEXPECTED;
 
-					const auto p(graphics::fromNative<graphics::Point>(location));
+					const auto p(fromNative<graphics::Point>(location));
 					try {
 						target_.dragMoved(widgetapi::DragMoveInput(
 							win32::makeLocatedUserInput(keyState, widgetapi::mapFromGlobal(widget_, p)),
@@ -139,7 +140,7 @@ namespace ascension {
 						return E_UNEXPECTED;
 					}
 					if(auto helper = dropTargetHelper()) {
-						auto p2(graphics::toNative<POINT>(p));
+						auto p2(toNative<POINT>(p));
 						helper->DragOver(&p2, *effect);
 					}
 					return S_OK;
@@ -161,7 +162,7 @@ namespace ascension {
 					::ReleaseStgMedium(&stg);
 */
 					HRESULT hr = S_OK;
-					const auto p(graphics::fromNative<graphics::Point>(location));
+					const auto p(fromNative<graphics::Point>(location));
 					try {
 						target_.dropped(widgetapi::DropInput(
 							win32::makeLocatedUserInput(keyState, widgetapi::mapFromGlobal(widget_, p)),
@@ -172,7 +173,7 @@ namespace ascension {
 						hr = E_UNEXPECTED;
 					}
 					if(auto helper = dropTargetHelper()) {
-						auto p2(graphics::toNative<POINT>(p));
+						auto p2(toNative<POINT>(p));
 						helper->DragOver(&p2, *effect);
 					}
 					return hr;
