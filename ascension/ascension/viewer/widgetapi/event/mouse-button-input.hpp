@@ -8,6 +8,9 @@
 
 #ifndef ASCENSION_MOUSE_BUTTON_INPUT_HPP
 #define ASCENSION_MOUSE_BUTTON_INPUT_HPP
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(WIN32)
+#	include <ascension/corelib/native-conversion.hpp>
+#endif
 #include <ascension/viewer/widgetapi/event/located-user-input.hpp>
 
 namespace ascension {
@@ -37,20 +40,12 @@ namespace ascension {
 			}
 		}
 	}
-		
-	template<typename Model, typename Native> inline Model fromNative(const Native& object) {
-		return fromNative<Model>(object);
-	}
-
-	template<typename Native, typename Model> inline Native toNative(const Model& object) {
-		return toNative(object, static_cast<const Native*>(nullptr));
-	}
 
 #if ASCENSION_SUPPORTS_WINDOW_SYSTEM(WIN32)
 	namespace win32 {
 		inline viewer::widgetapi::event::MouseButtonInput makeMouseButtonInput(viewer::widgetapi::event::MouseButton button, WPARAM wp, LPARAM lp) {
 			return viewer::widgetapi::event::MouseButtonInput(makeMouseLocation<graphics::Point>(lp), button,
-				ascension::fromNative<viewer::widgetapi::event::MouseButtons>(wp), ascension::fromNative<viewer::widgetapi::event::KeyboardModifiers>(wp));
+				fromNative<viewer::widgetapi::event::MouseButtons>(wp), fromNative<viewer::widgetapi::event::KeyboardModifiers>(wp));
 		}
 	}
 #endif // ASCENSION_SUPPORTS_WINDOW_SYSTEM(WIN32)

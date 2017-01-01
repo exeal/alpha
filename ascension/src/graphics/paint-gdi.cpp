@@ -8,7 +8,7 @@
 
 #include <ascension/graphics/paint.hpp>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-#include <ascension/graphics/native-conversion.hpp>
+#include <ascension/corelib/native-conversion.hpp>
 
 namespace ascension {
 	namespace graphics {

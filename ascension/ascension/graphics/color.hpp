@@ -24,8 +24,6 @@
 
 namespace ascension {
 	namespace graphics {
-		//TODO: Use native-conversion.hpp.
-
 		/**
 		 * @c Color provides colors based on RGB values.
 		 * @see "CSS Color Module Level 3" (http://www.w3.org/TR/css3-color/)
@@ -65,27 +63,25 @@ namespace ascension {
 		};
 
 		// platform-dependent conversions
-		namespace detail {
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
-			template<typename T>
-			inline T fromNative(const Gdk::RGBA& native, typename std::enable_if<std::is_same<T, Color>::value>::type* = nullptr) {
-				if(native.get_red() > 1.0 || native.get_green() > 1.0 || native.get_blue() > 1.0 || native.get_alpha() > 1.0)
-					throw std::overflow_error("native");
-				return Color(
-					static_cast<Byte>(boost::math::iround(native.get_red() * static_cast<double>(std::numeric_limits<Byte>::max()))),
-					static_cast<Byte>(boost::math::iround(native.get_green() * static_cast<double>(std::numeric_limits<Byte>::max()))),
-					static_cast<Byte>(boost::math::iround(native.get_blue() * static_cast<double>(std::numeric_limits<Byte>::max()))),
-					static_cast<Byte>(boost::math::iround(native.get_alpha() * static_cast<double>(std::numeric_limits<Byte>::max()))));
-			}
-			inline Gdk::RGBA toNative(const Color& from, const Gdk::RGBA* = nullptr) BOOST_NOEXCEPT {
-				Gdk::RGBA temp;
-				temp.set_rgba(
-					from.red() / static_cast<double>(std::numeric_limits<Byte>::max()),
-					from.green() / static_cast<double>(std::numeric_limits<Byte>::max()),
-					from.blue() / static_cast<double>(std::numeric_limits<Byte>::max()),
-					from.alpha() / static_cast<double>(std::numeric_limits<Byte>::max()));
-				return temp;
-			}
+		inline Color _fromNative(const Gdk::RGBA& native, const Color* = nullptr) {
+			if(native.get_red() > 1.0 || native.get_green() > 1.0 || native.get_blue() > 1.0 || native.get_alpha() > 1.0)
+				throw std::overflow_error("native");
+			return Color(
+				static_cast<Byte>(boost::math::iround(native.get_red() * static_cast<double>(std::numeric_limits<Byte>::max()))),
+				static_cast<Byte>(boost::math::iround(native.get_green() * static_cast<double>(std::numeric_limits<Byte>::max()))),
+				static_cast<Byte>(boost::math::iround(native.get_blue() * static_cast<double>(std::numeric_limits<Byte>::max()))),
+				static_cast<Byte>(boost::math::iround(native.get_alpha() * static_cast<double>(std::numeric_limits<Byte>::max()))));
+		}
+		inline Gdk::RGBA _toNative(const Color& from, const Gdk::RGBA* = nullptr) BOOST_NOEXCEPT {
+			Gdk::RGBA temp;
+			temp.set_rgba(
+				from.red() / static_cast<double>(std::numeric_limits<Byte>::max()),
+				from.green() / static_cast<double>(std::numeric_limits<Byte>::max()),
+				from.blue() / static_cast<double>(std::numeric_limits<Byte>::max()),
+				from.alpha() / static_cast<double>(std::numeric_limits<Byte>::max()));
+			return temp;
+		}
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 #endif
@@ -94,32 +90,29 @@ namespace ascension {
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
-			template<typename T>
-			inline T fromNative(const COLORREF& native, typename std::enable_if<std::is_same<T, Color>::value>::type* = nullptr) BOOST_NOEXCEPT {
-				return Color(
-					static_cast<Byte>(native & 0xff),
-					static_cast<Byte>((native >> 8) & 0xff),
-					static_cast<Byte>((native >> 16) & 0xff));
-			}
-			template<typename T>
-			inline T fromNative(const RGBQUAD& native, typename std::enable_if<std::is_same<T, Color>::value>::type* = nullptr) BOOST_NOEXCEPT {
-				return Color(value.rgbRed, value.rgbGreen, value.rgbBlue, value.rgbReserved);
-			}
-			inline COLORREF toNative(const Color& from, const COLORREF* = nullptr) BOOST_NOEXCEPT {
-				return RGB(from.red(), from.green(), from.blue());
-			}
-			inline RGBQUAD toNative(const Color& from, const RGBQUAD* = nullptr) BOOST_NOEXCEPT {
-				RGBQUAD temp;
-				temp.rgbRed = from.red();
-				temp.rgbGreen = from.green();
-				temp.rgbBlue = from.blue();
-				temp.rgbReserved = from.alpha();
-				return temp;
-			}
+		inline Color _fromNative(const COLORREF& native, const Color* = nullptr) BOOST_NOEXCEPT {
+			return Color(
+				static_cast<Byte>(native & 0xff),
+				static_cast<Byte>((native >> 8) & 0xff),
+				static_cast<Byte>((native >> 16) & 0xff));
+		}
+		inline Color _fromNative(const RGBQUAD& native, const Color* = nullptr) BOOST_NOEXCEPT {
+			return Color(native.rgbRed, native.rgbGreen, native.rgbBlue, native.rgbReserved);
+		}
+		inline COLORREF _toNative(const Color& from, const COLORREF* = nullptr) BOOST_NOEXCEPT {
+			return RGB(from.red(), from.green(), from.blue());
+		}
+		inline RGBQUAD _toNative(const Color& from, const RGBQUAD* = nullptr) BOOST_NOEXCEPT {
+			RGBQUAD temp;
+			temp.rgbRed = from.red();
+			temp.rgbGreen = from.green();
+			temp.rgbBlue = from.blue();
+			temp.rgbReserved = from.alpha();
+			return temp;
+		}
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 #endif
-		}
 
 		/// Specialization of @c boost#hash_value function template for @c Color.
 		inline std::size_t hash_value(const Color& object) BOOST_NOEXCEPT {
