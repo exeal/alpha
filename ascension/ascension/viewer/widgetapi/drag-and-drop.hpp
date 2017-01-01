@@ -61,7 +61,7 @@ namespace ascension {
 			ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 			DropAction resolveDefaultDropAction(DropAction possibleActions,
-				event::LocatedUserInput::MouseButton buttons, const event::KeyboardModifiers& modifiers);
+				const event::MouseButtons& buttons, const event::KeyboardModifiers& modifiers);
 
 			class DragContext {
 			public:
