@@ -24,7 +24,7 @@ namespace ascension {
 					 * @param buttons The button state when the event was generated
 					 * @param modifiers The keyboard modifier flags
 					 */
-					MouseButtonInput(const graphics::Point& location, MouseButton button, MouseButton buttons,
+					MouseButtonInput(const graphics::Point& location, MouseButton button, const MouseButtons& buttons,
 						const KeyboardModifiers& modifiers) : LocatedUserInput(location, buttons, modifiers), button_(button) {}
 					/// Returns the button that caused the event.
 					MouseButton button() const BOOST_NOEXCEPT {
@@ -37,38 +37,20 @@ namespace ascension {
 			}
 		}
 	}
+		
+	template<typename Model, typename Native> inline Model fromNative(const Native& object) {
+		return fromNative<Model>(object);
+	}
+
+	template<typename Native, typename Model> inline Native toNative(const Model& object) {
+		return toNative(object, static_cast<const Native*>(nullptr));
+	}
 
 #if ASCENSION_SUPPORTS_WINDOW_SYSTEM(WIN32)
 	namespace win32 {
-		inline viewer::widgetapi::event::MouseButtonInput makeMouseButtonInput(viewer::widgetapi::event::LocatedUserInput::MouseButton button, WPARAM wp, LPARAM lp) {
-			return viewer::widgetapi::event::MouseButtonInput(makeMouseLocation<graphics::Point>(lp), button, makeModifiers(wp));
-		}
-
-		template<typename Point>
-		inline viewer::widgetapi::event::MouseButtonInput makeMouseButtonInput(DWORD keyState, const Point& location) {
-			viewer::widgetapi::UserInput::MouseButton buttons = 0;
-			if(boole(keyState & MK_LBUTTON))
-				buttons |= viewer::widgetapi::UserInput::BUTTON1_DOWN;
-			if(boole(keyState & MK_MBUTTON))
-				buttons |= viewer::widgetapi::UserInput::BUTTON2_DOWN;
-			if(boole(keyState & MK_RBUTTON))
-				buttons |= viewer::widgetapi::UserInput::BUTTON3_DOWN;
-			if(boole(keyState & MK_XBUTTON1))
-				buttons |= viewer::widgetapi::UserInput::BUTTON4_DOWN;
-			if(boole(keyState & MK_XBUTTON2))
-				buttons |= viewer::widgetapi::UserInput::BUTTON5_DOWN;
-			viewer::widgetapi::UserInput::ModifierKey modifiers = 0;
-			if(boole(keyState & MK_CONTROL))
-				modifiers |= viewer::widgetapi::UserInput::CONTROL_DOWN;
-			if(boole(keyState & MK_SHIFT))
-				modifiers |= viewer::widgetapi::UserInput::SHIFT_DOWN;
-			if(boole(keyState & MK_ALT))
-				modifiers |= viewer::widgetapi::UserInput::ALT_DOWN;
-			return viewer::widgetapi::MouseButtonInput(
-				boost::geometry::make<graphics::Point>(
-					static_cast<typename boost::geometry::coordinate_type<graphics::Point>::type>(geometry::x(location)),
-					static_cast<typename boost::geometry::coordinate_type<graphics::Point>::type>(geometry::y(location))),
-				buttons, modifiers);
+		inline viewer::widgetapi::event::MouseButtonInput makeMouseButtonInput(viewer::widgetapi::event::MouseButton button, WPARAM wp, LPARAM lp) {
+			return viewer::widgetapi::event::MouseButtonInput(makeMouseLocation<graphics::Point>(lp), button,
+				ascension::fromNative<viewer::widgetapi::event::MouseButtons>(wp), ascension::fromNative<viewer::widgetapi::event::KeyboardModifiers>(wp));
 		}
 	}
 #endif // ASCENSION_SUPPORTS_WINDOW_SYSTEM(WIN32)

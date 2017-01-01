@@ -127,20 +127,7 @@ namespace ascension {
 				modifiers |= viewer::widgetapi::UserInput::ALT_DOWN;
 			return modifiers;
 		}
-*/
-		inline viewer::widgetapi::event::LocatedUserInput::MouseButton makeButtons(WPARAM wp) BOOST_NOEXCEPT {
-			return static_cast<viewer::widgetapi::event::LocatedUserInput::MouseButton>(wp);
-		}
 
-		inline viewer::widgetapi::event::KeyboardModifiers makeModifiers(WPARAM wp) BOOST_NOEXCEPT {
-			viewer::widgetapi::event::KeyboardModifiers modifiers;
-			if((wp & MK_CONTROL) != 0)
-				modifiers = viewer::widgetapi::event::CONTROL_DOWN;
-			if((wp & MK_SHIFT) != 0)
-				modifiers = viewer::widgetapi::event::SHIFT_DOWN;
-			return modifiers;
-		}
-/*
 		inline viewer::widgetapi::KeyInput makeKeyInput(WPARAM wp, LPARAM lp) {
 			return viewer::widgetapi::KeyInput(wp, makeModifiers(), LOWORD(lp), HIWORD(lp));
 		}
