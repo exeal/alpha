@@ -104,7 +104,7 @@ namespace ascension {
 			/// @see MouseInputStrategy#mouseButtonInput
 			void LineNumberRuler::mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) {
 				if(viewer() != nullptr) {
-					if(input.button() == widgetapi::event::LocatedUserInput::BUTTON1_DOWN) {
+					if(input.button() == widgetapi::event::BUTTON1_DOWN) {
 						if(action == PRESSED) {
 							// select line(s)
 							const auto caret(viewer()->textArea()->caret());
