@@ -5,13 +5,13 @@
  * @date 2016-07-16 Created.
  */
 
+#include <ascension/corelib/native-conversion.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <ascension/presentation/text-toplevel-style.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #include <ascension/viewer/widget-themed-text-renderer.hpp>
-#include <ascension/graphics/native-conversion.hpp>
 #if (ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)) && BOOST_OS_WINDOWS
 #	include <ascension/graphics/rendering-context.hpp>
 #endif
@@ -30,7 +30,7 @@ namespace ascension {
 		graphics::Color WidgetThemedTextRenderer::actualLineBackgroundColor(const graphics::font::TextLayout&) const BOOST_NOEXCEPT {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			if(const auto context = textViewer_.get_style_context())
-				return graphics::fromNative<graphics::Color>(context->get_background_color());	// deprecated api
+				return fromNative<graphics::Color>(context->get_background_color());	// deprecated api
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -38,9 +38,9 @@ namespace ascension {
 			if(brush.get() != nullptr) {
 				LOGBRUSH lb;
 				if(::GetObject(brush.get(), sizeof(decltype(lb)), &lb) != 0 && lb.lbStyle == BS_SOLID)
-					return graphics::fromNative<graphics::Color>(lb.lbColor);
+					return fromNative<graphics::Color>(lb.lbColor);
 			}
-			return graphics::fromNative<graphics::Color>(::GetSysColor(COLOR_WINDOW));
+			return fromNative<graphics::Color>(::GetSysColor(COLOR_WINDOW));
 #endif
 			return graphics::Color::OPAQUE_WHITE;
 		}
