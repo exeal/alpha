@@ -378,7 +378,7 @@ namespace ascension {
 //					const double ydpi = ::GetDeviceCaps(dc.get(), LOGPIXELSY);
 
 					// generic font metrics
-					win32::AutoZeroSize<OUTLINETEXTMETRICW, UINT> otm;
+					auto otm(win32::makeZeroSize<OUTLINETEXTMETRICW, UINT>());
 					TEXTMETRICW tm;
 					if(::GetOutlineTextMetricsW(dc.get(), sizeof(decltype(otm)), &otm) == 0) {
 						tm = otm.otmTextMetrics;
@@ -596,7 +596,7 @@ namespace ascension {
 				static_assert(sizeof(DWORD) == 4, "");
 				const std::size_t dx = std::min(static_cast<std::size_t>(geometry::dx(dirtyRectangle)), image.width());
 				const std::size_t dy = std::min(static_cast<std::size_t>(geometry::dy(dirtyRectangle)), image.height());
-				win32::AutoZeroSize<BITMAPV5HEADER> header;
+				auto header(win32::makeZeroSize<BITMAPV5HEADER>());
 				header.bV5Width = dx;
 				header.bV5Height = dy;
 				header.bV5Planes = 1;

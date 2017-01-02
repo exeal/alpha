@@ -38,7 +38,7 @@ namespace alpha {
 
 			const Alpha& app = Alpha::instance();
 			win32::gdi::ClientDC dc = getDC();
-			win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
+			auto ncm(win32::makeZeroSize<NONCLIENTMETRICSW>());
 			::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);
 			HFONT font = ::CreateFontIndirectW(&ncm.lfStatusFont);
 			HFONT oldFont = static_cast<HFONT>(dc.selectObject(font_.get()));
@@ -101,7 +101,7 @@ namespace alpha {
 				}
 				if(formatLength != 0) {
 					length_t messageArguments[3];
-					win32::AutoZero<SCROLLINFO> si;
+					auto si(win32::makeZero<SCROLLINFO>());
 					viewer.getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
 					messageArguments[0] = viewer.caret().line() + viewer.verticalRulerConfiguration().lineNumbers.startValue;
 					messageArguments[1] = viewer.caret().visualColumn() + columnStartValue_;
@@ -115,7 +115,7 @@ namespace alpha {
 		}
 
 		void StatusBar::updateDefaultFont() {
-			ascension::win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
+			auto ncm(ascension::win32::makeZeroSize<NONCLIENTMETRICSW>());
 			::DeleteObject(defaultFont_);
 			::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);
 			defaultFont_ = ::CreateFontIndirectW(&ncm.lfStatusFont);

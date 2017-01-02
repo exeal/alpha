@@ -245,8 +245,8 @@ namespace ascension {
 /*
 #if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE)
 					SCRIPT_STRING_ANALYSIS ssa;
-					win32::AutoZero<SCRIPT_CONTROL> sc;
-					win32::AutoZero<SCRIPT_STATE> ss;
+					auto sc(win32::makeZero<SCRIPT_CONTROL>());
+					auto ss(win32::makeZero<SCRIPT_STATE>());
 					HRESULT hr;
 //					switch(configuration_.lineNumbers.digitSubstitution) {
 //						case DST_CONTEXTUAL:

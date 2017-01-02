@@ -717,7 +717,7 @@ namespace alpha {
 
 		// ï ñºÇ≈ï€ë∂ or ÉtÉ@ÉCÉãÇ™ë∂ç›ÇµÇ»Ç¢
 		if(!overwrite || !buffer.textFile().isOpen() || !toBoolean(::PathFileExistsW(buffer.textFile().pathName().c_str()))) {
-			win32::AutoZero<OSVERSIONINFOW> osVersion;
+			auto osVersion(win32::makeZero<OSVERSIONINFOW>());
 			const wstring filterSource(app.loadMessage(MSG_DIALOG__SAVE_FILE_FILTER));
 			wchar_t* const filter = new wchar_t[filterSource.length() + 6];
 
@@ -727,8 +727,8 @@ namespace alpha {
 			wcsncpy(filter + filterSource.length(), L"\0*.*\0\0", 6);
 			wcscpy(fileName, (buffer.textFile().pathName().c_str()));
 
-			win32::AutoZeroSize<OPENFILENAMEW> newOfn;
-			win32::AutoZeroSize<OPENFILENAME_NT4W> oldOfn;
+			auto newOfn(win32::makeZeroSize<OPENFILENAMEW> newOfn;
+			auto oldOfn(win32::makeZeroSize<OPENFILENAME_NT4W> oldOfn;
 			OPENFILENAMEW& ofn = (osVersion.dwMajorVersion > 4) ? newOfn : *reinterpret_cast<OPENFILENAMEW*>(&oldOfn);
 			ofn.hwndOwner = app.getMainWindow().use();
 			ofn.hInstance = ::GetModuleHandle(0);

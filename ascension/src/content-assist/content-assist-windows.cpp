@@ -172,7 +172,7 @@ void DefaultContentAssistant::CompletionProposalsPopup::setWritingMode(const pre
 }
 
 void DefaultContentAssistant::CompletionProposalsPopup::updateDefaultFont() {
-	win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
+	auto ncm(win32::makeZeroSize<NONCLIENTMETRICSW>());
 	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
 	HFONT newFont = ::CreateFontIndirectW(&ncm.lfStatusFont);
 	if(defaultFont_ != nullptr && reinterpret_cast<HFONT>(::SendMessageW(handle().get(), WM_GETFONT, 0, 0)) == defaultFont_) {

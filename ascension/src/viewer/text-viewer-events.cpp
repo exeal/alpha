@@ -648,7 +648,7 @@ namespace ascension {
 			updateTextAreaAllocationRectangle();
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// notify the tooltip
-			win32::AutoZeroSize<TOOLINFOW> ti;
+			auto ti(win32::makeZeroSize<TOOLINFOW>());
 			const graphics::Rectangle viewerBounds(widgetapi::bounds(*this, false));
 			ti.hwnd = handle().get();
 			ti.uId = 1;

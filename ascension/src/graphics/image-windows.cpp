@@ -70,7 +70,7 @@ namespace ascension {
 		}
 
 		void Image::initialize(const std::uint8_t* data, const geometry::BasicDimension<std::uint32_t>& size, Format format) {
-			win32::AutoZeroSize<BITMAPV5HEADER> header;
+			auto header(win32::makeZeroSize<BITMAPV5HEADER>());
 			static_assert(sizeof(decltype(header)) >= sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 3, "");
 			switch(format) {
 				case Image::ARGB32:

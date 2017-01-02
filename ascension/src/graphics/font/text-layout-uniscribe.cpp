@@ -9,12 +9,12 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/corelib/native-conversion.hpp>
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
-#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/graphics/font/actual-text-styles.hpp>
@@ -353,12 +353,12 @@ namespace ascension {
 				}
 
 				void convertNumberSubstitutionToUniscribe(const NumberSubstitution& from, SCRIPT_DIGITSUBSTITUTE& to) {
-					boost::optional<win32::AutoZero<SCRIPT_DIGITSUBSTITUTE>> userLocale;
+					boost::optional<SCRIPT_DIGITSUBSTITUTE> userLocale;
 					switch(boost::native_value(from.localeSource)) {
 						case NumberSubstitution::LocaleSource::TEXT:
 						case NumberSubstitution::LocaleSource::USER: {
 							// TODO: This code should not run frequently.
-							userLocale = win32::AutoZero<SCRIPT_DIGITSUBSTITUTE>();
+							userLocale = win32::makeZero<SCRIPT_DIGITSUBSTITUTE>();
 							recordUserDefaultLocaleDigitSubstitution(boost::get(userLocale));
 							to = boost::get(userLocale);
 							break;
@@ -373,10 +373,10 @@ namespace ascension {
 					switch(boost::native_value(from.method)) {
 						case NumberSubstitution::Method::AS_LOCALE:
 							if(userLocale == boost::none) {
-								userLocale = win32::AutoZero<SCRIPT_DIGITSUBSTITUTE>();
+								userLocale = win32::makeZero<SCRIPT_DIGITSUBSTITUTE>();
 								recordUserDefaultLocaleDigitSubstitution(boost::get(userLocale));
 							}
-							to.DigitSubstitute = userLocale->DigitSubstitute;
+							to.DigitSubstitute = boost::get(userLocale).DigitSubstitute;
 							break;
 						case NumberSubstitution::Method::CONTEXT:
 							to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_CONTEXT;
@@ -2297,8 +2297,8 @@ namespace ascension {
 					HRESULT hr;
 
 					// 1-1. configure Uniscribe's itemize
-					win32::AutoZero<SCRIPT_CONTROL> control;
-					win32::AutoZero<SCRIPT_STATE> initialState;
+					auto control(win32::makeZero<SCRIPT_CONTROL>());
+					auto initialState(win32::makeZero<SCRIPT_STATE>());
 					initialState.uBidiLevel = (boost::fusion::at_key<presentation::styles::Direction>(lineStyle) == presentation::RIGHT_TO_LEFT) ? 1 : 0;
 //					initialState.fOverrideDirection = 1;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -3484,7 +3484,7 @@ namespace ascension {
 			// Font ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 			std::unique_ptr<const GlyphVector> Font::createGlyphVector(const FontRenderContext& frc, const StringPiece& text) const {
-				win32::AutoZero<SCRIPT_ANALYSIS> script;
+				auto script(win32::makeZero<SCRIPT_ANALYSIS>());
 				script.eScript = SCRIPT_UNDEFINED;
 				std::unique_ptr<GlyphVectorImpl> gv(new GlyphVectorImpl(text, script, shared_from_this(), frc, SCRIPT_TAG_UNKNOWN));
 				auto dc(win32::detail::screenDC());

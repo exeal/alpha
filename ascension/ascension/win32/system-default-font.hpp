@@ -13,7 +13,7 @@ namespace ascension {
 		inline void systemDefaultFont(LOGFONTW& out) {
 			LOGFONTW lf;
 			if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(decltype(lf)), &lf) == 0) {
-				win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
+				auto ncm(win32::makeZeroSize<NONCLIENTMETRICSW>());
 				if(!win32::boole(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(decltype(ncm)), &ncm, 0)))
 					throw makePlatformError();
 				lf = ncm.lfMessageFont;
