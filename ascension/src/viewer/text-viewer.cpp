@@ -387,7 +387,7 @@ namespace ascension {
 					scrollBar->setSliderPosition(boost::get(position));
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				win32::AutoZeroSize<SCROLLINFO> si;
+				auto si(win32::makeZeroSize<SCROLLINFO>());
 				if(range/* != boost::none*/) {
 					si.fMask |= SIF_RANGE;
 					si.nMin = *boost::const_begin(range);

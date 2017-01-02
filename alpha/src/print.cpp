@@ -234,7 +234,7 @@ bool Printing::print(const Buffer& buffer, bool showDialog) {
 	// start printing
 	dc.setAbortProc(abortProcedure);
 	const basic_string<WCHAR> bufferName(buffer.textFile().isBoundToFile() ? buffer.textFile().location() : buffer.name());
-	win32::AutoZero<DOCINFOW> di;
+	auto di(win32::makeZero<DOCINFOW>());
 	di.lpszDocName = bufferName.c_str();
 	if(dc.startDoc(di) == SP_ERROR) {
 		printing_ = false;

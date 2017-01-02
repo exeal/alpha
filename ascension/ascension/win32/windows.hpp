@@ -131,17 +131,29 @@ namespace ascension {
 			const WCHAR* const name_;
 		};
 
-		/// Defines a structure type automatically fills oneself with zero.
-		template<typename Structure> struct AutoZero : public Structure {
-			/// Default constructor.
-			AutoZero() BOOST_NOEXCEPT {std::memset(this, 0, sizeof(Structure));}
-		};
+		/**
+		 * Creates an object and fills with zero.
+		 * @tparam T The object type
+		 * @return The created object
+		 */
+		template<typename T> inline T makeZero() {
+			T object;
+			std::memset(&object, 0, sizeof(T));
+			return object;
+		}
 
-		/// Defines a structure type automatically fills oneself with zero and sets its size member.
-		template<typename Structure, typename SizeType = int> struct AutoZeroSize : public AutoZero<Structure> {
-			/// Default constructor.
-			AutoZeroSize() BOOST_NOEXCEPT {*reinterpret_cast<SizeType*>(this) = sizeof(Structure);}
-		};
+		/**
+		 * Creates an object, fills with zero and sets its size member.
+		 * @tparam T The object type
+		 * @tparam SizeType The type of the size member
+		 * @return The created object
+		 */
+		template<typename T, typename SizeType = int> inline T makeZeroSize() {
+			T object;
+			std::memset(&object, 0, sizeof(T));
+			*reinterpret_cast<SizeType*>(&object) = sizeof(T);
+			return object;
+		}
 
 	}
 }

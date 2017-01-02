@@ -133,7 +133,7 @@ namespace ascension {
 				viewer.writingModeProvider().setDefaultDirection(!viewer.writingModeProvider().defaultDirection());
 //				viewer.synchronizeWritingModeUI();
 //				if(config.lineWrap.wrapsAtWindowEdge()) {
-//					win32::AutoZeroSize<SCROLLINFO> scroll;
+//					auto scroll(win32::makeZeroSize<SCROLLINFO>());
 //					viewer.getScrollInformation(SB_HORZ, scroll);
 //					viewer.setScrollInformation(SB_HORZ, scroll);
 //				}

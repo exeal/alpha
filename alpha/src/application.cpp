@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
 		std::unique_ptr<WCHAR[]> data(new WCHAR[commandLineLength + 1 + MAX_PATH]);
 		::GetCurrentDirectoryW(MAX_PATH, data.get());
 		std::wcscpy(data.get() + MAX_PATH, commandLine);
-		ascension::win32::AutoZero<COPYDATASTRUCT> cd;
+		auto cd(ascension::win32::makeZero<COPYDATASTRUCT>());
 		cd.lpData = data.get();
 		cd.cbData = static_cast<DWORD>(sizeof(WCHAR) * (commandLineLength + 1 + MAX_PATH));
 		::SendMessageW(existWnd, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cd));
@@ -174,7 +174,7 @@ namespace alpha {
 		EditorView& activeView = EditorPanes::instance().activePane().selectedView();
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		LOGFONTW font;
-		ascension::win32::AutoZeroSize<CHOOSEFONTW> cf;
+		auto cf(ascension::win32::makeZeroSize<CHOOSEFONTW>());
 
 		::GetObjectW(editorFont_, sizeof(decltype(LOGFONTW)), &font);
 		cf.hwndOwner = getMainWindow().use();
@@ -281,7 +281,7 @@ namespace alpha {
 	void Application::saveSettings() {
 		// visibility of bars
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		ascension::win32::AutoZero<REBARBANDINFOW> rbbi;
+		auto rbbi(ascension::win32::makeZero<REBARBANDINFOW>());
 		rbbi.fMask = RBBIM_STYLE;
 		rebar_.getBandInfo(rebar_.idToIndex(IDC_TOOLBAR), rbbi);
 		writeIntegerProfile(L"View", L"visibleToolbar", ascension::win32::boole(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);

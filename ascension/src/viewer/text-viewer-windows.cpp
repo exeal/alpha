@@ -529,7 +529,7 @@ void TextViewer::initializeNativeObjects(const TextViewer* other) {
 		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(handle().get(), GWLP_HINSTANCE))), nullptr),
 		&::DestroyWindow);
 	if(toolTip_.get() != nullptr) {
-		win32::AutoZeroSize<TOOLINFOW> ti;
+		auto ti(win32::makeZeroSize<TOOLINFOW>());
 		RECT margins = {1, 1, 1, 1};
 		ti.hwnd = handle().get();
 		ti.lpszText = LPSTR_TEXTCALLBACKW;
@@ -763,7 +763,7 @@ void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(*scrollableRangeInPhysicalDirection<0>(*viewport).end(), boost::none));
 			break;
 		case SB_THUMBTRACK: {	// by drag or wheel
-			win32::AutoZeroSize<SCROLLINFO> si;
+			auto si(win32::makeZeroSize<SCROLLINFO>());
 			si.fMask = SIF_TRACKPOS;
 			if(win32::boole(::GetScrollInfo(handle().get(), SB_HORZ, &si)))
 				viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(si.nTrackPos, boost::none));
@@ -876,7 +876,7 @@ void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, *scrollableRangeInPhysicalDirection<1>(*viewport).end()));
 			break;
 		case SB_THUMBTRACK: {	// by drag or wheel
-			win32::AutoZeroSize<SCROLLINFO> si;
+			auto si(win32::makeZeroSize<SCROLLINFO>());
 			si.fMask = SIF_TRACKPOS;
 			if(win32::boole(::GetScrollInfo(handle().get(), SB_VERT, &si)))
 				viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, si.nTrackPos));
@@ -1140,7 +1140,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void*
 			make_pair(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator")
 		};
 		auto insertUnicodeControlCharacterPopup(win32::makeHandle(::CreatePopupMenu(), &::DestroyMenu));
-		win32::AutoZeroSize<MENUITEMINFOW> item;
+		auto item(win32::makeZeroSize<MENUITEMINFOW>());
 		for(size_t i = 0; i < ASCENSION_COUNTOF(insertUnicodeControlCharacterItems); ++i) {
 			if(!insertUnicodeControlCharacterItems[i].second.empty()) {
 				item.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
@@ -1243,7 +1243,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void*
 	::EnableMenuItem(toplevelPopup.get(), WM_PASTE, MF_BYCOMMAND | (!readOnly && caret_->canPaste(false)) ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
 	::EnableMenuItem(toplevelPopup.get(), WM_CLEAR, MF_BYCOMMAND | (!readOnly && hasSelection) ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
 	::EnableMenuItem(toplevelPopup.get(), WM_SELECTALL, MF_BYCOMMAND | (doc.numberOfLines() > 1 || doc.lineLength(0) > 0) ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
-	win32::AutoZeroSize<MENUITEMINFOW> item;
+	auto item(win32::makeZeroSize<MENUITEMINFOW>());
 	item.fMask = MIIM_STATE;
 	item.fState = ((configuration_.readingDirection == RIGHT_TO_LEFT) ? MFS_CHECKED : MFS_UNCHECKED) | MFS_ENABLED | MFS_UNHILITE;
 	::SetMenuItemInfoW(toplevelPopup.get(), ID_RTLREADING, false, &item);
@@ -1261,7 +1261,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void*
 		const basic_string<WCHAR> closeSoftKeyboard(japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x9589\x3058\x308b(&F)" : L"Close so&ft keyboard");
 		const basic_string<WCHAR> reconvert(japanese ? L"\x518d\x5909\x63db(&R)" : L"&Reconvert");
 
-		win32::AutoZeroSize<MENUITEMINFOW> item;
+		auto item(win32::makeZeroSize<MENUITEMINFOW>());
 		item.fMask = MIIM_FTYPE;
 		item.fType = MFT_SEPARATOR;
 		::InsertMenuItemW(toplevelPopup.get(), ::GetMenuItemCount(toplevelPopup.get()), true, &item);
@@ -1299,7 +1299,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void*
 #endif // _MSC_VER < 1400
 			japanese ? L"\x202a%s\x202c \x3092\x958b\x304f" : L"Open \x202a%s\x202c", escapeAmpersands(doc.line(
 				line(caret())).substr(link->region().front(), link->region().size())).c_str());
-		win32::AutoZeroSize<MENUITEMINFOW> item;
+		auto item(win32::makeZeroSize<MENUITEMINFOW>());
 		item.fMask = MIIM_FTYPE;
 		item.fType = MFT_SEPARATOR;
 		::InsertMenuItemW(toplevelPopup.get(), ::GetMenuItemCount(toplevelPopup.get()), true, &item);
