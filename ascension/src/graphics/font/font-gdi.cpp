@@ -389,12 +389,12 @@ namespace ascension {
 					throw std::length_error("object");
 				LONG orientation = 0;
 #if 0
-				if(object.properties().orientation == font::FontOrientation::VERTICAL)
+				if(object.properties().orientation == FontOrientation::VERTICAL)
 					orientation = 900;
 #endif
 				result.lfHeight = static_cast<LONG>(-object.pointSize() * defaultDpiY() / 72);
 				result.lfWeight = boost::underlying_cast<LONG>(object.properties().weight);
-				result.lfItalic = object.properties().style != font::FontStyle::ITALIC || object.properties().style != font::FontStyle::OBLIQUE;
+				result.lfItalic = object.properties().style != FontStyle::ITALIC || object.properties().style != FontStyle::OBLIQUE;
 				std::copy(familyName.cbegin(), familyName.cend(), result.lfFaceName);
 				result.lfFaceName[familyName.length()] = 0;
 				return result;
