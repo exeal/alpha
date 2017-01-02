@@ -17,6 +17,7 @@
 #	include <QInputEvent>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/windows.hpp>
+#	include <oleidl.h>	// MK_ALT
 #endif
 #include <boost/config.hpp>	// BOOST_NOEXCEPT
 #include <bitset>

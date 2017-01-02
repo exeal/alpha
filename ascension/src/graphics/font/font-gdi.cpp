@@ -10,9 +10,9 @@
 #include <ascension/graphics/font/font-collection.hpp>
 
 #if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
+#include <ascension/corelib/native-conversion.hpp>
 #include <ascension/graphics/font/font-description.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
-#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
 #include <ascension/win32/system-default-font.hpp>
@@ -265,7 +265,7 @@ namespace ascension {
 
 				auto dc(win32::detail::screenDC());
 				const int cookie = ::SaveDC(dc.get());
-				const XFORM xform(graphics::toNative<XFORM>(frc.transform()));
+				const XFORM xform(toNative<XFORM>(frc.transform()));
 				std::unique_ptr<LineMetricsImpl> lm;
 				if(::SetGraphicsMode(dc.get(), GM_ADVANCED) != 0 && ::SetMapMode(dc.get(), MM_TEXT) != 0 && ::SetWorldTransform(dc.get(), &xform)) {
 					::SelectObject(dc.get(), native().get());
@@ -373,18 +373,18 @@ namespace ascension {
 
 namespace ascension {
 	namespace graphics {
-		namespace detail {
-			template<> font::FontDescription fromNative<font::FontDescription>(const LOGFONTW& object) {
+		namespace font {
+			template<> FontDescription _fromNative<font::FontDescription>(const LOGFONTW& object, const FontDescription* /* = nullptr */) {
 				const String familyName(object.lfFaceName, object.lfFaceName + std::wcslen(object.lfFaceName));
-				return font::FontDescription(font::FontFamily(familyName), -object.lfHeight * 72 / defaultDpiY(),
-					font::FontProperties(static_cast<font::FontWeight>(object.lfWeight),
-						font::FontStretch::NORMAL, win32::boole(object.lfItalic) ? font::FontStyle::ITALIC : font::FontStyle::NORMAL));
+				return FontDescription(FontFamily(familyName), -object.lfHeight * 72 / defaultDpiY(),
+					FontProperties(static_cast<FontWeight>(object.lfWeight),
+						FontStretch::NORMAL, win32::boole(object.lfItalic) ? FontStyle::ITALIC : FontStyle::NORMAL));
 			}
 
-			LOGFONTW toNative(const font::FontDescription& object, const LOGFONTW* /* = nullptr */) {
+			LOGFONTW _toNative(const FontDescription& object, const LOGFONTW* /* = nullptr */) {
 //				fillLogFont(win32::detail::screenDC(), object, geometry::makeIdentityTransform(), boost::none);
 				const auto& familyName = object.family().name();
-				win32::AutoZero<LOGFONT> result;
+				auto result(win32::makeZero<LOGFONT>());
 				if(familyName.length() >= std::extent<decltype(result.lfFaceName)>::value)
 					throw std::length_error("object");
 				LONG orientation = 0;
