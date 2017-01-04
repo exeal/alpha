@@ -145,14 +145,26 @@ namespace ascension {
 		 */
 		template<typename SinglePassReadableRange> void setURIs(const SinglePassReadableRange& uris);
 
-		// MimeDataFormats
+		// InterprocessDataFormats
 		void formats(std::vector<Format>& out) const override;
 		virtual bool hasFormat(Format format) const BOOST_NOEXCEPT override;
 //		bool hasImage() const BOOST_NOEXCEPT override;
 		bool hasText() const BOOST_NOEXCEPT override;
 		bool hasURIs() const BOOST_NOEXCEPT override;
 
-	public:
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		std::shared_ptr<Gtk::SelectionData> native();
+		std::shared_ptr<const Gtk::SelectionData> native() const;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+		std::shared_ptr<QMimeData> native();
+		std::shared_ptr<const QMimeData> native() const;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+		??? native();
+		const native() const;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		win32::com::SmartPointer<IDataObject> native();
+#endif
+
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		explicit InterprocessData(Gtk::SelectionData& impl);
 	private:
