@@ -524,42 +524,29 @@ namespace ascension {
 
 		namespace utils {
 			/**
-			 * Creates an MIME data object represents the selected content.
+			 * Creates an @c InterprocessData object represents the selected content.
 			 * @param caret The caret gives the selection
-			 * @param rtf Set @c true if the content is available as Rich Text Format. This feature is not
-			 * implemented yet and the parameter is ignored
-			 * @return The MIME data object
+			 * @param rtf Set @c true if the content is available as Rich Text Format. This feature is not implemented
+			 *            yet and the parameter is ignored
+			 * @return The @c InterprocessData object
 			 */
-			std::unique_ptr<widgetapi::MimeData> createMimeDataForSelectedString(const Caret& caret, bool rtf) {
-				std::unique_ptr<widgetapi::MimeData> mimeData(new widgetapi::MimeData);
-				const String text(selectedString(caret, text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED));
-
-				mimeData->setText(text);
+			InterprocessData createInterprocessDataForSelectedString(const Caret& caret, bool rtf) {
+				InterprocessData data;
+				data.setText(selectedString(caret, text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED));
 				if(caret.isSelectionRectangle())
-					mimeData->setData(rectangleTextMimeDataFormat(), boost::make_iterator_range<const unsigned char*>(nullptr, nullptr));
-
-				return std::move(mimeData);
+					data.setData(rectangleTextMimeDataFormat(), boost::make_iterator_range<const unsigned char*>(nullptr, nullptr));
+				return data;
+#if 0
+				if(rtf) {
+					const CLIPFORMAT rtfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(L"Rich Text Format"));	// CF_RTF
+					const CLIPFORMAT rtfWithoutObjectsFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(L"Rich Text Format Without Objects"));	// CF_RTFNOOBJS
+																																							// TODO: implement the follow...
+				}
+#endif
 			}
 
-			/**
-			 * Returns the text content from the given MIME data.
-			 * @param data The MIME data
-			 * @return A pair of the following values:
-			 * @retval first The text string
-			 * @retval second @c true if the content is rectangle
-			 * @throw std#bad_alloc
-			 * @throw std#invalid_argument @a data does not have text data
-			 */
-			std::pair<String, bool> getTextFromMimeData(const widgetapi::MimeData& data) {
-				if(!data.hasText())
-					throw std::invalid_argument("'data' does not have text data.");
-				std::vector<widgetapi::MimeDataFormats::Format> availableFormats;
-				data.formats(availableFormats);
-				return std::make_pair(data.text(), boost::range::find(availableFormats, rectangleTextMimeDataFormat()) != boost::end(availableFormats));
-			}
-
-			/// Returns MIME data format for rectangle text.
-			widgetapi::MimeDataFormats::Format rectangleTextMimeDataFormat() {
+			/// Returns interprocess data format for rectangle text.
+			InterprocessDataFormats::Format rectangleTextMimeDataFormat() {
 #ifndef ASCENSION_RECTANGLE_TEXT_MIME_FORMAT
 #	if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #		define ASCENSION_RECTANGLE_TEXT_MIME_FORMAT "text/x-ascension-rectangle"
