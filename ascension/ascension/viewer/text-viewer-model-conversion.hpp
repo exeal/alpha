@@ -9,6 +9,7 @@
 #define ASCENSION_TEXT_VIEWER_MODEL_CONVERSION_HPP
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
+#include <ascension/kernel/locations.hpp>
 #include <ascension/kernel/point.hpp>
 
 namespace ascension {
