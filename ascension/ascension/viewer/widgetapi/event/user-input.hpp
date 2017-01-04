@@ -116,22 +116,6 @@ namespace ascension {
 #endif
 			return boost::geometry::make<Point>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
 		}
-/*
-		inline viewer::widgetapi::UserInput::ModifierKey makeModifiers() BOOST_NOEXCEPT {
-			viewer::widgetapi::UserInput::ModifierKey modifiers = 0;
-			if(::GetKeyState(VK_SHIFT) < 0)
-				modifiers |= viewer::widgetapi::UserInput::SHIFT_DOWN;
-			if(::GetKeyState(VK_CONTROL) < 0)
-				modifiers |= viewer::widgetapi::UserInput::CONTROL_DOWN;
-			if(::GetKeyState(VK_MENU) < 0)
-				modifiers |= viewer::widgetapi::UserInput::ALT_DOWN;
-			return modifiers;
-		}
-
-		inline viewer::widgetapi::KeyInput makeKeyInput(WPARAM wp, LPARAM lp) {
-			return viewer::widgetapi::KeyInput(wp, makeModifiers(), LOWORD(lp), HIWORD(lp));
-		}
-*/
 	}
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 }
