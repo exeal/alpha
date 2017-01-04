@@ -95,7 +95,7 @@ namespace ascension {
 				}
 				SmartPointerType sp() const {return sp_;}
 #ifndef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
-				explicit operator bool() const {return p_;}
+				explicit operator bool() const {return p_ != nullptr;}
 #else
 			private:
 				typedef void(ProxyBase::*safeBool)() const;
