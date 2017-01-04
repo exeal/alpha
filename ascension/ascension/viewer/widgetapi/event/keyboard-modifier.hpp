@@ -99,6 +99,21 @@ namespace ascension {
 			}
 		}
 	}
+
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(WIN32)
+	namespace win32 {
+		inline viewer::widgetapi::event::KeyboardModifiers makeKeyboardModifiers() BOOST_NOEXCEPT {
+			viewer::widgetapi::event::KeyboardModifiers v;
+			if(::GetKeyState(VK_SHIFT) < 0)
+				v.set(viewer::widgetapi::event::SHIFT_DOWN);
+			if(::GetKeyState(VK_CONTROL) < 0)
+				v.set(viewer::widgetapi::event::CONTROL_DOWN);
+			if(::GetKeyState(VK_MENU) < 0)
+				v.set(viewer::widgetapi::event::ALT_DOWN);
+			return v;
+		}
+	}
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 }
 
 #endif // !ASCENSION_KEYBOARD_MODIFIER_HPP
