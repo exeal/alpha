@@ -8,6 +8,7 @@
 #include <ascension/content-assist/content-assist.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/geometry/algorithms/normalize.hpp>
@@ -51,7 +52,7 @@ namespace ascension {
 //			texteditor::abortIncrementalSearch(document());
 
 			graphics::Point location;
-			widgetapi::event::LocatedUserInput::MouseButton buttons;
+			widgetapi::event::MouseButtons buttons;
 			widgetapi::event::KeyboardModifiers modifiers;
 
 			// invoked by the keyboard
@@ -82,8 +83,8 @@ namespace ascension {
 				location = graphics::geometry::make<graphics::Point>((
 					graphics::geometry::_x = graphics::geometry::x(globalLocation), graphics::geometry::_y = graphics::geometry::y(globalLocation)));
 				widgetapi::mapFromGlobal(*this, location);
-				buttons = widgetapi::event::LocatedUserInput::NO_BUTTON;
-				modifiers = win32::makeModifiers();
+				buttons.reset();
+				modifiers = win32::makeKeyboardModifiers();
 #endif
 			}
 
@@ -117,7 +118,7 @@ namespace ascension {
 
 		/// @internal Calls @c #mouseReleased.
 		void TextViewer::fireMouseReleased(widgetapi::event::MouseButtonInput& input) {
-			if(allowsMouseInput() || input.button() == widgetapi::event::LocatedUserInput::BUTTON3_DOWN)
+			if(allowsMouseInput() || input.button() == widgetapi::event::BUTTON3_DOWN)
 				restoreHiddenCursor();
 			if(allowsMouseInput())
 				mouseReleased(input);
@@ -558,14 +559,14 @@ namespace ascension {
 					texteditor::commands::PasteCommand(*this, false)();
 					break;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				case VK_SHIFT:
-					if(input.hasModifier(widgetapi::event::CONTROL_DOWN)) {
-						if(::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == presentation::RIGHT_TO_LEFT)
-							presentation().setDefaultDirection(presentation::LEFT_TO_RIGHT);
-						else if(::GetKeyState(VK_RSHIFT) < 0 && configuration_.readingDirection == presentation::LEFT_TO_RIGHT)
-							presentation().setDefaultDirection(presentation::RIGHT_TO_LEFT);
-						}
-					break;
+//				case VK_SHIFT:
+//					if(input.hasModifier(widgetapi::event::CONTROL_DOWN)) {
+//						if(::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == presentation::RIGHT_TO_LEFT)
+//							presentation().setDefaultDirection(presentation::LEFT_TO_RIGHT);
+//						else if(::GetKeyState(VK_RSHIFT) < 0 && configuration_.readingDirection == presentation::LEFT_TO_RIGHT)
+//							presentation().setDefaultDirection(presentation::RIGHT_TO_LEFT);
+//						}
+//					break;
 #endif
 				default:
 					return input.ignore();
@@ -652,7 +653,7 @@ namespace ascension {
 			const graphics::Rectangle viewerBounds(widgetapi::bounds(*this, false));
 			ti.hwnd = handle().get();
 			ti.uId = 1;
-			ti.rect = graphics::toNative<RECT>(viewerBounds);
+			ti.rect = toNative<RECT>(viewerBounds);
 			::SendMessageW(toolTip_.get(), TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			if(contentAssistant() != 0)
