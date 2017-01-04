@@ -101,8 +101,7 @@ namespace ascension {
 			try {
 				if(win32::boole(::IsClipboardFormatAvailable(utils::rectangleTextMimeDataFormat())))
 					return true;
-			}
-			catch(const std::system_error&) {
+			} catch(const std::system_error&) {
 			}
 			return false;
 		}
@@ -118,36 +117,36 @@ namespace ascension {
 		/// @see detail#InputEventHandler#handleInputEvent
 		LRESULT Caret::handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 			switch(message) {
-			case WM_CHAR:
-				return onChar(wp, consumed), (consumed ? 0 : 1);
-			case WM_IME_COMPOSITION:
-				return onImeComposition(wp, lp, consumed), 0;
-			case WM_IME_ENDCOMPOSITION:
-				context_.inputMethodCompositionActivated = false;
-				resetVisualization();
-				break;
-			case WM_IME_NOTIFY:
-				if(wp == IMN_SETOPENSTATUS)
-					inputModeChangedSignal_(*this, INPUT_METHOD_OPEN_STATUS);
-				break;
-			case WM_IME_REQUEST:
-				return onImeRequest(wp, lp, consumed);
-			case WM_IME_STARTCOMPOSITION:
-				context_.inputMethodCompositionActivated = true;
-				adjustInputMethodCompositionWindow();
-				utils::closeCompletionProposalsPopup(textArea().textViewer());
-				break;
-			case WM_INPUTLANGCHANGE:
-				inputModeChangedSignal_(*this, INPUT_LOCALE);
-				break;
-			case WM_SYSCHAR:
-				break;
-#ifdef WM_UNICHAR
-			case WM_UNICHAR:
-#endif // WM_UNICHAR
-				if(wp != UNICODE_NOCHAR)
+				case WM_CHAR:
 					return onChar(wp, consumed), (consumed ? 0 : 1);
-				break;
+				case WM_IME_COMPOSITION:
+					return onImeComposition(wp, lp, consumed), 0;
+				case WM_IME_ENDCOMPOSITION:
+					context_.inputMethodCompositionActivated = false;
+					resetVisualization();
+					break;
+				case WM_IME_NOTIFY:
+					if(wp == IMN_SETOPENSTATUS)
+						inputModeChangedSignal_(*this, INPUT_METHOD_OPEN_STATUS);
+					break;
+				case WM_IME_REQUEST:
+					return onImeRequest(wp, lp, consumed);
+				case WM_IME_STARTCOMPOSITION:
+					context_.inputMethodCompositionActivated = true;
+					adjustInputMethodCompositionWindow();
+					utils::closeCompletionProposalsPopup(textArea().textViewer());
+					break;
+				case WM_INPUTLANGCHANGE:
+					inputModeChangedSignal_(*this, INPUT_LOCALE);
+					break;
+				case WM_SYSCHAR:
+					break;
+#ifdef WM_UNICHAR
+				case WM_UNICHAR:
+#endif // WM_UNICHAR
+					if(wp != UNICODE_NOCHAR)
+						return onChar(wp, consumed), (consumed ? 0 : 1);
+					break;
 			}
 			return 0;
 		}
@@ -181,8 +180,7 @@ namespace ascension {
 										static_cast<kernel::DocumentCharacterIterator&>(++kernel::DocumentCharacterIterator(doc, insertionPosition(*this))).tell()),
 									String(1, static_cast<Char>(wp)));
 								doc.insertUndoBoundary();
-							}
-							catch(const kernel::DocumentCantChangeException&) {
+							} catch(const kernel::DocumentCantChangeException&) {
 							}
 							context_.inputMethodComposingCharacter = false;
 							resetVisualization();
@@ -207,8 +205,7 @@ namespace ascension {
 						context_.inputMethodComposingCharacter = true;
 						if(win32::boole(lp & CS_NOMOVECARET))
 							moveTo(TextHit::leading(p));
-					}
-					catch(...) {
+					} catch(...) {
 					}
 					consumed = true;
 					resetVisualization();
@@ -237,8 +234,7 @@ namespace ascension {
 						lineString.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 					}
 					return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(kernel::line(*this));
-				}
-				else {
+				} else {
 					const auto selection(selectedString(*this, text::Newline::USE_INTRINSIC_VALUE));
 					if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lp)) {
 						rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<DWORD>(selection.length());
@@ -259,8 +255,7 @@ namespace ascension {
 						if(rcs->dwCompStrLen < rcs->dwStrLen)	// the composition region was truncated.
 							rcs->dwCompStrLen = rcs->dwStrLen;	// IME will alert and reconversion will not be happen if do this
 																// (however, NotePad narrows the selection...)
-					}
-					else {
+					} else {
 						// reconvert the region IME passed if no selection (and create the new selection).
 						// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
 						if(doc.isNarrowed() && kernel::line(*this) == kernel::line(boost::const_begin(region))) {	// the document is narrowed
@@ -268,8 +263,7 @@ namespace ascension {
 								rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * kernel::offsetInLine(*boost::const_begin(region)) - rcs->dwCompStrOffset);
 								rcs->dwTargetStrLen = rcs->dwCompStrOffset;
 								rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * kernel::offsetInLine(*boost::const_begin(region)));
-							}
-							else if(rcs->dwCompStrOffset / sizeof(Char) > kernel::offsetInLine(*boost::const_end(region))) {
+							} else if(rcs->dwCompStrOffset / sizeof(Char) > kernel::offsetInLine(*boost::const_end(region))) {
 								rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * kernel::offsetInLine(*boost::const_begin(region));
 								rcs->dwTargetStrOffset = rcs->dwCompStrOffset;
 								rcs->dwCompStrLen = rcs->dwTargetStrLen
@@ -332,8 +326,7 @@ namespace ascension {
 					if(!isSelectionEmpty(*this) && context_.yanking)
 						document().undo();
 					replaceSelection(text.first, text.second);
-				}
-				catch(...) {
+				} catch(...) {
 					killRing.setCurrent(-1);
 					throw;
 				}
