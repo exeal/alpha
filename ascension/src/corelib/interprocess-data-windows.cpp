@@ -97,12 +97,12 @@ namespace ascension {
 					if(newEntry.get() == nullptr)
 						return E_OUTOFMEMORY;
 					newEntry->format = *format;
-					std::memset(&newEntry->medium, 0, sizeof(STGMEDIUM));
+					newEntry->medium = win32::makeZero<STGMEDIUM>();
 					entries_.push_back(newEntry);
 					entry = std::prev(std::end(entries_));
 				} else if((*entry)->medium.tymed != TYMED_NULL) {
 					::ReleaseStgMedium(&(*entry)->medium);
-					std::memset(&(*entry)->medium, 0, sizeof(STGMEDIUM));
+					(*entry)->medium = win32::makeZero<STGMEDIUM>();
 				}
 
 				assert((*entry)->medium.tymed == TYMED_NULL);
@@ -110,7 +110,23 @@ namespace ascension {
 				return S_OK;
 			}
 			/// @see IDataObject#EnumFormatEtc
-			STDMETHODIMP EnumFormatEtc(DWORD direction, IEnumFORMATETC** enumerator) override;
+			STDMETHODIMP EnumFormatEtc(DWORD direction, IEnumFORMATETC** enumerator) override {
+				if(direction == DATADIR_SET)
+					return E_NOTIMPL;
+				else if(direction != DATADIR_GET)
+					return E_INVALIDARG;
+				else if(enumerator == nullptr)
+					return E_INVALIDARG;
+				FORMATETC* const buffer = static_cast<FORMATETC*>(::CoTaskMemAlloc(sizeof(FORMATETC) * entries_.size()));
+				if(buffer == nullptr)
+					return E_OUTOFMEMORY;
+				std::size_t j = 0;
+				for(auto i(std::begin(entries_)), e(std::end(entries_)); i != e; ++i, ++j)
+					buffer[j] = (*i)->format;
+				const HRESULT hr = ::CreateFormatEnumerator(static_cast<UINT>(entries_.size()), buffer, enumerator);
+				::CoTaskMemFree(buffer);
+				return hr;
+			}
 			/// @see IDataObject#DAdvise
 			STDMETHODIMP DAdvise(LPFORMATETC, DWORD, LPADVISESINK, LPDWORD) override {
 				return OLE_E_ADVISENOTSUPPORTED;
@@ -145,7 +161,25 @@ namespace ascension {
 					::ReleaseStgMedium(&medium);
 				}
 			};
-			std::list<std::shared_ptr<Entry>>::iterator find(const FORMATETC& format, std::list<std::shared_ptr<Entry>>::iterator initial) const BOOST_NOEXCEPT;
+
+			/**
+			 * Finds the entry which has the specified format.
+			 * @param format The format to search
+			 * @param initial The position where the search starts
+			 * @return An iterator which addresses the found entry, or the end if not found
+			 */
+			std::list<std::shared_ptr<Entry>>::iterator find(const FORMATETC& format, std::list<std::shared_ptr<Entry>>::iterator initial) const BOOST_NOEXCEPT {
+				const auto e(std::end(const_cast<IDataObjectImpl*>(this)->entries_));
+				if(format.ptd == nullptr) {	// this does not support DVTARGETDEVICE
+					for(auto i(initial); i != e; ++i) {
+						const auto& other = (*i)->format;
+						if(other.cfFormat == format.cfFormat && other.dwAspect == format.dwAspect && other.lindex == format.lindex)
+							return i;
+					}
+				}
+				return e;
+			}
+
 		private:
 			std::list<std::shared_ptr<Entry>> entries_;
 		};
@@ -256,6 +290,10 @@ namespace ascension {
 
 	bool InterprocessData::hasURIs() const BOOST_NOEXCEPT {
 		return false;	// TODO: Not implemented.
+	}
+
+	win32::com::SmartPointer<IDataObject> InterprocessData::native() {
+		return impl_;
 	}
 
 	void InterprocessData::setData(Format format, const boost::iterator_range<const std::uint8_t*>& range) {
