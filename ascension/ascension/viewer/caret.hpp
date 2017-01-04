@@ -29,8 +29,7 @@ namespace ascension {
 		class Caret;
 
 		namespace utils {
-			std::unique_ptr<InterprocessData> createMimeDataForSelectedString(const Caret& caret, bool rtf);
-			std::pair<String, bool> getTextFromMimeData(const InterprocessData& data);
+			InterprocessData createInterprocessDataForSelectedString(const Caret& caret, bool rtf);
 			InterprocessDataFormats::Format rectangleTextMimeDataFormat();
 		}
 
