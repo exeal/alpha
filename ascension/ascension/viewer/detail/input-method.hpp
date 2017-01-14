@@ -12,12 +12,17 @@ namespace ascension {
 	namespace viewer {
 		class TextViewer;
 
+		namespace widgetapi {
+			namespace event {
+				class InputMethodEvent;
+				class InputMethodQueryEvent;
+			}
+		}
+
 		namespace detail {
-			class InputMethodEvent {
-				virtual void commitInputString(const StringPiece& text) = 0;
-				virtual void preeditChanged() = 0;
-				virtual void preeditEnded() = 0;
-				virtual void preeditStarted() = 0;
+			class InputMethodEventHandler {
+				virtual void handleInputMethodEvent(widgetapi::event::InputMethodEvent& event, const void* nativeEvent) BOOST_NOEXCEPT = 0;
+				virtual void handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event, const void* nativeEvent) BOOST_NOEXCEPT = 0;
 				friend class TextViewer;
 			};
 

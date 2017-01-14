@@ -51,7 +51,7 @@ namespace ascension {
 	namespace viewer {
 		// documentation is caret.cpp
 		class Caret : public VisualPoint,
-			public kernel::DocumentListener, public detail::InputMethodEvent, public detail::InputMethodQueryEvent {
+			public kernel::DocumentListener, public detail::InputMethodEventHandler, public detail::InputMethodQueryEvent {
 		public:
 			/// Mode of tracking match brackets.
 			enum MatchBracketsTrackingMode {
@@ -180,7 +180,6 @@ namespace ascension {
 			void moved(const TextHit& from) BOOST_NOEXCEPT override;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
-			void onChar(CodePoint c, bool& consumed);
 			void onImeComposition(WPARAM wp, LPARAM lp, bool& consumed);
 			LRESULT onImeRequest(WPARAM command, LPARAM lp, bool& consumed);
 #endif
@@ -189,13 +188,10 @@ namespace ascension {
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
-			// detail.InputMethodEvent
-			void commitInputString(const StringPiece& text) override;
-			void preeditChanged() override;
-			void preeditEnded() override;
-			void preeditStarted() override;
+			// detail.InputMethodEventHandler
+			void handleInputMethodEvent(widgetapi::event::InputMethodEvent& event, const void* nativeEvent) BOOST_NOEXCEPT override;
 			// detail.InputMethodQueryEvent
-			std::pair<const StringPiece, StringPiece::const_iterator> querySurroundingText() const override;
+			void handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event, const void* nativeEvent) BOOST_NOEXCEPT override;
 		private:
 			class SelectionAnchor : public VisualPoint {
 			public:

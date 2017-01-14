@@ -114,46 +114,74 @@ namespace ascension {
 			return clipboardLocale_;
 		}
 
-		/// @see detail#InputEventHandler#handleInputEvent
-		LRESULT Caret::handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
-			switch(message) {
-				case WM_CHAR:
-					return onChar(wp, consumed), (consumed ? 0 : 1);
-				case WM_IME_COMPOSITION:
-					return onImeComposition(wp, lp, consumed), 0;
-				case WM_IME_ENDCOMPOSITION:
-					context_.inputMethodCompositionActivated = false;
+		/// @see detail#InputMethodEventHandler#handleInputMethodEvent
+		void Caret::handleInputMethodEvent(widgetapi::event::InputMethodEvent& event, const void* nativeEvent) BOOST_NOEXCEPT {
+			if(document().isReadOnly())
+				return;
+			const auto preeditString(event.preeditString());
+			if(preeditString == boost::none) {	// completed or canceled
+				context_.inputMethodCompositionActivated = false;
+
+				const auto commitString(event.commitString());
+				if(commitString != boost::none && boost::get(commitString).empty()) {	// completed => commit
+					if(!context_.inputMethodComposingCharacter)
+						texteditor::commands::TextInputCommand(textArea().textViewer(), boost::get(commitString))();
+					else {
+						auto& d = document();
+						try {
+							d.insertUndoBoundary();
+							d.replace(
+								kernel::Region(
+									insertionPosition(*this),
+									static_cast<kernel::DocumentCharacterIterator&>(++kernel::DocumentCharacterIterator(d, insertionPosition(*this))).tell()),
+								String(1, static_cast<Char>(static_cast<const MSG*>(nativeEvent)->wParam)));
+							d.insertUndoBoundary();
+						} catch(const kernel::DocumentCantChangeException&) {
+						}
+						context_.inputMethodComposingCharacter = false;
+					}
+				}
+
+				resetVisualization();
+			} else if(boost::get(preeditString).empty()) {	// started
+				context_.inputMethodCompositionActivated = true;
+				adjustInputMethodCompositionWindow();
+				utils::closeCompletionProposalsPopup(textArea().textViewer());
+			} else {	// changed
+				auto& nativeMessage = *static_cast<const MSG*>(nativeEvent);
+				if((nativeMessage.lParam & CS_INSERTCHAR) != 0) {
+					const auto p(insertionPosition(*this));	// position before motion
+					try {
+						if(context_.inputMethodComposingCharacter)
+							document().replace(
+								kernel::Region(
+									p,
+									static_cast<kernel::DocumentCharacterIterator&>(++kernel::DocumentCharacterIterator(document(), p)).tell()),
+								String(1, static_cast<Char>(nativeMessage.wParam)));
+						else
+							kernel::insert(document(), p, String(1, static_cast<Char>(nativeMessage.wParam)));
+						context_.inputMethodComposingCharacter = true;
+						if((nativeMessage.lParam & CS_NOMOVECARET) != 0)
+							moveTo(TextHit::leading(p));
+					} catch(...) {
+					}
+					event.consume();
 					resetVisualization();
-					break;
+				}
+			}
+#if 0
+			switch(message) {
 				case WM_IME_NOTIFY:
 					if(wp == IMN_SETOPENSTATUS)
 						inputModeChangedSignal_(*this, INPUT_METHOD_OPEN_STATUS);
 					break;
 				case WM_IME_REQUEST:
 					return onImeRequest(wp, lp, consumed);
-				case WM_IME_STARTCOMPOSITION:
-					context_.inputMethodCompositionActivated = true;
-					adjustInputMethodCompositionWindow();
-					utils::closeCompletionProposalsPopup(textArea().textViewer());
-					break;
 				case WM_INPUTLANGCHANGE:
 					inputModeChangedSignal_(*this, INPUT_LOCALE);
 					break;
-				case WM_SYSCHAR:
-					break;
-#ifdef WM_UNICHAR
-				case WM_UNICHAR:
-#endif // WM_UNICHAR
-					if(wp != UNICODE_NOCHAR)
-						return onChar(wp, consumed), (consumed ? 0 : 1);
-					break;
 			}
-			return 0;
-		}
-
-		/// Handles Win32 @c WM_CHAR, @c WM_SYSCHAR and @c WM_UNICHAR window messages.
-		void Caret::onChar(CodePoint c, bool& consumed) {
-			consumed = texteditor::commands::CharacterInputCommand(textArea().textViewer(), c)() != 0;
+#endif
 		}
 
 		/// Handles Win32 @c WM_IME_COMPOSITION window message.
@@ -186,7 +214,7 @@ namespace ascension {
 							resetVisualization();
 						}
 					}
-					//					adjustInputMethodCompositionWindow();
+//					adjustInputMethodCompositionWindow();
 					consumed = true;	// prevent to be send WM_CHARs
 				}
 			}

@@ -719,6 +719,7 @@ namespace ascension {
 		void TextArea::uninstall(TextViewer& viewer) {
 			if(&viewer == &textViewer()) {
 				uninstallTextRenderer();
+				mouseInputStrategy_->interruptMouseReaction(false);
 				mouseInputStrategy_->uninstall();
 				mouseInputStrategyIsInstalled_ = false;
 				viewerFocusChangedConnection_.disconnect();
