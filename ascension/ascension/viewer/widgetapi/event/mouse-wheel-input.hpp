@@ -33,7 +33,7 @@ namespace ascension {
 					 * @param wheelRotation The number of notches by which the mouse wheel was rotated
 					 */
 					MouseWheelInput(
-						const graphics::Point& location, MouseButton buttons, const KeyboardModifiers& modifiers,
+						const graphics::Point& location, const MouseButton& buttons, const KeyboardModifiers& modifiers,
 						const graphics::geometry::BasicDimension<unsigned int>& scrollAmount,
 						const graphics::geometry::BasicDimension<double>& wheelRotation)
 						: LocatedUserInput(location, buttons, modifiers), scrollAmount_(scrollAmount), wheelRotation_(wheelRotation) {}
@@ -45,7 +45,7 @@ namespace ascension {
 					 * @param wheelRotation The number of notches by which the mouse wheel was rotated
 					 */
 					MouseWheelInput(
-						const graphics::Point& location, MouseButton buttons, const KeyboardModifiers& modifiers,
+						const graphics::Point& location, const MouseButtons& buttons, const KeyboardModifiers& modifiers,
 						const graphics::geometry::BasicDimension<double>& wheelRotation)
 						: LocatedUserInput(location, buttons, modifiers), wheelRotation_(wheelRotation) {}
 					/// Returns the number of units that should be scrolled per click of mouse wheel rotation.
