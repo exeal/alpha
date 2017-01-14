@@ -53,8 +53,6 @@
 #include <windows.h>
 #undef STRICT
 #undef size_t
-#include <stdexcept>
-#include <sstream>
 #include <utility>									// std.swap
 #include <ascension/corelib/basic-exceptions.hpp>	// makePlatformError
 #include <ascension/corelib/string-piece.hpp>		// BasicStringPiece
@@ -63,14 +61,17 @@
 namespace ascension {
 	namespace win32 {
 		/**
-		 * Converts the given 16-bit character string into `const WCHAR*`.
-		 * @param p The source
+		 * Converts between 16-bit character strings, such as `WCHAR*`.
+		 * @tparam To The destination character type
+		 * @tparam From The source character type
+		 * @param p The pointer to the source character string
 		 * @return The converted pointer
 		 */
-		template<typename Character>
-		inline const WCHAR* asWideString(const Character* p) BOOST_NOEXCEPT {
-			static_assert(sizeof(Character) == sizeof(WCHAR), "This function can't use on current configuration.");
-			return reinterpret_cast<const WCHAR*>(p);
+		template<typename To, typename From>
+		inline BOOST_CONSTEXPR To* wideString(From* p) BOOST_NOEXCEPT {
+			static_assert(sizeof(From) == 2, "The source is not 16-bit character string.");
+			static_assert(sizeof(To) == 2, "The destination is not 16-bit character string.");
+			return reinterpret_cast<To*>(p);
 		}
 
 		/**
