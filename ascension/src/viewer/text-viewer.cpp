@@ -193,6 +193,117 @@ namespace ascension {
 			return makeSignalConnector(focusChangedSignal_);
 		}
 
+		namespace {
+			template<typename Coordinate>
+			inline widgetapi::NativeScrollPosition reverseScrollPosition(const TextViewer& textViewer, widgetapi::NativeScrollPosition position) {
+				const auto textRenderer(textViewer.textArea()->textRenderer());
+				//				return static_cast<widgetapi::NativeScrollPosition>(textRenderer->layouts().maximumMeasure()
+				//					/ widgetapi::createRenderingContext(textViewer)->fontMetrics(textRenderer->defaultFont())->averageCharacterWidth())
+				//					- position
+				//					- static_cast<widgetapi::NativeScrollPosition>(textRenderer->viewport()->numberOfVisibleCharactersInLine());
+				const presentation::BlockFlowDirection blockFlowDirection = textRenderer->blockFlowDirection();
+				const auto viewport(textViewer.textArea()->viewport());
+				return static_cast<widgetapi::NativeScrollPosition>(*graphics::font::scrollableRange<Coordinate>(*viewport).end() - position - graphics::font::pageSize<Coordinate>(*viewport));
+			}
+
+			graphics::PhysicalTwoAxes<widgetapi::NativeScrollPosition> physicalScrollPosition(const TextViewer& textViewer) {
+				const auto textRenderer(textViewer.textArea()->textRenderer());
+				const auto viewport(textViewer.textArea()->viewport());
+				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset> scrollPositions(viewport->scrollPositions());
+				widgetapi::NativeScrollPosition x, y;
+				switch(textRenderer->blockFlowDirection()) {
+					case presentation::HORIZONTAL_TB:
+						x = (textRenderer->inlineFlowDirection() == presentation::LEFT_TO_RIGHT) ?
+							scrollPositions.ipd() : reverseScrollPosition<presentation::ReadingDirection>(textViewer, static_cast<widgetapi::NativeScrollPosition>(scrollPositions.ipd()));
+						y = scrollPositions.bpd();
+						break;
+					case presentation::VERTICAL_RL:
+						x = reverseScrollPosition<presentation::BlockFlowDirection>(textViewer, scrollPositions.bpd());
+						y = scrollPositions.ipd();
+						break;
+					case presentation::VERTICAL_LR:
+						x = scrollPositions.bpd();
+						y = scrollPositions.ipd();
+						break;
+					default:
+						ASCENSION_ASSERT_NOT_REACHED();
+				}
+//				x /= xScrollRate;
+//				y /= yScrollRate;
+				return graphics::makePhysicalTwoAxes((graphics::_x = x, graphics::_y = y));
+			}
+
+			template<typename AbstractCoordinate>
+			inline widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer) {
+				return 1;	// TODO: Not implemented.
+			}
+
+			template<std::size_t physicalCoordinate>
+			inline widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer) {
+				return 1;	// TODO: Not implemented.
+			}
+
+			void configureScrollBar(TextViewer& viewer, std::size_t coordinate, const boost::optional<widgetapi::NativeScrollPosition>& position,
+				const boost::optional<NumericRange<widgetapi::NativeScrollPosition>>& range, const boost::optional<widgetapi::NativeScrollPosition>& pageSize) {
+				assert(coordinate <= 1);
+#ifdef _DEBUG
+				std::ostringstream parametersMessage;
+				if(position != boost::none)
+					parametersMessage << "position=" << boost::get(position) << ", ";
+				if(range != boost::none)
+					parametersMessage << "range=[" << *boost::const_begin(boost::get(range)) << "," << *boost::const_end(boost::get(range)) << "), ";
+				if(pageSize != boost::none)
+					parametersMessage << "pagesize=" << boost::get(pageSize) << ", ";
+				ASCENSION_LOG_TRIVIAL(debug)
+					<< "A TextViewer 0x" << std::hex << reinterpret_cast<std::uintptr_t>(&viewer)
+					<< " was configured the scroll bar (" << coordinate << ") with: \n\t" << parametersMessage.str() << std::endl;
+#endif
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+				Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
+				if(range != boost::none) {
+					adjustment->set_lower(*boost::const_begin(boost::get(range)));
+					adjustment->set_upper(*boost::const_end(boost::get(range)));
+				}
+				adjustment->set_step_increment((coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer));
+				if(pageSize != boost::none) {
+					adjustment->set_page_increment(boost::get(pageSize));
+					adjustment->set_page_size(boost::get(pageSize));
+				}
+				if(position != boost::none)
+					adjustment->set_value(boost::get(position));
+#endif
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+				QScrollBar* const scrollBar = (coordinate == 0) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
+				if(range != boost::none)
+					scrollBar->setRange(*boost::const_begin(boost::get(range)), *boost::const_end(boost::get(range)));
+				scrollBar->setSingleStep((coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer));
+				if(pageSize != boost::none)
+					scrollBar->setPageStep(boost::get(pageSize));
+				if(position != boost::none)
+					scrollBar->setSliderPosition(boost::get(position));
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				auto si(win32::makeZeroSize<SCROLLINFO>());
+				if(range/* != boost::none*/) {
+					si.fMask |= SIF_RANGE;
+					si.nMin = *boost::const_begin(boost::get(range));
+					si.nMax = *boost::const_end(boost::get(range));
+				}
+				if(pageSize != boost::none) {
+					si.fMask |= SIF_PAGE;
+					si.nPage = *pageSize;
+				}
+				if(position != boost::none) {
+					si.fMask |= SIF_POS;
+					si.nPos = *position;
+				}
+				::SetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si, true);
+#endif
+			}
+		}
+
 		/// Invoked when the widget gained the keyboard focus.
 		void TextViewer::focusGained(widgetapi::event::Event& event) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -299,112 +410,6 @@ namespace ascension {
 			return false;
 		}
 #endif
-
-		namespace {
-			template<typename Coordinate>
-			inline widgetapi::NativeScrollPosition reverseScrollPosition(const TextViewer& textViewer, widgetapi::NativeScrollPosition position) {
-				const auto textRenderer(textViewer.textArea()->textRenderer());
-//				return static_cast<widgetapi::NativeScrollPosition>(textRenderer->layouts().maximumMeasure()
-//					/ widgetapi::createRenderingContext(textViewer)->fontMetrics(textRenderer->defaultFont())->averageCharacterWidth())
-//					- position
-//					- static_cast<widgetapi::NativeScrollPosition>(textRenderer->viewport()->numberOfVisibleCharactersInLine());
-				const presentation::BlockFlowDirection blockFlowDirection = textRenderer->blockFlowDirection();
-				const auto viewport(textViewer.textArea()->viewport());
-				return *graphics::font::scrollableRange<Coordinate>(*viewport).end() - position - graphics::font::pageSize<Coordinate>(*viewport);
-			}
-			graphics::PhysicalTwoAxes<widgetapi::NativeScrollPosition> physicalScrollPosition(const TextViewer& textViewer) {
-				const auto textRenderer(textViewer.textArea()->textRenderer());
-				const auto viewport(textViewer.textArea()->viewport());
-				const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset> scrollPositions(viewport->scrollPositions());
-				widgetapi::NativeScrollPosition x, y;
-				switch(textRenderer->blockFlowDirection()) {
-					case presentation::HORIZONTAL_TB:
-						x = (textRenderer->inlineFlowDirection() == presentation::LEFT_TO_RIGHT) ?
-							scrollPositions.ipd() : reverseScrollPosition<presentation::ReadingDirection>(textViewer, static_cast<widgetapi::NativeScrollPosition>(scrollPositions.ipd()));
-						y = scrollPositions.bpd();
-						break;
-					case presentation::VERTICAL_RL:
-						x = reverseScrollPosition<presentation::BlockFlowDirection>(textViewer, scrollPositions.bpd());
-						y = scrollPositions.ipd();
-						break;
-					case presentation::VERTICAL_LR:
-						x = scrollPositions.bpd();
-						y = scrollPositions.ipd();
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-//				x /= xScrollRate;
-//				y /= yScrollRate;
-				return graphics::makePhysicalTwoAxes((graphics::_x = x, graphics::_y = y));
-			}
-		}
-
-		namespace {
-			template<typename AbstractCoordinate>
-			inline widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer) {return 1;}	// TODO: Not implemented.
-			template<std::size_t physicalCoordinate>
-			inline widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer) {return 1;}	// TODO: Not implemented.
-			void configureScrollBar(TextViewer& viewer, std::size_t coordinate, const boost::optional<widgetapi::NativeScrollPosition>& position,
-					const boost::optional<NumericRange<widgetapi::NativeScrollPosition>>& range, const boost::optional<widgetapi::NativeScrollPosition>& pageSize) {
-				assert(coordinate <= 1);
-#ifdef _DEBUG
-				std::ostringstream parametersMessage;
-				if(position != boost::none)
-					parametersMessage << "position=" << boost::get(position) << ", ";
-				if(range != boost::none)
-					parametersMessage << "range=[" << *boost::const_begin(boost::get(range)) << "," << *boost::const_end(boost::get(range)) << "), ";
-				if(pageSize != boost::none)
-					parametersMessage << "pagesize=" << boost::get(pageSize) << ", ";
-				ASCENSION_LOG_TRIVIAL(debug)
-					<< "A TextViewer 0x" << std::hex << reinterpret_cast<std::uintptr_t>(&viewer)
-					<< " was configured the scroll bar (" << coordinate << ") with: \n\t" << parametersMessage.str() << std::endl;
-#endif
-
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
-				Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
-				if(range != boost::none) {
-					adjustment->set_lower(*boost::const_begin(boost::get(range)));
-					adjustment->set_upper(*boost::const_end(boost::get(range)));
-				}
-				adjustment->set_step_increment((coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer));
-				if(pageSize != boost::none) {
-					adjustment->set_page_increment(boost::get(pageSize));
-					adjustment->set_page_size(boost::get(pageSize));
-				}
-				if(position != boost::none)
-					adjustment->set_value(boost::get(position));
-#endif
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				QScrollBar* const scrollBar = (coordinate == 0) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
-				if(range != boost::none)
-					scrollBar->setRange(*boost::const_begin(boost::get(range)), *boost::const_end(boost::get(range)));
-				scrollBar->setSingleStep((coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer));
-				if(pageSize != boost::none)
-					scrollBar->setPageStep(boost::get(pageSize));
-				if(position != boost::none)
-					scrollBar->setSliderPosition(boost::get(position));
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				auto si(win32::makeZeroSize<SCROLLINFO>());
-				if(range/* != boost::none*/) {
-					si.fMask |= SIF_RANGE;
-					si.nMin = *boost::const_begin(range);
-					si.nMax = *boost::const_end(range);
-				}
-				if(pageSize != boost::none) {
-					si.fMask |= SIF_PAGE;
-					si.nPage = *pageSize;
-				}
-				if(position != boost::none) {
-					si.fMask |= SIF_POS;
-					si.nPos = *position;
-				}
-				::SetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si, true);
-#endif
-			}
-		}
 
 		/// @overload
 		TextViewerComponent* TextViewer::hitTest(const graphics::Point& location) BOOST_NOEXCEPT {
@@ -786,8 +791,9 @@ namespace ascension {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 #	error Not implemented.
 #else
-					range = nrange<widgetapi::NativeScrollPosition>(*boost::const_begin(viewportRange), *boost::const_end(viewportRange) + std::ceil(realSize) - 1);
-					size = boost::math::trunc(realSize);
+					range = nrange<widgetapi::NativeScrollPosition>(
+						*boost::const_begin(viewportRange), *boost::const_end(viewportRange) + static_cast<widgetapi::NativeScrollPosition>(std::ceil(realSize)) - 1);
+					size = static_cast<widgetapi::NativeScrollPosition>(boost::math::trunc(realSize));
 #endif
 				}
 				configureScrollBar(*this, presentation::isHorizontal(renderer->blockFlowDirection()) ? 0 : 1, position, range, size);
@@ -807,8 +813,9 @@ namespace ascension {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 #	error Not implemented.
 #else
-					range = nrange<widgetapi::NativeScrollPosition>(*boost::const_begin(viewportRange), *boost::const_end(viewportRange) + std::ceil(realSize) - 1);
-					size = boost::math::trunc(realSize);
+					range = nrange<widgetapi::NativeScrollPosition>(
+						*boost::const_begin(viewportRange), *boost::const_end(viewportRange) + static_cast<widgetapi::NativeScrollPosition>(std::ceil(realSize)) - 1);
+					size = static_cast<widgetapi::NativeScrollPosition>(boost::math::trunc(realSize));
 #endif
 				}
 				configureScrollBar(*this, presentation::isHorizontal(renderer->blockFlowDirection()) ? 1 : 0, position, range, size);

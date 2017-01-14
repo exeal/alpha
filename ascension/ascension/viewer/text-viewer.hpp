@@ -16,6 +16,7 @@
 #include <ascension/presentation/flow-relative-two-axes.hpp>
 #include <ascension/viewer/mouse-input-strategy.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
+#include <ascension/viewer/widgetapi/event/input-method-event.hpp>
 #include <ascension/viewer/widgetapi/event/key-input.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-button-input.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-wheel-input.hpp>
@@ -255,6 +256,8 @@ namespace ascension {
 			/// @{
 			virtual void focusAboutToBeLost(widgetapi::event::Event& event);
 			virtual void focusGained(widgetapi::event::Event& event);
+			virtual void handleInputMethodEvent(widgetapi::event::InputMethodEvent& event, const void* nativeEvent);
+			virtual void handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event, const void* nativeEvent);
 			virtual void keyPressed(widgetapi::event::KeyInput& input);
 			virtual void keyReleased(widgetapi::event::KeyInput& input);
 			virtual void mouseDoubleClicked(widgetapi::event::MouseButtonInput& input);
@@ -265,7 +268,7 @@ namespace ascension {
 			virtual void mouseWheelChanged(widgetapi::event::MouseWheelInput& input);
 			virtual void paint(graphics::PaintContext& context);
 			virtual void resized(const graphics::Dimension& newSize);
-			virtual void showContextMenu(const widgetapi::event::LocatedUserInput& input, void* nativeEvent);
+			virtual void showContextMenu(const widgetapi::event::LocatedUserInput& input, const void* nativeEvent);
 			/// @}
 
 			/// @name Overridable Widget Events (Platform-dependent)

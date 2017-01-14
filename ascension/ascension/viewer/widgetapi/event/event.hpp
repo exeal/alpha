@@ -8,7 +8,6 @@
 
 #ifndef ASCENSION_EVENT_HPP
 #define ASCENSION_EVENT_HPP
-
 #include <boost/config.hpp>
 
 namespace ascension {

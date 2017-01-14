@@ -137,6 +137,30 @@ namespace ascension {
 				mouseWheelChanged(input);
 		}
 
+		/**
+		 * Invoked when received input method composition events.
+		 * @param event The event
+		 * @param nativeEvent The platform-native event
+		 */
+		void TextViewer::handleInputMethodEvent(widgetapi::event::InputMethodEvent& event, const void* nativeEvent) {
+			if(auto ta = textArea()) {
+				if(auto caret = ta->caret())
+					static_cast<detail::InputMethodEventHandler*>(caret.get())->handleInputMethodEvent(event, nativeEvent);
+			}
+		}
+
+		/**
+		 * Invoked when received input method query events.
+		 * @param event The event
+		 * @param nativeEvent The platform-native event
+		 */
+		void TextViewer::handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event, const void* nativeEvent) {
+			if(auto ta = textArea()) {
+				if(auto caret = ta->caret())
+					static_cast<detail::InputMethodEventHandler*>(caret.get())->handleInputMethodQueryEvent(event, nativeEvent);
+			}
+		}
+
 		namespace {
 			void handleDirectionalKey(TextViewer& viewer, graphics::PhysicalDirection direction, const widgetapi::event::KeyboardModifiers& modifiers) {
 				if(const auto renderer = viewer.textArea()->textRenderer()) {
