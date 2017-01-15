@@ -341,8 +341,7 @@ namespace ascension {
 				const InterprocessData data(content);
 				document().insertUndoBoundary();
 				replaceSelection(data.text(), data.hasFormat(utils::rectangleTextMimeDataFormat()));	// this may throw several exceptions
-			}
-			else {
+			} else {
 				texteditor::Session* const session = document().session();
 				if(session == nullptr || session->killRing().numberOfKills() == 0)
 					throw IllegalStateException("the kill-ring is not available.");

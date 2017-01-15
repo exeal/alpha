@@ -72,7 +72,7 @@ namespace ascension {
 					, int mouseButton, GdkEvent* event
 #endif
 				);
-				void setData(std::shared_ptr<const InterprocessData> data);
+				void setData(const InterprocessData& data);
 				void setImage(const graphics::Image& image, const boost::geometry::model::d2::point_xy<std::uint32_t>& hotspot);
 				DropAction supportedActions() const;
 			private:

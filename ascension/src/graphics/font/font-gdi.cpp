@@ -340,7 +340,7 @@ namespace ascension {
 					::OutputDebugStringW(L"[SystemFonts.cache] Created font '");
 					::OutputDebugStringW(lf2.lfFaceName);
 					::OutputDebugStringW(L"' for request '");
-					::OutputDebugStringW(win32::asWideString(description.family().name().c_str()));
+					::OutputDebugStringW(win32::wideString<const WCHAR>(description.family().name().c_str()));
 					::OutputDebugStringW(L"'.\n");
 				}
 #endif

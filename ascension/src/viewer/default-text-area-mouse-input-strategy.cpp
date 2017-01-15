@@ -318,8 +318,7 @@ namespace ascension {
 			TextViewer& viewer = textArea_->textViewer();
 			widgetapi::DragContext d(viewer);
 
-			auto draggingContent(utils::createMimeDataForSelectedString(*textArea_->caret(), true));
-			d.setMimeData(std::move(draggingContent));
+			d.setData(utils::createInterprocessDataForSelectedString(*textArea_->caret(), true));
 
 			boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>> imageDimensions;
 			std::unique_ptr<graphics::Image> image(createSelectionImage(*caret, dragAndDrop_->approachedPosition, true, imageDimensions));
@@ -365,7 +364,7 @@ namespace ascension {
 		}
 
 		namespace {
-			inline bool isMimeDataAcceptable(const widgetapi::MimeDataFormats& formats, bool onlyRectangle) {
+			inline bool isInterprocessDataAcceptable(const InterprocessDataFormats& formats, bool onlyRectangle) {
 				if(onlyRectangle)
 					return formats.hasFormat(utils::rectangleTextMimeDataFormat());
 				return formats.hasText();
@@ -401,7 +400,7 @@ namespace ascension {
 				return input.ignore(boost::none);
 
 			// validate the dragged data if can drop
-			if(!isMimeDataAcceptable(input.mimeDataFormats(), false))
+			if(!isInterprocessDataAcceptable(input.dataFormats(), false))
 				return input.ignore(boost::none);
 
 			if(dragAndDrop_ == boost::none || dragAndDrop_->state != DragAndDrop::PROCESSING_AS_SOURCE) {
@@ -409,9 +408,9 @@ namespace ascension {
 				dragAndDrop_ = DragAndDrop();
 				// retrieve number of lines if text is rectangle
 				boost::get(dragAndDrop_).numberOfRectangleLines = 0;
-				if(isMimeDataAcceptable(input.mimeDataFormats(), true)) {
+				if(isInterprocessDataAcceptable(input.dataFormats(), true)) {
 					// TODO: Not implemented.
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
 					const presentation::TextAnchor anchor = defaultTextAnchor(viewer.presentation());
 					const presentation::ReadingDirection readingDirection = defaultReadingDirection(viewer.presentation());
 					if((anchor == presentation::TextAnchor::START && readingDirection == presentation::RIGHT_TO_LEFT)
@@ -542,22 +541,24 @@ namespace ascension {
 				if((input.possibleActions() & widgetapi::DROP_ACTION_COPY) != 0) {
 					caret->moveTo(destination);
 
-					std::pair<String, bool> content;
-					bool failed = false;
+					String content;
+					bool contentIsRectangle, failed = false;
 					try {
-						content = utils::getTextFromMimeData(*input.mimeData());
+						const auto data(input.data());
+						content = data.text();
+						contentIsRectangle = data.hasFormat(utils::rectangleTextMimeDataFormat());
 					} catch(...) {
 						failed = true;
 					}
 					if(!failed) {
 						AutoFreeze af(&viewer);
 						try {
-							caret->replaceSelection(content.first, content.second);
+							caret->replaceSelection(content, contentIsRectangle);
 						} catch(...) {
 							failed = true;
 						}
 						if(!failed) {
-							if(content.second)
+							if(contentIsRectangle)
 								caret->beginRectangleSelection();
 							caret->select(_anchor = insertionPosition(document, destination), _caret = caret->hit());
 							input.setDropAction(widgetapi::DROP_ACTION_COPY);
@@ -846,7 +847,7 @@ namespace ascension {
 				return input.consume();
 
 			switch(input.button()) {
-				case widgetapi::event::LocatedUserInput::BUTTON1_DOWN:
+				case widgetapi::event::BUTTON1_DOWN:
 					if(action == PRESSED)
 						handleLeftButtonPressed(input, targetLocker);
 					else if(action == RELEASED)
@@ -856,7 +857,7 @@ namespace ascension {
 						handleLeftButtonDoubleClick(input, targetLocker);
 					}
 					break;
-				case widgetapi::event::LocatedUserInput::BUTTON2_DOWN:
+				case widgetapi::event::BUTTON2_DOWN:
 					if(action == PRESSED && isStateNeutral()) {
 						if(textArea_->caret()->document().numberOfLines() > textArea_->viewport()->numberOfVisibleLines()) {
 							autoScroll_ = AutoScroll();
@@ -888,13 +889,13 @@ namespace ascension {
 						}
 					}
 					break;
-				case widgetapi::event::LocatedUserInput::BUTTON3_DOWN:
+				case widgetapi::event::BUTTON3_DOWN:
 					handleRightButton(action, input);
 					break;
-				case widgetapi::event::LocatedUserInput::BUTTON4_DOWN:
+				case widgetapi::event::BUTTON4_DOWN:
 					handleX1Button(action, input);
 					break;
-				case widgetapi::event::LocatedUserInput::BUTTON5_DOWN:
+				case widgetapi::event::BUTTON5_DOWN:
 					handleX2Button(action, input);
 					break;
 			}
@@ -929,13 +930,13 @@ namespace ascension {
 							beginDragAndDrop(input);
 						else {
 							autoScroll_->state = AutoScroll::SCROLLING_WITH_DRAG;
-							autoScroll_->timer.start(boost::chrono::milliseconds::zero(), *this);
+							timer_.start(boost::chrono::milliseconds::zero(), *this);
 						}
 					}
 					input.consume();
 #endif
 				}
-			} else if((input.buttons() & widgetapi::event::LocatedUserInput::BUTTON1_DOWN) != 0) {
+			} else if((input.buttons().test(widgetapi::event::BUTTON1_DOWN))) {
 				if(selectionExtender_.get() == nullptr) {
 					selectionExtender_.reset(new CharacterSelectionExtender(*textArea_->caret()));
 					beginLocationTracking(textArea_->textViewer(), &targetLocker, true, true);

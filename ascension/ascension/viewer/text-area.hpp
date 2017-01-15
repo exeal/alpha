@@ -44,8 +44,8 @@ namespace ascension {
 
 			/// @name Text Viewer
 			/// @{
-			/* BOOST_CONSTEXPR */ TextViewer& textViewer() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR const TextViewer& textViewer() const BOOST_NOEXCEPT;
+			TextViewer& textViewer() BOOST_NOEXCEPT;
+			const TextViewer& textViewer() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Caret
@@ -199,12 +199,12 @@ namespace ascension {
 		}
 		
 		/// Returns the text viewer.
-		inline /* BOOST_CONSTEXPR */ TextViewer& TextArea::textViewer() BOOST_NOEXCEPT {
+		inline TextViewer& TextArea::textViewer() BOOST_NOEXCEPT {
 			return *viewer_;
 		}
 		
 		/// Returns the text viewer.
-		inline BOOST_CONSTEXPR const TextViewer& TextArea::textViewer() const BOOST_NOEXCEPT {
+		inline const TextViewer& TextArea::textViewer() const BOOST_NOEXCEPT {
 			return *viewer_;
 		}
 		

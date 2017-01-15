@@ -476,8 +476,8 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				return std::make_pair(
-					graphics::fromNative<graphics::Color>(::GetSysColor(COLOR_HIGHLIGHTTEXT)),
-					graphics::fromNative<graphics::Color>(::GetSysColor(COLOR_HIGHLIGHT)));
+					fromNative<graphics::Color>(::GetSysColor(COLOR_HIGHLIGHTTEXT)),
+					fromNative<graphics::Color>(::GetSysColor(COLOR_HIGHLIGHT)));
 #endif
 			}
 		}
@@ -827,7 +827,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					{
-						const auto temp(graphics::toNative<RECT>(boundsToScroll));
+						const auto temp(toNative<RECT>(boundsToScroll));
 						::ScrollWindowEx(textViewer().handle().get(),
 							graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels),
 							nullptr, &temp, nullptr, nullptr, SW_INVALIDATE);
