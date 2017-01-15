@@ -11,6 +11,7 @@
 #include <ascension/graphics/image.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
@@ -56,7 +57,7 @@ namespace ascension {
 						PAINTSTRUCT ps;
 						::BeginPaint(handle().get(), &ps);
 						graphics::RenderingContext2D temp(win32::borrowed(ps.hdc));
-						paint(graphics::PaintContext(std::move(temp), ps.rcPaint));
+						paint(graphics::PaintContext(std::move(temp), fromNative<graphics::Rectangle>(ps.rcPaint)));
 						::EndPaint(handle().get(), &ps);
 						consumed = true;
 					}

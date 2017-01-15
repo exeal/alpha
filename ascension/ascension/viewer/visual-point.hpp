@@ -28,6 +28,7 @@ namespace ascension {
 
 	namespace viewer {
 		class TextArea;
+		class TextViewer;
 		class VisualPoint;
 
 		kernel::Position insertionPosition(const VisualPoint& p);

@@ -165,7 +165,7 @@ namespace ascension {
 								rcs->dwStrLen = static_cast<DWORD>(s.length());
 								rcs->dwStrOffset = sizeof(RECONVERTSTRING);
 								rcs->dwCompStrLen = rcs->dwTargetStrLen =
-									static_cast<DWORD>(multilineSelection ? s.length() : (kernel::offsetInLine(caret->end()) - kernel::offsetInLine(caret->beginning())));
+									static_cast<DWORD>(multilineSelection ? s.length() : (kernel::offsetInLine(viewer::insertionPosition(caret->end())) - kernel::offsetInLine(viewer::insertionPosition(caret->beginning()))));
 								rcs->dwCompStrOffset = rcs->dwTargetStrOffset =
 									multilineSelection ? 0 : static_cast<DWORD>(sizeof(Char) * kernel::offsetInLine(caret->beginning()));
 								s.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), s.length());

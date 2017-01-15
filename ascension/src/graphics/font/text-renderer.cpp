@@ -22,6 +22,7 @@
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
+#include <ascension/win32/system-default-font.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>

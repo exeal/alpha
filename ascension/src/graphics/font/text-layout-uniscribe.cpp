@@ -1272,7 +1272,7 @@ namespace ascension {
 						indices.reset(new WORD[numberOfGlyphs]);
 						visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
 						hr = ::ScriptShape(dc.get(), &fontCache,
-							win32::asWideString(boost::const_begin(text)), static_cast<int>(boost::size(text)),
+							win32::wideString<const WCHAR>(boost::const_begin(text)), static_cast<int>(boost::size(text)),
 							numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis),
 							indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
 						if(hr != E_OUTOFMEMORY)
@@ -1526,7 +1526,7 @@ namespace ascension {
 
 				inline HRESULT GlyphVectorImpl::logicalAttributes(SCRIPT_LOGATTR attributes[]) const {
 					raiseIfNull(attributes, "attributes");
-					return ::ScriptBreak(win32::asWideString(boost::const_begin(*this)), static_cast<int>(length()), &analysis_, attributes);
+					return ::ScriptBreak(win32::wideString<const WCHAR>(boost::const_begin(*this)), static_cast<int>(length()), &analysis_, attributes);
 				}
 
 				/// @see GlyphVector#logicalBounds
@@ -2319,7 +2319,7 @@ namespace ascension {
 					while(true) {
 						scriptRuns.reallocate(estimatedNumberOfScriptRuns);
 						scriptTags.reallocate(estimatedNumberOfScriptRuns);
-						hr = Uniscribe16::instance().itemize(win32::asWideString(std::begin(textString)), static_cast<int>(textString.length()),
+						hr = Uniscribe16::instance().itemize(win32::wideString<const WCHAR>(std::begin(textString)), static_cast<int>(textString.length()),
 							estimatedNumberOfScriptRuns, control, initialState, scriptRuns.get(), scriptTags.get(), numberOfScriptRuns);
 						if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
 							break;
