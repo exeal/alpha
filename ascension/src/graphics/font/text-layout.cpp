@@ -24,7 +24,7 @@
 #include <ascension/graphics/geometry/rectangle-range.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/geometry/algorithms/translate.hpp>
-#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/paint-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <boost/foreach.hpp>

@@ -15,7 +15,7 @@
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
-#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/paint-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/graphics/font/actual-text-styles.hpp>
 #include <ascension/graphics/font/font.hpp>

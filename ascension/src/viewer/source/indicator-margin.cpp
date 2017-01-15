@@ -6,7 +6,7 @@
  */
 
 #include <ascension/graphics/paint.hpp>
-#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/paint-context.hpp>
 #include <ascension/viewer/source/indicator-margin.hpp>
 #include <ascension/viewer/source/ruler-allocation-width-sink.hpp>
 

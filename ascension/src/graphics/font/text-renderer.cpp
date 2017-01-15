@@ -20,7 +20,7 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/geometry/rectangle-range.hpp>
 #include <ascension/graphics/paint.hpp>
-#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/paint-context.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/win32/system-default-font.hpp>
 #include <boost/core/null_deleter.hpp>
@@ -529,7 +529,8 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					LOGFONTW lf;
 					win32::systemDefaultFont(lf);
-					newFont = std::make_shared<const graphics::font::Font>(::CreateFontIndirectW(), &::DeleteObject);
+					win32::Handle<HFONT> native(::CreateFontIndirectW(&lf), &::DeleteObject);
+					newFont = std::make_shared<const graphics::font::Font>(native);
 #endif
 				}
 				assert(newFont.get() != nullptr);

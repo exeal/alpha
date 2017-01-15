@@ -9,7 +9,7 @@
 #include <ascension/corelib/numeric-range-algorithm/includes.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/paint.hpp>
-#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/paint-context.hpp>
 #include <ascension/graphics/geometry/algorithms/translate.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/locations.hpp>

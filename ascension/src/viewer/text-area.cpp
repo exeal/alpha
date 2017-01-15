@@ -22,7 +22,7 @@
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/geometry/algorithms/normalize.hpp>
 #include <ascension/graphics/geometry/algorithms/size.hpp>
-#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/paint-context.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/log.hpp>
 #include <ascension/presentation/presentation.hpp>

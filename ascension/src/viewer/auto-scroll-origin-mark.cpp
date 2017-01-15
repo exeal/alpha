@@ -10,7 +10,7 @@
 
 #include <ascension/graphics/image.hpp>
 #include <ascension/graphics/paint.hpp>
-#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/paint-context.hpp>
 #include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
