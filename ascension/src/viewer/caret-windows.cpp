@@ -114,61 +114,6 @@ namespace ascension {
 			return clipboardLocale_;
 		}
 
-		/// @see detail#InputMethodEventHandler#handleInputMethodEvent
-		void Caret::handleInputMethodEvent(widgetapi::event::InputMethodEvent& event, const void* nativeEvent) BOOST_NOEXCEPT {
-			if(document().isReadOnly())
-				return;
-			const auto preeditString(event.preeditString());
-			if(preeditString == boost::none) {	// completed or canceled
-				context_.inputMethodCompositionActivated = false;
-
-				const auto commitString(event.commitString());
-				if(commitString != boost::none && boost::get(commitString).empty()) {	// completed => commit
-					if(!context_.inputMethodComposingCharacter)
-						texteditor::commands::TextInputCommand(textArea().textViewer(), boost::get(commitString))();
-					else {
-						auto& d = document();
-						try {
-							d.insertUndoBoundary();
-							d.replace(
-								kernel::Region(
-									insertionPosition(*this),
-									static_cast<kernel::DocumentCharacterIterator&>(++kernel::DocumentCharacterIterator(d, insertionPosition(*this))).tell()),
-								String(1, static_cast<Char>(static_cast<const MSG*>(nativeEvent)->wParam)));
-							d.insertUndoBoundary();
-						} catch(const kernel::DocumentCantChangeException&) {
-						}
-						context_.inputMethodComposingCharacter = false;
-					}
-				}
-
-				resetVisualization();
-			} else if(boost::get(preeditString).empty()) {	// started
-				context_.inputMethodCompositionActivated = true;
-				adjustInputMethodCompositionWindow();
-				utils::closeCompletionProposalsPopup(textArea().textViewer());
-			} else {	// changed
-				auto& nativeMessage = *static_cast<const MSG*>(nativeEvent);
-				if((nativeMessage.lParam & CS_INSERTCHAR) != 0) {
-					const auto p(insertionPosition(*this));	// position before motion
-					try {
-						if(context_.inputMethodComposingCharacter)
-							document().replace(
-								kernel::Region(
-									p,
-									static_cast<kernel::DocumentCharacterIterator&>(++kernel::DocumentCharacterIterator(document(), p)).tell()),
-								String(1, static_cast<Char>(nativeMessage.wParam)));
-						else
-							kernel::insert(document(), p, String(1, static_cast<Char>(nativeMessage.wParam)));
-						context_.inputMethodComposingCharacter = true;
-						if((nativeMessage.lParam & CS_NOMOVECARET) != 0)
-							moveTo(TextHit::leading(p));
-					} catch(...) {
-					}
-					event.consume();
-					resetVisualization();
-				}
-			}
 #if 0
 			switch(message) {
 				case WM_IME_NOTIFY:
@@ -182,64 +127,6 @@ namespace ascension {
 					break;
 			}
 #endif
-		}
-
-		/// Handles Win32 @c WM_IME_COMPOSITION window message.
-		void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
-			if(document().isReadOnly())
-				return;
-			else if(/*event.lParam == 0 ||*/ win32::boole(lp & GCS_RESULTSTR)) {	// completed
-				auto imc(inputMethod(textArea().textViewer()));
-				if(imc.get() != nullptr) {
-					if(const Index len = ::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, nullptr, 0) / sizeof(WCHAR)) {
-						// this was not canceled
-						const std::unique_ptr<Char[]> text(new Char[len + 1]);
-						::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, text.get(), static_cast<DWORD>(len * sizeof(WCHAR)));
-						text[len] = 0;
-						if(!context_.inputMethodComposingCharacter)
-							texteditor::commands::TextInputCommand(textArea().textViewer(), text.get())();
-						else {
-							auto& doc = document();
-							try {
-								doc.insertUndoBoundary();
-								doc.replace(
-									kernel::Region(
-										insertionPosition(*this),
-										static_cast<kernel::DocumentCharacterIterator&>(++kernel::DocumentCharacterIterator(doc, insertionPosition(*this))).tell()),
-									String(1, static_cast<Char>(wp)));
-								doc.insertUndoBoundary();
-							} catch(const kernel::DocumentCantChangeException&) {
-							}
-							context_.inputMethodComposingCharacter = false;
-							resetVisualization();
-						}
-					}
-//					adjustInputMethodCompositionWindow();
-					consumed = true;	// prevent to be send WM_CHARs
-				}
-			}
-			else if(win32::boole(GCS_COMPSTR & lp)) {
-				if(win32::boole(lp & CS_INSERTCHAR)) {
-					const auto p(insertionPosition(*this));	// position before motion
-					try {
-						if(context_.inputMethodComposingCharacter)
-							document().replace(
-								kernel::Region(
-									p,
-									static_cast<kernel::DocumentCharacterIterator&>(++kernel::DocumentCharacterIterator(document(), p)).tell()),
-								String(1, static_cast<Char>(wp)));
-						else
-							kernel::insert(document(), p, String(1, static_cast<Char>(wp)));
-						context_.inputMethodComposingCharacter = true;
-						if(win32::boole(lp & CS_NOMOVECARET))
-							moveTo(TextHit::leading(p));
-					} catch(...) {
-					}
-					consumed = true;
-					resetVisualization();
-				}
-			}
-		}
 
 		/// Handles Win32 @c WM_IME_REQUEST window message.
 		LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
@@ -366,6 +253,31 @@ namespace ascension {
 			}
 			document().insertUndoBoundary();
 		}
+
+		void Caret::preeditChanged(widgetapi::event::InputMethodEvent& event) BOOST_NOEXCEPT {
+			if(!document().isReadOnly()) {
+				auto& nativeMessage = *static_cast<const MSG*>(event.native());
+				if((nativeMessage.lParam & CS_INSERTCHAR) != 0) {
+					const auto p(insertionPosition(*this));	// position before motion
+					try {
+						if(context_.inputMethodComposingCharacter)
+							document().replace(
+								kernel::Region(
+									p,
+									static_cast<kernel::DocumentCharacterIterator&>(++kernel::DocumentCharacterIterator(document(), p)).tell()),
+								String(1, static_cast<Char>(nativeMessage.wParam)));
+						else
+							kernel::insert(document(), p, String(1, static_cast<Char>(nativeMessage.wParam)));
+						context_.inputMethodComposingCharacter = true;
+						if((nativeMessage.lParam & CS_NOMOVECARET) != 0)
+							moveTo(TextHit::leading(p));
+					} catch(...) {
+					}
+					event.consume();
+					resetVisualization();
+				}
+			 }
+		 }
 
 		/**
 		 * Sets the locale used to convert non-Unicode data in the clipboard.

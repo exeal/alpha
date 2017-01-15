@@ -17,6 +17,24 @@ namespace ascension {
 	namespace viewer {
 		namespace widgetapi {
 			namespace event {
+				class InputMethodEventBase : public Event {
+				public:
+					/// Returns a pointer to the platform-native object.
+					const void* native() const BOOST_NOEXCEPT {
+						return native_;
+					}
+
+				protected:
+					/**
+					 * Protected constructor.
+					 * @param native A pointer to the platform-native object
+					 */
+					InputMethodEventBase(const void* native) : native_(native) {}
+
+				private:
+					const void* native_;
+				};
+
 				/**
 				 * Provides parameters for input method events.
 				 * <table>
@@ -28,7 +46,7 @@ namespace ascension {
 				 *  </table>
 				 * @see InputMethodQueryEvent
 				 */
-				class InputMethodEvent : public Event {
+				class InputMethodEvent : public InputMethodEventBase {
 				public:
 					/// Destructor.
 					virtual ~InputMethodEvent() BOOST_NOEXCEPT {}
@@ -54,6 +72,9 @@ namespace ascension {
 					 */
 					virtual boost::optional<NumericRange<Index>> replacementInlineRange() const BOOST_NOEXCEPT = 0;
 					/// @}
+
+				protected:
+					explicit InputMethodEvent(const void* native) BOOST_NOEXCEPT : InputMethodEventBase(native) {}
 				};
 
 				/// Simple implementation of @c InputMethodEvent interface.
@@ -70,48 +91,55 @@ namespace ascension {
 					/// @{
 					/**
 					 * Creates a @c ConstantInputMethodEvent instance which means the composition canceled.
+					 * @param native A pointer to the platform-native object
 					 */
-					static ConstantInputMethodEvent createCanceledInstance() {
-						return ConstantInputMethodEvent(String(), boost::none, boost::none);
+					static ConstantInputMethodEvent createCanceledInstance(const void* native) {
+						return ConstantInputMethodEvent(native, String(), boost::none, boost::none);
 					}
 					/**
 					 * Creates a @c ConstantInputMethodEvent instance which means the composition changed.
+					 * @param native A pointer to the platform-native object
 					 * @param preeditString
 					 * @param replacementInlineRange
 					 */
-					static ConstantInputMethodEvent createChangedInstance(const String& preeditString, boost::optional<NumericRange<Index>> replacementInlineRange = boost::none) {
-						return ConstantInputMethodEvent(boost::none, preeditString, replacementInlineRange);
+					static ConstantInputMethodEvent createChangedInstance(const void* native, const String& preeditString, boost::optional<NumericRange<Index>> replacementInlineRange = boost::none) {
+						return ConstantInputMethodEvent(native, boost::none, preeditString, replacementInlineRange);
 					}
 					/**
 					 * Creates a @c ConstantInputMethodEvent instance which means the composition completed.
+					 * @param native A pointer to the platform-native object
 					 * @param commitString
 					 * @param replacementInlineRange
 					 */
-					static ConstantInputMethodEvent createCompletedInstance(const String& commitString, boost::optional<NumericRange<Index>> replacementInlineRange = boost::none) {
-						return ConstantInputMethodEvent(commitString, boost::none, replacementInlineRange);
+					static ConstantInputMethodEvent createCompletedInstance(const void* native, const String& commitString, boost::optional<NumericRange<Index>> replacementInlineRange = boost::none) {
+						return ConstantInputMethodEvent(native, commitString, boost::none, replacementInlineRange);
 					}
 					/**
 					 * Creates a @c ConstantInputMethodEvent which means the composition started.
+					 * @param native A pointer to the platform-native object
 					 */
-					static ConstantInputMethodEvent createStartedInstance() {
-						return ConstantInputMethodEvent(boost::none, String(), boost::none);
+					static ConstantInputMethodEvent createStartedInstance(const void* native) {
+						return ConstantInputMethodEvent(native, boost::none, String(), boost::none);
 					}
 					/// @}
 
 				private:
 					/**
 					 * Creates @c ConstantInputMethodEvent instance.
+					 * @param native A pointer to the platform-native object
 					 * @param commitString The value returned by @c #commitString method
 					 * @param preeditString The value returned by @c #preeditString method
 					 * @param replacementInlineRange The value returned by @c #replacementInlineRange method
 					 */
-					ConstantInputMethodEvent(boost::optional<String> commitString, boost::optional<String> preeditString, boost::optional<NumericRange<Index>> replacementInlineRange)
-						: commitString_(commitString), preeditString_(preeditString), replacementInlineRange_(replacementInlineRange_) {}
+					ConstantInputMethodEvent(const void* native, boost::optional<String> commitString, boost::optional<String> preeditString, boost::optional<NumericRange<Index>> replacementInlineRange)
+						: InputMethodEvent(native), commitString_(commitString), preeditString_(preeditString), replacementInlineRange_(replacementInlineRange_) {}
 					const boost::optional<String> commitString_, preeditString_;
 					const boost::optional<NumericRange<Index>> replacementInlineRange_;
 				};
 
-				class InputMethodQueryEvent : public Event {
+				class InputMethodQueryEvent : public InputMethodEventBase {
+				protected:
+					explicit InputMethodQueryEvent(const void* native) BOOST_NOEXCEPT : InputMethodEventBase(native) {}
 				};
 			}
 		}

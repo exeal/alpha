@@ -54,7 +54,7 @@ namespace ascension {
 
 		// documentation is caret.cpp
 		class Caret : public VisualPoint,
-			public kernel::DocumentListener, public detail::InputMethodEventHandler, public detail::InputMethodQueryEvent {
+			public kernel::DocumentListener, public detail::InputMethodEventHandler, public detail::InputMethodQueryEventHandler {
 		public:
 			/// Mode of tracking match brackets.
 			enum MatchBracketsTrackingMode {
@@ -201,9 +201,12 @@ namespace ascension {
 			void documentAboutToBeChanged(const kernel::Document& document) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			// detail.InputMethodEventHandler
-			void handleInputMethodEvent(widgetapi::event::InputMethodEvent& event, const void* nativeEvent) BOOST_NOEXCEPT override;
-			// detail.InputMethodQueryEvent
-			void handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event, const void* nativeEvent) BOOST_NOEXCEPT override;
+			void commitString(widgetapi::event::InputMethodEvent& event) BOOST_NOEXCEPT override;
+			void preeditChanged(widgetapi::event::InputMethodEvent& event) BOOST_NOEXCEPT override;
+			void preeditEnded() BOOST_NOEXCEPT override;
+			void preeditStarted() BOOST_NOEXCEPT override;
+			// detail.InputMethodQueryEventHandler
+			std::pair<const StringPiece, StringPiece::const_iterator> querySurroundingText() const BOOST_NOEXCEPT override;
 		private:
 			class SelectionAnchor : public VisualPoint {
 			public:

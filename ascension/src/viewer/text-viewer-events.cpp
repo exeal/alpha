@@ -140,21 +140,31 @@ namespace ascension {
 		/**
 		 * Invoked when received input method composition events.
 		 * @param event The event
-		 * @param nativeEvent The platform-native event
 		 */
-		void TextViewer::handleInputMethodEvent(widgetapi::event::InputMethodEvent& event, const void* nativeEvent) {
+		void TextViewer::handleInputMethodEvent(widgetapi::event::InputMethodEvent& event) {
 			if(auto ta = textArea()) {
-				if(auto caret = ta->caret())
-					static_cast<detail::InputMethodEventHandler*>(caret.get())->handleInputMethodEvent(event, nativeEvent);
+				if(auto caret = ta->caret()) {
+					auto& handler = *static_cast<detail::InputMethodEventHandler*>(caret.get());
+					const auto preeditString(event.preeditString());
+					if(preeditString == boost::none) {	// completed or canceled
+						const auto commitString(event.commitString());
+						if(commitString != boost::none && boost::get(commitString).empty())	// completed => commit
+							handler.commitString(event);
+						handler.preeditEnded();
+					} else if(boost::get(preeditString).empty()) {	// started
+						event.consume();
+						handler.preeditStarted();
+					} else	// changed
+						handler.preeditChanged(event);
+				}
 			}
 		}
 
 		/**
 		 * Invoked when received input method query events.
 		 * @param event The event
-		 * @param nativeEvent The platform-native event
 		 */
-		void TextViewer::handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event, const void* nativeEvent) {
+		void TextViewer::handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event) {
 			if(auto ta = textArea()) {
 				if(auto caret = ta->caret())
 					static_cast<detail::InputMethodEventHandler*>(caret.get())->handleInputMethodQueryEvent(event, nativeEvent);
