@@ -22,7 +22,6 @@
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/geometry/algorithms/normalize.hpp>
 #include <ascension/graphics/geometry/algorithms/size.hpp>
-#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/log.hpp>
@@ -373,15 +372,6 @@ namespace ascension {
 			}
 		}
 
-		/**
-		 * Hides the caret.
-		 * @see hidesCaret, showCaret
-		 */
-		void TextArea::hideCaret() BOOST_NOEXCEPT {
-			if(caretPainter_.get() != nullptr)
-				static_cast<detail::CaretPainterBase&>(*caretPainter_).hide();
-		}
-
 		/// @see TextViewerComponent#install
 		void TextArea::install(TextViewer& viewer, const Locator& locator) {
 			viewer_ = &viewer;
@@ -407,8 +397,6 @@ namespace ascension {
 				mouseInputStrategy_->install(*this);
 			} else
 				setMouseInputStrategy(std::unique_ptr<TextAreaMouseInputStrategy>());
-			setCaretPainter(std::unique_ptr<CaretPainter>());
-			showCaret();
 			relocated();
 		}
 
@@ -526,23 +514,20 @@ namespace ascension {
 		void TextArea::paint(graphics::PaintContext& context) {
 //			Timer tm(L"TextViewer.paint");
 
-			// paint the text area
-			const auto cr(contentRectangle()), ar(allocationRectangle());
-			const bool narrowed = !boost::geometry::equals(cr, ar);
-			if(narrowed) {
-				context.save();
-				context.translate(graphics::geometry::left(cr) - graphics::geometry::left(ar), graphics::geometry::top(cr) - graphics::geometry::top(ar));
-				context.rectangle(graphics::geometry::make<graphics::Rectangle>(boost::geometry::make_zero<graphics::Point>(), graphics::geometry::size(cr))).clip();
+			if(auto renderer = textRenderer()) {
+				const auto cr(contentRectangle()), ar(allocationRectangle());
+				const bool narrowed = !boost::geometry::equals(cr, ar);
+				if(narrowed) {
+					context.save();
+					context.translate(graphics::geometry::left(cr) - graphics::geometry::left(ar), graphics::geometry::top(cr) - graphics::geometry::top(ar));
+					context.rectangle(graphics::geometry::make<graphics::Rectangle>(boost::geometry::make_zero<graphics::Point>(), graphics::geometry::size(cr))).clip();
+				}
+				renderer->paint(context, *viewport(), this);
+				if(narrowed)
+					context.restore();
+				if(caret().get() != nullptr)
+					caret()->paint(context);
 			}
-			textRenderer()->paint(context, *viewport(), this);
-			if(narrowed)
-				context.restore();
-
-			// paint the caret(s)
-			const auto ip(insertionPosition(*caret()));
-			if(const graphics::font::TextLayout* const layout = textRenderer()->layouts().at(kernel::line(ip)))
-				static_cast<detail::CaretPainterBase&>(*caretPainter_).paintIfShows(context, *layout,
-					modelToView(textViewer(), graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(ip))));
 		}
 
 		/**
@@ -701,15 +686,6 @@ namespace ascension {
 			}
 		}
 
-		/**
-		 * Shows (and begins blinking) the hidden caret.
-		 * @see hideCaret, hidesCaret
-		 */
-		void TextArea::showCaret() BOOST_NOEXCEPT {
-			if(caretPainter_.get() != nullptr)
-				static_cast<detail::CaretPainterBase&>(*caretPainter_).show();
-		}
-
 		/// @see graphics#font#LineRenderingOptions#textWrappingMark
 		std::unique_ptr<const graphics::font::InlineObject> TextArea::textWrappingMark(Index line) const BOOST_NOEXCEPT {
 			return std::unique_ptr<const graphics::font::InlineObject>();
@@ -728,7 +704,6 @@ namespace ascension {
 				selectionShapeChangedConnection_.disconnect();
 				matchBracketsChangedConnection_.disconnect();
 				caret()->document().removeListener(*this);
-				caretPainter_.reset();
 				caret_.reset();
 				renderer_.reset();
 				locator_ = nullptr;

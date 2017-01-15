@@ -12,9 +12,10 @@
 #include <ascension/corelib/signals.hpp>
 #include <ascension/corelib/text/newline.hpp>
 #include <ascension/kernel/document-observers.hpp>
-#include <ascension/viewer/detail/input-method.hpp>
+#include <ascension/viewer/caret-painter.hpp>
 #include <ascension/viewer/selected-region.hpp>
 #include <ascension/viewer/visual-point.hpp>
+#include <ascension/viewer/detail/input-method.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>	// widgetapi.MimeData, widgetapi.MimeDataFormats
 
 namespace ascension {
@@ -49,6 +50,8 @@ namespace ascension {
 	}
 
 	namespace viewer {
+		class CaretPainter;
+
 		// documentation is caret.cpp
 		class Caret : public VisualPoint,
 			public kernel::DocumentListener, public detail::InputMethodEventHandler, public detail::InputMethodQueryEvent {
@@ -136,6 +139,15 @@ namespace ascension {
 			/// @{
 			bool inputCharacter(CodePoint c, bool validateSequence = true, bool blockControls = true);
 			/// @}
+
+			/// @name Visibility and Rendering
+			/// @{
+			void hide() BOOST_NOEXCEPT;
+			void paint(graphics::PaintContext& context) const;
+			void setPainter(std::unique_ptr<CaretPainter> newPainter);
+			void show() BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR bool shows() const BOOST_NOEXCEPT;
+			/// @}
 #if 0
 			/// @name Visualization Updates
 			/// @{
@@ -208,6 +220,7 @@ namespace ascension {
 				boost::optional<kernel::Position> positionBeforeUpdate_;
 			};
 			std::unique_ptr<SelectionAnchor> anchor_;
+			std::unique_ptr<CaretPainter> painter_;
 #if BOOST_OS_WINDOWS
 			LCID clipboardLocale_;
 #endif // BOOST_OS_WINDOWS
@@ -365,6 +378,14 @@ namespace ascension {
 		/// Returns the selected region.
 		inline SelectedRegion Caret::selectedRegion() const BOOST_NOEXCEPT {
 			return selection();	// kernel.Document is only declared in this header file
+		}
+
+		/**
+		 * Returns @c true if the caret is shown.
+		 * @see #hide, show
+		 */
+		inline BOOST_CONSTEXPR bool Caret::shows() const BOOST_NOEXCEPT {
+			return painter_.get() != nullptr && painter_->shows();
 		}
 
 		/**
