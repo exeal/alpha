@@ -66,21 +66,39 @@ namespace ascension {
 				Cursor(const Cursor& other);
 				/// Copy-assignment operator.
 				Cursor& operator=(const Cursor& other);
-				/// Returns the underlying native object.
+				/**
+				 * Creates a @c Cursor from the window system-native object.
+				 * @param native The native object
+				 */
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Glib::RefPtr<Gdk::Cursor> asNativeObject() BOOST_NOEXCEPT {return impl_;}
-				/// Returns the underlying native object.
-				Glib::RefPtr<const Gdk::Cursor>
+				explicit Cursor(Glib::RefPtr<Gdk::Cursor> native) : native_(native) {}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				const QCursor&
+				explicit Cursor(std::shared_ptr<QCursor> native) BOOST_NOEXCEPT : native_(native) {}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-				NSCursor???
+				explicit Cursor(std::shared_ptr<NSCursor> native) BOOST_NOEXCEPT : native_(native) {}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				win32::Handle<HCURSOR>
+				explicit Cursor(win32::Handle<HCURSOR> native) BOOST_NOEXCEPT : native_(native) {}
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif
-					asNativeObject() const BOOST_NOEXCEPT {return impl_;}
+				/// Returns the underlying native object.
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				Glib::RefPtr<Gdk::Cursor> native() {return native_;}
+				/// Returns the underlying native object.
+				Glib::RefPtr<const Gdk::Cursor> native() const {return native_;}
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+				std::shared_ptr<QCursor> native() BOOST_NOEXCEPT {return native_;}
+				/// Returns the underlying native object.
+				std::shared_ptr<const QCursor> native() const BOOST_NOEXCEPT {return native_;}
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+				std::shared_ptr<NSCursor> native() BOOST_NOEXCEPT {return native_;}
+				/// Returns the underlying native object.
+				std::shared_ptr<const NSCursor> native() const BOOST_NOEXCEPT {return native_;}
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				win32::Handle<HCURSOR> native() const BOOST_NOEXCEPT {return native_;}
+#else
+				ASCENSION_CANT_DETECT_PLATFORM();
+#endif
 				/**
 				 * Creates a new cursor with the given monochrome pixel data.
 				 * @param size The size of the @a bitmap in pixels
@@ -108,19 +126,17 @@ namespace ascension {
 
 			private:
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Glib::RefPtr<Gdk::Cursor>
+				Glib::RefPtr<Gdk::Cursor> native_;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				QCursor
+				std::shared_ptr<QCursor> native_;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-				NSCursor
+				std::shared_ptr<NSCursor> native_;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				win32::Handle<HCURSOR>
+				win32::Handle<HCURSOR> native_;
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif
-					impl_;
 			};
-
 		}
 	}
 }
