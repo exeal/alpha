@@ -13,12 +13,12 @@ namespace ascension {
 			Cursor::Cursor(Cursor::BuiltinShape shape) {
 				if(!IS_INTRESOURCE(shape))
 					throw std::invalid_argument("shape");
-				impl_ = win32::borrowed(static_cast<HCURSOR>(::LoadImageW(nullptr, shape, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
+				native_ = win32::borrowed(static_cast<HCURSOR>(::LoadImageW(nullptr, shape, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
 			}
 
-			Cursor::Cursor(const Cursor& other) : impl_(::CopyIcon(other.impl_.get()), &::DestroyCursor) {
+			Cursor::Cursor(const Cursor& other) : native_(::CopyIcon(other.impl_.get()), &::DestroyCursor) {
 				// TODO: MSDN says "Do not use the CopyCursor function for animated cursor."
-				if(impl_.get() == nullptr)
+				if(native_.get() == nullptr)
 					throw makePlatformError();
 			}
 		}
