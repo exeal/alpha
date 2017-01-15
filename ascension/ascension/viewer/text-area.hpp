@@ -14,7 +14,6 @@
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/presentation/flow-relative-two-axes.hpp>
-#include <ascension/viewer/caret-painter.hpp>
 #include <ascension/viewer/detail/weak-reference-for-points.hpp>
 #include <ascension/viewer/text-viewer-component.hpp>
 
@@ -27,6 +26,7 @@ namespace ascension {
 	}
 
 	namespace viewer {
+		class Caret;
 		class SelectedRegion;
 		class TextAreaMouseInputStrategy;
 
@@ -52,10 +52,6 @@ namespace ascension {
 			/// @{
 			std::shared_ptr<Caret> caret() BOOST_NOEXCEPT;
 			std::shared_ptr<const Caret> caret() const BOOST_NOEXCEPT;
-			void hideCaret() BOOST_NOEXCEPT;
-			void setCaretPainter(std::unique_ptr<CaretPainter> newCaretPainter);
-			void showCaret() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR bool showsCaret() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Geometry
@@ -152,7 +148,6 @@ namespace ascension {
 			std::shared_ptr<Caret> caret_;
 			std::shared_ptr<graphics::font::TextRenderer> renderer_;
 			std::shared_ptr<graphics::font::TextViewport> viewport_;
-			std::unique_ptr<CaretPainter> caretPainter_;
 			boost::integer_range<Index> linesToRedraw_;
 			std::shared_ptr<TextAreaMouseInputStrategy> mouseInputStrategy_;
 			bool mouseInputStrategyIsInstalled_;
@@ -178,14 +173,6 @@ namespace ascension {
 		/// Returns the caret, or @c nullptr if not installed.
 		inline std::shared_ptr<const Caret> TextArea::caret() const BOOST_NOEXCEPT {
 			return caret_;
-		}
-
-		/**
-		 * Returns @c true if the caret is shown.
-		 * @see #hideCaret, showCaret
-		 */
-		inline BOOST_CONSTEXPR bool TextArea::showsCaret() const BOOST_NOEXCEPT {
-			return caretPainter_.get() != nullptr && static_cast<const detail::CaretPainterBase&>(*caretPainter_).shows();
 		}
 		
 		/// Returns the text renderer, or @c nullptr if not installed.

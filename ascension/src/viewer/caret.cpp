@@ -10,9 +10,10 @@
 #include <ascension/corelib/utility.hpp>	// detail.ValueSaver<>
 #include <ascension/corelib/text/identifier-syntax.hpp>
 #include <ascension/corelib/text/utf.hpp>
-#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/image.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/text-editor/commands/inputs.hpp>
 #include <ascension/text-editor/input-sequence-checker.hpp>
@@ -21,6 +22,7 @@
 #include <ascension/viewer/standard-caret-painter.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
+#include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/viewer/virtual-box.hpp>
 #include <boost/range/algorithm/binary_search.hpp>
@@ -414,6 +416,15 @@ namespace ascension {
 			motionSignal_(*this, regionBeforeMotion);
 		}
 
+		/**
+		 * Hides the caret.
+		 * @see #show, #shows
+		 */
+		void Caret::hide() BOOST_NOEXCEPT {
+			if(painter_.get() != nullptr)
+				painter_->hide();
+		}
+
 		namespace {
 			/**
 			 * @internal Deletes the forward one character and inserts the specified text.
@@ -533,21 +544,12 @@ namespace ascension {
 			const bool installed = isInstalled();
 			VisualPoint::install(textArea);
 			if(!installed) {
-#ifdef ASCENSION_USE_SYSTEM_CARET
-				viewportResizedConnection_ = textArea.textRenderer().viewport()->resizedSignal().connect([this](const graphics::Dimension&) {
-//					if(this->textViewer().rulerConfiguration().alignment != ALIGN_LEFT)
-						this->resetVisualization();
-				});
-				viewportScrolledConnection_ = textArea.textRenderer().viewport()->scrolledSignal().connect(
-					[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
-						this->updateLocation();
-					}
-				);
-#endif // ASCENSION_USE_SYSTEM_CARET
 				anchor_->install(textArea);
 				anchorMotionSignalConnection_ = anchor_->motionSignal().connect(
 					std::bind(&Caret::pointMoved, this, std::placeholders::_1, std::placeholders::_2));
 			}
+			setPainter(std::unique_ptr<CaretPainter>());
+			show();
 		}
 
 		/// Returns the @c MatchBracketsChangedSignal signal connector.
@@ -576,6 +578,19 @@ namespace ascension {
 			VisualPoint::moved(from);
 			if(!document().isChanging())
 				updateVisualAttributes();
+		}
+
+		/**
+		 * Paints the figure of the caret.
+		 * @param context The painting context
+		 */
+		void Caret::paint(graphics::PaintContext& context) const {
+			if(painter_.get() != nullptr) {
+				const auto ip(insertionPosition(*this));
+				if(const graphics::font::TextLayout* const layout = textArea().textRenderer()->layouts().at(kernel::line(ip)))
+					painter_->paintIfShows(context, *layout,
+						modelToView(textArea().textViewer(), graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(ip))));
+			}
 		}
 
 		/// @see VisualPoint#MotionSignal
@@ -754,25 +769,6 @@ namespace ascension {
 		}
 
 		/**
-		 * Sets the caret painter.
-		 * @param newCaretPainter The new caret painter to set. If this parameter is @c null, the @c TextArea instance
-		 *                        uses @c StandardCaretPainter object instead
-		 */
-		void TextArea::setCaretPainter(std::unique_ptr<CaretPainter> newCaretPainter) {
-			if(newCaretPainter == caretPainter_ && newCaretPainter.get() != nullptr)
-				return;
-			if(caretPainter_.get() != nullptr)
-				static_cast<detail::CaretPainterBase&>(*caretPainter_).uninstall(*caret());	// TODO: Support multiple carets.
-			if(newCaretPainter.get() == nullptr)
-				newCaretPainter.reset(new StandardCaretPainter());
-			caretPainter_ = std::move(newCaretPainter);
-			static_cast<detail::CaretPainterBase&>(*caretPainter_).install(*caret());	// TODO: Support multiple carets.
-#ifdef ASCENSION_USE_SYSTEM_CARET
-			caretStaticShapeChanged(caret());	// update caret shapes immediately
-#endif
-		}
-
-		/**
 		 * Sets character input mode.
 		 * @param overtype Set @c true to set to overtype mode, @c false to set to insert mode
 		 * @return This caret
@@ -786,15 +782,35 @@ namespace ascension {
 			return *this;
 		}
 
+		/**
+		 * Sets the caret painter.
+		 * @param newPainter The new caret painter to set. If this parameter is @c null, the @c Caret instance uses a
+		 *                   default-constructed @c StandardCaretPainter object instead
+		 */
+		void Caret::setPainter(std::unique_ptr<CaretPainter> newPainter) {
+			if(newPainter == painter_ && newPainter.get() != nullptr)
+				return;
+			if(painter_.get() != nullptr)
+				painter_->uninstall(*this);	// TODO: Support multiple carets.
+			if(newPainter.get() == nullptr)
+				newPainter.reset(new StandardCaretPainter());
+			painter_ = std::move(newPainter);
+			painter_->install(*this);	// TODO: Support multiple carets.
+		}
+
+		/**
+		 * Shows (and may begin blinking) the hidden caret.
+		 * @see #hide, #shows
+		 */
+		void Caret::show() BOOST_NOEXCEPT {
+			if(painter_.get() != nullptr)
+				painter_->show();
+		}
+
 		/// @see VisualPoint#uninstall
 		void Caret::uninstall() BOOST_NOEXCEPT {
 			try {
-#ifdef ASCENSION_USE_SYSTEM_CARET
-				if(!isTextAreaDisposed()) {
-					viewportResizedConnection_.disconnect();
-					viewportScrolledConnection_.disconnect();
-				}
-#endif // ASCENSION_USE_SYSTEM_CARET
+				painter_.reset();
 				anchor_->uninstall();
 				anchorMotionSignalConnection_.disconnect();
 				shapeCache_.image.reset();

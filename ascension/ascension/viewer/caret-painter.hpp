@@ -9,85 +9,54 @@
 
 #ifndef ASCENSION_CARET_PAINTER_HPP
 #define ASCENSION_CARET_PAINTER_HPP
-#include <ascension/corelib/timer.hpp>
-#include <ascension/presentation/flow-relative-four-sides.hpp>
-#include <ascension/viewer/detail/caret-painter-base.hpp>
-#include <boost/optional.hpp>
-#include <boost/signals2/connection.hpp>
-#include <memory>
+#include <ascension/graphics/geometry/point.hpp>
 
 namespace ascension {
-	namespace kernel {
-		class Point;
+	namespace graphics {
+		class PaintContext;
+
+		namespace font {
+			class TextLayout;
+		}
 	}
 
 	namespace viewer {
 		class Caret;
 
 		/**
-		 * Paints the caret on the @c TextArea with blinking.
-		 * @c CaretPainter is an abstract class and the derived class should implement @c #paint method to draw a
-		 * concrete figure of the caret.
-		 * @see SolidCaretPainter, LocaleSensitivePainter
+		 * An interface for object which paints the caret on the @c TextArea.
+		 * @see Caret, StandardCaretPainter, TextArea
 		 */
-		class CaretPainter : public detail::CaretPainterBase, private HasTimer<> {
+		class CaretPainter {
 		public:
+			/// Destructor.
 			virtual ~CaretPainter() BOOST_NOEXCEPT;
-
-		protected:
-			CaretPainter();
-			/* BOOST_CONSTEXPR */ Caret& caret() BOOST_NOEXCEPT;
-			BOOST_CONSTEXPR const Caret& caret() const BOOST_NOEXCEPT;
-			static std::pair<
-				presentation::FlowRelativeFourSides<graphics::Scalar>, presentation::FlowRelativeTwoAxes<graphics::Scalar>
-			> computeCharacterLogicalBounds(const Caret& caret, const graphics::font::TextLayout& layout);
-			virtual void installed() BOOST_NOEXCEPT;
-			virtual void paint(graphics::PaintContext& context,
+			/// Hides the cursor.
+			virtual void hide() = 0;
+			/**
+			 * Installs this @c CaretPainterBase instance to the @c TextArea object.
+			 * @param caret The caret
+			 */
+			virtual void install(Caret& caret) = 0;
+			/**
+			 * Paints the caret.
+			 * @param context The graphics context
+			 * @param layout The line layout
+			 * @param alignmentPoint The 'alignment-point' of @a layout
+			 */
+			virtual void paintIfShows(graphics::PaintContext& context,
 				const graphics::font::TextLayout& layout, const graphics::Point& alignmentPoint) = 0;
-			virtual void uninstalled() BOOST_NOEXCEPT;
-
-		private:
-			void setVisible(bool visible);
-			void timeElapsed(Timer<>& timer);
-			// detail.CaretPainterBase
-			void hide() override;
-			void install(Caret& caret) override;
-			bool isVisible() const BOOST_NOEXCEPT override;
-			void paintIfShows(graphics::PaintContext& context,
-				const graphics::font::TextLayout& layout, const graphics::Point& alignmentPoint) override;
-			void pend() override;
-			void resetTimer() override;
-			void show() override;
-			bool shows() const BOOST_NOEXCEPT override;
-			void uninstall(Caret& caret) override;
-			void update() override;
-		private:
-			Caret* caret_;
-			Timer<> timer_;
-			boost::chrono::milliseconds elapsedTimeFromLastUserInput_;
-			boost::optional<bool> visible_;	// boost.none => hides, true => visible, false => blinking and invisible
-			boost::signals2::scoped_connection caretMotionConnection_, viewerFocusChangedConnection_;
+			/// Shows and begins blinking the caret.
+			virtual void show() = 0;
+			/// Returns @c true if the caret is shown (may be blinking off).
+			virtual bool shows() const BOOST_NOEXCEPT = 0;
+			/**
+			 * Uninstalls this @c CaretPainterBase instance from the @c TextArea object.
+			 * @param caret The caret
+			 */
+			virtual void uninstall(Caret& caret) = 0;
+			friend class Caret;
 		};
-
-		/// Returns the caret.
-		/* BOOST_CONSTEXPR */ inline Caret& CaretPainter::caret() BOOST_NOEXCEPT {
-			return assert(caret_ != nullptr), *caret_;
-		}
-
-		/// Returns the caret.
-		BOOST_CONSTEXPR inline const Caret& CaretPainter::caret() const BOOST_NOEXCEPT {
-			return assert(caret_ != nullptr), *caret_;
-		}
-
-		/// @see CaretPainterBase#isVisible
-		inline bool CaretPainter::isVisible() const BOOST_NOEXCEPT {
-			return boost::get_optional_value_or(visible_, false);
-		}
-
-		/// @see CaretPainterBase#shows
-		inline bool CaretPainter::shows() const BOOST_NOEXCEPT {
-			return visible_ != boost::none;
-		}
 	}
 }
 
