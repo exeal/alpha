@@ -16,7 +16,7 @@ namespace ascension {
 				native_ = win32::borrowed(static_cast<HCURSOR>(::LoadImageW(nullptr, shape, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
 			}
 
-			Cursor::Cursor(const Cursor& other) : native_(::CopyIcon(other.impl_.get()), &::DestroyCursor) {
+			Cursor::Cursor(const Cursor& other) : native_(::CopyIcon(other.native_.get()), &::DestroyCursor) {
 				// TODO: MSDN says "Do not use the CopyCursor function for animated cursor."
 				if(native_.get() == nullptr)
 					throw makePlatformError();

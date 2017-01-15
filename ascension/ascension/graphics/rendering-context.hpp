@@ -876,37 +876,7 @@ namespace ascension {
 			std::shared_ptr<Gdiplus::Graphics> nativeObject_;
 #endif
 		};
-
-		class PaintContext : public RenderingContext2D {
-		public:
-			/**
-			 * Constructor.
-			 * @param context The rendering context
-			 * @param boundsToPaint The rectangle in which the painting is requested
-			 */
-			PaintContext(RenderingContext2D&& context, const Rectangle& boundsToPaint)
-				: RenderingContext2D(std::move(context)), boundsToPaint_(boundsToPaint) {}
-			/**
-			 * Constructor.
-			 * @param context The rendering context
-			 * @param boundsToPaint The rectangle in which the painting is requested
-			 */
-			PaintContext(std::unique_ptr<RenderingContext2D> context, const Rectangle& boundsToPaint)
-				: RenderingContext2D(context->native()), boundsToPaint_(boundsToPaint) {}
-			/// Returns the rendering context.
-//			RenderingContext2D& operator*() BOOST_NOEXCEPT {return context_;}
-			/// Returns the rendering context.
-//			const RenderingContext2D& operator*() const BOOST_NOEXCEPT {return context_;}
-			/// Returns the rendering context.
-//			RenderingContext2D* operator->() BOOST_NOEXCEPT {return &context_;}
-			/// Returns the rendering context.
-//			const RenderingContext2D* operator->() const BOOST_NOEXCEPT {return &context_;}
-			/// Returns a rectangle in which the painting is requested.
-			const Rectangle& boundsToPaint() const BOOST_NOEXCEPT {return boundsToPaint_;}
-		private:
-			const Rectangle boundsToPaint_;
-		};
 	}
 }
 
-#endif //!ASCENSION_RENDERING_CONTEXT_HPP
+#endif // !ASCENSION_RENDERING_CONTEXT_HPP

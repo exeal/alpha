@@ -19,7 +19,7 @@
 #include <ascension/graphics/geometry/rectangle-corners.hpp>
 #include <ascension/graphics/geometry/rectangle-odxdy.hpp>
 #include <ascension/graphics/geometry/algorithms/make.hpp>
-#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/paint-context.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/log.hpp>
 #include <ascension/presentation/hyperlink/hyperlink.hpp>
