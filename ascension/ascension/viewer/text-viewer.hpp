@@ -256,8 +256,8 @@ namespace ascension {
 			/// @{
 			virtual void focusAboutToBeLost(widgetapi::event::Event& event);
 			virtual void focusGained(widgetapi::event::Event& event);
-			virtual void handleInputMethodEvent(widgetapi::event::InputMethodEvent& event, const void* nativeEvent);
-			virtual void handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event, const void* nativeEvent);
+			virtual void handleInputMethodEvent(widgetapi::event::InputMethodEvent& event);
+			virtual void handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event);
 			virtual void keyPressed(widgetapi::event::KeyInput& input);
 			virtual void keyReleased(widgetapi::event::KeyInput& input);
 			virtual void mouseDoubleClicked(widgetapi::event::MouseButtonInput& input);

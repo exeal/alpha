@@ -21,13 +21,15 @@ namespace ascension {
 
 		namespace detail {
 			class InputMethodEventHandler {
-				virtual void handleInputMethodEvent(widgetapi::event::InputMethodEvent& event, const void* nativeEvent) BOOST_NOEXCEPT = 0;
-				virtual void handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event, const void* nativeEvent) BOOST_NOEXCEPT = 0;
+				virtual void commitString(widgetapi::event::InputMethodEvent& event) BOOST_NOEXCEPT = 0;
+				virtual void preeditChanged(widgetapi::event::InputMethodEvent& event) BOOST_NOEXCEPT = 0;
+				virtual void preeditEnded() BOOST_NOEXCEPT = 0;
+				virtual void preeditStarted() BOOST_NOEXCEPT = 0;
 				friend class TextViewer;
 			};
 
-			class InputMethodQueryEvent {
-				virtual std::pair<const StringPiece, StringPiece::const_iterator> querySurroundingText() const = 0;
+			class InputMethodQueryEventHandler {
+				virtual std::pair<const StringPiece, StringPiece::const_iterator> querySurroundingText() const BOOST_NOEXCEPT = 0;
 				friend class TextViewer;
 			};
 

@@ -15,6 +15,7 @@
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/kernel/document.hpp>
+#include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/text-editor/commands/inputs.hpp>
 #include <ascension/text-editor/input-sequence-checker.hpp>
 #include <ascension/text-editor/session.hpp>
@@ -258,10 +259,28 @@ namespace ascension {
 			moveTo(hit());
 		}
 
-		/// @see detail#InputMethodEvent#commitInputString
-		void Caret::commitInputString(const StringPiece& text) {
-//			if(!context_.inputMethodComposingCharacter)
-				texteditor::commands::TextInputCommand(textArea().textViewer(), text.to_string())();
+		/// @see detail#InputMethodEventHandler#commitString
+		void Caret::commitString(widgetapi::event::InputMethodEvent& event) BOOST_NOEXCEPT {
+			const auto commitString(event.commitString());
+			assert(commitString != boost::none);
+			if(!context_.inputMethodComposingCharacter)
+				texteditor::commands::TextInputCommand(textArea().textViewer(), boost::get(commitString))();
+			else {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				auto& d = document();
+				try {
+					d.insertUndoBoundary();
+					d.replace(
+						kernel::Region(
+							insertionPosition(*this),
+							static_cast<kernel::DocumentCharacterIterator&>(++kernel::DocumentCharacterIterator(d, insertionPosition(*this))).tell()),
+						String(1, static_cast<Char>(static_cast<const MSG*>(event.native())->wParam)));
+					d.insertUndoBoundary();
+				} catch(const kernel::DocumentCantChangeException&) {
+				}
+#endif
+				context_.inputMethodComposingCharacter = false;
+			}
 		}
 
 		/// @see kernel#DocumentListener#documentAboutToBeChanged
@@ -613,26 +632,21 @@ namespace ascension {
 			}
 		}
 
-		/// @see detail#InputMethodEvent#preeditChanged
-		void Caret::preeditChanged() {
-			// TODO: Not implemented.
-		}
-
 		/// @see detail#InputMethodEvent#preeditEnded
-		void Caret::preeditEnded() {
+		void Caret::preeditEnded() BOOST_NOEXCEPT {
 			context_.inputMethodCompositionActivated = false;
 			updateVisualAttributes();
 		}
 
-		/// @see detail#InputMethodEvent#preeditStarted
-		void Caret::preeditStarted() {
+		/// @see detail#InputMethodEventHandler#preeditStarted
+		void Caret::preeditStarted() BOOST_NOEXCEPT {
 			context_.inputMethodCompositionActivated = true;
 			adjustInputMethodCompositionWindow();
 			utils::closeCompletionProposalsPopup(textArea().textViewer());
 		}
 
 		// @see detail#InputMethodQueryEvent#querySurroundingText
-		std::pair<const StringPiece, StringPiece::const_iterator> Caret::querySurroundingText() const {
+		std::pair<const StringPiece, StringPiece::const_iterator> Caret::querySurroundingText() const BOOST_NOEXCEPT {
 			const StringPiece lineString(document().lineString(kernel::line(hit().characterIndex())));
 			StringPiece::const_iterator position(lineString.cbegin());
 			if(boost::size(selectedRegion().lines()) == 1)

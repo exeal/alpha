@@ -1097,8 +1097,8 @@ namespace ascension {
 								std::unique_ptr<WCHAR[]> buffer(new WCHAR[length]);
 								nbytes = ::ImmGetCompositionStringW(im.get(), GCS_RESULTSTR, buffer.get(), nbytes);
 								if(nbytes > 0) {
-									auto e(widgetapi::event::ConstantInputMethodEvent::createCompletedInstance(String(win32::wideString<const Char>(buffer.get()))));
-									handleInputMethodEvent(e, &native);
+									auto e(widgetapi::event::ConstantInputMethodEvent::createCompletedInstance(&native, String(win32::wideString<const Char>(buffer.get()))));
+									handleInputMethodEvent(e);
 									if(consumed = e.isConsumed())
 										return 0L;	// block WM_CHARs
 								}
@@ -1111,7 +1111,7 @@ namespace ascension {
 				case WM_IME_ENDCOMPOSITION: {
 					MSG native;
 					nativeMessage(*this, message, wp, lp, native);
-					handleInputMethodEvent(widgetapi::event::ConstantInputMethodEvent::createCanceledInstance(), &native);
+					handleInputMethodEvent(widgetapi::event::ConstantInputMethodEvent::createCanceledInstance(&native));
 					break;
 				}
 				case WM_IME_REQUEST:
@@ -1119,7 +1119,7 @@ namespace ascension {
 				case WM_IME_STARTCOMPOSITION: {
 					MSG native;
 					nativeMessage(*this, message, wp, lp, native);
-					handleInputMethodEvent(widgetapi::event::ConstantInputMethodEvent::createStartedInstance(), &native);
+					handleInputMethodEvent(widgetapi::event::ConstantInputMethodEvent::createStartedInstance(&native));
 					break;
 				}
 				case WM_KEYDOWN:
