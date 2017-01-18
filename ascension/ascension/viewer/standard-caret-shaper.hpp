@@ -1,15 +1,16 @@
 /**
- * @file default-caret-shaper.hpp
+ * @file standard-caret-shaper.hpp
  * This header defines the two classes implement @c CaretShaper.
  * @author exeal
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-09-25 separated from viewer.hpp
  * @date 2013-04-21 separated from caret-shaper.hpp
+ * @date 2017-01-18 Renamed from default-caret-shaper.hpp.
  */
 
-#ifndef ASCENSION_DEFAULT_CARET_SHAPER_HPP
-#define ASCENSION_DEFAULT_CARET_SHAPER_HPP
+#ifndef ASCENSION_STANDARD_CARET_SHAPER_HPP
+#define ASCENSION_STANDARD_CARET_SHAPER_HPP
 #include <ascension/graphics/color.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
 #include <map>
@@ -61,4 +62,4 @@ namespace ascension {
 	}
 } // namespace ascension.viewer
 
-#endif // !ASCENSION_DEFAULT_CARET_SHAPER_HPP
+#endif // !ASCENSION_STANDARD_CARET_SHAPER_HPP
