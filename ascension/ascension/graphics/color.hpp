@@ -36,24 +36,24 @@ namespace ascension {
 			/// Creates a color value with uninitialized components.
 			Color() BOOST_NOEXCEPT {}
 			/// Creates a color value based on RGB values.
-			Color(Byte red, Byte green, Byte blue, Byte alpha = 255) BOOST_NOEXCEPT
+			BOOST_CONSTEXPR Color(Byte red, Byte green, Byte blue, Byte alpha = 255) BOOST_NOEXCEPT
 				: red_(red * 0x0101), green_(green * 0x0101), blue_(blue * 0x0101), alpha_(alpha * 0x0101) {}
 			/// Returns the blue color component of this color.
-			Byte blue() const BOOST_NOEXCEPT {return blue_ >> 8;}
+			BOOST_CONSTEXPR Byte blue() const BOOST_NOEXCEPT {return blue_ >> 8;}
 			/// Returns the green color component of this color.
-			Byte green() const BOOST_NOEXCEPT {return green_ >> 8;}
+			BOOST_CONSTEXPR Byte green() const BOOST_NOEXCEPT {return green_ >> 8;}
 			/// Returns the red color component of this color.
-			Byte red() const BOOST_NOEXCEPT {return red_ >> 8;}
+			BOOST_CONSTEXPR Byte red() const BOOST_NOEXCEPT {return red_ >> 8;}
 			/// Returns the alpha value of this color.
-			Byte alpha() const BOOST_NOEXCEPT {return alpha_ >> 8;}
+			BOOST_CONSTEXPR Byte alpha() const BOOST_NOEXCEPT {return alpha_ >> 8;}
 			/// Returns @c true if this color is fully opaque.
-			bool isFullyOpaque() const BOOST_NOEXCEPT {return alpha() == 255;}
+			BOOST_CONSTEXPR bool isFullyOpaque() const BOOST_NOEXCEPT {return alpha() == 255;}
 			/// Returns @c true if this color is fully transparent.
-			bool isFullyTransparent() const BOOST_NOEXCEPT {return alpha() == 0;}
+			BOOST_CONSTEXPR bool isFullyTransparent() const BOOST_NOEXCEPT {return alpha() == 0;}
 			/// Returns @c true if this color is transparent.
-			bool isTransparent() const BOOST_NOEXCEPT {return !isFullyOpaque();}
+			BOOST_CONSTEXPR bool isTransparent() const BOOST_NOEXCEPT {return !isFullyOpaque();}
 			/// Equality operator.
-			bool operator==(const Color& other) const BOOST_NOEXCEPT {
+			BOOST_CONSTEXPR bool operator==(const Color& other) const BOOST_NOEXCEPT {
 				return red() == other.red() && green() == other.green()
 					&& blue() == other.blue() && alpha() == other.alpha();
 			}
