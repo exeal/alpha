@@ -1,10 +1,11 @@
 /**
- * @file default-caret-shaper.cpp
+ * @file standard-caret-shaper.cpp
  * @author exeal
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-09-25 separated from viewer.cpp
  * @date 2013-04-21 separated from caret-shaper.cpp
+ * @date 2017-01-18 Renamed from default-caret-shaper.cpp.
  */
 
 #include <ascension/graphics/font/line-layout-vector.hpp>
@@ -17,7 +18,7 @@
 #include <ascension/graphics/image.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/default-caret-shaper.hpp>
+#include <ascension/viewer/standard-caret-shaper.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
