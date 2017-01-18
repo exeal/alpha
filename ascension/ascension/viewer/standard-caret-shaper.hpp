@@ -18,45 +18,24 @@
 namespace ascension {
 	namespace viewer {
 		/**
-		 * Default implementation of @c CaretShaper.
-		 * @c DefaultCaretShaper returns system-defined caret shape (color, width) which depends on
-		 * the writing mode of the text viewer and the line metrics.
+		 * Standard implementation of @c CaretShaper.
+		 * @c StandardCaretShaper returns standard shapes based on the system setting, the active keyboard layout and
+		 * the writing mode.
 		 */
-		class DefaultCaretShaper : public CaretShaper, private boost::noncopyable {
+		class StandardCaretShaper : public CaretShaper, private boost::noncopyable {
 		protected:
-			Shape createSolidShape(const Caret& caret,
-				const boost::optional<graphics::Color>& color, const boost::optional<std::uint32_t>& measure) const;
 			// CaretShaper
-			virtual void install(Caret& caret) BOOST_NOEXCEPT override;
-			virtual Shape shape(const Caret& caret,
-				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT override;
-			virtual void uninstall(Caret& caret) BOOST_NOEXCEPT override;
-			// Caret.MotionSignal
-			virtual void caretMoved(const Caret& caret, const SelectedRegion& regionBeforeMotion);
-
-		private:
-			std::map<const Caret*, boost::signals2::connection> caretMotionConnections_;
-		};
-
-		/**
-		 * @c LocaleSensitiveCaretShaper defines caret shape based on active keyboard layout.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class LocaleSensitiveCaretShaper : public DefaultCaretShaper {
-		public:
-			explicit LocaleSensitiveCaretShaper() BOOST_NOEXCEPT;
-
-		private:
-			// DefaultCaretShaper overrides
-			void caretMoved(const Caret& caret, const SelectedRegion& regionBeforeMotion) override;
 			void install(Caret& caret) BOOST_NOEXCEPT override;
 			Shape shape(const Caret& caret,
 				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT override;
 			void uninstall(Caret& caret) BOOST_NOEXCEPT override;
+			// Caret.MotionSignal
+			void caretMoved(const Caret& caret, const SelectedRegion& regionBeforeMotion);
 			// Caret.InputModeChangedSignal
 			void inputModeChanged(const Caret& caret, Caret::InputModeChangedSignalType type) BOOST_NOEXCEPT;
 
 		private:
+			std::map<const Caret*, boost::signals2::connection> caretMotionConnections_;
 			std::map<const Caret*, boost::signals2::connection> inputModeChangedConnections_;
 		};
 	}

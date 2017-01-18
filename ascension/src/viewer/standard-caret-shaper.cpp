@@ -27,16 +27,44 @@
 
 namespace ascension {
 	namespace viewer {
-		// DefaultCaretShaper /////////////////////////////////////////////////////////////////////////////////////////
+		namespace {
+#if BOOST_OS_WINDOWS
+			/// Returns @c true if the specified language is RTL.
+			inline BOOST_CONSTEXPR bool isRtlLanguage(LANGID id) BOOST_NOEXCEPT {
+				return id == LANG_ARABIC || id == LANG_FARSI || id == LANG_HEBREW || id == LANG_SYRIAC || id == LANG_URDU;
+			}
+
+			/// Returns @c true if the specified language is Thai or Lao.
+			inline BOOST_CONSTEXPR bool isTisLanguage(LANGID id) BOOST_NOEXCEPT {
+#ifndef LANG_LAO
+#	define LANGID LANG_LAO 0x54
+#endif // !LANG_LAO
+				return id == LANG_THAI || id == LANG_LAO;
+			}
+#endif // BOOST_OS_WINDOWS
+
+			/// @internal Returns measure in piexels of the system setting.
+			inline std::uint32_t systemDefinedCaretMeasure() {
+#if BOOST_OS_WINDOWS
+				DWORD width;
+				if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
+					width = 1;	// NT4 does not support SPI_GETCARETWIDTH
+				return static_cast<std::uint32_t>(width);
+#else
+				// TODO: Write codes in other platforms.
+				return 1;
+#endif
+			}
+		}
 
 		/// @see Caret#MotionSignal
-		void DefaultCaretShaper::caretMoved(const Caret& caret, const SelectedRegion& regionBeforeMotion) {
-			if(kernel::line(caret) != kernel::line(insertionPosition(caret.document(), regionBeforeMotion.caret())))
+		void StandardCaretShaper::caretMoved(const Caret& caret, const SelectedRegion& regionBeforeMotion) {
+			if(caret.isOvertypeMode() || kernel::line(caret) != kernel::line(insertionPosition(caret.document(), regionBeforeMotion.caret())))
 				signalStaticShapeChanged(caret);
 		}
 
 		namespace {
-			inline std::uint32_t packColor(const graphics::Color& color) BOOST_NOEXCEPT {
+			inline BOOST_CONSTEXPR std::uint32_t packColor(const graphics::Color& color) BOOST_NOEXCEPT {
 				return (0xff << 12) | (color.red() << 8) | (color.green() << 4) | color.blue();
 			}
 
@@ -81,85 +109,69 @@ namespace ascension {
 				return std::get<2>(newEntry);
 			}
 
-			inline std::uint32_t systemDefinedCaretMeasure() {
-#if BOOST_OS_WINDOWS
-				DWORD width;
-				if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
-					width = 1;	// NT4 does not support SPI_GETCARETWIDTH
-				return static_cast<std::uint32_t>(width);
-#else
-				// TODO: Write codes in other platforms.
-				return 1;
-#endif
+			/**
+			 * @internal Creates a solid (rectangular) caret shape with the given color and measure.
+			 * @param caret The caret to shape
+			 * @param color The color of the image
+			 * @param measure The measure of image in pixels. If @c boost#none, the system setting is used
+			 * @return The shape
+			 */
+			CaretShaper::Shape createSolidShape(const Caret& caret, const boost::optional<graphics::Color>& color, const boost::optional<std::uint32_t>& measure) {
+				const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
+				const auto renderer(caret.textArea().textRenderer());
+				boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>> bounds;
+
+				if(const graphics::font::TextLayout* const layout = renderer->layouts().at(kernel::line(caret))) {
+					boost::optional<graphics::Rectangle> characterBounds(currentCharacterLogicalBounds(caret));
+					assert(characterBounds);
+
+					boost::optional<std::uint32_t> advance(measure);
+					if(advance == boost::none && (!caret.isOvertypeMode() || !isSelectionEmpty(caret)))
+						advance = systemDefinedCaretMeasure();
+					if(advance != boost::none) {
+						const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
+						presentation::FlowRelativeFourSides<std::int32_t> abstractBounds;
+						graphics::PhysicalFourSides<std::int32_t> physicalBounds(bounds);
+						presentation::mapDimensions(writingMode, presentation::_from = physicalBounds, presentation::_to = abstractBounds);
+						abstractBounds.end() = abstractBounds.start() + boost::get(advance);
+						presentation::mapDimensions(writingMode, presentation::_from = abstractBounds, presentation::_to = physicalBounds);
+						boost::geometry::assign(bounds, graphics::geometry::make<graphics::Rectangle>(physicalBounds));
+					}
+				}
+				else
+					boost::geometry::assign_zero(bounds);
+
+				// create an image
+				CaretShaper::Shape shape;
+				shape.image = createSolidCaretImage(
+					static_cast<graphics::geometry::BasicDimension<std::uint32_t>>(graphics::geometry::size(bounds)),
+					boost::get_optional_value_or(color, graphics::Color::OPAQUE_BLACK));
+				graphics::geometry::scale(
+					graphics::geometry::_from = graphics::geometry::topLeft(bounds), graphics::geometry::_to = shape.alignmentPoint,
+					graphics::geometry::_sx = -1, graphics::geometry::_sy = -1);
+				return shape;
 			}
 		}	// namespace @0
 
-		/**
-		 * Creates a solid (rectangular) caret shape with the given color and measure.
-		 * @param caret The caret to shape
-		 * @param color The color of the image
-		 * @param measure The measure of image in pixels
-		 */
-		CaretShaper::Shape DefaultCaretShaper::createSolidShape(const Caret& caret,
-				const boost::optional<graphics::Color>& color, const boost::optional<std::uint32_t>& measure) const {
-			const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
-			const auto renderer(caret.textArea().textRenderer());
-			boost::geometry::model::box<boost::geometry::model::d2::point_xy<std::int32_t>> bounds;
-
-			if(const graphics::font::TextLayout* const layout = renderer->layouts().at(kernel::line(caret))) {
-				boost::optional<graphics::Rectangle> characterBounds(currentCharacterLogicalBounds(caret));
-				assert(characterBounds);
-
-				boost::optional<std::uint32_t> advance(measure);
-				if(advance == boost::none && (!caret.isOvertypeMode() || !isSelectionEmpty(caret)))
-					advance = systemDefinedCaretMeasure();
-				if(advance != boost::none) {
-					const presentation::WritingMode writingMode(graphics::font::writingMode(*layout));
-					presentation::FlowRelativeFourSides<std::int32_t> abstractBounds;
-					graphics::PhysicalFourSides<std::int32_t> physicalBounds(bounds);
-					presentation::mapDimensions(writingMode, presentation::_from = physicalBounds, presentation::_to = abstractBounds);
-					abstractBounds.end() = abstractBounds.start() + *advance;
-					presentation::mapDimensions(writingMode, presentation::_from = abstractBounds, presentation::_to = physicalBounds);
-					boost::geometry::assign(bounds, graphics::geometry::make<graphics::Rectangle>(physicalBounds));
-				}
-			} else
-				boost::geometry::assign_zero(bounds);
-
-			// create an image
-			Shape shape;
-			shape.image = createSolidCaretImage(
-				static_cast<graphics::geometry::BasicDimension<std::uint32_t>>(graphics::geometry::size(bounds)),
-				boost::get_optional_value_or(color, graphics::Color::OPAQUE_BLACK));
-			graphics::geometry::scale(
-				graphics::geometry::_from = graphics::geometry::topLeft(bounds), graphics::geometry::_to = shape.alignmentPoint,
-				graphics::geometry::_sx = -1, graphics::geometry::_sy = -1);
-			return shape;
+		/// @see Caret#InputModeChangedSignal
+		void StandardCaretShaper::inputModeChanged(const Caret& caret, Caret::InputModeChangedSignalType) BOOST_NOEXCEPT {
+			signalStaticShapeChanged(caret);
 		}
 
 		/// @see CaretShaper#install
-		void DefaultCaretShaper::install(Caret& caret) BOOST_NOEXCEPT {
+		void StandardCaretShaper::install(Caret& caret) BOOST_NOEXCEPT {
 			assert(caretMotionConnections_.find(&caret) == std::end(caretMotionConnections_));
 			caretMotionConnections_.insert(std::make_pair(&caret,
 				caret.motionSignal().connect(
-					std::bind(&DefaultCaretShaper::caretMoved, this, std::placeholders::_1, std::placeholders::_2))));
+					std::bind(&StandardCaretShaper::caretMoved, this, std::placeholders::_1, std::placeholders::_2))));
+
+			assert(inputModeChangedConnections_.find(&caret) == std::end(inputModeChangedConnections_));
+			inputModeChangedConnections_.insert(std::make_pair(&caret,
+				caret.inputModeChangedSignal().connect(
+					std::bind(&StandardCaretShaper::inputModeChanged, this, std::placeholders::_1, std::placeholders::_2))));
 		}
 
 		namespace {
-#if BOOST_OS_WINDOWS
-			/// Returns @c true if the specified language is RTL.
-			inline bool isRtlLanguage(LANGID id) BOOST_NOEXCEPT {
-				return id == LANG_ARABIC || id == LANG_FARSI || id == LANG_HEBREW || id == LANG_SYRIAC || id == LANG_URDU;
-			}
-
-			/// Returns @c true if the specified language is Thai or Lao.
-			inline bool isTisLanguage(LANGID id) BOOST_NOEXCEPT {
-#ifndef LANG_LAO
-				const LANGID LANG_LAO = 0x54;
-#endif // !LANG_LAO
-				return id == LANG_THAI || id == LANG_LAO;
-			}
-#endif // BOOST_OS_WINDOWS
-
 			/**
 			 * Creates the bitmap for RTL caret.
 			 * @param extent The extent (height) of the image in pixels
@@ -216,76 +228,46 @@ namespace ascension {
 		}
 
 		/// @see CaretShaper#shape
-		CaretShaper::Shape DefaultCaretShaper::shape(const Caret& caret, const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT {
+		CaretShaper::Shape StandardCaretShaper::shape(const Caret& caret, const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT {
+#if 0
+#	if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			const bool inputMethodIsOpen = static_cast<Glib::ustring>(
+				const_cast<TextViewer&>(caret.textArea().textViewer()).get_settings()->property_gtk_im_module()) != nullptr;
+#	elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			auto imc(win32::inputMethod(const_cast<TextViewer&>(caret.textArea().textViewer())));
+			const bool inputMethodIsOpen = win32::boole(::ImmGetOpenStatus(imc.get()));
+#	else
+			ASCENSION_CANT_DETECT_PLATFORM();
+#	endif
+			if(inputMethodIsOpen) {
+				static const graphics::Color red(0x80, 0x00, 0x00);
+				return createSolidShape(caret, red, boost::none);
+			}
+#endif
+#if 0
+			if(presentation::isHorizontal(caret.textArea().textRenderer().computedBlockFlowDirection())) {
+				const WORD language = PRIMARYLANGID(LOWORD(::GetKeyboardLayout(::GetCurrentThreadId())));
+				if(isRtlLanguage(language))	// RTL
+					return createRtlCaretShape(caret, boost::none, boost::none);
+				else if(isTisLanguage(language))	// Thai relations
+					return createTisCaretShape(caret, boost::none, boost::none);
+			}
+#endif
 			return createSolidShape(caret, boost::none, boost::none);
 		}
 
 		/// @see CaretShaper#uninstall
-		void DefaultCaretShaper::uninstall(Caret& caret) BOOST_NOEXCEPT {
+		void StandardCaretShaper::uninstall(Caret& caret) BOOST_NOEXCEPT {
 			const auto i(caretMotionConnections_.find(&caret));
 			if(i != std::end(caretMotionConnections_)) {
-				i->second.disconnect();
+				std::get<1>(*i).disconnect();
 				caretMotionConnections_.erase(i);
 			}
-		}
-
-
-		// LocaleSensitiveCaretShaper /////////////////////////////////////////////////////////////////////////////////
-
-		/// @see Caret#MotionSignal
-		void LocaleSensitiveCaretShaper::caretMoved(const Caret& caret, const SelectedRegion& regionBeforeMotion) {
-			if(caret.isOvertypeMode())
-				signalStaticShapeChanged(caret);
-			else
-				DefaultCaretShaper::caretMoved(caret, regionBeforeMotion);
-		}
-
-		/// @see Caret#InputModeChangedSignal
-		void LocaleSensitiveCaretShaper::inputModeChanged(const Caret& caret, Caret::InputModeChangedSignalType) BOOST_NOEXCEPT {
-			signalStaticShapeChanged(caret);
-		}
-
-		/// @see CaretShaper#install
-		void LocaleSensitiveCaretShaper::install(Caret& caret) BOOST_NOEXCEPT {
-			DefaultCaretShaper::install(caret);
-			assert(inputModeChangedConnections_.find(&caret) == std::end(inputModeChangedConnections_));
-			inputModeChangedConnections_.insert(std::make_pair(&caret,
-				caret.inputModeChangedSignal().connect(
-					std::bind(&LocaleSensitiveCaretShaper::inputModeChanged, this, std::placeholders::_1, std::placeholders::_2))));
-		}
-
-		/// @see CaretShaper#shape
-		CaretShaper::Shape LocaleSensitiveCaretShaper::shape(const Caret& caret, const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT {
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			const bool inputMethodIsOpen = static_cast<Glib::ustring>(
-				const_cast<TextViewer&>(caret.textArea().textViewer()).get_settings()->property_gtk_im_module()) != nullptr;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			auto imc(win32::inputMethod(const_cast<TextViewer&>(caret.textArea().textViewer())));
-			const bool inputMethodIsOpen = win32::boole(::ImmGetOpenStatus(imc.get()));
-#else
-			ASCENSION_CANT_DETECT_PLATFORM();
-#endif
-			if(inputMethodIsOpen) {
-				static const graphics::Color red(0x80, 0x00, 0x00);
-				return createSolidShape(caret, red, boost::none);
-//			} else if(isHorizontal(caret.textViewer().textRenderer().computedBlockFlowDirection())) {
-//				const WORD language = PRIMARYLANGID(LOWORD(::GetKeyboardLayout(::GetCurrentThreadId())));
-//				if(isRtlLanguage(language))	// RTL
-//					return createRtlCaretShape(caret, boost::none, boost::none);
-//				else if(isTisLanguage(language))	// Thai relations
-//					return createTisCaretShape(caret, boost::none, boost::none);
+			const auto j(inputModeChangedConnections_.find(&caret));
+			if(j != std::end(inputModeChangedConnections_)) {
+				std::get<1>(*j).disconnect();
+				inputModeChangedConnections_.erase(j);
 			}
-			return DefaultCaretShaper::shape(caret, position);
-		}
-
-		/// @see CaretShapeProvider#uninstall
-		void LocaleSensitiveCaretShaper::uninstall(Caret& caret) BOOST_NOEXCEPT {
-			const auto i(inputModeChangedConnections_.find(&caret));
-			if(i != std::end(inputModeChangedConnections_)) {
-				i->second.disconnect();
-				inputModeChangedConnections_.erase(i);
-			}
-			DefaultCaretShaper::uninstall(caret);
 		}
 	}
 }
