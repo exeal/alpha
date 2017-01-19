@@ -90,7 +90,7 @@ namespace alpha {
 	 * @throw ascension#encoding#UnsupportedEncodingException @a encoding is not supported
 	 * @throw ascension#UnknownValueException @a newline is invalid
 	 */
-	std::shared_ptr<Buffer> BufferList::addNew(const Glib::ustring& name /* = Glib::ustring() */,
+	std::shared_ptr<Buffer> BufferList::addNew(const PlatformString& name /* = PlatformString() */,
 			const std::string& encoding /* = "UTF-8" */, ascension::text::Newline newline /* = ascension::text::Newline::USE_INTRINSIC_VALUE */) {
 		BufferEntry newEntry;
 		newEntry.buffer.reset(new Buffer(name));
@@ -203,8 +203,8 @@ namespace alpha {
 	 * @param buffer The buffer
 	 * @return The display name
 	 */
-	Glib::ustring BufferList::displayName(const Buffer& buffer) const BOOST_NOEXCEPT {
-		Glib::ustring name(buffer.name());
+	PlatformString BufferList::displayName(const Buffer& buffer) const BOOST_NOEXCEPT {
+		auto name(buffer.name());
 		if(buffer.isModified())
 			name.append(" *");	// TODO: Be customizable.
 		if(buffer.isReadOnly())
@@ -263,7 +263,7 @@ namespace alpha {
 	 * @param The name of buffer
 	 * @return The buffer, or @c boost#python#object() if there is no buffer with @a name
 	 */
-	Buffer* BufferList::forName(const Glib::ustring& name) const {
+	Buffer* BufferList::forName(const PlatformString& name) const {
 		const auto found = boost::find_if(buffers_, [&name](const BufferEntry& e) {
 			return e.buffer->name() == name;
 		});
@@ -402,10 +402,10 @@ namespace alpha {
 	 * @return The generated name string
 	 * @throw std#overflow_error
 	 */
-	Glib::ustring BufferList::makeUniqueName(const Glib::ustring& name) const {
+	PlatformString BufferList::makeUniqueName(const PlatformString& name) const {
 		if(forName(name) == nullptr)
 			return name;
-		const Glib::ustring format(name + "<%1>");
+		const auto format(name + "<%1>");
 		for(std::size_t n = 2; ; ++n) {
 			const Glib::ustring newName(Glib::ustring::compose(format, n));
 			if(forName(newName) == boost::python::object())
@@ -905,7 +905,7 @@ namespace alpha {
 //			.def("__iter__", &)
 			.def("__len__", &BufferList::numberOfBuffers)
 			.def("add_new", &BufferList::addNew,
-				(boost::python::arg("name") = Glib::ustring(), boost::python::arg("encoding") = "UTF-8", boost::python::arg("newline") = ascension::text::Newline::USE_INTRINSIC_VALUE),
+				(boost::python::arg("name") = PlatformString(), boost::python::arg("encoding") = "UTF-8", boost::python::arg("newline") = ascension::text::Newline::USE_INTRINSIC_VALUE),
 				boost::python::return_value_policy<boost::python::reference_existing_object>())
 #if 0
 			.def("add_new_dialog", &BufferList::addNewDialog,

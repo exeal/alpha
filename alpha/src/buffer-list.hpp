@@ -13,12 +13,6 @@
 #include <ascension/text-editor/session.hpp>
 #include <boost/python.hpp>
 #include <boost/thread/recursive_mutex.hpp>
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#	include <ascension/win32/ui/menu.hpp>
-#	include <ascension/win32/ui/common-controls.hpp>
-#else
-#	include <gtkmm/menu.h>
-#endif
 
 
 namespace alpha {
@@ -43,10 +37,10 @@ namespace alpha {
 		/// @name
 		/// @{
 		Buffer& at(std::size_t index) const;
-		Glib::ustring displayName(const Buffer& buffer) const BOOST_NOEXCEPT;
+		PlatformString displayName(const Buffer& buffer) const BOOST_NOEXCEPT;
 		boost::optional<std::size_t> find(const Buffer& buffer) const BOOST_NOEXCEPT;
-		Buffer* forName(const Glib::ustring& name) const;
-		Glib::ustring makeUniqueName(const Glib::ustring& name) const;
+		Buffer* forName(const PlatformString& name) const;
+		PlatformString makeUniqueName(const PlatformString& name) const;
 		void move(boost::python::ssize_t from, boost::python::ssize_t to);
 		std::size_t numberOfBuffers() const BOOST_NOEXCEPT;
 		/// @}
@@ -61,7 +55,7 @@ namespace alpha {
 		/// @name Open and Save
 		/// @{
 		std::shared_ptr<Buffer> addNew(
-			const Glib::ustring& name = Glib::ustring(), const std::string& encoding = "UTF-8",
+			const PlatformString& name = PlatformString(), const std::string& encoding = "UTF-8",
 			ascension::text::Newline newline = ascension::text::Newline::USE_INTRINSIC_VALUE);
 //		Buffer* addNewDialog(const ascension::String& name = L"");
 		void close(Buffer& buffer);

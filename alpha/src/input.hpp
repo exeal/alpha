@@ -7,6 +7,7 @@
 
 #ifndef ALPHA_INPUT_HPP
 #define ALPHA_INPUT_HPP
+#include "platform-string.hpp"
 #include <ascension/corelib/detail/scope-guard.hpp>
 #include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
 #include <boost/operators.hpp>	// boost.equality_comparable
@@ -21,7 +22,7 @@ namespace alpha {
 		class Input {
 		public:
 //			virtual bool equals(const Input& other) const BOOST_NOEXCEPT = 0;
-//			virtual Glib::ustring format() const BOOST_NOEXCEPT = 0;
+//			virtual PlatformString format() const BOOST_NOEXCEPT = 0;
 		};
 //		std::wostream& operator<<(std::wostream& out, const Input& v) {return out << v.format();}
 
@@ -35,11 +36,11 @@ namespace alpha {
 
 		public:
 			explicit KeyStroke(NaturalKey naturalKey, ModifierKey modifierKeys = static_cast<ModifierKey>(0));
-			explicit KeyStroke(const Glib::ustring& format);
+			explicit KeyStroke(const PlatformString& format);
 			bool operator==(const KeyStroke& other) const BOOST_NOEXCEPT;
 			ModifierKey modifierKeys() const BOOST_NOEXCEPT;
 			NaturalKey naturalKey() const BOOST_NOEXCEPT;
-			Glib::ustring text() const BOOST_NOEXCEPT;
+			PlatformString text() const BOOST_NOEXCEPT;
 
 		private:
 			/*const*/ NaturalKey naturalKey_;
@@ -79,13 +80,13 @@ namespace alpha {
 
 		class KeyMap : public AbstractKeyMap, public std::enable_shared_from_this<KeyMap> {
 		public:
-			explicit KeyMap(const Glib::ustring& name = Glib::ustring());
+			explicit KeyMap(const PlatformString& name = Glib::ustring());
 
 			/// @name Attributes
 			/// @{
 			boost::python::object lookupKey(const KeyStroke& key) const BOOST_NOEXCEPT override;
 			boost::python::object lookupKey(boost::python::object key) const override;
-			const Glib::ustring& name() const BOOST_NOEXCEPT;
+			const PlatformString& name() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Definitions
@@ -107,7 +108,7 @@ namespace alpha {
 			void checkLock(const char* message) const;
 			std::pair<KeyMap&, const KeyStroke&> lookupKeyMapAndKeyStroke(boost::python::object key) const;
 		private:
-			const Glib::ustring name_;
+			const PlatformString name_;
 			std::unordered_map<KeyStroke, boost::python::object> table_;
 			std::size_t lockedCount_;
 		};
