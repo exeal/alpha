@@ -76,7 +76,7 @@ wstring KeyStroke::format(py::object keys) {
 		}
 
 		/// Returns a human-readable text represents this key stroke.
-		Glib::ustring KeyStroke::text() const BOOST_NOEXCEPT {
+		PlatformString KeyStroke::text() const BOOST_NOEXCEPT {
 #if 1
 			return Gtk::AccelGroup::get_label(naturalKey(), static_cast<Gdk::ModifierType>(modifierKeys()));
 #else
@@ -114,7 +114,7 @@ wstring KeyStroke::format(py::object keys) {
 		 * Creates and returns a new @c KeyMap object.
 		 * @param name The name of this @c KeyMap
 		 */
-		KeyMap::KeyMap(const Glib::ustring& name /* = Glib::ustring() */) : name_(name), lockedCount_(0) {
+		KeyMap::KeyMap(const PlatformString& name /* = PlatformString() */) : name_(name), lockedCount_(0) {
 		}
 
 		/// @internal Raises Python's @c PermissionError if locked.
@@ -219,7 +219,7 @@ wstring KeyStroke::format(py::object keys) {
 		}
 
 		/// Returns the name of this @c KeyMap.
-		const Glib::ustring& KeyMap::name() const BOOST_NOEXCEPT {
+		const PlatformString& KeyMap::name() const BOOST_NOEXCEPT {
 			return name_;
 		}
 
@@ -316,7 +316,7 @@ wstring KeyStroke::format(py::object keys) {
 				return !typed;
 			} else {
 				// make human-readable text string for the incomplete (or undefined) key stroke(s)
-				Glib::ustring incompleteKeyStrokes;
+				PlatformString incompleteKeyStrokes;
 				assert(pendingKeyStrokes_.size() != 1);
 				if(pendingKeyStrokes_.empty())
 					incompleteKeyStrokes = key.text();
@@ -517,7 +517,7 @@ bool InputManager::input(const MSG& message) {
 				.def("text", &KeyStroke::text);
 
 			boost::python::class_<KeyMap, std::shared_ptr<KeyMap>>("KeyMap")
-				.def(boost::python::init<>((boost::python::arg("name") = Glib::ustring())))
+				.def(boost::python::init<>((boost::python::arg("name") = PlatformString())))
 				.def_readonly("name", boost::python::make_function(&KeyMap::name, boost::python::return_value_policy<boost::python::copy_const_reference>()))
 				.def<void(KeyMap::*)(boost::python::object, boost::python::object)>("define", &KeyMap::define)
 				.def<boost::python::object(KeyMap::*)(boost::python::object) const>("lookup_key", &KeyMap::lookupKey)

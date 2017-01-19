@@ -70,7 +70,7 @@ namespace alpha {
 	 * @param name The name of the buffer
 	 * @throw std#invalid_argument @a name is empty
 	 */
-	Buffer::Buffer(const Glib::ustring& name) : name_(BufferList::instance().makeUniqueName(name)) {
+	Buffer::Buffer(const PlatformString& name) : name_(BufferList::instance().makeUniqueName(name)) {
 		presentation_ = std::make_shared<ascension::presentation::Presentation>(*this);
 		textFile_.reset(new ascension::kernel::fileio::TextFileDocumentInput(*this));
 	}
@@ -85,7 +85,7 @@ namespace alpha {
 	 * @param newName The new name
 	 * @param unique
 	 */
-	void Buffer::rename(const Glib::ustring& newName, bool unique /* = false */) {
+	void Buffer::rename(const PlatformString& newName, bool unique /* = false */) {
 		if(unique && BufferList::instance().forName(newName) != boost::python::object()) {
 			const Glib::ustring message("Buffer name `" + newName + "' is in use");
 			::PyErr_SetString(PyExc_ValueError, message.c_str());

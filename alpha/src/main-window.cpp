@@ -51,8 +51,8 @@ namespace alpha {
 		void MainWindow::updateTitle() {
 //			if(isWindow()) {
 				// show the display name of the selected buffer and application credit
-				static Glib::ustring titleCache;
-				Glib::ustring title(BufferList::instance().displayName(EditorPanes::instance().selectedBuffer()));
+				static PlatformString titleCache;
+				PlatformString title(BufferList::instance().displayName(EditorPanes::instance().selectedBuffer()));
 				if(title != titleCache) {
 					titleCache = title;
 					title += " - ";

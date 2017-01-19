@@ -7,6 +7,7 @@
 
 #ifndef ALPHA_BUFFER_HPP
 #define ALPHA_BUFFER_HPP
+#include "platform-string.hpp"
 #include <ascension/kernel/fileio/text-file-document-input.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/text-editor/session.hpp>
@@ -15,15 +16,15 @@ namespace alpha {
 	/// A buffer.
 	class Buffer : public ascension::kernel::Document {
 	public:
-		explicit Buffer(const Glib::ustring& name);
+		explicit Buffer(const PlatformString& name);
 
 		/// @name Attributes
 		/// @{
-		const Glib::ustring& name() const BOOST_NOEXCEPT;
-		void rename(const Glib::ustring& newName, bool unique = false);
+		const PlatformString& name() const BOOST_NOEXCEPT;
+		void rename(const PlatformString& newName, bool unique = false);
 		/// @}
 
-		void save(const Glib::ustring& fileName);
+		void save(const PlatformString& fileName);
 
 		/// @name Shortcuts
 		/// @{
@@ -42,13 +43,13 @@ namespace alpha {
 	private:
 		std::shared_ptr<ascension::presentation::Presentation> presentation_;
 		std::unique_ptr<ascension::kernel::fileio::TextFileDocumentInput> textFile_;
-		Glib::ustring name_;
+		PlatformString name_;
 		NameChangedSignal nameChangedSignal_;
 	};
 
 
 	/// Returns the name of the buffer.
-	inline const Glib::ustring& Buffer::name() const BOOST_NOEXCEPT {
+	inline const PlatformString& Buffer::name() const BOOST_NOEXCEPT {
 		return name_;
 	}
 
