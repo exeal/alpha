@@ -8,20 +8,24 @@
 
 #ifndef ALPHA_MAIN_WINDOW_HPP
 #define ALPHA_MAIN_WINDOW_HPP
-//#include "buffer.hpp"
 #include "editor-panes.hpp"
-//#include "search.hpp"	// ui.SearchDialog
 #include "status-bar.hpp"
-#include <gtkmm/box.h>
-#include <gtkmm/window.h>
-#include <memory>	// std.unique_ptr
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	include <gtkmm/box.h>
+#	include <gtkmm/window.h>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#	include <ascension/win32/window/subclassed-window.hpp>
+#endif
 
 namespace alpha {
 	namespace ui {
-//		class SearchDialog;
-//		class BookmarkDialog;
-
-		class MainWindow : public Gtk::/*Application*/Window {
+		class MainWindow : public
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			Gtk::/*Application*/Window
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			ascension::win32::SubclassedWindow
+#endif
+		{
 		public:
 			MainWindow();
 
@@ -30,24 +34,18 @@ namespace alpha {
 			/// @name Children
 			/// @{
 			EditorPanes& editorPanes() const BOOST_NOEXCEPT;
-//			SearchDialog& searchDialog() const BOOST_NOEXCEPT;
 			StatusBar& statusBar() const BOOST_NOEXCEPT;
 			/// @}
 
 		private:
-#ifdef _DEBUG
-			bool on_event(GdkEvent* event) override;
-#endif
-			bool on_focus_in_event(GdkEventFocus* event) override;
-		private:
-			Gtk::Box box_;	// TODO: Replace by Gtk.Grid.
 			EditorPanes editorPanes_;
-//			std::unique_ptr<ui::SearchDialog> searchDialog_;
 			StatusBar statusBar_;
 			boost::signals2::scoped_connection bufferSelectionChangedConnection_;
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			manah::win32::ui::Rebar rebar_;		// rebar
-			manah::win32::ui::Toolbar toolbar_;	// standard toolbar
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			Gtk::Box box_;	// TODO: Replace by Gtk.Grid.
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+//			manah::win32::ui::Rebar rebar_;		// rebar
+//			manah::win32::ui::Toolbar toolbar_;	// standard toolbar
 #endif
 		};
 
@@ -55,11 +53,6 @@ namespace alpha {
 		inline EditorPanes& MainWindow::editorPanes() const BOOST_NOEXCEPT {
 			return const_cast<MainWindow*>(this)->editorPanes_;
 		}
-
-//		/// Returns the search dialog box.
-//		inline SearchDialog& MainWindow::searchDialog() const BOOST_NOEXCEPT {
-//			return *searchDialog_;
-//		}
 
 		/// Returns the status bar.
 		inline StatusBar& MainWindow::statusBar() const BOOST_NOEXCEPT {
