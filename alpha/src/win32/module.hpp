@@ -7,6 +7,7 @@
 
 #ifndef ALPHA_WIN32_MODULE_HPP
 #define ALPHA_WIN32_MODULE_HPP
+#include "win32/resource-id.hpp"
 #include <ascension/win32/handle.hpp>
 #include <string>
 #include <type_traits>
@@ -43,7 +44,7 @@ namespace alpha {
 			 * @param language The language of the resource
 			 * @return A handle to the specified resource's information block
 			 */
-			ascension::win32::Handle<HRSRC> findResource(const ascension::win32::ResourceID& id, const WCHAR* type, WORD language = MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL)) {
+			ascension::win32::Handle<HRSRC> findResource(const ResourceID& id, const WCHAR* type, WORD language = MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL)) {
 				if(HRSRC temp = ::FindResourceExW(handle_.get(), type, id, language))
 					return ascension::win32::borrowed(temp);
 				throw ascension::makePlatformError();
@@ -53,7 +54,7 @@ namespace alpha {
 			 * Calls @c LoadAcceleratorsW.
 			 * @param id The resource identifier
 			 */
-			void loadAccelerators(const ascension::win32::ResourceID& id) {
+			void loadAccelerators(const ResourceID& id) {
 				auto newAccelerators(ascension::win32::borrowed(::LoadAcceleratorsW(handle_.get(), id)));	// MSDN says "are freed automatically when the application terminates."
 				if(newAccelerators.get() == nullptr)
 					throw ascension::makePlatformError();
@@ -79,7 +80,7 @@ namespace alpha {
 			 * @param id The resource identifier
 			 * @return A handle to the loaded cursor
 			 */
-			static ascension::win32::Handle<HCURSOR> loadStandardCursor(const ascension::win32::ResourceID& id) {
+			static ascension::win32::Handle<HCURSOR> loadStandardCursor(const ResourceID& id) {
 				if(auto temp = ascension::win32::borrowed(::LoadCursorW(nullptr, id)))
 					return temp;
 				throw ascension::makePlatformError();
@@ -90,7 +91,7 @@ namespace alpha {
 			 * @param id The resource identifier
 			 * @return A handle to the loaded icon
 			 */
-			static ascension::win32::Handle<HICON> loadStandardIcon(const ascension::win32::ResourceID& id) {
+			static ascension::win32::Handle<HICON> loadStandardIcon(const ResourceID& id) {
 				if(auto temp = ascension::win32::borrowed(::LoadIconW(nullptr, id)))
 					return temp;
 				throw ascension::makePlatformError();

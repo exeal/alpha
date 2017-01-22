@@ -1202,17 +1202,7 @@ namespace ascension {
 					return (consumed = true), fireMouseReleased(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
 			}
 
-			return win32::CustomControl::processMessage(message, wp, lp, consumed);
-		}
-
-		void TextViewer::provideClassInformation(win32::CustomControl::ClassInformation& classInformation) const {
-			classInformation.style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS;
-			classInformation.background = COLOR_WINDOW;
-			classInformation.cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
-		}
-
-		std::basic_string<WCHAR> TextViewer::provideClassName() const {
-			return L"ascension.TextViewer";
+			return win32::CustomControl<TextViewer>::processMessage(message, wp, lp, consumed);
 		}
 
 		/// @see Widget#showContextMenu
@@ -1433,6 +1423,13 @@ namespace ascension {
 			int c = ::GetMenuItemCount(toplevelPopup.get());
 			while(c > 13)
 				::DeleteMenu(toplevelPopup.get(), c--, MF_BYPOSITION);
+		}
+
+		void TextViewer::windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT {
+			out.name = L"ascension.TextViewer";
+			out.styles = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS;
+			out.background = COLOR_WINDOW;
+			out.cursor = win32::WindowClass::Cursor(MAKEINTRESOURCEW(32513));	// IDC_IBEAM
 		}
 	}
 }

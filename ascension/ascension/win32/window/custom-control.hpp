@@ -28,7 +28,7 @@ namespace ascension {
 				Background(Handle<HBRUSH> handle) BOOST_NOEXCEPT : brush_(handle) {}
 				/// Creates a @c Background instance with a @c COLORREF value used to make the brush handle.
 				Background(int systemColor) BOOST_NOEXCEPT
-					: brush_(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(systemColor + 1))) {}
+					: brush_(borrowed(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(systemColor + 1)))) {}
 				/// Move-constructor.
 				Background(Background&& other) BOOST_NOEXCEPT : brush_(std::move(other.brush_)) {}
 				/// Move-assignment operator.
@@ -49,7 +49,8 @@ namespace ascension {
 				/// Creates a @c Cursor instance wirh a cursor handle.
 				Cursor(Handle<HCURSOR> handle) BOOST_NOEXCEPT : cursor_(handle) {}
 				/// Creates a @c Cursor instance with a numeric identifier for system cursor.
-				Cursor(const boost::basic_string_ref<WCHAR, std::char_traits<WCHAR>>& systemCursorID) BOOST_NOEXCEPT : cursor_(::LoadCursorW(nullptr, systemCursorID.data())) {}
+				Cursor(const std::basic_string<WCHAR>& systemCursorID) BOOST_NOEXCEPT :
+					cursor_(static_cast<HCURSOR>(::LoadImageW(nullptr, systemCursorID.c_str(), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_SHARED)), &::DestroyCursor) {}
 				/// Move-constructor.
 				Cursor(Cursor&& other) BOOST_NOEXCEPT : cursor_(std::move(other.cursor_)) {}
 				/// Move-assignment operator.

@@ -10,7 +10,7 @@
 #include "resource.h"
 #include "buffer.hpp"
 //#include "search.hpp"	// ui.SearchDialog
-#include "main-window.hpp"
+#include "ui/main-window.hpp"
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include "win32/module.hpp"
 #endif
