@@ -14,7 +14,7 @@
 #	include <gtkmm/box.h>
 #	include <gtkmm/window.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#	include <ascension/win32/window/subclassed-window.hpp>
+#	include <ascension/win32/window/custom-control.hpp>
 #endif
 
 namespace alpha {
@@ -23,7 +23,7 @@ namespace alpha {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			Gtk::/*Application*/Window
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			ascension::win32::SubclassedWindow
+			ascension::win32::CustomControl<MainWindow>
 #endif
 		{
 		public:
@@ -44,6 +44,7 @@ namespace alpha {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			Gtk::Box box_;	// TODO: Replace by Gtk.Grid.
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 //			manah::win32::ui::Rebar rebar_;		// rebar
 //			manah::win32::ui::Toolbar toolbar_;	// standard toolbar
 #endif

@@ -1,15 +1,17 @@
 /**
- * @file main-window.cpp
+ * @file main-window-gtk.cpp
  * Implements alpha#ui#MainWindow class.
  * @author exeal
  * @date 2014-06-04 Created.
+ * @date 2017-01-21 Renamed from main-window.cpp.
  */
 
-#include "buffer-list.hpp"
-#include "editor-view.hpp"
 #include "main-window.hpp"
-#include <ascension/log.hpp>
-#include <glibmm/i18n.h>
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	include "buffer-list.hpp"
+#	include "editor-view.hpp"
+#	include <ascension/log.hpp>
+#	include <glibmm/i18n.h>
 
 namespace alpha {
 	namespace ui {
@@ -43,3 +45,5 @@ namespace alpha {
 		}
 	}
 }
+
+#endif
