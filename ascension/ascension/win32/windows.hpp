@@ -119,19 +119,6 @@ namespace ascension {
 		explicit ClassName(Managed<HandleType>* handle) : BaseObject(handle) {}	\
 		explicit ClassName(Borrowed<HandleType>* handle) : BaseObject(handle) {}
 
-		/// A resource identifier can be initialized by using both a string and a numeric identifier.
-		class ResourceID : private boost::noncopyable {
-		public:
-			/// Constructor takes a string identifier.
-			ResourceID(const win32::StringPiece& name) BOOST_NOEXCEPT : name_(name.data()) {}
-			/// Constructor takes a numeric identifier.
-			ResourceID(UINT_PTR id) BOOST_NOEXCEPT : name_(MAKEINTRESOURCEW(id)) {}
-			/// Returns the string identifier.
-			operator const WCHAR*() const BOOST_NOEXCEPT {return name_;}
-		private:
-			const WCHAR* const name_;
-		};
-
 		/**
 		 * Creates an object and fills with zero.
 		 * @tparam T The object type
