@@ -21,7 +21,8 @@
 namespace ascension {
 	namespace viewer {
 		namespace {
-			typedef
+			/// Circled window displayed at which the auto scroll started.
+			class AutoScrollOriginMark : public
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Gtk::Window
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
@@ -29,12 +30,9 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				NSView
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				win32::CustomControl
+				win32::CustomControl<AutoScrollOriginMark>
 #endif
-				AutoScrollOriginMarkBase;
-
-			/// Circled window displayed at which the auto scroll started.
-			class AutoScrollOriginMark : public AutoScrollOriginMarkBase {
+			{
 			public:
 				/// Defines the type of the cursors obtained by @c #cursorForScrolling method.
 				enum CursorType {
@@ -43,7 +41,7 @@ namespace ascension {
 					CURSOR_DOWNWARD	///< Indicates scrolling downward.
 				};
 			public:
-				explicit AutoScrollOriginMark(TextViewer& viewer) BOOST_NOEXCEPT;
+				explicit AutoScrollOriginMark(TextViewer& viewer);
 				static const widgetapi::Cursor& cursorForScrolling(CursorType type);
 				void resetWidgetShape();
 			private:
@@ -52,7 +50,13 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				void on_realize() override {resetWidgetShape();}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+				void windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT override {
+					out.name = L"AutoScrollOriginMark";
+					out.styles = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
+					out.background = COLOR_WINDOW;
+					out.cursor = win32::WindowClass::Cursor(MAKEINTRESOURCEW(32513));	// IDC_IBEAM
+				}
+				LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override {
 					if(message == WM_PAINT) {
 						PAINTSTRUCT ps;
 						::BeginPaint(handle().get(), &ps);
@@ -61,14 +65,8 @@ namespace ascension {
 						::EndPaint(handle().get(), &ps);
 						consumed = true;
 					}
-					return win32::CustomControl::processMessage(message, wp, lp, consumed);
+					return win32::CustomControl<AutoScrollOriginMark>::processMessage(message, wp, lp, consumed);
 				}
-				void provideClassInformation(win32::CustomControl::ClassInformation& classInformation) const {
-					classInformation.style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
-					classInformation.background = COLOR_WINDOW;
-					classInformation.cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
-				}
-				std::basic_string<WCHAR> provideClassName() const override {return L"AutoScrollOriginMark";}
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			private:
 				graphics::Scalar width_;
@@ -82,7 +80,11 @@ namespace ascension {
 		 * Constructor.
 		 * @param viewer The text viewer. The widget becomes the child of this viewer
 		 */
-		AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) BOOST_NOEXCEPT {
+		AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				: win32::CustomControl<AutoScrollOriginMark>(POPUP)
+#endif
+		{
 //			resetWidgetShape();
 			widgetapi::setParentWidget(*this, viewer);
 		}

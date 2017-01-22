@@ -41,9 +41,6 @@ namespace alpha {
 		void updateStatusBar();
 
 	private:
-#ifdef _DEBUG
-		bool on_event(GdkEvent* event) override;
-#endif
 		// ascension.viewer.TextViewer (overrides)
 		void drawIndicatorMargin(ascension::Index line, ascension::graphics::PaintContext& context, const ascension::graphics::Rectangle& rect) override;
 		void initialized() BOOST_NOEXCEPT override;

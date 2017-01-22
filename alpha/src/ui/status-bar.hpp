@@ -29,7 +29,7 @@ namespace alpha {
 #endif
 		{
 		public:
-			explicit StatusBar(MainWindow& parent);
+			StatusBar();
 			bool isSimple() const BOOST_NOEXCEPT;
 			void setSimple(bool simple);
 		};

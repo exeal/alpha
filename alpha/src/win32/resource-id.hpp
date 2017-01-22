@@ -19,7 +19,7 @@ namespace alpha {
 			 * Creates a @c ResourceID instance with a numeric identifier.
 			 * @param id The identifier
 			 */
-			ResourceID(UINT_PTR id) BOOST_NOEXCEPT : name_(MAKEINTRESOURCEW(id)) {
+			ResourceID(UINT_PTR id) : name_(MAKEINTRESOURCEW(id)) {
 				if(!IS_INTRESOURCE(id))
 					throw std::invalid_argument("id");
 			}
