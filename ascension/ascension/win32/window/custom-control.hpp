@@ -71,10 +71,12 @@ namespace ascension {
 		 */
 		template<typename Derived>
 		class CustomControl : public Window {
-		public:
-			explicit CustomControl(const Handle<HWND>& parent) : Window(registerAndCreate(*this, parent)) {}
-
 		protected:
+			/**
+			 * Creates a @c CustomControl instance.
+			 * @param type The window type
+			 */
+			explicit CustomControl(Type type) : Window(registerAndCreate(*this).c_str(), type) {}
 			/**
 			 * The window procedure.
 			 * @param message The window message
@@ -90,11 +92,11 @@ namespace ascension {
 			virtual void windowClass(WindowClass& out) const BOOST_NOEXCEPT = 0;
 
 		private:
-			static Handle<HWND> registerAndCreate(CustomControl& self, const Handle<HWND>& parent /*, DWORD styles, DWORD extendedStyles */) {
-				static std::basic_string<WCHAR> klassName;
-				if(klassName.empty()) {
+			static const std::basic_string<WCHAR>& registerAndCreate(CustomControl& self) {
+				static std::basic_string<WCHAR> windowClassName;
+				if(windowClassName.empty()) {
 					WindowClass klassData;
-					self.klass(klassData);
+					self.windowClass(klassData);
 					assert(!klassData.name.empty());
 
 					WNDCLASSEXW classData;
@@ -111,22 +113,20 @@ namespace ascension {
 					classData.hIconSm = klassData.smallIcon.get();
 					if(::RegisterClassExW(&classData) == 0)
 						throw makePlatformError();
-					klassName = klassData.name;
+					windowClassName = klassData.name;
 				}
 
-				auto handle = ::CreateWindowExW(0/*extendedStyles*/, klassName.c_str(), nullptr, 0/*styles*/,
-					CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, parent.get(), nullptr, nullptr, &self);
-				if(handle == nullptr)
-					throw makePlatformError();
-				return makeHandle(handle, &::DestroyWindow);
+				return windowClassName;
 			}
 			static LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wp, LPARAM lp) {
 				return messageDispatcher_.dispatch(window, message, wp, lp);
 			}
 		private:
-			detail::MessageDispatcher<CustomControl> messageDispatcher_;
-			friend class detail::MessageDispatcher<CustomControl>;
+			static detail::MessageDispatcher<CustomControl<Derived>> messageDispatcher_;
+			friend class detail::MessageDispatcher<CustomControl<Derived>>;
 		};
+
+		template<typename Derived> detail::MessageDispatcher<CustomControl<Derived>> CustomControl<Derived>::messageDispatcher_;
 	}
 }
 

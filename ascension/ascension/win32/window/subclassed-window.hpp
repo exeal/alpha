@@ -9,14 +9,16 @@
 
 #ifndef ASCENSION_SUBCLASSED_WINDOW_HPP
 #define ASCENSION_SUBCLASSED_WINDOW_HPP
-#include <ascension/graphics/geometry/dimension.hpp>
-#include <ascension/graphics/geometry/point.hpp>
 #include <ascension/win32/window/window.hpp>
 #include <ascension/win32/window/detail/message-dispatcher.hpp>
-#include <boost/optional.hpp>
+#include <functional>
 
 namespace ascension {
 	namespace win32 {
+		/**
+		 * @tparam Derived The derived type
+		 */
+		template<typename Derived>
 		class SubclassedWindow : public Window {
 		public:
 			/// Move-constructor.
@@ -34,32 +36,13 @@ namespace ascension {
 		protected:
 			/**
 			 * Creates @c SubclassedWindow instance.
-			 * @param parent The parent or owner window
 			 * @param className The window class name
-			 * @param position The initial position of the window
-			 * @param size The initial size of the window in device units
-			 * @param style The window style
-			 * @param extendedStyle The extended window style
+			 * @param type The window type
 			 */
-			SubclassedWindow(const Handle<HWND>& parent, const std::basic_string<WCHAR>& className,
-					const boost::optional<graphics::Point>& position = boost::none, const boost::optional<graphics::Dimension>& size = boost::none,
-					const boost::optional<DWORD>& style = boost::none, const boost::optional<DWORD>& extendedStyle = boost::none) : Window(::CreateWindowExW(
-						boost::get_optional_value_or(extendedStyle, 0), className.c_str(), nullptr, boost::get_optional_value_or(style, 0),
-						(position != boost::none) ? static_cast<int>(boost::geometry::get<0>(boost::get(position))) : CW_USEDEFAULT,
-						(position != boost::none) ? static_cast<int>(boost::geometry::get<1>(boost::get(position))) : CW_USEDEFAULT,
-						(size != boost::none) ? static_cast<int>(graphics::geometry::dx(boost::get(size))) : CW_USEDEFAULT,
-						(size != boost::none) ? static_cast<int>(graphics::geometry::dy(boost::get(size))) : CW_USEDEFAULT,
-						parent.get(), nullptr, ::GetModuleHandleW(nullptr), nullptr)) {
-				if(handle().get() == nullptr)
-					throw makePlatformError();
-				originalWindowProcedure_ = reinterpret_cast<WNDPROC>(::GetWindowLongPtrW(handle().get(), GWLP_WNDPROC));
-				::SetLastError(0);
-				::SetWindowLongPtrW(handle().get(), GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
-				if(::GetLastError() != 0)
-					throw makePlatformError();
-				::SetWindowLongPtrW(handle().get(), GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(windowProcedure));
-				if(::GetLastError() != 0)
-					throw makePlatformError();
+			SubclassedWindow(const std::basic_string<WCHAR>& className, Type type) : Window(className, type) {
+				originalWindowProcedure_ = reinterpret_cast<WNDPROC>(getWindowLong(handle().get(), GWLP_WNDPROC));
+				setWindowLong(handle().get(), GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+				setWindowLong(handle().get(), GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(SubclassedWindow<Derived>::windowProcedure));
 			}
 			/**
 			 * Hooks and process window messages.
@@ -75,13 +58,15 @@ namespace ascension {
 
 		private:
 			static LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wp, LPARAM lp) {
-				return messageDispatcher_.dispatch(window, message, wp, lp, &SubclassedWindow::originalWindowProcedure_);
+				return messageDispatcher_.dispatch(window, message, wp, lp, &SubclassedWindow<Derived>::originalWindowProcedure_);
 			}
 		private:
-			static detail::MessageDispatcher<SubclassedWindow> messageDispatcher_;
+			static detail::MessageDispatcher<SubclassedWindow<Derived>> messageDispatcher_;
 			WNDPROC originalWindowProcedure_;
-			friend class detail::MessageDispatcher<SubclassedWindow>;
+			friend class detail::MessageDispatcher<SubclassedWindow<Derived>>;
 		};
+
+		template<typename Derived> detail::MessageDispatcher<SubclassedWindow<Derived>> SubclassedWindow<Derived>::messageDispatcher_;
 	}
 }
 
