@@ -115,7 +115,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				public NSView,
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				public win32::CustomControl,
+				public win32::CustomControl<TextViewer>,
 				public win32::com::IUnknownImpl<
 					ASCENSION_WIN32_COM_INTERFACE(IDropTarget), win32::com::NoReferenceCounting
 				>,
@@ -358,9 +358,8 @@ namespace ascension {
 			static void handleInputMethodContextPreeditStartSignal(GtkIMContext* context, gpointer userData);
 			static gboolean handleInputMethodContextRetrieveSurroundingSignal(GtkIMContext* context, gpointer userData);
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			// base.Widget
-			void provideClassInformation(ClassInformation& classInformation) const;
-			std::basic_string<WCHAR> provideClassName() const;
+			// win32.CustomControl<TextViewer>
+			void windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT;
 #endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 			// enumerations

@@ -11,16 +11,33 @@
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/win32/handle.hpp>
 #include <boost/noncopyable.hpp>
+#include <string>
 
 namespace ascension {
 	namespace win32 {
 		/// Holds a handle to the window.
 		class Window : private boost::noncopyable {
 		public:
-			static const DWORD DEFAULT_STYLE = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE;
-		public:
+			/// The window types.
+			enum Type {
+				WIDGET,		///< A widget.
+				TOPLEVEL,	///< A toplevel window.
+				POPUP		///< A pop-up window.
+			};
 			/// Constructor takes a borrowed window handle.
 			explicit Window(const Handle<HWND>& handle) BOOST_NOEXCEPT : handle_(handle.get()) {}
+			/**
+			 * Creates @c Window instance.
+			 * @param className The window class name
+			 * @param styles The window style(s)
+			 */
+			Window(const std::basic_string<WCHAR>& className, Type type) : handle_(::CreateWindowExW(
+					0, className.c_str(), nullptr, typeToStyles(type),
+					CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+					nullptr, nullptr, ::GetModuleHandleW(nullptr), nullptr), &::DestroyWindow) {
+				if(handle().get() == nullptr)
+					throw makePlatformError();
+			}
 			/// Move-constructor.
 			Window(Window&& other) BOOST_NOEXCEPT : handle_(std::move(other.handle_)) {}
 			/// Move-assignment operator.
@@ -29,13 +46,28 @@ namespace ascension {
 			Handle<HWND> handle() const {return handle_;}
 
 		protected:
-			/// Constructor takes a window handle.
+			/**
+			 * Creates a @c Window instance with the owned handle.
+			 * @param handle A handle to the window
+			 * @throw NullPointerException @a handle is @c null
+			 */
 			explicit Window(HWND&& handle) : handle_(handle, &::DestroyWindow) {
 				if(handle_.get() == nullptr)
 					throw NullPointerException("handle");
 			}
 
 		private:
+			static DWORD typeToStyles(Type type) {
+				switch(type) {
+					case WIDGET:
+						return WS_CHILD | WS_VISIBLE;
+					case TOPLEVEL:
+						return WS_OVERLAPPEDWINDOW;
+					case POPUP:
+						return WS_POPUPWINDOW;
+				}
+				ASCENSION_ASSERT_NOT_REACHED();
+			}
 			Handle<HWND> handle_;
 		};
 	}

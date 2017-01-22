@@ -96,7 +96,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QListView
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				win32::SubclassedWindow
+				win32::SubclassedWindow<CompletionProposalsPopup>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(X)
 				???
 #endif
