@@ -8,13 +8,14 @@
 #include "application.hpp"
 #include "buffer-list.hpp"
 #include "function-pointer.hpp"
+#include <ascension/corelib/text/from-latin1.hpp>
 #include <ascension/kernel/searcher.hpp>
 #include <boost/foreach.hpp>
+#include <boost/format.hpp>
 #include <boost/python/stl_iterator.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/for_each.hpp>
 #include <boost/thread/lock_guard.hpp>
-#include <glibmm/i18n.h>
 
 namespace alpha {
 
@@ -71,14 +72,6 @@ namespace alpha {
 		boost::for_each(buffers_, [this](BufferEntry& buffer) {
 			this->editorSession_.removeDocument(*buffer.buffer);
 		});
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		if(icons_.get() != 0) {
-			const int c = icons_.getNumberOfImages();
-			for(int i = 0; i < c; ++i)
-				::DestroyIcon(icons_.getIcon(i, ILD_NORMAL));
-			icons_.destroy();
-		}
-#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	}
 
 	/**
@@ -197,7 +190,7 @@ namespace alpha {
 			buffer.resetContent();
 		}
 	}
-
+#if 0
 	/**
 	 * Returns the presentative name of the specified buffer used to display in GUIs.
 	 * @param buffer The buffer
@@ -211,7 +204,7 @@ namespace alpha {
 			name.append(" #");	// TODO: Be customizable.
 		return name;
 	}
-
+#endif
 	/// Returns the @c DisplayNameChangedSignal signal connector.
 	ascension::SignalConnector<BufferList::DisplayNameChangedSignal> BufferList::displayNameChangedSignal() BOOST_NOEXCEPT {
 		return ascension::makeSignalConnector(displayNameChangedSignal_);
@@ -290,7 +283,7 @@ namespace alpha {
 		return getConcreteDocument(const_cast<ascension::kernel::Document&>(document));
 	}
 
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
 	/// Handles @c WM_NOTIFY message from the buffer bar.
 	LRESULT BufferList::handleBufferBarNotification(NMTOOLBARW& nmhdr) {
 		if(nmhdr.hdr.code == NM_RCLICK) {	// right click -> context menu
@@ -405,9 +398,9 @@ namespace alpha {
 	PlatformString BufferList::makeUniqueName(const PlatformString& name) const {
 		if(forName(name) == nullptr)
 			return name;
-		const auto format(name + "<%1>");
+		const auto format(name + ascension::fromLatin1<PlatformString>("<%1%>"));
 		for(std::size_t n = 2; ; ++n) {
-			const Glib::ustring newName(Glib::ustring::compose(format, n));
+			const auto newName((boost::basic_format<PlatformString::value_type>(format) % n).str());
 			if(forName(newName) == boost::python::object())
 				return newName;
 			if(n == std::numeric_limits<decltype(n)>::max())
@@ -666,7 +659,7 @@ namespace alpha {
 
 	/// Reconstructs the image list and the menu according to the current buffer list.
 	void BufferList::resetResources() {
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
 		if(icons_.get() != 0) {
 			const int c = icons_.getNumberOfImages();
 			for(int i = 0; i < c; ++i)
