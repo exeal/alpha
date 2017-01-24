@@ -7,6 +7,7 @@
  * @date 2016-11-04 Separated from command.cpp.
  */
 
+#include <ascension/corelib/text/from-latin1.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-input.hpp>
 #include <ascension/kernel/locations.hpp>

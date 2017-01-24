@@ -31,29 +31,6 @@ namespace ascension {
 		return StringPiece(first, last - first);
 	}
 
-	/**
-	 * Creates and returns a @c StringPiece from the given Latin1-encoded character string.
-	 * @tparam Character
-	 * @param from The source Latin1-encoded character string
-	 * @return A @c String
-	 */
-	template<typename Character>
-	inline ascension::String fromLatin1(const boost::basic_string_ref<Character, std::char_traits<Character>>& from) {
-		static_assert(sizeof(Character) == 1, "");
-		return ascension::String(from.cbegin(), from.cend());
-	}
-
-	/**
-	 * @overload
-	 * @tparam Character The type of @a from
-	 * @param from The source Latin1-encoded character string
-	 * @return A @c String
-	 */
-	template<typename Character>
-	inline ascension::String fromLatin1(const Character* from) {
-		return fromLatin1(boost::basic_string_ref<Character, std::char_traits<Character>>(from));
-	}
-
 #if ASCENSION_SUPPORTS_WINDOW_SYSTEM(GTK) || ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO) || ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
 	static_assert(sizeof(StringPiece::value_type) == 2, "");
 	static_assert(sizeof(StringPiece::value_type) == sizeof(gunichar2), "");

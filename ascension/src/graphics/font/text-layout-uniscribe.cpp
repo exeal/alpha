@@ -14,6 +14,7 @@
 #include <ascension/corelib/numeric-range-algorithm/intersection.hpp>
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/corelib/text/from-latin1.hpp>
 #include <ascension/corelib/text/string-character-iterator.hpp>
 #include <ascension/graphics/paint-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>

@@ -37,7 +37,6 @@ namespace alpha {
 		/// @name
 		/// @{
 		Buffer& at(std::size_t index) const;
-		PlatformString displayName(const Buffer& buffer) const BOOST_NOEXCEPT;
 		boost::optional<std::size_t> find(const Buffer& buffer) const BOOST_NOEXCEPT;
 		Buffer* forName(const PlatformString& name) const;
 		PlatformString makeUniqueName(const PlatformString& name) const;
