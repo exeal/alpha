@@ -8,6 +8,7 @@
 #include "application.hpp"
 #include "buffer-list.hpp"
 #include "function-pointer.hpp"
+#include "ui/main-window.hpp"
 #include <ascension/corelib/text/from-latin1.hpp>
 #include <ascension/kernel/searcher.hpp>
 #include <boost/foreach.hpp>

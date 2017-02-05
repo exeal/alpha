@@ -28,6 +28,13 @@ namespace ascension {
 						boost::geometry::set<boost::geometry::max_corner, dimension>(rectangle_, *std::end(other));
 						return *this;
 					}
+					RectangleRangeAccessProxy& operator=(const RectangleRangeAccessProxy& other) {
+						return *this = range<dimension>(other.rectangle_);
+					}
+					template<typename OtherGeometry, std::size_t otherDimension>
+					RectangleRangeAccessProxy& operator=(const RectangleRangeAccessProxy<OtherGeometry, otherDimension>& other) {
+						return *this = range<otherDimension>(other.rectangle_);
+					}
 					operator NumericRange<typename boost::geometry::coordinate_type<Geometry>::type>() const {
 						return crange<dimension>(rectangle_);
 					}
