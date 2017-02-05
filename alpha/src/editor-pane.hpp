@@ -8,9 +8,16 @@
 #ifndef ALPHA_EDITOR_PANE_HPP
 #define ALPHA_EDITOR_PANE_HPP
 #include <boost/core/noncopyable.hpp>
-#include <gtkmm/box.h>
-#include <gtkmm/scrolledwindow.h>
-#include <gtkmm/stack.h>
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	include <gtkmm/box.h>
+#	include <gtkmm/scrolledwindow.h>
+#	include <gtkmm/stack.h>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#	include <QStackedWidget>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#	include "win32/stacked-widget.hpp"
+#endif
 #include <list>
 #include <memory>
 
@@ -18,7 +25,17 @@ namespace alpha {
 	class Buffer;
 	class EditorView;
 
-	class EditorPane : public Gtk::Stack, private boost::noncopyable {
+	class EditorPane :
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		public Gtk::Stack, private boost::noncopyable
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+		public QStackedWidget
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+		???
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		public win32::StackedWidget
+#endif
+	{
 	public:
 		explicit EditorPane(std::unique_ptr<EditorView> initialViewer = std::unique_ptr<EditorView>());
 		EditorPane::EditorPane(const EditorPane& other);
@@ -42,28 +59,33 @@ namespace alpha {
 		const EditorView& selectedView() const;
 		/// @}
 
-		/// @name Splitting Panes
-		/// @{
-		void split();
-		void splitSideBySide();
-		/// @}
-
 	private:
-#ifdef _DEBUG
-		bool on_event(GdkEvent* event) override;
-		void on_realize() override;
-		void on_size_allocate(Gtk::Allocation& allocation) override;
-#endif
-		void split(Gtk::Orientation orientation);
 		void touch(const EditorView& viewer);
 
 	private:
-		typedef std::tuple<
-			Gtk::Box*,	// child of EditorPane. managed by gtkmm
-			Glib::RefPtr<Gtk::ScrolledWindow>,
-			std::unique_ptr<EditorView>
-//			std::unique_ptr<ModeLine>
-		> Child;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		class Container : public ascension::win32::CustomControl<Container> {
+		public:
+			Container();
+		private:
+			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
+			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
+		};
+		// ascension.win32.CustomControl
+		void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
+#endif
+		struct Child {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			Gtk::Box* container;	// child of EditorPane. managed by gtkmm
+			Glib::RefPtr<Gtk::ScrolledWindow> scroller;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			std::unique_ptr<Container> container;
+#endif
+			std::unique_ptr<EditorView> viewer;
+//			std::unique_ptr<ModeLine> modeLine;
+		};
 		std::list<Child> children_;	// visible and invisible children
 	};
 
@@ -76,14 +98,14 @@ namespace alpha {
 	inline EditorView& EditorPane::selectedView() {
 		if(children_.empty())
 			throw std::logic_error("There are no viewers.");
-		return *std::get<2>(children_.front());
+		return *children_.front().viewer;
 	}
 
 	/// Returns the visible viewer.
 	inline const EditorView& EditorPane::selectedView() const {
 		if(children_.empty())
 			throw std::logic_error("There are no viewers.");
-		return *std::get<2>(children_.front());
+		return *children_.front().viewer;
 	}
 }
 
