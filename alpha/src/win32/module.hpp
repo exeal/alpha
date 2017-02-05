@@ -36,7 +36,7 @@ namespace alpha {
 			const std::basic_string<WCHAR>& fileName() const BOOST_NOEXCEPT {
 				return fileName_;
 			}
-
+#if 0
 			/**
 			 * Calls @c FindResourceExW.
 			 * @param id The resource identifier
@@ -49,7 +49,7 @@ namespace alpha {
 					return ascension::win32::borrowed(temp);
 				throw ascension::makePlatformError();
 			}
-
+#endif
 			/**
 			 * Calls @c LoadAcceleratorsW.
 			 * @param id The resource identifier
@@ -60,7 +60,7 @@ namespace alpha {
 					throw ascension::makePlatformError();
 				std::swap(accelerators_, newAccelerators);
 			}
-
+#if 0
 			/**
 			 * Calls @c LoadResource.
 			 * @param resource A handle to the resource to be loaded
@@ -110,7 +110,7 @@ namespace alpha {
 					return temp;
 				throw ascension::makePlatformError();
 			}
-
+#endif
 		protected:
 			/// Returns a handle to the loaded accelerators, or @c null if not loaded.
 			ascension::win32::Handle<HACCEL> accelerators() const BOOST_NOEXCEPT {return accelerators_;}

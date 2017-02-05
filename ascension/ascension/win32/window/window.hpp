@@ -25,7 +25,7 @@ namespace ascension {
 				POPUP		///< A pop-up window.
 			};
 			/// Constructor takes a borrowed window handle.
-			explicit Window(const Handle<HWND>& handle) BOOST_NOEXCEPT : handle_(handle.get()) {}
+			explicit Window(const Handle<HWND>& handle) BOOST_NOEXCEPT : handle_(handle) {}
 			/**
 			 * Creates @c Window instance.
 			 * @param className The window class name

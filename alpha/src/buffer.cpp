@@ -87,9 +87,13 @@ namespace alpha {
 	 */
 	void Buffer::rename(const PlatformString& newName, bool unique /* = false */) {
 		if(unique && BufferList::instance().forName(newName) != boost::python::object()) {
+#ifndef ALPHA_NO_AMBIENT
 			const Glib::ustring message("Buffer name `" + newName + "' is in use");
 			::PyErr_SetString(PyExc_ValueError, message.c_str());
 			boost::python::throw_error_already_set();
+#else
+			throw std::invalid_argument("newName");
+#endif
 		}
 		name_ = BufferList::instance().makeUniqueName(newName);
 		nameChangedSignal_(*this);
