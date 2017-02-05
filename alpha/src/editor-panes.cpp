@@ -9,6 +9,7 @@
 
 #include "application.hpp"
 #include "buffer-list.hpp"
+#include "editor-pane.hpp"
 #include "editor-panes.hpp"
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
@@ -25,7 +26,13 @@ namespace alpha {
 	 */
 
 	/// Default constructor.
-	EditorPanes::EditorPanes() : Gtk::Paned(Gtk::ORIENTATION_VERTICAL) {
+	EditorPanes::EditorPanes()
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		: Gtk::Paned(Gtk::ORIENTATION_HORIZONTAL)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+		: QSplitter(Qt::Horizontal)
+#endif
+	{
 		BufferList& bufferList = BufferList::instance();
 		bufferAboutToBeRemovedConnection_ =
 			bufferList.bufferAboutToBeRemovedSignal().connect(
@@ -33,11 +40,23 @@ namespace alpha {
 		bufferAddedConnection_ =
 			bufferList.bufferAddedSignal().connect(
 				std::bind(&EditorPanes::bufferAdded, this, std::placeholders::_1, std::placeholders::_2));
+		auto firstPane(std::make_shared<EditorPane>());
+		activePane_ = firstPane.get();
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		add1(*Gtk::manage(activePane_ = new EditorPane()));
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+		addWidget(firstPane.release());
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+		// TODO: Not implemented.
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		resetChild<0>(firstPane);
+#endif
 #ifdef ALPHA_NO_AMBIENT
 		BufferList::instance().addNew();
 #endif
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		show_all_children();
+#endif
 	}
 
 	/// Returns the iterator addresses the first editor pane.
@@ -63,7 +82,6 @@ namespace alpha {
 		EditorView* originalView = nullptr;
 		BOOST_FOREACH(EditorPane& pane, *this) {
 			std::unique_ptr<EditorView> newView((originalView == nullptr) ? new EditorView(buffer) : new EditorView(*originalView));
-			newView->signal_focus_in_event().connect(sigc::mem_fun(*this, &EditorPanes::viewFocused));
 			if(originalView == nullptr)
 				originalView = newView.get();
 			if(originalView != newView.get())
@@ -98,58 +116,77 @@ namespace alpha {
 		return cend();
 	}
 
-	/// @internal Returns the first editor pane, or @c null if empty.
-	EditorPane* EditorPanes::firstPane() const {
-		for(const Gtk::Paned* paned = this; ; ) {
-			const Gtk::Widget* const child = paned->get_child1();
-			if(child == nullptr)
-				break;
-			else if(child->get_type() != Gtk::Paned::get_type())
-				return const_cast<EditorPane*>(static_cast<const EditorPane*>(child));
-			paned = static_cast<const Gtk::Paned*>(child);
+	namespace {
+		EditorPane* findFirstPane(const EditorPanes& root, bool last) {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			for(const Gtk::Paned* paned = &root; ; ) {
+				auto child(!last ? paned->get_child1() : paned->get_child2());
+				if(child == nullptr && last)
+					child = paned->get_child1();
+				if(child == nullptr)
+					break;
+				else if(child->get_type() != Gtk::Paned::get_type())
+					return const_cast<EditorPane*>(static_cast<const EditorPane*>(child));
+				paned = static_cast<const Gtk::Paned*>(child);
+			}
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+			for(const QSplitter* paned = &root; ; ) {
+				auto child(paned->widget(!last ? 0 : 1));
+				if(child == nullptr && last)
+					child = paned->widget(0);
+				if(child == nullptr)
+					break;
+				else if(const auto* const p = qobject_cast<const QSplitter*>(child))
+					paned = p;
+				else
+					return const_cast<EditorPane*>(static_cast<const EditorPane*>(child));
+			}
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+			// TODO: Not implemented.
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			for(const win32::PanedWidget* paned = &root; ; ) {
+				auto child(!last ? paned->child<0>() : paned->child<1>());
+				if(child.empty() && last)
+					child = paned->child<0>();
+				if(child.empty())
+					break;
+				else if(const auto* const p = boost::any_cast<std::shared_ptr<win32::PanedWidget>>(&child))
+					paned = p->get();
+				else
+					return boost::any_cast<EditorPane>(&child);
+			}
+#endif
+			return nullptr;
 		}
-		return nullptr;
+	}
+
+	/// @internal Returns the first editor pane, or @c null if empty.
+	inline EditorPane* EditorPanes::firstPane() const {
+		return findFirstPane(*this, false);
+	}
+
+	/// @see FocusChain#focus
+	void EditorPanes::focus(EditorView&) {
+		BOOST_FOREACH(EditorPane& pane, *this) {
+			if(ascension::viewer::widgetapi::hasFocus(pane.selectedView())) {
+				lastActivePane_ = activePane_;
+				activePane_ = &pane;
+				break;
+			}
+		}
 	}
 
 	/// @internal Returns the last editor pane, or @c null if empty.
-	EditorPane* EditorPanes::lastPane() const {
-		for(const Gtk::Paned* paned = this; ; ) {
-			const Gtk::Widget* child = paned->get_child2();
-			if(child == nullptr)
-				child = paned->get_child1();
-			if(child == nullptr)
-				break;
-			if(child->get_type() != Gtk::Paned::get_type())
-				return const_cast<EditorPane*>(static_cast<const EditorPane*>(child));
-			paned = static_cast<const Gtk::Paned*>(child);
-		}
-		return nullptr;
+	inline EditorPane* EditorPanes::lastPane() const {
+		return findFirstPane(*this, true);
 	}
-	
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 	bool EditorPanes::on_focus_in_event(GdkEventFocus*) {
 		EditorPane& pane = activePane();
 		if(pane.get_realized())
 			set_focus_child(pane);
 		return true;
-	}
-
-#ifdef _DEBUG
-	bool EditorPanes::on_event(GdkEvent* event) {
-//		ASCENSION_LOG_TRIVIAL(debug)
-//			<< "allocation = " << get_allocated_width() << "x" << get_allocated_height() << std::endl;
-		if(event != nullptr)
-			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
-		return Gtk::Paned::on_event(event);
-	}
-
-	void EditorPanes::on_realize() {
-		const Gdk::EventMask oldMask = get_events();
-		set_events(oldMask | Gdk::FOCUS_CHANGE_MASK);
-		return Gtk::Paned::on_realize();
-	}
-
-	void EditorPanes::on_size_allocate(Gtk::Allocation& allocation) {
-		return Gtk::Paned::on_size_allocate(allocation);
 	}
 #endif
 
@@ -158,7 +195,7 @@ namespace alpha {
 	 * @param pane The pane to remove. If @c null, the selected pane is removed
 	 * @throw ascension#NoSuchElementException @a pane is not valid
 	 */
-	void EditorPanes::remove(EditorPane* pane) {
+	void EditorPanes::remove(EditorPane& pane) {
 	}
 
 	/**
@@ -166,7 +203,7 @@ namespace alpha {
 	 * @param pane
 	 * @param root
 	 */
-	void EditorPanes::removeOthers(const EditorPane* pane, Gtk::Paned* root /* = nullptr */) {
+	void EditorPanes::removeOthers(const EditorPane& pane) {
 	}
 
 	/// Returns the selected buffer.
@@ -179,16 +216,85 @@ namespace alpha {
 		return activePane().selectedBuffer();
 	}
 
-	/// @see 
-	bool EditorPanes::viewFocused(GdkEventFocus*) {
-		BOOST_FOREACH(EditorPane& pane, *this) {
-			if(pane.selectedView().has_focus()) {
-				lastActivePane_ = activePane_;
-				activePane_ = &pane;
-				break;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+	namespace {
+		template<std::size_t position>
+		std::pair<win32::PanedWidget*, std::size_t> findParentPaned(win32::PanedWidget& root, EditorPane& pane) {
+			if(!root.child<position>().empty()) {
+				auto& child = root.child<position>();
+				if(auto* const p = boost::any_cast<EditorPane>(&child)) {
+					if(p == &pane)
+						return std::make_pair(&root, position);
+				} else if(auto* const p = boost::any_cast<std::shared_ptr<win32::PanedWidget>>(&child))
+					return findParentPaned(**p, pane);
+			}
+			return std::make_pair<win32::PanedWidget*, std::size_t>(nullptr, 0u);
+		}
+
+		std::pair<win32::PanedWidget*, std::size_t> findParentPaned(win32::PanedWidget& root, EditorPane& pane) {
+			auto temp(findParentPaned<0>(root, pane));
+			if(std::get<0>(temp) == nullptr)
+				temp = findParentPaned<1>(root, pane);
+			return temp;
+		}
+	}
+#endif
+
+	/**
+	 * @param pane
+	 * @param sideBySide
+	 */
+	void EditorPanes::split(EditorPane& pane, bool sideBySide) {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		const bool primary = paned->get_child1() == this;
+		assert(primary || paned->get_child2() == this);
+		std::unique_ptr<Gtk::Paned> newPaned(new Gtk::Paned(orientation));
+		std::unique_ptr<EditorPane> newPane(new EditorPane(*this));
+		panedParent->remove(*this);
+		newPaned->add1(*this);
+		newPaned->add2(*Gtk::manage(newPane.release()));
+		if(primary)
+			panedParent->add1(*Gtk::manage(newPaned.release()));
+		else
+			panedParent->add2(*Gtk::manage(newPaned.release()));
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		const auto paned(findParentPaned(*this, pane));
+		if(std::get<0>(paned) == nullptr)
+			throw std::invalid_argument("'pane' is not a descendant of this EditorPanes.");
+		auto newPane(std::make_shared<EditorPane>(pane));
+		if(std::get<1>(paned) == 0 && std::get<0>(paned)->child<1>().empty())
+			std::get<0>(paned)->resetChild<1>(newPane);
+		else if(std::get<1>(paned) == 1 && std::get<0>(paned)->child<0>().empty())
+			std::get<0>(paned)->resetChild<0>(newPane);
+		else {
+			auto newPaned(std::make_shared<win32::PanedWidget>());
+			newPaned->resetChild<1>(newPane);
+			std::shared_ptr<EditorPane> original(boost::any_cast<std::shared_ptr<EditorPane>>((std::get<1>(paned) == 0) ? std::get<0>(paned)->child<0>() : std::get<0>(paned)->child<1>()));
+			if(std::get<1>(paned) == 0) {
+				newPaned->resetChild<0>(boost::any_cast<std::shared_ptr<EditorPane>>(std::get<0>(paned)->child<0>()));
+				std::get<0>(paned)->resetChild<0>(newPaned);
+			} else {
+				newPaned->resetChild<0>(boost::any_cast<std::shared_ptr<EditorPane>>(std::get<0>(paned)->child<1>()));
+				std::get<0>(paned)->resetChild<1>(newPaned);
 			}
 		}
-		return false;
+#endif
+	}
+
+	/**
+	 * Split the specified pane in the @c EditorPanes.
+	 * @param pane The pane to split
+	 */
+	void EditorPanes::split(EditorPane& pane) {
+		return split(pane, false);
+	}
+
+	/**
+	 * Split the specified pane in the @c EditorPanes side-by-side.
+	 * @param pane The pane to split
+	 */
+	void EditorPanes::splitSideBySide(EditorPane& pane) {
+		return split(pane, true);
 	}
 
 
@@ -216,6 +322,7 @@ namespace alpha {
 			throw ascension::NoSuchElementException();
 
 		const bool isConst = std::is_const<Reference>::value;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		typedef std::conditional<!isConst, Gtk::Paned, const Gtk::Paned>::type PanedType;
 		auto parent = static_cast<PanedType*>(current_->get_parent());
 		assert(parent->get_type() == Gtk::Paned::get_type());
@@ -240,6 +347,9 @@ namespace alpha {
 			current_ = static_cast<pointer>(child);
 		else
 			end_ = true;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		// TODO: Not implemented.
+#endif
 	}
 
 #ifndef ALPHA_NO_AMBIENT

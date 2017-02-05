@@ -8,16 +8,48 @@
 
 #ifndef ALPHA_EDITOR_PANES_HPP
 #define ALPHA_EDITOR_PANES_HPP
-#include "editor-pane.hpp"
+//#include "editor-pane.hpp"
 #include <ascension/corelib/signals.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <gtkmm/paned.h>
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	include <gtkmm/paned.h>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#	include <QSplitter>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#	include "win32/paned-widget.hpp"
+#endif
 
 namespace alpha {
 	class BufferList;
 	class EditorPane;
+	class EditorView;
 
-	class EditorPanes : public Gtk::Paned, private boost::noncopyable {	// children may be either Gtk.Paned or EditorPane
+	class FocusChain {
+	protected:
+		/// Destructor.
+		virtual ~FocusChain() BOOST_NOEXCEPT {}
+
+	private:
+		/**
+		 * Sets the focused view.
+		 * @param view The @c EditorView focused in
+		 */
+		virtual void focus(EditorView& view) = 0;
+		friend class EditorView;
+	};
+
+	class EditorPanes : public FocusChain,
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		public Gtk::Paned, private boost::noncopyable
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+		public QSplitter, private boost::noncopyable
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+		???
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		public win32::PanedWidget
+#endif
+		{	// children may be either native widget or EditorPane
 	private:
 		template<typename Derived, typename Value>
 		class InternalIterator : public boost::iterators::iterator_facade<Derived, Value, boost::iterators::bidirectional_traversal_tag> {
@@ -63,10 +95,12 @@ namespace alpha {
 		ConstIterator end() const BOOST_NOEXCEPT;
 		/// @}
 
-		/// @name Removing Panes
+		/// @name Paned Operations
 		/// @{
-		void remove(EditorPane* pane);
-		void removeOthers(const EditorPane* pane, Gtk::Paned* root = nullptr);
+		void remove(EditorPane& pane);
+		void removeOthers(const EditorPane& pane);
+		void split(EditorPane& pane);
+		void splitSideBySide(EditorPane& pane);
 		/// @}
 
 		Buffer& selectedBuffer();
@@ -81,17 +115,15 @@ namespace alpha {
 	private:
 		EditorPane* firstPane() const;
 		EditorPane* lastPane() const;
+		void split(EditorPane& pane, bool sideBySide);
 		// BufferList signals
 		void bufferAboutToBeRemoved(BufferList& buffers, Buffer& buffer);
 		void bufferAdded(BufferList& buffers, std::shared_ptr<Buffer> buffer);
-		// EditorView signals
-		bool viewFocused(GdkEventFocus* event);
+		// FocusChain
+		void focus(EditorView& view) override;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		// Gtk.Widget
 		bool on_focus_in_event(GdkEventFocus* event) override;
-#ifdef _DEBUG
-		bool on_event(GdkEvent* event) override;
-		void on_realize() override;
-		void on_size_allocate(Gtk::Allocation& allocation) override;
 #endif
 
 	private:

@@ -23,12 +23,14 @@ namespace alpha {
 	 * @typedef alpha::EditorPanes::BufferSelectionChangedSignal
 	 * The signal which gets emitted when the active buffer was switched.
 	 * @param editorPanes The editor panes widget
-	 * @see #bufferSelectionChangedSignal, #selectedBuffer
+	 * @see #bufferSelectionChangedSignal, #selectedBuffer;
 	 */
 
 	/// Constructor.
 	EditorPane::EditorPane(std::unique_ptr<EditorView> initialViewer /* = std::unique_ptr<EditorView> */) {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		set_homogeneous(false);
+#endif
 		if(initialViewer.get() != nullptr)
 			add(std::move(initialViewer));
 	}
@@ -36,11 +38,8 @@ namespace alpha {
 	/// Copy-constructor.
 	EditorPane::EditorPane(const EditorPane& other) {
 		BOOST_FOREACH(const Child& child, other.children_) {
-			const EditorView& src = *std::get<2>(child);
+			const EditorView& src = *child.viewer;
 			std::unique_ptr<EditorView> newView(new EditorView(src));
-//			const bool succeeded = newViewer->create(p->getParent().use(), win32::ui::DefaultWindowRect(),
-//				WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
-//			assert(succeeded);
 			newView->setConfiguration(src.configuration(), true);
 			newView->textArea()->viewport()->scrollTo(src.textArea()->viewport()->scrollPositions());
 			add(std::move(newView));
@@ -59,49 +58,43 @@ namespace alpha {
 		oss << std::hex << reinterpret_cast<std::uintptr_t>(boost::addressof(*viewer));
 		const Glib::ustring name(oss.str());	// dummy
 
-		std::unique_ptr<Gtk::Box> box(new Gtk::Box(Gtk::ORIENTATION_VERTICAL));
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		std::unique_ptr<Gtk::Box> container(new Gtk::Box(Gtk::ORIENTATION_VERTICAL));
 		std::unique_ptr<Gtk::ScrolledWindow> scroller(new Gtk::ScrolledWindow());
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		std::unique_ptr<Container> container(new Container);
+#endif
 //		std::unique_ptr<ModeLine> modeLine(new ModeLine());
 
 		children_.push_back(Child());
 		Child& newChild = children_.back();
 		try {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			box->pack_start(*scroller, Gtk::PACK_EXPAND_WIDGET);
-			std::get<1>(newChild) = Glib::RefPtr<Gtk::ScrolledWindow>(scroller.release());
-			std::get<1>(newChild)->add(*viewer);
-			std::get<2>(newChild) = std::move(viewer);
+			newChild.scroller = Glib::RefPtr<Gtk::ScrolledWindow>(scroller.release());
+			newChild.scroller->add(*viewer);
+#endif
+			newChild.viewer = std::move(viewer);
 //			box->pack_end(*modeLine, Gtk::PACK_SHRINK);
 		} catch(...) {
 			children_.pop_back();
 			throw;
 		}
-		std::get<0>(newChild) = box.get();
-		Gtk::Stack::add(*Gtk::manage(box.release()), name);
-//		if(children_.size() == 1)
-//			this->select(*std::get<2>(children_.front()));
-		/*std::get<0>(newChild)->*/show_all_children();
-		/*std::get<0>(newChild)->*/show();
-	}
-
-#ifdef _DEBUG
-	bool EditorPane::on_event(GdkEvent* event) {
-//		ASCENSION_LOG_TRIVIAL(debug)
-//			<< "allocation = " << get_allocated_width() << "x" << get_allocated_height() << std::endl;
-//		if(event != nullptr)
-//			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
-		return Gtk::Stack::on_event(event);
-	}
-
-	void EditorPane::on_realize() {
-		return Gtk::Stack::on_realize();
-	}
-
-	void EditorPane::on_size_allocate(Gtk::Allocation& allocation) {
-		if(Gtk::Widget* const child = get_visible_child())
-			child->size_allocate(allocation);
-		return Gtk::Stack::on_size_allocate(allocation);
-	}
+		newChild.container = std::move(container);
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		Gtk::Stack::add(*Gtk::manage(container.release()), name);
+#else
+		ascension::viewer::widgetapi::setParentWidget(*container, *this);
 #endif
+//		if(children_.size() == 1)
+//			this->select(*children_.front().viewer);
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		show_all_children();
+#else
+		ascension::viewer::widgetapi::show(*container);
+#endif
+		ascension::viewer::widgetapi::show(*this);
+	}
 
 	/**
 	 * Removes the specified viewer from this @c EditorPane.
@@ -119,7 +112,11 @@ namespace alpha {
 	/// Removes all viewers from this @c EditorPane.
 	void EditorPane::removeAll() BOOST_NOEXCEPT {
 		BOOST_FOREACH(Child& child, children_)
-			Gtk::Stack::remove(*std::get<0>(child));
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			Gtk::Stack::remove(*child.container);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			::SetParent(child.container->handle().get(), nullptr);
+#endif
 		children_.clear();
 	}
 
@@ -131,17 +128,21 @@ namespace alpha {
 	void EditorPane::removeBuffer(const Buffer& buffer) {
 		if(!children_.empty()) {
 			auto i(std::begin(children_));
-			if(std::get<2>(*(i++))->document().get() == &buffer) {
+			if((i++)->viewer->document().get() == &buffer) {
 				if(i != std::end(children_))
-					select(*std::get<2>(*i));
+					select(*i->viewer);
 				--i;
 			} else {
 				for(const auto e(std::end(children_)); i != e; ++i) {
-					if(std::get<2>(*i)->document().get() == &buffer)
+					if(i->viewer->document().get() == &buffer)
 						break;
 				}
 			}
-			Gtk::Stack::remove(*std::get<2>(*i));
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			Gtk::Stack::remove(*i->viewer);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			::SetParent(i->viewer->handle().get(), nullptr);
+#endif
 			children_.erase(i);
 			return;
 		}
@@ -167,13 +168,13 @@ namespace alpha {
 	 * @throw ascension#NoSuchElementException @a buffer is not exist
 	 */
 	void EditorPane::selectBuffer(const Buffer& buffer) {
-		const bool hadFocus = !children_.empty() && selectedView().has_focus();
+		const bool hadFocus = !children_.empty() && ascension::viewer::widgetapi::hasFocus(selectedView());
 
 		if(children_.size() > 1) {
 			// bring to the front of the list
 			const auto e(std::end(children_));
 			for(auto i(std::next(std::begin(children_))); i != e; ++i) {
-				if(std::get<2>(*i)->document().get() == &buffer) {
+				if(i->viewer->document().get() == &buffer) {
 					Child temp(std::move(*i));
 					children_.erase(i);
 					children_.push_front(std::move(temp));
@@ -184,33 +185,20 @@ namespace alpha {
 		// show and focus
 		bool found = false;
 		BOOST_FOREACH(const Child& child, children_) {
-			Gtk::Box& box = *std::get<0>(child);
-			const std::unique_ptr<EditorView>& viewer = std::get<2>(child);
+			auto& container = *child.container;
+			const std::unique_ptr<EditorView>& viewer = child.viewer;
 			if(viewer->document().get() == &buffer) {
-				box.show();
-				assert(box.get_visible());
-				set_visible_child(box);
-				box.show_all_children();
-				if(hadFocus)
-					viewer->grab_focus();
-				found = true;
-#ifdef _DEBUG
-				bool visible = get_visible();
-				bool has_window = get_has_window();
-				int width = get_width(), height = get_height();
-				visible = std::get<0>(child)->get_visible();
-				has_window = std::get<0>(child)->get_has_window();
-				width = std::get<0>(child)->get_width();
-				height = std::get<0>(child)->get_height();
-				visible = std::get<1>(child)->get_visible();
-				has_window = std::get<1>(child)->get_has_window();
-				width = std::get<1>(child)->get_width();
-				height = std::get<1>(child)->get_height();
-				visible = viewer->get_visible();
-				has_window = viewer->get_has_window();
-				width = viewer->get_width();
-				height = viewer->get_height();
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				ascension::viewer::widgetapi::show(container);
+				assert(ascension::viewer::widgetapi::isVisible(container));
+				set_visible_child(container);
+				container.show_all_children();
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				setCurrentWidget(container);
 #endif
+				if(hadFocus)
+					ascension::viewer::widgetapi::setFocus(*viewer);
+				found = true;
 			}
 		}
 		if(!found)
@@ -233,38 +221,16 @@ namespace alpha {
 		return *selectedView().document();
 	}
 
-	/// @internal Implements @c #split(void) and @c #splitSideBySide methods.
-	void EditorPane::split(Gtk::Orientation orientation) {
-		Gtk::Container* const parent = get_parent();
-		assert(parent->get_type() == Gtk::Paned::get_type());
-		Gtk::Paned* const panedParent = static_cast<Gtk::Paned*>(parent);
-
-		const bool primary = panedParent->get_child1() == this;
-		assert(primary || panedParent->get_child2() == this);
-		std::unique_ptr<Gtk::Paned> newPaned(new Gtk::Paned(orientation));
-		std::unique_ptr<EditorPane> newPane(new EditorPane(*this));
-		panedParent->remove(*this);
-		newPaned->add1(*this);
-		newPaned->add2(*Gtk::manage(newPane.release()));
-		if(primary)
-			panedParent->add1(*Gtk::manage(newPaned.release()));
-		else
-			panedParent->add2(*Gtk::manage(newPaned.release()));
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+	EditorPane::Container::Container() : ascension::win32::CustomControl<Container>(ascension::win32::Window::WIDGET) {
 	}
 
-	/**
-	 * Splits this pane.
-	 * @see #splitSideBySide
-	 */
-	void EditorPane::split() {
-		return split(Gtk::ORIENTATION_VERTICAL);
+	LRESULT EditorPane::Container::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+		return 0l;
 	}
 
-	/**
-	 * Splits this pane side-by-side.
-	 * @see #split
-	 */
-	void EditorPane::splitSideBySide() {
-		return split(Gtk::ORIENTATION_HORIZONTAL);
+	void EditorPane::Container::windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT {
+		out.name = L"alpha.Container";
 	}
+#endif
 }
