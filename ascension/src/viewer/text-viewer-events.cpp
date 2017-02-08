@@ -166,8 +166,10 @@ namespace ascension {
 		 */
 		void TextViewer::handleInputMethodQueryEvent(widgetapi::event::InputMethodQueryEvent& event) {
 			if(auto ta = textArea()) {
-				if(auto caret = ta->caret())
-					static_cast<detail::InputMethodEventHandler*>(caret.get())->handleInputMethodQueryEvent(event, nativeEvent);
+				if(auto caret = ta->caret()) {
+					static_cast<detail::InputMethodQueryEventHandler*>(caret.get());
+					// TODO: Not implemented.
+				}
 			}
 		}
 

@@ -12,6 +12,7 @@
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/graphics/font/font.hpp>
+#include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/text-editor/commands/inputs.hpp>
@@ -131,6 +132,7 @@ namespace ascension {
 		/// Handles Win32 @c WM_IME_REQUEST window message.
 		LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 			const auto& doc = document();
+			const auto ip(insertionPosition(*this));
 
 			// this command will be sent two times when reconversion is invoked
 			if(command == IMR_RECONVERTSTRING) {
@@ -144,7 +146,7 @@ namespace ascension {
 						const auto& lineString = doc.lineString(kernel::line(*this));
 						rcs->dwStrLen = static_cast<DWORD>(lineString.length());
 						rcs->dwStrOffset = sizeof(RECONVERTSTRING);
-						rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * kernel::offsetInLine(*this));
+						rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * kernel::offsetInLine(ip));
 						rcs->dwTargetStrLen = rcs->dwCompStrLen = 0;
 						lineString.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 					}
@@ -173,7 +175,7 @@ namespace ascension {
 					} else {
 						// reconvert the region IME passed if no selection (and create the new selection).
 						// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
-						if(doc.isNarrowed() && kernel::line(*this) == kernel::line(boost::const_begin(region))) {	// the document is narrowed
+						if(doc.isNarrowed() && kernel::line(ip) == kernel::line(*boost::const_begin(region))) {	// the document is narrowed
 							if(rcs->dwCompStrOffset / sizeof(Char) < kernel::offsetInLine(*boost::const_begin(region))) {
 								rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * kernel::offsetInLine(*boost::const_begin(region)) - rcs->dwCompStrOffset);
 								rcs->dwTargetStrLen = rcs->dwCompStrOffset;
@@ -186,8 +188,8 @@ namespace ascension {
 							}
 						}
 						select(
-							_anchor = kernel::Position(line(*this), rcs->dwCompStrOffset / sizeof(Char)),
-							_caret = TextHit::leading(kernel::Position(line(*this), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen)));
+							_anchor = kernel::Position(kernel::line(ip), rcs->dwCompStrOffset / sizeof(Char)),
+							_caret = TextHit::leading(kernel::Position(kernel::line(ip), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen)));
 					}
 					consumed = true;
 					return true;
@@ -200,16 +202,16 @@ namespace ascension {
 
 			// queried document content for higher conversion accuracy
 			else if(command == IMR_DOCUMENTFEED) {
-				if(kernel::line(*this) == kernel::line(anchor())) {
+				if(kernel::line(ip) == kernel::line(anchor())) {
 					consumed = true;
 					if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lp)) {
-						rcs->dwStrLen = static_cast<DWORD>(doc.lineLength(line(*this)));
+						rcs->dwStrLen = static_cast<DWORD>(doc.lineLength(kernel::line(ip)));
 						rcs->dwStrOffset = sizeof(RECONVERTSTRING);
 						rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
-						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(kernel::offsetInLine(beginning()));
-						doc.lineString(kernel::line(*this)).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(kernel::offsetInLine(insertionPosition(beginning())));
+						doc.lineString(kernel::line(ip)).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 					}
-					return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(kernel::line(*this));
+					return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(kernel::line(ip));
 				}
 			}
 
@@ -274,7 +276,7 @@ namespace ascension {
 					} catch(...) {
 					}
 					event.consume();
-					resetVisualization();
+//					resetVisualization();
 				}
 			 }
 		 }
@@ -301,7 +303,7 @@ namespace ascension {
 				return;
 
 			auto content(utils::createInterprocessDataForSelectedString(caret, true));	// this may throw std.bad_alloc
-			HRESULT hr = tryOleClipboard(::OleSetClipboard, content.native());
+			HRESULT hr = tryOleClipboard(::OleSetClipboard, content.native().get());
 			if(FAILED(hr))
 				throw ClipboardException(hr);
 			hr = tryOleClipboard(::OleFlushClipboard);
