@@ -15,6 +15,8 @@
 #	include <gtkmm/window.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/window/custom-control.hpp>
+#	include <CommCtrl.h>
+#	include <shellapi.h>
 #endif
 
 namespace alpha {
@@ -38,13 +40,35 @@ namespace alpha {
 			/// @}
 
 		private:
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			bool onCommand(WORD id, WORD notifyCode, HWND control);
+			void onCopyData(ascension::win32::Handle<HWND> window, const COPYDATASTRUCT& data);
+			void onDestroy();
+			void onDrawItem(UINT id, const DRAWITEMSTRUCT& item);
+			void onDropFiles(ascension::win32::Handle<HDROP> drop);
+			void onEnterMenuLoop(bool isTrackPopup);
+			void onExitMenuLoop(bool shortcutMenu);
+			void onMeasureItem(UINT id, MEASUREITEMSTRUCT& mi);
+			LRESULT onMenuChar(WCHAR c, UINT type, ascension::win32::Handle<HMENU> menu);
+			void onMenuSelect(UINT itemID, UINT flags, HMENU sysMenu);
+			void onNotify(UINT_PTR id, NMHDR& nmhdr, bool& consumed);
+			void onRebarChevronPushed(const NMREBARCHEVRON& nmRebarChevron);
+			void onSetCursor(ascension::win32::Handle<HWND> window, UINT hitTest, UINT message, bool& consumed);
+			void onSettingChange(UINT flags, const wchar_t* section);
+			void onSize(UINT type, int cx, int cy);
+			void onToolExecuteCommand();
+			void onTimer(UINT_PTR timerID, TIMERPROC procedure);
+			// ascension.win32.CustomControl
+			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
+			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
+#endif
+		private:
 			EditorPanes editorPanes_;
 			StatusBar statusBar_;
 			boost::signals2::scoped_connection bufferSelectionChangedConnection_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			Gtk::Box box_;	// TODO: Replace by Gtk.Grid.
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 //			manah::win32::ui::Rebar rebar_;		// rebar
 //			manah::win32::ui::Toolbar toolbar_;	// standard toolbar
 #endif

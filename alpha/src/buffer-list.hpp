@@ -56,7 +56,7 @@ namespace alpha {
 		std::shared_ptr<Buffer> addNew(
 			const PlatformString& name = PlatformString(), const std::string& encoding = "UTF-8",
 			ascension::text::Newline newline = ascension::text::Newline::USE_INTRINSIC_VALUE);
-//		Buffer* addNewDialog(const ascension::String& name = L"");
+		std::shared_ptr<Buffer> addNewDialog(const PlatformString& name = PlatformString());
 		void close(Buffer& buffer);
 		bool saveSomeDialog(boost::python::tuple buffersToSave = boost::python::tuple());
 		/// @}
