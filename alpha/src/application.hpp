@@ -10,12 +10,14 @@
 #include "resource.h"
 #include "buffer.hpp"
 //#include "search.hpp"	// ui.SearchDialog
-#include "ui/main-window.hpp"
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#	include "win32/module.hpp"
-#endif
 #include <ascension/graphics/font/font-description.hpp>
-#include <gtkmm/application.h>
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	include <gtkmm/application.h>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#	include "win32/application.hpp"
+#else
+#	error "Not implemented"
+#endif
 
 
 // タイトルバーとかに使うアプリケーション名
@@ -28,12 +30,6 @@
 #define IDS_MACRO_DIRECTORY_NAME			L"macros\\"
 #define IDS_KEYBOARDSCHEME_DIRECTORY_NAME	L"keyboard-schemes\\"
 #define IDS_ICON_DIRECTORY_NAME				L"icons\\"
-#define IDS_BREAK_CR	L"CR (Macintosh)"
-#define IDS_BREAK_LF	L"LF (Unix)"
-#define IDS_BREAK_CRLF	L"CR+LF (Windows)"
-#define IDS_BREAK_NEL	L"NEL (EBCDIC)"
-#define IDS_BREAK_LS	L"LS (U+2028)"
-#define IDS_BREAK_PS	L"PS (U+2029)"
 
 // Timer ID
 #define ID_TIMER_QUERYCOMMAND	1	// ツールバーアイテムの有効化
@@ -53,35 +49,56 @@
 
 
 namespace alpha {
+	namespace ui {
+		class MainWindow;
+	}
+
 	/// The application class of Alpha.
-	class Application : public Gtk::Application {
+	class Application :
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		public Gtk::Application
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		public win32::WindowApplication<ui::MainWindow>
+#endif
+	{
 	public:
 		/// @name Instance
 		/// @{
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		static Glib::RefPtr<Application> create(Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
 		static Glib::RefPtr<Application> create(int& argc, char**& argv, Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
 		static Glib::RefPtr<Application> instance();
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		static std::shared_ptr<Application> create();
+		static std::shared_ptr<Application> instance();
+#endif
 		/// @}
 
 		void setFont(const ascension::graphics::font::FontDescription& font);
-		ui::MainWindow& window() BOOST_NOEXCEPT;
-		const ui::MainWindow& window() const BOOST_NOEXCEPT;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		ui::MainWindow& mainWindow() BOOST_NOEXCEPT;
+		const ui::MainWindow& mainWindow() const BOOST_NOEXCEPT;
+#endif
 		// operations
 		bool teardown(bool callHook = true);
 
 	private:
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		explicit Application(Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
 		Application(int& argc, char**& argv, Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		Application();
+#endif
 		void changeFont();
 //		bool	handleKeyDown(command::VirtualKey key, command::KeyModifier modifiers);
 		bool initInstance(int showCommand);
 		void loadSettings();
 		template<typename Section, typename Key, typename Container>
-		void readProfileList(Section section, Key key, Container& items, const Glib::ustring& defaultValue = Glib::ustring());
+		void readProfileList(Section section, Key key, Container& items, const PlatformString& defaultValue = PlatformString());
 		template<typename Section, typename Key> inline boost::optional<int> readIntegerProfile(Section section, Key key) const {
 			return boost::none;	// dummy
 		}
-		template<typename Section, typename Key> inline boost::optional<Glib::ustring> readStringProfile(Section section, Key key) const {
+		template<typename Section, typename Key> inline boost::optional<PlatformString> readStringProfile(Section section, Key key) const {
 			return boost::none;	// dummy
 		}
 		template<typename Section, typename Key, typename T> inline bool readStructureProfile(Section section, Key key, T& data) const {
@@ -97,42 +114,19 @@ namespace alpha {
 		template<typename Section, typename Key, typename T>
 		inline void writeStructureProfile(Section section, Key key, const T& data) const {}	// dummy
 
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		// Gio.Application
 		void on_activate() override;
 		void on_open(const Gio::Application::type_vec_files& files, const Glib::ustring& hint) override;
-
-		// message handlers
-	protected:
-		void onToolExecuteCommand();
-	protected:
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		bool onCommand(WORD id, WORD notifyCode, HWND control);						// WM_COMMAND
-		void onCopyData(HWND window, const COPYDATASTRUCT& cds);					// WM_COPYDATA
-		void onDestroy();															// WM_DESTROY
-		void onDrawItem(UINT id, const DRAWITEMSTRUCT& drawItem);					// WM_DRAWITEM
-		void onDropFiles(HDROP drop);												// WM_DROPFILES
-		void onEnterMenuLoop(bool isTrackPopup);									// WM_ENTERMENULOOP
-		void onExitMenuLoop(bool isTrackPopup);										// WM_EXITMENULOOP
-		void onMeasureItem(UINT id, MEASUREITEMSTRUCT& mi);							// WM_MEASUREITEM
-		LRESULT onMenuChar(wchar_t ch, UINT flags, manah::win32::ui::Menu& menu);	// WM_MENUCHAR
-		void onMenuSelect(UINT itemID, UINT flags, HMENU sysMenu);					// WM_MENUSELECT
-		bool onNotify(int id, NMHDR& nmhdr);										// WM_NOTIFY
-		bool onSetCursor(HWND window, UINT hitTest, UINT message);					// WM_SETCURSOR
-		void onSettingChange(UINT flags, const wchar_t* section);					// WM_SETTINGCHANGE
-		void onSize(UINT type, int cx, int cy);										// WM_SIZE
-		void onTimer(UINT timerID);													// WM_TIMER
-
-	protected:
-		void onRebarChevronPushed(const NMREBARCHEVRON& nmRebarChevron);	// RBN_CHEVRONPUSHED
-
-	protected:
-		/* ウィンドウプロシジャ */
-		static LRESULT CALLBACK appWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 #endif
 
 	private:
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		static Glib::RefPtr<Application> instance_;
 		std::unique_ptr<ui::MainWindow> window_;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		static std::shared_ptr<Application> instance_;
+#endif
 	};
 
 
