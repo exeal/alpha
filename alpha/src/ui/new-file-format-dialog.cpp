@@ -41,21 +41,21 @@ bool NewFileFormatDialog::onCommand(WORD id, WORD notifyCode, HWND control) {
 		if(newlineCombobox_.getCount() != 6) {
 			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
 			newlineCombobox_.resetContent();
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CRLF), NLF_CR_LF);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_LF), NLF_LINE_FEED);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_NEL), NLF_NEXT_LINE);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_LS), NLF_LINE_SEPARATOR);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_PS), NLF_PARAGRAPH_SEPARATOR);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(localizedString("CR+LF (Windows)")), NLF_CR_LF);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(localizedString("LF (Unix)")), NLF_LINE_FEED);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(localizedString("CR (Macintosh)")), NLF_CARRIAGE_RETURN);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(localizedString("NEL (EBCDIC)")), NLF_NEXT_LINE);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(localizedString("LS (U+2028)")), NLF_LINE_SEPARATOR);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(localizedString("PS (U+2029)")), NLF_PARAGRAPH_SEPARATOR);
 			newlineCombobox_.setCurSel(org);
 		}
 	} else {
 		if(newlineCombobox_.getCount() != 3) {
 			const int org = (newlineCombobox_.getCount() != 0) ? newlineCombobox_.getCurSel() : 0;
 			newlineCombobox_.resetContent();
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CRLF), NLF_CR_LF);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_LF), NLF_LINE_FEED);
-			newlineCombobox_.setItemData(newlineCombobox_.addString(IDS_BREAK_CR), NLF_CARRIAGE_RETURN);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(localizedString("CR+LF (Windows)")), NLF_CR_LF);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(localizedString("LF (Unix)")), NLF_LINE_FEED);
+			newlineCombobox_.setItemData(newlineCombobox_.addString(localizedString("CR (Macintosh)")), NLF_CARRIAGE_RETURN);
 			newlineCombobox_.setCurSel((org < newlineCombobox_.getCount()) ? org : 0);
 		}
 	}
