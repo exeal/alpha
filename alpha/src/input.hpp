@@ -9,6 +9,7 @@
 #define ALPHA_INPUT_HPP
 #include "platform-string.hpp"
 #include <ascension/corelib/detail/scope-guard.hpp>
+#include <ascension/viewer/widgetapi/event/keyboard-modifier.hpp>
 #include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
 #include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/python.hpp>
@@ -37,14 +38,14 @@ namespace alpha {
 		public:
 			explicit KeyStroke(NaturalKey naturalKey, ModifierKey modifierKeys = static_cast<ModifierKey>(0));
 			explicit KeyStroke(const PlatformString& format);
-			bool operator==(const KeyStroke& other) const BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR bool operator==(const KeyStroke& other) const BOOST_NOEXCEPT;
 			ModifierKey modifierKeys() const BOOST_NOEXCEPT;
-			NaturalKey naturalKey() const BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR NaturalKey naturalKey() const BOOST_NOEXCEPT;
 			PlatformString text() const BOOST_NOEXCEPT;
 
 		private:
 			/*const*/ NaturalKey naturalKey_;
-			/*const*/ ModifierKey modifierKeys_;
+			/*const*/ ascension::viewer::widgetapi::event::KeyboardModifiers modifierKeys_;
 		};
 	}
 }
@@ -80,7 +81,7 @@ namespace alpha {
 
 		class KeyMap : public AbstractKeyMap, public std::enable_shared_from_this<KeyMap> {
 		public:
-			explicit KeyMap(const PlatformString& name = Glib::ustring());
+			explicit KeyMap(const PlatformString& name = PlatformString());
 
 			/// @name Attributes
 			/// @{
@@ -99,7 +100,7 @@ namespace alpha {
 
 			/// @name Access Control
 			/// @{
-			bool isLocked() const BOOST_NOEXCEPT;
+			BOOST_CONSTEXPR bool isLocked() const BOOST_NOEXCEPT;
 			void lock();
 			void unlock();
 			/// @}
@@ -160,12 +161,17 @@ namespace alpha {
 			/// @name Input Handling
 			/// @{
 			void cancelIncompleteKeyStrokes();
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			bool input(const GdkEventButton& event);	// for button_press_event
 			bool input(const GdkEventKey& event);	// for key_press_event
 			bool input(const GdkEventTouch& event);	// for touch_event
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			bool input(const MSG& message);
+#endif
 			/// @}
 
 		private:
+			bool input(const KeyStroke& keyStroke);
 			template<typename Key>
 			boost::python::object internalLookupKey(const Key& key) const;
 		private:
@@ -175,6 +181,34 @@ namespace alpha {
 			typedef ascension::detail::MutexWithClass<KeyMap, &KeyMap::lock, &KeyMap::unlock> KeyMapMutex;
 			std::unique_ptr<boost::lock_guard<KeyMapMutex>> mappingSchemeLocker_, modalMappingSchemeLocker_;
 		};
+
+
+		/**
+		 * Equality operator returns @c true if equals to the given @c KeyStroke.
+		 * @param other The @c KeyStroke object to test
+		 * @return The result
+		 */
+		inline BOOST_CONSTEXPR bool KeyStroke::operator==(const KeyStroke& other) const BOOST_NOEXCEPT {
+			return naturalKey() == other.naturalKey() && modifierKeys() == other.modifierKeys();
+		}
+
+		/// Returns the modifier keys.
+		inline KeyStroke::ModifierKey KeyStroke::modifierKeys() const BOOST_NOEXCEPT {
+			return static_cast<ModifierKey>(modifierKeys_.to_ulong());
+		}
+
+		/// Returns the natural key code.
+		inline BOOST_CONSTEXPR KeyStroke::NaturalKey KeyStroke::naturalKey() const BOOST_NOEXCEPT {
+			return naturalKey_;
+		}
+
+		/**
+		 * Returns @c true if this @c KeyMap is locked.
+		 * @see #lock, #unlock
+		 */
+		inline BOOST_CONSTEXPR bool KeyMap::isLocked() const BOOST_NOEXCEPT {
+			return lockedCount_ != 0;
+		}
 	}
 } // namespace alpha.ui
 
