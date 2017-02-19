@@ -5,15 +5,19 @@
  * @date 2009, 2014
  */
 
-#include "input.hpp"
-#include "application.hpp"	// StatusBar
+#include "application.hpp"
 #include "function-pointer.hpp"
+#include "input.hpp"
+#include "localized-string.hpp"
+#include "ui/main-window.hpp"
 //#include "resource/messages.h"
 #include <ascension/viewer/widgetapi/event/user-input.hpp>
-#include <bitset>
+#include <boost/format.hpp>
 #include <boost/python/stl_iterator.hpp>
-#include <glibmm/i18n.h>
-#include <gtkmm/accelgroup.h>
+#include <bitset>
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	include <gtkmm/accelgroup.h>
+#endif
 
 
 namespace {
@@ -36,58 +40,40 @@ namespace alpha {
 		 * @param naturalKey
 		 * @param modifierKeys
 		 */
-		KeyStroke::KeyStroke(NaturalKey naturalKey, ModifierKey modifierKeys /* = 0 */) : naturalKey_(naturalKey), modifierKeys_(modifierKeys) {
+		KeyStroke::KeyStroke(NaturalKey naturalKey, ModifierKey modifierKeys /* = 0 */) : naturalKey_(naturalKey), modifierKeys_(static_cast<ascension::viewer::widgetapi::event::KeyboardModifier>(modifierKeys)) {
 		}
 
-		/**
-		 * Equality operator returns @c true if equals to the given @c KeyStroke.
-		 * @param other The @c KeyStroke object to test
-		 * @return The result
-		 */
-		bool KeyStroke::operator==(const KeyStroke& other) const BOOST_NOEXCEPT {
-			return naturalKey() == other.naturalKey() && modifierKeys() == other.modifierKeys();
-		}
-/*
-namespace {
-	inline wstring modifierString(UINT vkey, const wchar_t* defaultString) {
-		if(const int sc = ::MapVirtualKeyW(vkey, MAPVK_VK_TO_VSC) << 16) {
-			WCHAR s[256];
-			if(::GetKeyNameTextW(sc | (1 << 25), s, MANAH_COUNTOF(s)) != 0)
-				return s;
-		}
-		return defaultString;
-	}
-}
-
-wstring KeyStroke::format(py::object keys) {
-	if(py::extract<const KeyStroke&>(keys).check())
-		return static_cast<const KeyStroke&>(py::extract<const KeyStroke&>(keys)).format();
-	return format(makeStlInputIterator<const KeyStroke>(keys), py::stl_input_iterator<const KeyStroke>());
-}
-*/
-		/// Returns the modifier keys.
-		KeyStroke::ModifierKey KeyStroke::modifierKeys() const BOOST_NOEXCEPT {
-			return modifierKeys_;
-		}
-
-		/// Returns the natural key code.
-		KeyStroke::NaturalKey KeyStroke::naturalKey() const BOOST_NOEXCEPT {
-			return naturalKey_;
+		namespace {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			inline PlatformString modifierString(UINT vkey, const PlatformString& defaultString) {
+				if(const int sc = ::MapVirtualKeyW(vkey, MAPVK_VK_TO_VSC) << 16) {
+					WCHAR s[256];
+					if(::GetKeyNameTextW(sc | (1 << 25), s, std::extent<decltype(s)>::value) != 0)
+						return s;
+				}
+				return defaultString;
+			}
+#endif
+//			wstring KeyStroke::format(py::object keys) {
+//				if(py::extract<const KeyStroke&>(keys).check())
+//					return static_cast<const KeyStroke&>(py::extract<const KeyStroke&>(keys)).format();
+//				return format(makeStlInputIterator<const KeyStroke>(keys), py::stl_input_iterator<const KeyStroke>());
+//			}
 		}
 
 		/// Returns a human-readable text represents this key stroke.
 		PlatformString KeyStroke::text() const BOOST_NOEXCEPT {
-#if 1
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			return Gtk::AccelGroup::get_label(naturalKey(), static_cast<Gdk::ModifierType>(modifierKeys()));
-#else
-			wstring result;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			PlatformString result;
 			result.reserve(256);
 
-			if((modifierKeys() & CONTROL_KEY) != 0)
+			if(modifierKeys_.test(ascension::viewer::widgetapi::event::CONTROL_DOWN))
 				result.append(modifierString(VK_CONTROL, L"Ctrl")).append(L"+");
-			if((modifierKeys() & SHIFT_KEY) != 0)
+			if(modifierKeys_.test(ascension::viewer::widgetapi::event::SHIFT_DOWN))
 				result.append(modifierString(VK_SHIFT, L"Shift")).append(L"+");
-			if((modifierKeys() & ALTERNATIVE_KEY) != 0)
+			if(modifierKeys_.test(ascension::viewer::widgetapi::event::ALT_DOWN))
 				result.append(modifierString(VK_MENU, L"Alt")).append(L"+");
 
 			if(UINT sc = ::MapVirtualKeyW(naturalKey(), MAPVK_VK_TO_VSC) << 16) {
@@ -98,7 +84,7 @@ wstring KeyStroke::format(py::object keys) {
 					sc |= (1 << 24);
 				}
 				wchar_t buffer[256];
-				if(::GetKeyNameTextW(sc | (1 << 25), buffer, MANAH_COUNTOF(buffer)) != 0) {
+				if(::GetKeyNameTextW(sc | (1 << 25), buffer, std::extent<decltype(buffer)>::value) != 0) {
 					result += buffer;
 					return result;
 				}
@@ -154,14 +140,6 @@ wstring KeyStroke::format(py::object keys) {
 		void KeyMap::define(boost::python::object key, boost::python::object definition) {
 			const auto k(lookupKeyMapAndKeyStroke(key));
 			return k.first.define(k.second, definition);
-		}
-
-		/**
-		 * Returns @c true if this @c KeyMap is locked.
-		 * @see #lock, #unlock
-		 */
-		bool KeyMap::isLocked() const BOOST_NOEXCEPT {
-			return lockedCount_ != 0;
 		}
 
 		/**
@@ -275,6 +253,7 @@ wstring KeyStroke::format(py::object keys) {
 			}
 		}
 
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		/**
 		 * Handles button press event.
 		 * @param event The event object
@@ -291,13 +270,63 @@ wstring KeyStroke::format(py::object keys) {
 		bool InputManager::input(const GdkEventKey& event) {
 			if(event.type != Gdk::KEY_PRESS || event.is_modifier != 0)
 				return false;
+			return input(KeyStroke(static_cast<KeyStroke::NaturalKey>(event.keyval), static_cast<KeyStroke::ModifierKey>(event.state)));
+		}
 
-			const KeyStroke key(static_cast<KeyStroke::NaturalKey>(event.keyval), static_cast<KeyStroke::ModifierKey>(event.state));
+		/**
+		 * Handles touch event.
+		 * @param event The event object
+		 */
+		bool InputManager::input(const GdkEventTouch& event) {
+			// TODO: Not implemented.
+			return false;
+		}
+
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+
+/***/
+bool InputManager::input(const MSG& message) {
+	if((message.message == WM_KEYDOWN || message.message == WM_SYSKEYDOWN) && message.wParam != VK_PROCESSKEY) {
+		// this interrupts WM_CHARs
+		const KeyStroke k(
+			static_cast<KeyStroke::NaturalKey>(message.wParam),
+			static_cast<KeyStroke::ModifierKey>(ascension::win32::makeKeyboardModifiers().to_ulong()));
+		switch(k.naturalKey()) {
+			case VK_SHIFT:
+			case VK_CONTROL:
+			case VK_MENU:
+				return false;
+		}
+		return input(k);
+	} else if(message.message == WM_SYSCHAR) {
+/*		// interrupt menu activation if key sequence is defined
+		if(!pendingKeySequence_.empty())
+			return true;
+		const KeyStroke k(
+			static_cast<KeyStroke::ModifierKey>(
+				((::GetKeyState(VK_CONTROL) < 0) ? KeyStroke::CONTROL_KEY : 0)
+				| ((::GetKeyState(VK_SHIFT) < 0) ? KeyStroke::SHIFT_KEY : 0)
+				| KeyStroke::ALTERNATIVE_KEY),
+			LOBYTE(::VkKeyScanW(static_cast<WCHAR>(message.wParam & 0xffffu))));
+		bool partialMatch;
+		py::object command(mappingScheme_.second->command(pendingKeySequence_, &partialMatch));
+		if(command != py::object() || partialMatch)
+			return true;
+*/	}
+	return false;
+}
+#endif
+		/**
+		 * @internal
+		 * @param keyStroke
+		 * @return
+		 */
+		bool InputManager::input(const KeyStroke& keyStroke) {
 			boost::python::object definition;
 			if(pendingKeyStrokes_.empty())	// first stroke
-				definition = lookupKey(key);
+				definition = lookupKey(keyStroke);
 			else {
-				pendingKeyStrokes_.push_back(key);
+				pendingKeyStrokes_.push_back(keyStroke);
 				boost::python::tuple keyStrokes(pendingKeyStrokes_);
 				definition = lookupKey(keyStrokes);
 			}
@@ -319,7 +348,7 @@ wstring KeyStroke::format(py::object keys) {
 				PlatformString incompleteKeyStrokes;
 				assert(pendingKeyStrokes_.size() != 1);
 				if(pendingKeyStrokes_.empty())
-					incompleteKeyStrokes = key.text();
+					incompleteKeyStrokes = keyStroke.text();
 				else {
 					for(std::size_t i = 0, c = pendingKeyStrokes_.size(); ; ++i) {
 						incompleteKeyStrokes += pendingKeyStrokes_[i].text();
@@ -350,76 +379,6 @@ wstring KeyStroke::format(py::object keys) {
 				return true;
 			}
 		}
-
-		/**
-		 * Handles touch event.
-		 * @param event The event object
-		 */
-		bool InputManager::input(const GdkEventTouch& event) {
-			// TODO: Not implemented.
-			return false;
-		}
-
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
-/***/
-bool InputManager::input(const MSG& message) {
-	if((message.message == WM_KEYDOWN || message.message == WM_SYSKEYDOWN) && message.wParam != VK_PROCESSKEY) {
-		// this interrupts WM_CHARs
-		const KeyStroke k(
-			static_cast<KeyStroke::ModifierKey>(
-				((::GetKeyState(VK_CONTROL) < 0) ? KeyStroke::CONTROL_KEY : 0)
-				| ((::GetKeyState(VK_SHIFT) < 0) ? KeyStroke::SHIFT_KEY : 0)
-				| ((message.message == WM_SYSKEYDOWN || ::GetKeyState(VK_MENU) < 0) ? KeyStroke::ALTERNATIVE_KEY : 0)),
-			static_cast<KeyStroke::VirtualKey>(message.wParam));
-		switch(k.naturalKey()) {
-		case VK_SHIFT:
-		case VK_CONTROL:
-		case VK_MENU:
-			return false;
-		}
-		bool partialMatch;
-		pendingKeySequence_.push_back(k);
-		py::object command(mappingScheme_.second->command(pendingKeySequence_, &partialMatch));
-		if(command != py::object()) {
-			pendingKeySequence_.clear();
-			bool typed = false;
-			if(inputTypedCharacterCommand_ == py::object())
-				inputTypedCharacterCommand_ = Interpreter::instance().module("intrinsics").attr("input_typed_character");
-			if(command == inputTypedCharacterCommand_)
-				typed = true;
-			if(!typed)
-				ambient::Interpreter::instance().executeCommand(command);
-			alpha::Alpha::instance().statusBar().setText(L"");
-			return !typed;
-		} else if(partialMatch) {
-			const wstring s(KeyStroke::format(pendingKeySequence_.begin(), pendingKeySequence_.end()));
-			alpha::Alpha::instance().statusBar().setText(s.c_str());
-			return true;
-		}
-		const bool activateMenu =
-			pendingKeySequence_.size() == 1 && (k.modifierKeys() & KeyStroke::ALTERNATIVE_KEY) != 0;
-		pendingKeySequence_.clear();
-		::MessageBeep(MB_OK);
-		alpha::Alpha::instance().statusBar().setText(L"");
-		return !activateMenu;
-	} else if(message.message == WM_SYSCHAR) {
-/*		// interrupt menu activation if key sequence is defined
-		if(!pendingKeySequence_.empty())
-			return true;
-		const KeyStroke k(
-			static_cast<KeyStroke::ModifierKey>(
-				((::GetKeyState(VK_CONTROL) < 0) ? KeyStroke::CONTROL_KEY : 0)
-				| ((::GetKeyState(VK_SHIFT) < 0) ? KeyStroke::SHIFT_KEY : 0)
-				| KeyStroke::ALTERNATIVE_KEY),
-			LOBYTE(::VkKeyScanW(static_cast<WCHAR>(message.wParam & 0xffffu))));
-		bool partialMatch;
-		py::object command(mappingScheme_.second->command(pendingKeySequence_, &partialMatch));
-		if(command != py::object() || partialMatch)
-			return true;
-*/	}
-	return false;
-}
-#endif
 
 		/// Returns the singleton instance.
 		InputManager& InputManager::instance() {
