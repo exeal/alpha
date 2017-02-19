@@ -13,18 +13,6 @@
 
 namespace alpha {
 	namespace ui {
-		StatusBar::StatusBar() : ascension::win32::Window(STATUSCLASSNAMEW, ascension::win32::Window::WIDGET) {
-			const auto styles = ascension::win32::getWindowLong(handle().get(), GWL_STYLE);
-			ascension::win32::setWindowLong(handle().get(), GWL_STYLE, styles | WS_VISIBLE | CCS_BOTTOM | SBARS_SIZEGRIP);
-		}
-
-		bool StatusBar::isSimple() const BOOST_NOEXCEPT {
-			return ascension::win32::boole(::SendMessageW(handle().get(), SB_ISSIMPLE, 0, 0L));
-		}
-
-		void StatusBar::setSimple(bool simple) {
-			::SendMessageW(handle().get(), SB_SIMPLE, simple ? TRUE : FALSE, 0L);
-		}
 	}
 }
 

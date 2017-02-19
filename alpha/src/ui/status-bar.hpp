@@ -13,7 +13,7 @@
 #	include <gtkmm/label.h>
 #	include <gtkmm/statusbar.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#	include <ascension/win32/window/window.hpp>
+#	include "win32/status-bar.hpp"
 #endif
 
 namespace alpha {
@@ -25,13 +25,11 @@ namespace alpha {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			Gtk::Statusbar
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			ascension::win32::Window
+			win32::StatusBar
 #endif
 		{
 		public:
 			StatusBar();
-			bool isSimple() const BOOST_NOEXCEPT;
-			void setSimple(bool simple);
 		};
 	}
 }
