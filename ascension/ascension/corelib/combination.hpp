@@ -9,6 +9,7 @@
 #define ASCENSION_COMBINATION_HPP
 #include <bitset>
 #include <type_traits>
+#include <utility>	// std.tuple_size
 
 namespace ascension {
 	template<typename T, std::size_t N>
