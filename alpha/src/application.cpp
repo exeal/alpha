@@ -13,10 +13,11 @@
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
 //#include "search.hpp"
+#include "ui/main-window.hpp"
 //#include <ascension/text-editor.hpp>
 #include <ascension/corelib/regex.hpp>
 #include <ascension/graphics/font/font.hpp>
-#include <ascension/graphics/native-conversion.hpp>
+//#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <gtkmm/fontchooserdialog.h>
 #include <gtkmm/messagedialog.h>
@@ -107,23 +108,27 @@ int main(int argc, char* argv[]) {
 		dialog.run();
 		return exitCode = -1;
 	}
-	ascension::win32::Handle<HANDLE>::Type mutex(::CreateMutexW(0, false, IDS_APPFULLVERSION), &::CloseHandle);
+	auto mutex(ascension::win32::makeHandle(::CreateMutexW(0, false, IDS_APPFULLVERSION), &::CloseHandle));
 
 	// 簡単な多重起動抑止 (Ctrl キーを押しながら起動すると多重起動するようにしてみた)
 	if(::GetLastError() != ERROR_ALREADY_EXISTS || ascension::win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
 		::OleInitialize(nullptr);	// enter STA and initialize high-level services
 		std::atexit(&alpha::callOleUninitialize);
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		ascension::win32::ui::initCommonControls(ICC_COOL_CLASSES | ICC_PAGESCROLLER_CLASS | ICC_WIN95_CLASSES);
-#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #endif
 #ifndef ALPHA_NO_AMBIENT
 		alpha::ambient::Interpreter::instance().install();
 		alpha::ambient::Interpreter::instance().toplevelPackage();
 #endif
 
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		const Glib::RefPtr<alpha::Application> application(alpha::Application::create(argc, argv));
 		exitCode = application->run(application->window());
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		alpha::ui::MainWindow window;
+		alpha::Application application(window);
+		application.run();
+#else
+#endif
 #if BOOST_OS_WINDOWS
 	} else {	// pass the command line arguments to the existing process
 		HWND existWnd = ::FindWindowW(IDS_APPNAME, nullptr);
@@ -264,6 +269,7 @@ namespace alpha {
 		s.setStoredStrings(std::begin(replacesWiths), std::end(replacesWiths), true);
 	}
 
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 	/// Overrides @c Gio#Application#on_activate method.
 	void Application::on_activate() {
 		window_->show();
@@ -276,6 +282,7 @@ namespace alpha {
 		// TODO: Not implemented.
 		return on_open(files, hint);
 	}
+#endif
 
 	/// Saves the settings into the file.
 	void Application::saveSettings() {
