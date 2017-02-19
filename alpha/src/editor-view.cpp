@@ -12,7 +12,7 @@
 #include <ascension/corelib/numeric-range-algorithm/order.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
-#include <ascension/graphics/native-conversion.hpp>
+//#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/geometry/rectangle-odxdy.hpp>
@@ -21,45 +21,39 @@
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/log.hpp>
 #include <ascension/presentation/presentative-text-renderer.hpp>
-#include <ascension/text-editor/commands/searches.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-area-rendering-strategy.hpp>
-#include <boost/range/algorithm/replace_if.hpp>
-#include <glibmm/i18n.h>
+//#include <ascension/viewer/widgetapi/widget.hpp>
 
 namespace alpha {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && defined(ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
 	namespace {
 		static const char GLIBMM_CUSTOM_TYPE_NAME[] = "alpha.EditorView";
 	}
+#endif
 
 	/// Default constructor.
 	EditorView::EditorView(std::shared_ptr<Buffer> buffer) :
-#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && defined(ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
 			Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME),
 #endif
-			ascension::viewer::TextViewer(buffer),
-			buffer_(buffer), visualColumnStartValue_(1) {
+			ascension::viewer::TextViewer(buffer), buffer_(buffer) {
 		document()->bookmarker().addListener(*this);
 //		caretObject_.reset(new CaretProxy(caret()));
 	}
 
 	/// Copy-constructor.
 	EditorView::EditorView(const EditorView& other) :
-#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && defined(ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
 			Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME),
 #endif
-			ascension::viewer::TextViewer(other), buffer_(other.buffer_), visualColumnStartValue_(other.visualColumnStartValue_) {
+			ascension::viewer::TextViewer(other), buffer_(other.buffer_) {
 	}
 
 	/// Destructor.
 	EditorView::~EditorView() {
 		document()->bookmarker().removeListener(*this);
-	}
-
-	/// Begins incremental search.
-	void EditorView::beginIncrementalSearch(ascension::searcher::TextSearcher::Type type, ascension::Direction direction) {
-		ascension::texteditor::commands::IncrementalFindCommand(*this, type, direction, this)();
 	}
 
 	/// @see BookmarkListener#bookmarkChanged
@@ -69,11 +63,12 @@ namespace alpha {
 
 	/// @see BookmarkListener#bookmarkCleared
 	void EditorView::bookmarkCleared() {
-		queue_draw();
+		ascension::viewer::widgetapi::scheduleRedraw(*this, false);
 	}
 
 	/// @see TextViewer#drawIndicatorMargin
 	void EditorView::drawIndicatorMargin(ascension::Index line, ascension::graphics::PaintContext& context, const ascension::graphics::Rectangle& rect) {
+#if 0
 		if(document()->bookmarker().isMarked(line)) {
 			// draw a bookmark indication mark
 			namespace gfx = ascension::graphics;
@@ -97,69 +92,18 @@ namespace alpha {
 				context.fillRectangle(r);
 			}
 		}
+#endif
 	}
 
 	/// @see TextViewer#focusAboutToBeLost
 	void EditorView::focusAboutToBeLost(ascension::viewer::widgetapi::event::Event& event) {
 		ascension::viewer::TextViewer::focusAboutToBeLost(event);
-		BufferList::instance().editorSession().incrementalSearcher().end();
 	}
 
 	/// @see TextViewer#focusGained
 	void EditorView::focusGained(ascension::viewer::widgetapi::event::Event& event) {
 		ascension::viewer::TextViewer::focusGained(event);
 		BufferList::instance().select(*document());
-	}
-
-	/// @see IncrementalSearchListener#incrementalSearchAborted
-	void EditorView::incrementalSearchAborted(const ascension::kernel::Position& initialPosition) {
-		incrementalSearchCompleted();
-		textArea()->caret()->moveTo(ascension::viewer::TextHit::leading(initialPosition));
-	}
-
-	/// @see IncrementalSearchListener#incrementalSearchCompleted
-	void EditorView::incrementalSearchCompleted() {
-		Application::instance()->window().statusBar().pop();
-	}
-
-	/// @see IncrementalSearchListener#incrementalSearchPatternChanged
-	void EditorView::incrementalSearchPatternChanged(ascension::searcher::IncrementalSearchCallback::Result result, int wrappingStatus) {
-
-		const Glib::RefPtr<Application> app(Application::instance());
-		ui::StatusBar& statusBar = app->window().statusBar();
-		const ascension::searcher::IncrementalSearcher& isearch = BufferList::instance().editorSession().incrementalSearcher();
-		const bool forward = isearch.direction() == ascension::Direction::forward();
-		Glib::ustring message;
-		bool messageIsFormat = true;
-
-		if(result == ascension::searcher::IncrementalSearchCallback::EMPTY_PATTERN) {
-			textArea()->caret()->select(ascension::viewer::SelectedRegion(isearch.matchedRegion()));
-			message = forward ? _("Incremental search : (empty pattern)") : _("Reversal incremental search : (empty pattern)");
-			messageIsFormat = false;
-		} else if(result == ascension::searcher::IncrementalSearchCallback::FOUND) {
-			textArea()->caret()->select(ascension::viewer::SelectedRegion(isearch.matchedRegion()));
-			message = forward ? _("Incremental search : %1") : _("Reversal incremental search : %1");
-		} else {
-			if(result == ascension::searcher::IncrementalSearchCallback::NOT_FOUND)
-				message = forward ? _("Incremental search : %1 (not found)") : _("Reversal incremental search : %1 (not found)");
-			else
-				message = forward ? _("Incremental search : %1 (invalid pattern)") : _("Reversal incremental search : %1 (invalid pattern)");
-			beep();
-		}
-
-		if(messageIsFormat) {
-			message = Glib::ustring::compose(message, ascension::toGlibUstring(isearch.pattern()));
-			std::string temp(message);
-			boost::replace_if(temp, std::bind(std::equal_to<std::string::value_type>(), '\t', std::placeholders::_1), ' ');
-			message = temp;
-		}
-		statusBar.push(message);
-//		if(boost::get_optional_value_or(app->readIntegerProfile("View", "applyMainFontToSomeControls"), 1) != 0)
-//			statusBar.override_font(textRenderer().defaultFont()->describeProperties());
-	}
-
-	/// @see IncrementalSearchListener#incrementalSearchStarted
-	void EditorView::incrementalSearchStarted(const ascension::kernel::Document&) {
 	}
 
 	/// @see TextViewer#initialized
@@ -182,14 +126,6 @@ namespace alpha {
 	/// @see Caret#MatchBracketsChangedSignal
 	void EditorView::matchBracketsChanged(const ascension::viewer::Caret& self, const boost::optional<std::pair<ascension::kernel::Position, ascension::kernel::Position>>& previouslyMatchedBrackets, bool outsideOfView) {
 		// TODO: indicate if the pair is outside of the viewer.
-	}
-#endif
-
-#ifdef _DEBUG
-	bool EditorView::on_event(GdkEvent* event) {
-//		if(event != nullptr)
-//			ASCENSION_LOG_TRIVIAL(debug) << event->type << std::endl;
-		return ascension::viewer::TextViewer::on_event(event);
 	}
 #endif
 

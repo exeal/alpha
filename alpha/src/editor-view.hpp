@@ -7,9 +7,9 @@
 
 #ifndef ALPHA_EDITOR_VIEW_HPP
 #define ALPHA_EDITOR_VIEW_HPP
+#include <ascension/kernel/bookmarker.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-viewer.hpp>
-#include <ascension/kernel/searcher.hpp>	// ascension.searcher.IncrementalSearchCallback
 #ifndef ALPHA_NO_AMBIENT
 #	include <boost/python.hpp>
 #endif
@@ -18,8 +18,7 @@ namespace alpha {
 	class Buffer;
 
 	/// A view of a text editor.
-	class EditorView : public ascension::viewer::TextViewer,
-		public ascension::kernel::BookmarkListener, public ascension::searcher::IncrementalSearchCallback {
+	class EditorView : public ascension::viewer::TextViewer, public ascension::kernel::BookmarkListener {
 	public:
 		// constructors
 		explicit EditorView(std::shared_ptr<Buffer> buffer);
@@ -30,15 +29,8 @@ namespace alpha {
 		boost::python::object asCaret() const;
 		boost::python::object asTextEditor() const;
 #endif
-		const wchar_t* currentPositionString() const;
 		std::shared_ptr<Buffer> document() BOOST_NOEXCEPT;
 		std::shared_ptr<const Buffer> document() const BOOST_NOEXCEPT;
-		ascension::Index visualColumnStartValue() const /*throw()*/;
-		void setVisualColumnStartValue() throw();
-		// operations
-		void beginIncrementalSearch(ascension::searcher::TextSearcher::Type type, ascension::Direction direction);
-		// notification
-		void updateStatusBar();
 
 	private:
 		// ascension.viewer.TextViewer (overrides)
@@ -55,20 +47,14 @@ namespace alpha {
 		void overtypeModeChanged(const ascension::viewer::Caret& self);
 		void selectionShapeChanged(const ascension::viewer::Caret& self);
 #endif
-		// ascension.searcher.IncrementalSearchCallback
-		void incrementalSearchAborted(const ascension::kernel::Position& initialPosition);
-		void incrementalSearchCompleted();
-		void incrementalSearchPatternChanged(ascension::searcher::IncrementalSearchCallback::Result result, int wrappingStatus);
-		void incrementalSearchStarted(const ascension::kernel::Document& document);
 		// ascension.kernel.BookmarkListener
-		void bookmarkChanged(ascension::Index line);
-		void bookmarkCleared();
+		void bookmarkChanged(ascension::Index line) override;
+		void bookmarkCleared() override;
 	private:
 #ifndef ALPHA_NO_AMBIENT
 		mutable boost::python::object asCaret_, asTextEditor_;
 #endif
 		std::shared_ptr<Buffer> buffer_;	// for .document
-		ascension::Index visualColumnStartValue_;
 	};
 
 
