@@ -340,8 +340,12 @@ wstring KeyStroke::format(py::object keys) {
 					Application::instance()->window().statusBar().push(incompleteKeyStrokes);
 				} else {	// undefined key stroke(s)
 					cancelIncompleteKeyStrokes();
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 					::gdk_beep();	// TODO: Use Gdk.Window.beep() or Gdk.Display.beep() instead.
-					Application::instance()->window().statusBar().push(Glib::ustring::compose(_("%1 is undefined"), incompleteKeyStrokes));
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+					::MessageBeep(MB_OK);
+#endif
+					Application::instance()->window().statusBar().push((boost::basic_format<PlatformString::value_type>(localizedString("%1% is undefined")) % incompleteKeyStrokes).str());
 				}
 				return true;
 			}

@@ -39,21 +39,21 @@ namespace {
 					if(newlineCombobox.getCount() != 7) {
 						newlineCombobox.resetContent();
 						newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), k::NLF_RAW_VALUE);
-						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CRLF), k::NLF_CR_LF);
-						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LF), k::NLF_LINE_FEED);
-						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CR), k::NLF_CARRIAGE_RETURN);
-						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_NEL), k::NLF_NEXT_LINE);
-						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LS), k::NLF_LINE_SEPARATOR);
-						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_PS), k::NLF_PARAGRAPH_SEPARATOR);
+						newlineCombobox.setItemData(newlineCombobox.addString(localizedString("CR+LF (Windows)")), k::NLF_CR_LF);
+						newlineCombobox.setItemData(newlineCombobox.addString(localizedString("LF (Unix)")), k::NLF_LINE_FEED);
+						newlineCombobox.setItemData(newlineCombobox.addString(localizedString("CR (Macintosh)")), k::NLF_CARRIAGE_RETURN);
+						newlineCombobox.setItemData(newlineCombobox.addString(localizedString("NEL (EBCDIC)")), k::NLF_NEXT_LINE);
+						newlineCombobox.setItemData(newlineCombobox.addString(localizedString("LS (U+2028)")), k::NLF_LINE_SEPARATOR);
+						newlineCombobox.setItemData(newlineCombobox.addString(localizedString("PS (U+2029)")), k::NLF_PARAGRAPH_SEPARATOR);
 						newlineCombobox.setCurSel(newline);
 					}
 				} else {
 					if(newlineCombobox.getCount() != 4) {
 						newlineCombobox.resetContent();
 						newlineCombobox.setItemData(newlineCombobox.addString(keepNLF.c_str()), k::NLF_RAW_VALUE);
-						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CRLF), k::NLF_CR_LF);
-						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_LF), k::NLF_LINE_FEED);
-						newlineCombobox.setItemData(newlineCombobox.addString(IDS_BREAK_CR), k::NLF_CARRIAGE_RETURN);
+						newlineCombobox.setItemData(newlineCombobox.addString(localizedString("CR+LF (Windows)")), k::NLF_CR_LF);
+						newlineCombobox.setItemData(newlineCombobox.addString(localizedString("LF (Unix)")), k::NLF_LINE_FEED);
+						newlineCombobox.setItemData(newlineCombobox.addString(localizedString("CR (Macintosh)")), k::NLF_CARRIAGE_RETURN);
 						newlineCombobox.setCurSel((newline < 4) ? newline : 0);
 					}
 				}
