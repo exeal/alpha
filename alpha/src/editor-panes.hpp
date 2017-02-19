@@ -21,6 +21,7 @@
 #endif
 
 namespace alpha {
+	class Buffer;
 	class BufferList;
 	class EditorPane;
 	class EditorView;
