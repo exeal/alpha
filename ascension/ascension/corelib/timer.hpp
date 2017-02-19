@@ -10,6 +10,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <boost/chrono/duration.hpp>
 #include <boost/config.hpp>	// BOOST_NOEXCEPT
+#include <boost/core/noncopyable.hpp>
 #include <boost/optional.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <glibmm/main.h>
@@ -41,14 +42,30 @@ namespace ascension {
 	 * @tparam T The type for uniqueness. See the description of @c HasTimer class template
 	 */
 	template<typename T = void>
-	class Timer
+	class Timer : private boost::noncopyable
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-		: protected QTimer
+		, protected QTimer
 #endif
 	{
 	public:
 		/// Default constructor.
 		Timer() : object_(nullptr) {}
+		/**
+		 * Move constructor.
+		 * @param other The source object
+		 */
+		Timer(Timer&& other) : object_(other.object_)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			, connection_(other.connection_)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			, identifier_(other.identifier_)
+#endif
+		{
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			other.connection_ = sigc::connection();
+#endif
+			other.object_ = nullptr;
+		}
 		/**
 		 * Creates a timer and starts.
 		 * @param interval The interval in milliseconds
@@ -60,6 +77,20 @@ namespace ascension {
 		}
 		/// Destructor.
 		~Timer() {stop();}
+		/**
+		 * Move-assignment operator.
+		 * @param other The source object
+		 */
+		Timer& operator=(Timer&& other) {
+			object_ = other.object_;
+			other.object_ = nullptr;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			connection_ = other.connection_;
+			other.connection_ = sigc::connection();
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			identifier_ = other.identifier_;
+#endif
+		}
 		/// Returns the timeout interval in milliseconds or @c boost#none if not active.
 		boost::optional<boost::chrono::milliseconds> Timer::interval() const BOOST_NOEXCEPT {
 			return isActive() ? boost::make_optional(interval_) : boost::none;
