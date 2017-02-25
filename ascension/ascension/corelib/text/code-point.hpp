@@ -197,13 +197,15 @@ namespace ascension {
 		 * Returns @c true if the specified code point is in Unicode codespace (0..10FFFF).
 		 * @see InvalidCodePointException
 		 */
-		inline bool isValidCodePoint(CodePoint c) BOOST_NOEXCEPT {return c <= 0x10fffful;}
+		inline BOOST_CONSTEXPR bool isValidCodePoint(CodePoint c) BOOST_NOEXCEPT {
+			return c <= 0x10fffful;
+		}
 
 		/**
 		 * Returns @c true if the specified code point is Unicode scalar value.
 		 * @see InvalidScalarValueException
 		 */
-		inline bool isScalarValue(CodePoint c) BOOST_NOEXCEPT {
+		inline BOOST_CONSTEXPR bool isScalarValue(CodePoint c) BOOST_NOEXCEPT {
 			return isValidCodePoint(c) && !surrogates::isSurrogate(c);
 		}
 

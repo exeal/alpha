@@ -786,9 +786,7 @@ namespace ascension {
 			if(c < 0x010000u)
 				return addCharacter(static_cast<Char>(c & 0xffffu));
 			Char surrogates[2];
-			Char* temp = surrogates;
-			const std::size_t n = text::utf::checkedEncode(c, temp);
-			return addString(StringPiece(surrogates, n));
+			return addString(String(surrogates, text::utf::checkedEncode(c, surrogates)));
 		}
 
 		/**

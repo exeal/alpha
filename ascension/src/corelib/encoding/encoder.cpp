@@ -103,7 +103,7 @@ namespace ascension {
 				throw text::InvalidScalarValueException(c);
 			Char buffer[2];
 			Char* p = buffer;
-			return canEncode(StringPiece(buffer, text::utf::encode(c, p)));
+			return canEncode(String(p, text::utf::encode(c, p)));
 		}
 
 		/**
