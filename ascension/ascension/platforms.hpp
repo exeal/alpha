@@ -108,14 +108,14 @@
 #	error Multiple window system is available.
 #endif
 
-#ifndef ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS
+#ifdef ASCENSION_DIAGNOSE_PLATFORM_SELECTION
 #	pragma message("Window system selection and support status --")
 #	pragma message("  GTK+3: " BOOST_STRINGIZE(ASCENSION_WINDOW_SYSTEM_GTK))
 #	pragma message("  Qt: " BOOST_STRINGIZE(ASCENSION_WINDOW_SYSTEM_QT))
 #	pragma message("  Quartz: " BOOST_STRINGIZE(ASCENSION_WINDOW_SYSTEM_QUARTZ))
 #	pragma message("  Win32: " BOOST_STRINGIZE(ASCENSION_WINDOW_SYSTEM_WIN32))
 #	pragma message("  X Window System: " BOOST_STRINGIZE(ASCENSION_WINDOW_SYSTEM_X))
-#endif // !ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS
+#endif
 
 
 // graphics system ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -182,7 +182,7 @@
 #	error Can't detect graphics system.
 #endif
 
-#ifndef ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS
+#ifdef ASCENSION_DIAGNOSE_PLATFORM_SELECTION
 #	pragma message("Graphics system selection and support status --")
 #	pragma message("  cairomm: " BOOST_STRINGIZE(ASCENSION_GRAPHICS_SYSTEM_CAIRO))
 #	pragma message("  Core Graphics: " BOOST_STRINGIZE(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS))
@@ -190,7 +190,7 @@
 #	pragma message("  Qt: " BOOST_STRINGIZE(ASCENSION_GRAPHICS_SYSTEM_QT))
 #	pragma message("  Win32 GDI: " BOOST_STRINGIZE(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI))
 #	pragma message("  Win32 GDI+: " BOOST_STRINGIZE(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS))
-#endif // !ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS
+#endif
 
 
 // shaping engine /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -280,7 +280,7 @@
 #	error Can't detect shaping engine.
 #endif
 
-#ifndef ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS
+#ifdef ASCENSION_DIAGNOSE_PLATFORM_SELECTION
 #	pragma message("Shaping engine selection and support status --")
 #	pragma message("  Core Text: " BOOST_STRINGIZE(ASCENSION_SHAPING_ENGINE_CORE_TEXT))
 #	pragma message("  Direct Write: " BOOST_STRINGIZE(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE))
@@ -290,7 +290,7 @@
 #	pragma message("  Uniscribe: " BOOST_STRINGIZE(ASCENSION_SHAPING_ENGINE_UNISCRIBE))
 #	pragma message("  Win32 GDI: " BOOST_STRINGIZE(ASCENSION_SHAPING_ENGINE_WIN32_GDI))
 #	pragma message("  Win32 GDI+: " BOOST_STRINGIZE(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS))
-#endif // !ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS
+#endif
 
 
 // ASCENSION_HAS_CSTDINT and ASCENSION_HAS_UNISTD_H
