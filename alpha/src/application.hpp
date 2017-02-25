@@ -11,6 +11,7 @@
 #include "buffer.hpp"
 //#include "search.hpp"	// ui.SearchDialog
 #include <ascension/graphics/font/font-description.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/application.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -82,30 +83,24 @@ namespace alpha {
 		// operations
 		bool teardown(bool callHook = true);
 
+		/// @name Settings
+		/// @{
+		typedef boost::property_tree::basic_ptree<std::string, PlatformString> Settings;
+		void saveSettings();
+		Settings& settings() BOOST_NOEXCEPT;
+		const Settings& settings() const BOOST_NOEXCEPT;
+		/// @}
+
 	private:
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		explicit Application(Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
 		Application(int& argc, char**& argv, Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		Application();
+		explicit Application(std::unique_ptr<ui::MainWindow> window);
 #endif
 		void changeFont();
-//		bool	handleKeyDown(command::VirtualKey key, command::KeyModifier modifiers);
 		bool initInstance(int showCommand);
 		void loadSettings();
-		template<typename Section, typename Key, typename Container>
-		void readProfileList(Section section, Key key, Container& items, const PlatformString& defaultValue = PlatformString());
-		template<typename Section, typename Key> inline boost::optional<int> readIntegerProfile(Section section, Key key) const {
-			return boost::none;	// dummy
-		}
-		template<typename Section, typename Key> inline boost::optional<PlatformString> readStringProfile(Section section, Key key) const {
-			return boost::none;	// dummy
-		}
-		template<typename Section, typename Key, typename T> inline bool readStructureProfile(Section section, Key key, T& data) const {
-			return false;	// dummy
-		}
-		void saveSettings();
-//		void	setupToolbar();
 		void updateTitleBar();
 		template<typename Section, typename Key, typename Value>
 		inline void writeIntegerProfile(Section section, Key key, Value value) {}	// dummy
@@ -127,27 +122,36 @@ namespace alpha {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		static std::shared_ptr<Application> instance_;
 #endif
+		std::unique_ptr<Settings> settings_;
 	};
 
 
 	/// Returns the singleton application object.
-	inline Glib::RefPtr<Application> Application::instance() {
+	inline
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		Glib::RefPtr<Application>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		std::shared_ptr<Application>
+#endif
+		Application::instance() {
 		if(!instance_)
 			throw ascension::NullPointerException("There is no singleton instance.");
 		return instance_;
 	}
 
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 	/// Returns the main window.
-	inline ui::MainWindow& Application::window() BOOST_NOEXCEPT {
+	inline ui::MainWindow& Application::mainWindow() BOOST_NOEXCEPT {
 		assert(window_.get() != nullptr);
 		return *window_;
 	}
 
 	/// Returns the main window.
-	inline const ui::MainWindow& Application::window() const BOOST_NOEXCEPT {
+	inline const ui::MainWindow& Application::mainWindow() const BOOST_NOEXCEPT {
 		assert(window_.get() != nullptr);
 		return *window_;
 	}
+#endif
 } // namespace alpha
 
 #endif // ALPHA_APPLICATION_HPP

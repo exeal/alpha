@@ -1,5 +1,5 @@
 /**
- * @file application.hpp
+ * @file application.cpp
  * @author exeal
  * @date 2003-2009, 2014-2015
  */
@@ -12,32 +12,30 @@
 #include "editor-panes.hpp"
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
+#include "localized-string.hpp"
 //#include "search.hpp"
 #include "ui/main-window.hpp"
 //#include <ascension/text-editor.hpp>
 #include <ascension/corelib/regex.hpp>
 #include <ascension/graphics/font/font.hpp>
 //#include <ascension/graphics/native-conversion.hpp>
+#include <ascension/kernel/searcher.hpp>
 #include <ascension/viewer/text-area.hpp>
-#include <gtkmm/fontchooserdialog.h>
-#include <gtkmm/messagedialog.h>
-#include <glibmm/i18n.h>
 //#include "../resource/messages.h"
 //#include <manah/win32/dc.hpp>
 //#include <manah/win32/gdi-object.hpp>
 //#include <manah/win32/ui/wait-cursor.hpp>
+#include <boost/foreach.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 #include <algorithm>
 #include <codecvt>
 #include <fstream>
-//#include <commdlg.h>	// ChooseFont
-//#include <shlwapi.h>	// PathXxxx
-//#include <comcat.h>		// ICatInformation
 #if BOOST_OS_WINDOWS
 #	include <CommCtrl.h>	// InitMUILanguage
 #	include <Ole2.h>		// OleInitialize, OleUninitialize
 #endif
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#	include <CommDlg.h>	// ChooseFontW
 #	include <Dlgs.h>
 #endif
 
@@ -104,8 +102,13 @@ int main(int argc, char* argv[]) {
 	osvi.dwOSVersionInfoSize = sizeof(decltype(osvi));
 	::GetVersionExA(&osvi);
 	if(!ascension::win32::boole(osvi.dwPlatformId & VER_PLATFORM_WIN32_NT)) {
-		Gtk::MessageDialog dialog(_("Alpha does not support your platform."), false, Gtk::MESSAGE_ERROR);
+		static const auto message(alpha::localizedString("Alpha does not support your platform."));
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		Gtk::MessageDialog dialog(message.c_str(), false, Gtk::MESSAGE_ERROR);
 		dialog.run();
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		::MessageBoxW(nullptr, message.c_str(), IDS_APPNAME, MB_ICONERROR);
+#endif
 		return exitCode = -1;
 	}
 	auto mutex(ascension::win32::makeHandle(::CreateMutexW(0, false, IDS_APPFULLVERSION), &::CloseHandle));
@@ -122,10 +125,10 @@ int main(int argc, char* argv[]) {
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		const Glib::RefPtr<alpha::Application> application(alpha::Application::create(argc, argv));
-		exitCode = application->run(application->window());
+		exitCode = application->run(application->mainWindow());
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		alpha::ui::MainWindow window;
-		alpha::Application application(window);
+		std::unique_ptr<alpha::ui::MainWindow> window(new alpha::ui::MainWindow);
+		alpha::Application application(std::move(window));
 		application.run();
 #else
 #endif
@@ -154,215 +157,71 @@ int main(int argc, char* argv[]) {
 }
 
 namespace alpha {
-	// Application ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	Glib::RefPtr<Application> Application::instance_;
-
-	/// Private constructor.
-	Application::Application(Gio::ApplicationFlags flags /* = Gio::APPLICATION_FLAGS_NONE */)
-			: Gtk::Application("alpha", flags), window_(new ui::MainWindow) {
-		Glib::set_application_name("alpha");
-//		searchDialog_.reset(new ui::SearchDialog());	// ctor of SearchDialog calls Alpha
-//		onSettingChange(0, 0);	// statusFont_ の初期化
-	}
-
-	/// Private constructor.
-	Application::Application(int& argc, char**& argv, Gio::ApplicationFlags flags /* = Gio::APPLICATION_FLAGS_NONE */)
-			: Gtk::Application(argc, argv, "alpha", flags), window_(new ui::MainWindow) {
-		Glib::set_application_name("alpha");
-//		searchDialog_.reset(new ui::SearchDialog());	// ctor of SearchDialog calls Alpha
-//		onSettingChange(0, 0);	// statusFont_ の初期化
-	}
-
-	/// Shows font-chooser user interface and changes the font of the selected editor.
-	void Application::changeFont() {
-		EditorView& activeView = EditorPanes::instance().activePane().selectedView();
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		LOGFONTW font;
-		auto cf(ascension::win32::makeZeroSize<CHOOSEFONTW>());
-
-		::GetObjectW(editorFont_, sizeof(decltype(LOGFONTW)), &font);
-		cf.hwndOwner = getMainWindow().use();
-		cf.lpLogFont = &font;
-		cf.lpfnHook = chooseFontHookProc;
-		cf.Flags = CF_APPLY | CF_ENABLEHOOK | CF_INITTOLOGFONTSTRUCT | CF_NOVERTFONTS | CF_SCREENFONTS;
-		cf.hInstance = use();
-
-		if(ascension::win32::boole(::ChooseFontW(&cf))) {
-			font.lfItalic = false;
-			font.lfWeight = FW_REGULAR;
-			setFont(font);
-		}
-#else
-		Gtk::FontChooserDialog dialog(Glib::ustring(), window());
-		dialog.set_font_desc(ascension::graphics::toNative<Pango::FontDescription>(activeView.textArea()->textRenderer()->defaultFont()->describe()));
-		if(dialog.run() == Gtk::RESPONSE_ACCEPT)
-			setFont(ascension::graphics::fromNative<ascension::graphics::font::FontDescription>(dialog.get_font_desc()));
-#endif
-	}
-
 	/**
-	 * Creates a new @c Application instance.
-	 * @param flags The application flags
-	 * @return The instance
-	 * @throw ascension#IllegalStateException The instance is already exist.
+	 * @fn alpha::Application::changeFont
+	 * Shows font-chooser user interface and changes the font of the selected editor.
 	 */
-	Glib::RefPtr<Application> Application::create(Gio::ApplicationFlags flags /* = Gio::APPLICATION_FLAGS_NONE */) {
-		if(instance_)
-			throw ascension::IllegalStateException("");
-		instance_ = Glib::RefPtr<Application>(new Application(flags));
-		return instance_;
-	}
-
-	/**
-	 * Creates a new @c Application instance.
-	 * @param argc The parameter received by your main() function
-	 * @param argv The parameter received by your main() function
-	 * @param flags The application flags
-	 * @return The instance
-	 * @throw ascension#IllegalStateException The instance is already exist.
-	 */
-	Glib::RefPtr<Application> Application::create(int& argc, char**& argv, Gio::ApplicationFlags flags /* = Gio::APPLICATION_FLAGS_NONE */) {
-		if(instance_)
-			throw ascension::IllegalStateException("");
-		instance_ = Glib::RefPtr<Application>(new Application(argc, argv, flags));
-		return instance_;
-	}
 
 	/// Loads settings from the file.
 	void Application::loadSettings() {
 		// 表示に関する設定
 		ascension::graphics::font::FontDescription fd(*ascension::graphics::font::FontFamily::createMonospaceInstance(), 0.0);
-		readStructureProfile(L"View", L"Font.default", fd);	// this can fail
+		fd = settings().get<ascension::graphics::font::FontDescription>("view.font.default");	// this can fail
 		setFont(fd);
 
 		// Migemo DLL & 辞書パス
-		const Glib::ustring migemoRuntimePath(boost::get_optional_value_or(readStringProfile("Find", "migemoRuntimePath"), Glib::ustring()));
-		const Glib::ustring migemoDictionaryPath(boost::get_optional_value_or(readStringProfile("Find", "migemoDictionaryPath"), Glib::ustring()));
-		if(!migemoRuntimePath.empty() && !migemoDictionaryPath.empty()) {
+		const auto migemoRuntimePath(settings().get<PlatformString>("find.migemo-runtime-path", PlatformString()));
+		const auto migemoDictionaryPath(settings().get<PlatformString>("find.migemo-dictionary-path", PlatformString()));
+		if(!migemoRuntimePath.empty() && !migemoDictionaryPath.empty())
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			ascension::regex::MigemoPattern::initialize(
 				boost::filesystem::path(migemoRuntimePath.c_str(), std::codecvt_utf8_utf16<wchar_t>()),
 				boost::filesystem::path(migemoDictionaryPath.c_str(), std::codecvt_utf8_utf16<wchar_t>()));
-		}
+#else
+			ascension::regex::MigemoPattern::initialize(
+				boost::filesystem::path(migemoRuntimePath), boost::filesystem::path(migemoDictionaryPath));
+#endif
 
-		// 検索文字列の履歴
+		// search and replacement strings
 		std::list<ascension::String> findWhats, replacesWiths;
-		for(unsigned short i = 0; i < 16; ++i) {
-			std::ostringstream keyName("findWhat(");
-			keyName << i << ")";
-			const boost::optional<Glib::ustring> v(readStringProfile("Find", keyName.str()));
-			if(v == boost::none || v->empty())
-				break;
-			findWhats.push_back(ascension::fromGlibUstring(*v));
-		}
-		for(unsigned short i = 0; i < 16; ++i) {
-			std::ostringstream keyName("replaceWith(");
-			keyName << i << ")";
-			const boost::optional<Glib::ustring> v(readStringProfile("Find", keyName.str()));
-			if(v == boost::none || v->empty())
-				break;
-			replacesWiths.push_back(ascension::fromGlibUstring(*v));
-		}
-		ascension::searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
+		BOOST_FOREACH(auto& s, settings().get_child("find.find-what"))
+			findWhats.push_back(std::get<1>(s).data());
+		BOOST_FOREACH(auto&s, settings().get_child("find.replace-with"))
+			replacesWiths.push_back(std::get<1>(s).data());
+		auto& s = BufferList::instance().editorSession().textSearcher();
 		s.setMaximumNumberOfStoredStrings(16);
 		s.setStoredStrings(std::begin(findWhats), std::end(findWhats), false);
 		s.setStoredStrings(std::begin(replacesWiths), std::end(replacesWiths), true);
 	}
 
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-	/// Overrides @c Gio#Application#on_activate method.
-	void Application::on_activate() {
-		window_->show();
-//		BufferList::instance().addNew("*Messages*");
-//		window_->statusBar().push("Ready");
-	}
-
-	/// Overrides @c Gio#Application#on_open method.
-	void Application::on_open(const Gio::Application::type_vec_files& files, const Glib::ustring& hint) {
-		// TODO: Not implemented.
-		return on_open(files, hint);
-	}
-#endif
-
 	/// Saves the settings into the file.
 	void Application::saveSettings() {
 		// visibility of bars
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
 		auto rbbi(ascension::win32::makeZero<REBARBANDINFOW>());
 		rbbi.fMask = RBBIM_STYLE;
 		rebar_.getBandInfo(rebar_.idToIndex(IDC_TOOLBAR), rbbi);
-		writeIntegerProfile(L"View", L"visibleToolbar", ascension::win32::boole(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);
+		settings().put("view.visible-toolbar", (rbbi.fStyle & RBBS_HIDDEN) != 0);
 		rebar_.getBandInfo(rebar_.idToIndex(IDC_BUFFERBAR), rbbi);
-		writeIntegerProfile(L"View", L"visibleBufferBar", ascension::win32::boole(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);
-		writeIntegerProfile(L"View", L"visibleStatusBar", statusBar_.isVisible() ? 1 : 0);
+		settings().put("view.visible-buffer-bar", (rbbi.fStyle & RBBS_HIDDEN) != 0);
+		settings().put("view.visible-status-bar", ascension::viewer::widgetapi::isVisible(mainWindow().statusBar()));
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 		// search and replacement strings
-		const ascension::searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
-		for(std::size_t i = 0, c = s.numberOfStoredPatterns(); ; ++i) {
-			std::ostringstream keyName("findWhat(");
-			keyName << i << ")";
-			if(i < c)
-				writeStringProfile("Find", keyName.str(), s.pattern(i).c_str());
-			else {
-				writeStringProfile("Find", keyName.str(), "");
-				break;
-			}
-		}
-		for(std::size_t i = 0, c = s.numberOfStoredReplacements(); ; ++i) {
-			std::ostringstream keyName("replaceWith(");
-			keyName << i << ")";
-			if(i < c)
-				writeStringProfile("Find", keyName.str(), s.replacement(i).c_str());
-			else {
-				writeStringProfile("Find", keyName.str(), "");
-				break;
-			}
-		}
+		const auto& s = BufferList::instance().editorSession().textSearcher();
+		for(std::size_t i = 0, c = s.numberOfStoredPatterns(); ; ++i)
+			settings().put("find.find-what", s.pattern(i));
+		for(std::size_t i = 0, c = s.numberOfStoredReplacements(); ; ++i)
+			settings().put("find.replace-with", s.replacement(i));
+
+		boost::property_tree::write_xml("./settings.xml", settings());
 	}
 
-/// 全てのエディタと一部のコントロールに新しいフォントを設定
-void Application::setFont(const ascension::graphics::font::FontDescription& font) {
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-	LOGFONTW lf = font;
-
-	lf.lfWeight = FW_NORMAL;
-	editorFont_ = ::CreateFontIndirectW(&lf);
-
-	// update the all presentations
-	const int ydpi = win32::gdi::ScreenDC().getDeviceCaps(LOGPIXELSY); 
-	BufferList& buffers = BufferList::instance();
-	for(size_t i = 0; i < buffers.numberOfBuffers(); ++i) {
-		ascension::presentation::Presentation& p = buffers.at(i).presentation();
-		std::shared_ptr<const ascension::presentation::RunStyle> defaultStyle(p.defaultTextRunStyle());
-		std::unique_ptr<ascension::presentation::RunStyle> newDefaultStyle(
-			(defaultStyle.get() != 0) ? new ascension::presentation::RunStyle(*defaultStyle) : new ascension::presentation::RunStyle);
-		newDefaultStyle->fontFamily = lf.lfFaceName;
-		newDefaultStyle->fontProperties.weight = static_cast<ascension::presentation::FontProperties::Weight>(lf.lfWeight);
-		newDefaultStyle->fontProperties.style = (lf.lfItalic != 0) ?
-			ascension::presentation::FontProperties::ITALIC : presentation::FontProperties::NORMAL_STYLE;
-		newDefaultStyle->fontProperties.size = lf.lfHeight * 96.0 / ydpi;
-		newDefaultStyle->fontSizeAdjust = 0.0;
-		p.setDefaultTextRunStyle(std::shared_ptr<const ascension::presentation::RunStyle>(newDefaultStyle.release()));
-	}
-
-	// 一部のコントロールにも設定
-	if(ascension::win32::boole(readIntegerProfile(L"View", L"applyMainFontToSomeControls", 1))) {
-//		if(bookmarkDialog_.get() != 0 && bookmarkDialog_->isWindow())
-//			bookmarkDialog_->sendItemMessage(IDC_LIST_BOOKMARKS, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
-//		if(searchDialog_.get() != 0 && searchDialog_->isWindow()) {
-//			searchDialog_->sendItemMessage(IDC_COMBO_FINDWHAT, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
-//			searchDialog_->sendItemMessage(IDC_COMBO_REPLACEWITH, WM_SETFONT, reinterpret_cast<WPARAM>(editorFont_), true);
-//		}
-	}
-
-	// INI ファイルに保存
-	writeStructureProfile("View", "Font.default", lf);
-
-	// 等幅 <-> 可変幅で表記を変える必要がある
-	statusBar_.adjustPaneWidths();
-#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-}
+	/**
+	 * @fn alpha::Application::setFont
+	 * Sets the specified font into the all editors and some widgets.
+	 * @param font
+	 */
 
 	bool Application::teardown(bool callHook /* = true */) {
 #ifndef ALPHA_NO_AMBIENT
