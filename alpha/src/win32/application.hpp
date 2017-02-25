@@ -109,16 +109,20 @@ namespace alpha {
 			/**
 			 * Creates a @c WindowApplication instance.
 			 * @param window The main window
+			 * @throw ascension#NullPointerException @a window is @c null
 			 */
-			explicit WindowApplication(MainWindow& window) : window_(window) {}
+			explicit WindowApplication(std::unique_ptr<MainWindow> window) : window_(window) {
+				if(window_.get() == nullptr)
+					throw ascension::NullPointerException("window");
+			}
 
 			/// Returns the main window.
 			MainWindow& mainWindow() const {
-				return window_;
+				return *window_;
 			}
 
 		private:
-			MainWindow& window_;
+			std::unique_ptr<MainWindow> window_;
 		};
 	}
 } // namespace alpha.win32
