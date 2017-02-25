@@ -152,8 +152,7 @@ namespace ascension {
 				if(!excludeTurkishI || c == (f = foldTurkishI(*i)))
 					f = foldCommon(c);
 				if(f != c || c >= 0x010000u) {
-					Char* temp = buffer;
-					if(utf::checkedEncode(f, temp) < 2)
+					if(std::distance(buffer, utf::checkedEncode(f, buffer)) < 2)
 						s.sputc(buffer[0]);
 					else
 						s.sputn(buffer, 2);

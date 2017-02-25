@@ -169,7 +169,7 @@ namespace ascension {
 			 * @return The length of the decomposition
 			 */
 			Index internalDecompose(CodePoint c, bool compatibility, Char* destination) {
-				Char* last = destination + (utf::checkedEncode(c, destination) < 2 ? 1 : 2);
+				Char* last = utf::checkedEncode(c, destination);
 				Index len;
 				CodePoint current;
 				Char decomposedHangul[4];

@@ -18,16 +18,6 @@
 namespace ascension {
 	namespace text {
 		namespace utf {
-
-			/**
-			 * Provides the default type for Unicode code unit.
-			 * @tparam codeUnitSize The byte size of code unit
-			 */
-			template<std::size_t codeUnitSize> struct DefaultByte;
-			template<> struct DefaultByte<1> {typedef std::uint8_t Type;};
-			template<> struct DefaultByte<2> {typedef Char Type;};
-			template<> struct DefaultByte<4> {typedef CodePoint Type;};
-
 			/**
 			 * Converts UTF-x character sequence into UCS-4.
 			 * @tparam BaseIterator The base iterator represents UTF-x character sequence
@@ -92,9 +82,9 @@ namespace ascension {
 					--i;
 					std::size_t numberOfReadBytes = 1;
 					for(; numberOfReadBytes <= 4; ++numberOfReadBytes, --i) {
-						if(isLeadingByte(*i))
+						if(CodeUnitTraits<1>::isLeading(*i))
 							break;
-						else if(!isValidByte(*i)) {
+						else if(!CodeUnitTraits<1>::isValid(*i)) {
 							if(!replacesMalformedInput())
 								throw MalformedInputException<BaseIterator>(i, 1);
 							--base_;
@@ -102,9 +92,9 @@ namespace ascension {
 							cache_ = REPLACEMENT_CHARACTER;
 							return;
 						}
-						assert(maybeTrailingByte(*i));
+						assert(CodeUnitTraits<1>::maybeTrailing(*i));
 					}
-					if(length(*i) != numberOfReadBytes) {
+					if(CodeUnitTraits<1>::lengthForLeading(*i) != numberOfReadBytes) {
 						if(!replacesMalformedInput())
 							throw MalformedInputException<BaseIterator>(i, numberOfReadBytes);
 						base_ = i;
@@ -152,7 +142,8 @@ namespace ascension {
 						cache_ = REPLACEMENT_CHARACTER;
 						return;
 					}
-					extractedBytes_ = numberOfEncodedBytes<CODE_UNIT_SIZE>(cache_);
+					extractedBytes_ = CodeUnitTraits<CODE_UNIT_SIZE>::length(cache_);
+					assert(extractedBytes_ > 0);
 				}
 				// boost.iterator_facade
 				friend class boost::iterators::iterator_core_access;
@@ -233,10 +224,9 @@ namespace ascension {
 
 			private:
 				void extract() const {
-					CodeUnit* out = cache_.data();
-					const std::size_t extractedBytes = checkedEncode(*base_, out);
+					const auto p = checkedEncode(*base_, cache_.data());
 					if(sizeof(CodeUnit) != 4)
-						std::fill(cache_.begin() + extractedBytes, cache_.end(), 0);
+						std::fill(p, cache_.data() + cache_.size(), 0);
 					positionInCache_ = cache_.begin();
 				}
 			private:

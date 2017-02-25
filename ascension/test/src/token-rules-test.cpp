@@ -8,6 +8,7 @@
 #include <ascension/rules/uri-token-rule.hpp>
 #include <ascension/rules/word-token-rule.hpp>
 #include <ascension/rules/word-set-token-rule.hpp>
+#include <boost/optional/optional_io.hpp>
 #include <boost/range/irange.hpp>
 #include "from-latin1.hpp"
 
@@ -24,9 +25,9 @@ namespace {
 		const auto length(rule.matches(input, input.cbegin() + position, IDS));
 
 		if(expectedLength == boost::none)
-			BOOST_TEST((length == boost::none));
+			BOOST_TEST(length == boost::none);
 		else {
-			BOOST_REQUIRE((length != boost::none));
+			BOOST_REQUIRE(length != boost::none);
 			BOOST_TEST(boost::get(length) == boost::get(expectedLength));
 		}
 	}
@@ -82,9 +83,9 @@ namespace {
 		const auto length(rule.matches(input, input.cbegin() + position, IDS));
 
 		if(expectedLength == boost::none)
-			BOOST_TEST((length == boost::none));
+			BOOST_TEST(length == boost::none);
 		else {
-			BOOST_REQUIRE((length != boost::none));
+			BOOST_REQUIRE(length != boost::none);
 			BOOST_TEST(boost::get(length) == boost::get(expectedLength));
 		}
 	}

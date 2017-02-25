@@ -496,6 +496,9 @@ namespace ascension {
 									cp = ((fromNext[0] & 0x07) << 18) | ((fromNext[1] & 0x3f) << 12)
 										| ((fromNext[2] & 0x3f) << 6) | ((fromNext[3] & 0x3f) << 0);
 									break;
+								default:
+									cp = 0;
+									ASCENSION_ASSERT_NOT_REACHED();
 							}
 
 							if(std::distance(toNext, boost::end(to)) == 1 && text::surrogates::isSupplemental(cp))
@@ -655,7 +658,7 @@ namespace ascension {
 							else if(encoder.substitutionPolicy() != Encoder::IGNORE_UNMAPPABLE_CHARACTERS)
 								return Encoder::UNMAPPABLE_CHARACTER;
 						} else
-							toNext += text::utf::encode(c, toNext);
+							toNext = text::utf::encode(c, toNext);
 					}
 					return (fromNext == boost::const_end(from)) ? Encoder::COMPLETED : Encoder::INSUFFICIENT_BUFFER;
 				}

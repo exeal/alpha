@@ -9,6 +9,9 @@
 #ifndef ASCENSION_CHARACTER_HPP
 #define ASCENSION_CHARACTER_HPP
 #include <ascension/platforms.hpp>
+#ifndef BOOST_NO_CXX11_CHAR16_T
+#	include <boost/functional/hash/hash.hpp>
+#endif
 #include <array>
 #ifdef BOOST_NO_CXX11_CHAR16_T
 #	include <cstdint>
@@ -91,7 +94,9 @@ namespace ascension {
 
 #ifndef BOOST_NO_CXX11_CHAR16_T
 namespace boost {
-	std::size_t hash_value(char16_t c);
+	inline std::size_t hash_value(char16_t c) {
+		return hash_value(static_cast<unsigned short>(c));
+	}
 }
 #endif
 
