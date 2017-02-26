@@ -49,6 +49,10 @@ namespace ascension {
 				return std::unique_ptr<graphics::RenderingContext2D>(new graphics::RenderingContext2D(std::move(dc)));
 			}
 
+			Proxy<const Window> cwindow(Proxy<const Widget> widget) {
+				return Proxy<const Window>(*widget.get());
+			}
+
 			Proxy<Widget> desktop() {
 				return win32::Window(win32::borrowed(::GetDesktopWindow()));
 			}
@@ -242,6 +246,10 @@ namespace ascension {
 
 			void showNormal(Proxy<Widget> widget) {
 				::ShowWindow(widget->handle().get(), SW_RESTORE);
+			}
+
+			Proxy<Window> window(Proxy<Widget> widget) {
+				return Proxy<Window>(*widget.get());
 			}
 
 			double windowOpacity(Proxy<const Widget> widget) {
