@@ -4,6 +4,8 @@
  * @date 2014-02-01 Created.
  */
 
+#include <ascension/corelib/native-conversion.hpp>
+#include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
@@ -20,6 +22,20 @@ namespace ascension {
 				// TODO: MSDN says "Do not use the CopyCursor function for animated cursor."
 				if(native_.get() == nullptr)
 					throw makePlatformError();
+			}
+
+			graphics::Point Cursor::position() {
+				POINT p;
+				if(!win32::boole(::GetCursorPos(&p)))
+					throw makePlatformError();
+				return fromNative<graphics::Point>(p);
+			}
+
+			graphics::Point Cursor::position(Proxy<const Window> window) {
+				POINT p;
+				if(!win32::boole(::GetCursorPos(&p)) || !win32::boole(::ScreenToClient(window->handle().get(), &p)))
+					throw makePlatformError();
+				return fromNative<graphics::Point>(p);
 			}
 		}
 	}
