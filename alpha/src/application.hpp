@@ -70,7 +70,7 @@ namespace alpha {
 		static Glib::RefPtr<Application> create(int& argc, char**& argv, Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
 		static Glib::RefPtr<Application> instance();
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		static std::shared_ptr<Application> create();
+		static std::shared_ptr<Application> create(std::unique_ptr<ui::MainWindow> window);
 		static std::shared_ptr<Application> instance();
 #endif
 		/// @}

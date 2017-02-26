@@ -128,8 +128,8 @@ int main(int argc, char* argv[]) {
 		exitCode = application->run(application->mainWindow());
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		std::unique_ptr<alpha::ui::MainWindow> window(new alpha::ui::MainWindow);
-		alpha::Application application(std::move(window));
-		application.run();
+		auto application(alpha::Application::create(std::move(window)));
+		application->run(0);
 #else
 #endif
 #if BOOST_OS_WINDOWS
@@ -166,7 +166,7 @@ namespace alpha {
 	void Application::loadSettings() {
 		// ï\é¶Ç…ä÷Ç∑ÇÈê›íË
 		ascension::graphics::font::FontDescription fd(*ascension::graphics::font::FontFamily::createMonospaceInstance(), 0.0);
-		fd = settings().get<ascension::graphics::font::FontDescription>("view.font.default");	// this can fail
+//		fd = settings().get<ascension::graphics::font::FontDescription>("view.font.default");	// this can fail
 		setFont(fd);
 
 		// Migemo DLL & é´èëÉpÉX
@@ -238,8 +238,11 @@ namespace alpha {
 		}
 #endif
 		saveSettings();
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		::PostQuitMessage(0);
+#else
 		quit();
-//		::PostQuitMessage(0);
+#endif
 		return true;
 	}
 
