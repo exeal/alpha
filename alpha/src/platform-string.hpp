@@ -15,23 +15,29 @@
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #	include <???>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-#	include <string>
+#	include <ascension/corelib/text/character.hpp>
 #	include <winnt.h>
 #endif
 
 namespace alpha {
 	/// String type on the selected window system.
-	typedef
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-		Glib::ustring
+	typedef Glib::ustring PlatformString;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-		QString
+	typedef QString PlatformString;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-		???
+	typedef ??? PlatformString;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		std::basic_string<WCHAR>
+	typedef std::basic_string<WCHAR> PlatformString;
 #endif
-		PlatformString;
 }
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+namespace std {
+	basic_ostream<WCHAR>& operator<<(basic_ostream<WCHAR>& out, const ascension::text::String& s);
+	basic_istream<WCHAR>& operator>>(basic_istream<WCHAR>& in, ascension::text::String& s);
+	basic_istream<WCHAR>& operator>>(basic_istream<WCHAR>& in, std::string& s);
+}
+#endif
 
 #endif // !ALPHA_PLATFORM_STRING_HPP
