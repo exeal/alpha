@@ -17,6 +17,7 @@
 #include "ui/main-window.hpp"
 //#include <ascension/text-editor.hpp>
 #include <ascension/corelib/regex.hpp>
+#include <ascension/corelib/text/utf-string.hpp>
 #include <ascension/graphics/font/font.hpp>
 //#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/kernel/searcher.hpp>
@@ -185,9 +186,9 @@ namespace alpha {
 		// search and replacement strings
 		std::list<ascension::String> findWhats, replacesWiths;
 		BOOST_FOREACH(auto& s, settings().get_child("find.find-what"))
-			findWhats.push_back(std::get<1>(s).data());
+			findWhats.push_back(ascension::text::utf::toString(std::get<1>(s).data()));
 		BOOST_FOREACH(auto&s, settings().get_child("find.replace-with"))
-			replacesWiths.push_back(std::get<1>(s).data());
+			replacesWiths.push_back(ascension::text::utf::toString(std::get<1>(s).data()));
 		auto& s = BufferList::instance().editorSession().textSearcher();
 		s.setMaximumNumberOfStoredStrings(16);
 		s.setStoredStrings(std::begin(findWhats), std::end(findWhats), false);
