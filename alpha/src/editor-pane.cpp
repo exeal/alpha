@@ -54,11 +54,11 @@ namespace alpha {
 	void EditorPane::add(std::unique_ptr<EditorView> viewer) {
 		if(viewer.get() == nullptr)
 			throw ascension::NullPointerException("viewer");
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		std::ostringstream oss;
 		oss << std::hex << reinterpret_cast<std::uintptr_t>(boost::addressof(*viewer));
 		const Glib::ustring name(oss.str());	// dummy
-
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		std::unique_ptr<Gtk::Box> container(new Gtk::Box(Gtk::ORIENTATION_VERTICAL));
 		std::unique_ptr<Gtk::ScrolledWindow> scroller(new Gtk::ScrolledWindow());
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)

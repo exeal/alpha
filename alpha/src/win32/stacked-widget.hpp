@@ -77,7 +77,7 @@ namespace alpha {
 		 * @param set The new setting
 		 * @see #isHorizontallyHomogeneous, #setVerticallyHomogeneous
 		 */
-		void StackedWidget::setHorizontallyHomogeneous(bool set /* = true */) BOOST_NOEXCEPT {
+		inline void StackedWidget::setHorizontallyHomogeneous(bool set /* = true */) BOOST_NOEXCEPT {
 			horizontallyHomogeneous_ = set;
 		}
 
@@ -86,7 +86,7 @@ namespace alpha {
 		 * @param set The new setting
 		 * @see isVerticallyHomogeneous#, #setHorizontallyHomogeneous
 		 */
-		void StackedWidget::setVerticallyHomogeneous(bool set /* = true */) BOOST_NOEXCEPT {
+		inline void StackedWidget::setVerticallyHomogeneous(bool set /* = true */) BOOST_NOEXCEPT {
 			verticallyHomogeneous_ = set;
 		}
 	}

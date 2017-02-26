@@ -366,7 +366,7 @@ bool InputManager::input(const MSG& message) {
 						mappingSchemeLocker_.reset(new boost::lock_guard<KeyMapMutex>(KeyMapMutex(mappingScheme_.get())));
 					if(modalMappingScheme_.get() != nullptr)
 						modalMappingSchemeLocker_.reset(new boost::lock_guard<KeyMapMutex>(KeyMapMutex(modalMappingScheme_.get())));
-					Application::instance()->window().statusBar().push(incompleteKeyStrokes);
+					Application::instance()->mainWindow().statusBar().push(incompleteKeyStrokes);
 				} else {	// undefined key stroke(s)
 					cancelIncompleteKeyStrokes();
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -374,7 +374,7 @@ bool InputManager::input(const MSG& message) {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					::MessageBeep(MB_OK);
 #endif
-					Application::instance()->window().statusBar().push((boost::basic_format<PlatformString::value_type>(localizedString("%1% is undefined")) % incompleteKeyStrokes).str());
+					Application::instance()->mainWindow().statusBar().push((boost::basic_format<PlatformString::value_type>(localizedString("%1% is undefined")) % incompleteKeyStrokes).str());
 				}
 				return true;
 			}
