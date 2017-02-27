@@ -131,7 +131,7 @@ namespace ascension {
 					throw makePlatformError();
 			}
 
-			void resize(Proxy<Widget> widget, const graphics::Dimension& newSize) {
+			void resize(Proxy<Window> widget, const graphics::Dimension& newSize) {
 				if(!win32::boole(::SetWindowPos(widget->handle().get(), nullptr,
 					0, 0, static_cast<int>(graphics::geometry::dx(newSize)), static_cast<int>(graphics::geometry::dy(newSize)),
 					SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER)))
