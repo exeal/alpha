@@ -214,7 +214,12 @@ namespace ascension {
 				::SetScrollRange(handle().get(), bar, range.beginning(), range.end(), redraw);
 			}
 #endif
-			void setParent(Proxy<Widget> widget, Proxy<Widget> newParent) {
+			void setParentWidget(Proxy<Widget> widget, Proxy<Widget> newParent) {
+				if(::SetParent(widget->handle().get(), (newParent.get() != nullptr) ? newParent->handle().get() : nullptr) == nullptr)
+					throw makePlatformError();
+			}
+
+			void setParentWindow(Proxy<Widget> widget, Proxy<Window> newParent) {
 				if(::SetParent(widget->handle().get(), (newParent.get() != nullptr) ? newParent->handle().get() : nullptr) == nullptr)
 					throw makePlatformError();
 			}
