@@ -107,6 +107,19 @@ namespace ascension {
 					throw makePlatformError();
 			}
 
+			Widget::pointer parentWidget(Proxy<const Widget> widget) {
+				static win32::Window parent((win32::Handle<HWND>()));
+				auto temp(win32::borrowed(::GetParent(widget->handle().get())));
+				if(temp.get() == nullptr)
+					return nullptr;
+				parent = win32::Window(temp);
+				return &parent;
+			}
+
+			Window::pointer parentWindow(Proxy<const Widget> widget) {
+				return parentWidget(widget);
+			}
+
 			void raise(Proxy<Window> widget) {
 				if(!win32::boole(::SetWindowPos(widget->handle().get(),
 					HWND_TOP, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE)))
