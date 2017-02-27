@@ -188,6 +188,13 @@ namespace ascension {
 	InterprocessData::InterprocessData() {
 	}
 
+	/**
+	 * Creates an @c InterprocessData object from @c IDataObject.
+	 * @param impl The @c IDataObject
+	 */
+	InterprocessData::InterprocessData(win32::com::SmartPointer<IDataObject> impl) : impl_(impl) {
+	}
+
 	void InterprocessData::data(Format format, std::vector<std::uint8_t>& out) const {
 		if(impl_.get() == nullptr)
 			throw IllegalStateException("An empty MimeData.");
