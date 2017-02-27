@@ -84,8 +84,11 @@ namespace ascension {
 			 * @param wp The first parameter
 			 * @param lp The second parameter
 			 * @param[out] consumed
+			 * @note The default implementation calls @c DefWindowProcW.
 			 */
-			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) = 0;
+			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+				return (consumed = true), ::DefWindowProcW(handle().get(), message, wp, lp);
+			}
 			/**
 			 * Returns the window class data.
 			 * @param[out] classInformation
