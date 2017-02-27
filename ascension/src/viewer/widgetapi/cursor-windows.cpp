@@ -24,6 +24,10 @@ namespace ascension {
 					throw makePlatformError();
 			}
 
+			void Cursor::hide() {
+				::ShowCursor(false);	// this may not hide
+			}
+
 			graphics::Point Cursor::position() {
 				POINT p;
 				if(!win32::boole(::GetCursorPos(&p)))
@@ -36,6 +40,10 @@ namespace ascension {
 				if(!win32::boole(::GetCursorPos(&p)) || !win32::boole(::ScreenToClient(window->handle().get(), &p)))
 					throw makePlatformError();
 				return fromNative<graphics::Point>(p);
+			}
+
+			void Cursor::show() {
+				::ShowCursor(true);	// this may not display
 			}
 		}
 	}
