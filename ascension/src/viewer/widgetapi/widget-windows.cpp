@@ -100,22 +100,14 @@ namespace ascension {
 					throw makePlatformError();
 			}
 
-			void move(Proxy<Widget> widget, const graphics::Point& newOrigin) {
+			void move(Proxy<Window> widget, const graphics::Point& newOrigin) {
 				if(!win32::boole(::SetWindowPos(widget->handle().get(), nullptr,
 					static_cast<int>(graphics::geometry::x(newOrigin)), static_cast<int>(graphics::geometry::y(newOrigin)), 0, 0,
 					SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_NOZORDER)))
 					throw makePlatformError();
 			}
-			/*
-						boost::optional<NativeWidget> parent(Proxy<const Widget> widget) {
-							HWND parentHandle = ::GetParent(widget.handle().get());
-							if(parentHandle == nullptr)
-								return boost::none;
-							win32::Window temp((win32::Handle<HWND>(parentHandle)));
-							return boost::make_optional(temp);
-						}
-			*/
-			void raise(Proxy<Widget> widget) {
+
+			void raise(Proxy<Window> widget) {
 				if(!win32::boole(::SetWindowPos(widget->handle().get(),
 					HWND_TOP, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE)))
 					throw makePlatformError();
@@ -251,6 +243,11 @@ namespace ascension {
 
 			void showNormal(Proxy<Widget> widget) {
 				::ShowWindow(widget->handle().get(), SW_RESTORE);
+			}
+
+			void unsetFocus(Proxy<Widget> widget) {
+				if(hasFocus(widget))
+					::SetFocus(nullptr);
 			}
 
 			Proxy<Window> window(Proxy<Widget> widget) {
