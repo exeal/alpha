@@ -82,11 +82,11 @@ namespace ascension {
 				return ::GetActiveWindow() == widget->handle().get();
 			}
 
-			bool isMaximized(Proxy<const Widget> widget) {
+			bool isMaximized(Proxy<const Window> widget) {
 				return win32::boole(::IsZoomed(widget->handle().get()));
 			}
 
-			bool isMinimized(Proxy<const Widget> widget) {
+			bool isMinimized(Proxy<const Window> widget) {
 				return win32::boole(::IsIconic(widget->handle().get()));
 			}
 
