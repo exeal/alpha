@@ -46,24 +46,15 @@ namespace ascension {
 #endif
 			Format;
 		/// Returns a list of formats supported by the object.
-		virtual void formats(std::vector<Format>& out) const;
+		virtual void formats(std::vector<Format>& out) const = 0;
 		/// Returns @c true if this object can return data for the MIME type specified by @a format.
-		virtual bool hasFormat(Format format) const BOOST_NOEXCEPT;
+		virtual bool hasFormat(Format format) const BOOST_NOEXCEPT = 0;
 //		/// Returns @c true if this object can return an image.
-//		virtual bool hasImage() const BOOST_NOEXCEPT;
+//		virtual bool hasImage() const BOOST_NOEXCEPT = 0;
 		/// Returns @c true if this object can return plain text.
-		virtual bool hasText() const BOOST_NOEXCEPT;
+		virtual bool hasText() const BOOST_NOEXCEPT = 0;
 		/// Returns @c true if this object can return a list of URI.
-		virtual bool hasURIs() const BOOST_NOEXCEPT;
-
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-	public:
-		explicit InterprocessDataFormats(std::vector<std::string>&& targets);
-	private:
-		const std::vector<std::string> targets_;
-#endif
-	protected:
-		InterprocessDataFormats() BOOST_NOEXCEPT {}
+		virtual bool hasURIs() const BOOST_NOEXCEPT = 0;
 	};
 
 	/**
