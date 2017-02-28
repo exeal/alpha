@@ -276,6 +276,71 @@ namespace ascension {
 			}
 		}
 	}
+
+	namespace graphics {
+		boost::optional<Color> SystemColors::get(Value value) {
+			switch(value) {
+				case ACTIVE_BORDER:
+					return fromNative<Color>(::GetSysColor(COLOR_ACTIVEBORDER));
+				case ACTIVE_CAPTION:
+					return fromNative<Color>(::GetSysColor(COLOR_ACTIVECAPTION));
+				case APP_WORKSPACE:
+					return fromNative<Color>(::GetSysColor(COLOR_APPWORKSPACE));
+				case BACKGROUND:
+					return fromNative<Color>(::GetSysColor(COLOR_BACKGROUND));
+				case BUTTON_FACE:
+					return fromNative<Color>(::GetSysColor(COLOR_BTNFACE));
+				case BUTTON_HIGHLIGHT:
+					return fromNative<Color>(::GetSysColor(COLOR_BTNHIGHLIGHT));
+				case BUTTON_SHADOW:
+					return fromNative<Color>(::GetSysColor(COLOR_BTNSHADOW));
+				case BUTTON_TEXT:
+					return fromNative<Color>(::GetSysColor(COLOR_BTNTEXT));
+				case CAPTION_TEXT:
+					return fromNative<Color>(::GetSysColor(COLOR_CAPTIONTEXT));
+				case GRAY_TEXT:
+					return fromNative<Color>(::GetSysColor(COLOR_GRAYTEXT));
+				case HIGHLIGHT:
+					return fromNative<Color>(::GetSysColor(COLOR_HIGHLIGHT));
+				case HIGHLIGHT_TEXT:
+					return fromNative<Color>(::GetSysColor(COLOR_HIGHLIGHTTEXT));
+				case INACTIVE_BORDER:
+					return fromNative<Color>(::GetSysColor(COLOR_INACTIVEBORDER));
+				case INACTIVE_CAPTION:
+					return fromNative<Color>(::GetSysColor(COLOR_INACTIVECAPTION));
+				case INACTIVE_CAPTION_TEXT:
+					return fromNative<Color>(::GetSysColor(COLOR_INACTIVECAPTIONTEXT));
+				case INFO_BACKGROUND:
+					return fromNative<Color>(::GetSysColor(COLOR_INFOBK));
+				case INFO_TEXT:
+					return fromNative<Color>(::GetSysColor(COLOR_INFOTEXT));
+				case MENU:
+					return fromNative<Color>(::GetSysColor(COLOR_MENU));
+				case MENU_TEXT:
+					return fromNative<Color>(::GetSysColor(COLOR_MENUTEXT));
+				case SCROLLBAR:
+					return fromNative<Color>(::GetSysColor(COLOR_SCROLLBAR));
+				case THREE_D_DARK_SHADOW:
+					return fromNative<Color>(::GetSysColor(COLOR_3DDKSHADOW));
+				case THREE_D_FACE:
+					return fromNative<Color>(::GetSysColor(COLOR_3DFACE));
+				case THREE_D_HIGHLIGHT:
+					return fromNative<Color>(::GetSysColor(COLOR_3DHIGHLIGHT));
+				case THREE_D_LIGHT_SHADOW:
+					return fromNative<Color>(::GetSysColor(COLOR_3DLIGHT));
+				case THREE_D_SHADOW:
+					return fromNative<Color>(::GetSysColor(COLOR_3DSHADOW));
+				case WINDOW:
+					return fromNative<Color>(::GetSysColor(COLOR_WINDOW));
+				case WINDOW_FRAME:
+					return fromNative<Color>(::GetSysColor(COLOR_WINDOWFRAME));
+				case WINDOW_TEXT:
+					return fromNative<Color>(::GetSysColor(COLOR_WINDOWTEXT));
+				default:
+					throw UnknownValueException("value");
+			}
+		}
+	}
 }
 
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
