@@ -29,32 +29,6 @@ namespace ascension {
 							instance = win32::com::SmartPointer<IDropTargetHelper>::create(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER);
 						return boost::get(instance);
 					}
-
-					inline DropAction translateDropActions(DWORD effect) BOOST_NOEXCEPT {
-						DropAction result = DROP_ACTION_IGNORE;
-						if(win32::boole(effect & DROPEFFECT_COPY))
-							result |= widgetapi::DROP_ACTION_COPY;
-						if(win32::boole(effect & DROPEFFECT_MOVE))
-							result |= widgetapi::DROP_ACTION_MOVE;
-						if(win32::boole(effect & DROPEFFECT_LINK))
-							result |= widgetapi::DROP_ACTION_LINK;
-						if(win32::boole(effect & DROPEFFECT_SCROLL))
-							result |= widgetapi::DROP_ACTION_WIN32_SCROLL;
-						return result;
-					}
-
-					inline DWORD translateDropAction(DropAction dropAction) BOOST_NOEXCEPT {
-						DWORD effect = DROPEFFECT_NONE;
-						if((dropAction & widgetapi::DROP_ACTION_COPY) != 0)
-							effect |= DROPEFFECT_COPY;
-						if((dropAction & widgetapi::DROP_ACTION_MOVE) != 0)
-							effect |= DROPEFFECT_MOVE;
-						if((dropAction & widgetapi::DROP_ACTION_LINK) != 0)
-							effect |= DROPEFFECT_LINK;
-						if((dropAction & widgetapi::DROP_ACTION_WIN32_SCROLL) != 0)
-							effect |= DROPEFFECT_SCROLL;
-						return effect;
-					}
 				}
 
 				namespace {
@@ -92,7 +66,7 @@ namespace ascension {
 					const auto p(fromNative<graphics::Point>(location));
 					widgetapi::DragEnterInput input(
 						win32::makeLocatedUserInput(keyState, widgetapi::mapFromGlobal(widget_, p)),
-						translateDropActions(*effect), makeInterprocessData(data));
+						fromNative<DropActions>(*effect), makeInterprocessData(data));
 					try {
 						target_.dragEntered(input);
 					} catch(const std::bad_alloc&) {
@@ -101,7 +75,10 @@ namespace ascension {
 						return E_UNEXPECTED;
 					}
 					data_ = makeInterprocessData(data);
-					*effect = translateDropAction(input.dropAction());
+					if(input.dropAction() == boost::none)
+						*effect = DROPEFFECT_NONE;
+					else
+						*effect = toNative<DWORD>(DropActions(boost::get(input.dropAction())));
 					if(auto helper = dropTargetHelper()) {
 						auto p2(toNative<POINT>(p));
 						helper->DragEnter(widget_.get()->handle().get(), data, &p2, *effect);
@@ -133,7 +110,7 @@ namespace ascension {
 					try {
 						target_.dragMoved(widgetapi::DragMoveInput(
 							win32::makeLocatedUserInput(keyState, widgetapi::mapFromGlobal(widget_, p)),
-							translateDropActions(*effect), data_));
+							fromNative<DropActions>(*effect), data_));
 					} catch(const std::bad_alloc&) {
 						return E_OUTOFMEMORY;
 					} catch(...) {
@@ -166,7 +143,7 @@ namespace ascension {
 					try {
 						target_.dropped(widgetapi::DropInput(
 							win32::makeLocatedUserInput(keyState, widgetapi::mapFromGlobal(widget_, p)),
-							translateDropActions(*effect), makeInterprocessData(data)));
+							fromNative<DropActions>(*effect), makeInterprocessData(data)));
 					} catch(const std::bad_alloc&) {
 						hr = E_OUTOFMEMORY;
 					} catch(...) {
@@ -178,6 +155,52 @@ namespace ascension {
 					}
 					return hr;
 				}
+			}
+
+			namespace {
+				DropAction firstAction(const DropActions& actions) {
+					assert(actions.any());
+					for(std::size_t i = 0; i < actions.size(); ++i) {
+						if(actions.test(i))
+							return static_cast<DropAction>(i);
+					}
+					ASCENSION_ASSERT_NOT_REACHED();
+				}
+			}
+
+			boost::optional<DropAction> resolveDefaultDropAction(const DropActions& possibleActions, const event::MouseButtons&, const event::KeyboardModifiers& modifiers) {
+				if(possibleActions.none())
+					return boost::none;
+				else if(possibleActions.count() == 1)
+					return firstAction(possibleActions);
+
+				boost::optional<DWORD> effect;
+				if(modifiers == event::KeyboardModifiers(event::SHIFT_DOWN)
+						|| modifiers == event::KeyboardModifiers(std::make_tuple(event::SHIFT_DOWN, event::ALT_DOWN))
+						|| modifiers == event::KeyboardModifiers(std::make_tuple(event::CONTROL_DOWN, event::ALT_DOWN))
+						|| modifiers == event::KeyboardModifiers(std::make_tuple(event::SHIFT_DOWN, event::CONTROL_DOWN, event::ALT_DOWN)))
+					effect = DROPEFFECT_MOVE;
+				else if(modifiers == event::KeyboardModifiers(event::CONTROL_DOWN))
+					effect = DROPEFFECT_COPY;
+				else if(modifiers == event::KeyboardModifiers(event::ALT_DOWN)
+						|| modifiers == event::KeyboardModifiers(std::make_tuple(event::SHIFT_DOWN, event::CONTROL_DOWN)))
+					effect = DROPEFFECT_LINK;
+
+				if(effect == boost::none) {
+					// query the system default setting
+					static const WCHAR REGISTRY_VALUE_NAME[] = L"DefaultDropEffect\\*";
+					DWORD systemDefaultEffect, type, size;
+					if(ERROR_SUCCESS != ::RegQueryValueExW(HKEY_CLASSES_ROOT, REGISTRY_VALUE_NAME, nullptr, &type, reinterpret_cast<LPBYTE>(&systemDefaultEffect), &size) || type != REG_DWORD || size != sizeof(DWORD))
+						// TODO: Accept other types and sizes
+						systemDefaultEffect = DROPEFFECT_MOVE;
+					effect = systemDefaultEffect;
+				}
+
+				DropActions action = fromNative<DropActions>(boost::get(effect));
+				assert(action.count() == 1);
+				action &= possibleActions;
+				return action.any() ? firstAction(action) : firstAction(possibleActions);
+
 			}
 		}
 	}

@@ -328,9 +328,9 @@ namespace ascension {
 				graphics::geometry::_sx = -1, graphics::geometry::_sy = -1);
 			d.setImage(*image, hotspot);
 
-			widgetapi::DropAction possibleActions = widgetapi::DROP_ACTION_COPY;
+			widgetapi::DropActions possibleActions(widgetapi::COPY_ACTION);
 			if(!caret->document().isReadOnly())
-				possibleActions |= widgetapi::DROP_ACTION_MOVE;
+				possibleActions.set(widgetapi::MOVE_ACTION);
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			d.execute(possibleActions, input.modifiers().native(), nullptr);
 #else
@@ -394,7 +394,7 @@ namespace ascension {
 
 		/// @see DropTarget#dragEntered
 		void DefaultTextAreaMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
-			input.setDropAction(widgetapi::DROP_ACTION_IGNORE);
+			input.setDropAction(boost::none);
 			TextViewer& viewer = textArea_->textViewer();
 			if(/*dnd_.supportLevel == DONT_SUPPORT_DND ||*/ textArea_->caret()->document().isReadOnly() || !viewer.allowsMouseInput())
 				return input.ignore(boost::none);
@@ -474,7 +474,7 @@ namespace ascension {
 
 		/// @see DropTarget#dragMoved
 		void DefaultTextAreaMouseInputStrategy::dragMoved(widgetapi::DragMoveInput& input) {
-			widgetapi::DropAction dropAction = widgetapi::DROP_ACTION_IGNORE;
+			boost::optional<widgetapi::DropAction> dropAction;
 			bool acceptable = false;
 			const graphics::font::TextViewportNotificationLocker lock(textArea_->viewport().get());
 			const TextViewer& viewer = textArea_->textViewer();
@@ -501,11 +501,11 @@ namespace ascension {
 			}
 
 			if(acceptable) {
-				dropAction = input.hasModifier(widgetapi::event::CONTROL_DOWN) ? widgetapi::DROP_ACTION_COPY : widgetapi::DROP_ACTION_MOVE;
+				dropAction = input.hasModifier(widgetapi::event::CONTROL_DOWN) ? widgetapi::COPY_ACTION : widgetapi::MOVE_ACTION;
 				const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> scrollOffset(calculateDnDScrollOffset(viewer));
 				if(scrollOffset.x() != 0 || scrollOffset.y() != 0) {
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-					dropAction |= widgetapi::DROP_ACTION_WIN32_SCROLL;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
+					boost::get(dropAction).set(widgetapi::WIN32_SCROLL_ACTION);
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					// only one direction to scroll
 					if(scrollOffset.x() != 0)
@@ -524,7 +524,7 @@ namespace ascension {
 		void DefaultTextAreaMouseInputStrategy::dropped(widgetapi::DropInput& input) {
 			TextViewer& viewer = textArea_->textViewer();
 			auto& document = textArea_->caret()->document();
-			input.setDropAction(widgetapi::DROP_ACTION_IGNORE);
+			input.setDropAction(boost::none);
 			if(/*dnd_.supportLevel == DONT_SUPPORT_DND ||*/ dragAndDrop_ == boost::none || document.isReadOnly() || !viewer.allowsMouseInput())
 				return input.ignore();
 
@@ -538,7 +538,7 @@ namespace ascension {
 
 			if(dragAndDrop_->state == DragAndDrop::PROCESSING_AS_TARGET) {	// dropped from the other widget
 				endLocationTracking();
-				if((input.possibleActions() & widgetapi::DROP_ACTION_COPY) != 0) {
+				if((input.possibleActions().test(widgetapi::COPY_ACTION))) {
 					caret->moveTo(destination);
 
 					String content;
@@ -561,7 +561,7 @@ namespace ascension {
 							if(contentIsRectangle)
 								caret->beginRectangleSelection();
 							caret->select(_anchor = insertionPosition(document, destination), _caret = caret->hit());
-							input.setDropAction(widgetapi::DROP_ACTION_COPY);
+							input.setDropAction(widgetapi::COPY_ACTION);
 						}
 					}
 				}
@@ -578,7 +578,7 @@ namespace ascension {
 					const bool rectangle = caret->isSelectionRectangle();
 					bool failed = false;
 					if(input.hasModifier(widgetapi::event::CONTROL_DOWN)) {	// copy
-						if((input.possibleActions() & widgetapi::DROP_ACTION_COPY) != 0) {
+						if(input.possibleActions().test(widgetapi::COPY_ACTION)) {
 							document.insertUndoBoundary();
 							AutoFreeze af(&viewer);
 //							textArea_->redrawLines(ca.beginning().line(), ca.end().line());
@@ -592,12 +592,12 @@ namespace ascension {
 							caret->enableAutoShow(true);
 							if(!failed) {
 								caret->select(_anchor = insertionPosition(document, destination), _caret = caret->hit());
-								input.setDropAction(widgetapi::DROP_ACTION_COPY);
+								input.setDropAction(widgetapi::COPY_ACTION);
 							}
 							document.insertUndoBoundary();
 						}
 					} else {	// move as a rectangle or linear
-						if((input.possibleActions() & widgetapi::DROP_ACTION_MOVE) != 0) {
+						if(input.possibleActions().test(widgetapi::MOVE_ACTION)) {
 							document.insertUndoBoundary();
 							AutoFreeze af(&viewer);
 							const auto oldSelection(caret->selectedRegion());
@@ -620,7 +620,7 @@ namespace ascension {
 							}
 							caret->enableAutoShow(true);
 							if(!failed)
-								input.setDropAction(widgetapi::DROP_ACTION_MOVE);
+								input.setDropAction(widgetapi::MOVE_ACTION);
 							document.insertUndoBoundary();
 						}
 					}

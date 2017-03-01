@@ -22,7 +22,7 @@ namespace ascension {
 				return context_->get_suggested_action();
 			}
 
-			DropAction DragContext::execute(DropAction supportedActions, int mouseButton, GdkEvent* event) {
+			DropAction DragContext::execute(const DropActions& supportedActions, int mouseButton, GdkEvent* event) {
 				if(mimeData_.get() == nullptr)
 					throw IllegalStateException("DragContext.setMimeData is not called.");
 				std::vector<MimeData::Format> formats;
@@ -56,10 +56,10 @@ namespace ascension {
 				mimeData_ = data;
 			}
 
-			DropAction DragContext::supportedActions() const {
+			DropActions DragContext::supportedActions() const {
 				if(!context_)
 					throw IllegalStateException("");
-				return context_->get_actions();
+				return fromNative<DropActions>(context_->get_actions());
 			}
 		}
 

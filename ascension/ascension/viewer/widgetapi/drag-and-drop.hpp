@@ -7,6 +7,7 @@
 
 #ifndef ASCENSION_DRAG_AND_DROP_HPP
 #define ASCENSION_DRAG_AND_DROP_HPP
+#include <ascension/corelib/combination.hpp>
 #include <ascension/corelib/interprocess-data.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
 #include <ascension/viewer/widgetapi/event/located-user-input.hpp>
@@ -24,57 +25,147 @@
 namespace ascension {
 	namespace viewer {
 		namespace widgetapi {
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			typedef Gdk::DragAction DropAction;
-			const DropAction DROP_ACTION_IGNORE = Gdk::ACTION_DEFAULT;
-			const DropAction DROP_ACTION_COPY = Gdk::ACTION_COPY;
-			const DropAction DROP_ACTION_MOVE = Gdk::ACTION_MOVE;
-			const DropAction DROP_ACTION_LINK = Gdk::ACTION_LINK;
-			const DropAction DROP_ACTION_GTK_PRIVATE = Gdk::ACTION_PRIVATE;
-			const DropAction DROP_ACTION_GTK_ASK = Gdk::ACTION_ASK;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-			typedef ??? DropAction;
-			const DropAction DROP_ACTION_IGNORE = Qt::IgnoreAction;
-			const DropAction DROP_ACTION_COPY = Qt::CopyAction;
-			const DropAction DROP_ACTION_MOVE = Qt::MoveAction;
-			const DropAction DROP_ACTION_LINK = Qt::LinkAction;
-			const DropAction DROP_ACTION_QT_MASK = Qt::ActionMask;
-			const DropAction DROP_ACTION_QT_TARGET_MOVE = Qt::TargetMoveAction;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-			typedef ??? DropAction;
-			const DropAction DROP_ACTION_IGNORE = NSDragOperationNone;
-			const DropAction DROP_ACTION_COPY = NSDragOperationCopy;
-			const DropAction DROP_ACTION_MOVE = NSDragOperationMove;
-			const DropAction DROP_ACTION_LINK = NSDragOperationLink;
-			const DropAction DROP_ACTION_OSX_GENERIC = NSDragOperationGeneric;
-			const DropAction DROP_ACTION_OSX_PRIVATE = NSDragOperationPrivate;
-			const DropAction DROP_ACTION_OSX_DELETE = NSDragOperationDelete;
-			const DropAction DROP_ACTION_OSX_EVERY = NSDragOperationEvery;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			typedef DWORD DropAction;
-			const DropAction DROP_ACTION_IGNORE = DROPEFFECT_NONE;
-			const DropAction DROP_ACTION_COPY = DROPEFFECT_COPY;
-			const DropAction DROP_ACTION_MOVE = DROPEFFECT_MOVE;
-			const DropAction DROP_ACTION_LINK = DROPEFFECT_LINK;
-			const DropAction DROP_ACTION_WIN32_SCROLL = DROPEFFECT_SCROLL;
-#else
-			ASCENSION_CANT_DETECT_PLATFORM();
+			enum DropAction {
+				COPY_ACTION,			///< "Copy" action.
+				MOVE_ACTION,			///< "Move" action.
+				LINK_ACTION,			///< "Link" action.
+				GTK_PRIVATE_ACTION,		///< For @c Gdk#ACTION_PRIVATE of gtkmm.
+				GTK_ASK_ACTION,			///< For @c Gdk#ACTION_ASK of gtkmm.
+				QT_ACTION_MASK,			///< For @c Qt#ActionMask
+				QT_TARGET_MOVE_ACTION,	///< For @c Qt#TargetMoveAction of Qt.
+				OSX_GENERIC_ACTION,		///< For @c NSDragOperationGeneric of Quartz.
+				OSX_PRIVATE_ACTION,		///< For @c NSDragOperationPrivate of Quartz.
+				OSX_DELETE_ACTION,		///< For @c NSDragOperationDelete of Quartz.
+				OSX_EVERY_ACTION,		///< For @c NSDragOperationEvery of Quartz.
+				WIN32_SCROLL_ACTION,	///< For @c DROPEFFECT_SCROLL of Win32.
+				NUMBER_OF_DROP_ACTIONS
+			};
+
+			typedef Combination<DropAction, NUMBER_OF_DROP_ACTIONS> DropActions;
+
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(GTK)
+			DropActions _fromNative(Gdk::DragAction native, const DropActions* = nullptr) {
+				DropActions actions;
+				if((native & Gdk::ACTION_COPY) != 0)
+					actions.set(COPY_ACTION);
+				if((native & Gdk::ACTION_MOVE) != 0)
+					actions.set(MOVE_ACTION);
+				if((native & Gdk::ACTION_LINK) != 0)
+					actions.set(LINK_ACTION);
+				if((native & Gdk::ACTION_PRIVATE) != 0)
+					actions.set(GTK_PRIVATE_ACTION);
+				if((native & Gdk::ACTION_ASK) != 0)
+					actions.set(GTK_ASK_ACTION);
+				return actions;
+			}
+			Gdk::DragAction _toNative(const DropActions& actions, const Gdk::DragAction* = nullptr) {
+				Gdk::DragAction native = Gdk::ACTION_DEFAULT;
+				if(action.test(COPY_ACTION))
+					native |= Gdk::ACTION_COPY;
+				if(action.test(MOVE_ACTION))
+					native |= Gdk::ACTION_MOVE;
+				if(action.test(LINK_ACTION))
+					native |= Gdk::ACTION_LINK;
+				if(action.test(GTK_PRIVATE_ACTION))
+					native |= Gdk::ACTION_PRIVATE;
+				if(action.test(GTK_ASK_ACTION))
+					native |= Gdk::ACTION_ASK;
+				return native;
+			}
 #endif
-			DropAction resolveDefaultDropAction(DropAction possibleActions,
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(QT)
+			DropActions _fromNative(const Qt::DropActions& native, const DropActions* = nullptr) {
+				DropActions actions;
+				if(native.testFlag(Qt::CopyAction))
+					actions.set(COPY_ACTION);
+				if(native.testFlag(Qt::MoveAction))
+					actions.set(MOVE_ACTION);
+				if(native.testFlag(Qt::LinkAction))
+					actions.set(LINK_ACTION);
+				if(native.testFlag(Qt::ActionMask))
+					actions.set(QT_ACTION_MASK);
+				if(native.testFlag(Qt::TargetMoveAction))
+					actions.set(QT_TARGET_MOVE_ACTION);
+				return actions;
+			}
+			Qt::DropActions _toNative(const DropActions& actions, const Qt::DropActions* = nullptr) {
+				Qt::DropActions native(Qt::IgnoreAction);
+				if(actions.test(COPY_ACTION))
+					native.setFlag(Qt::CopyAction);
+				if(actions.test(MOVE_ACTION))
+					native.setFlag(Qt::MoveAction);
+				if(actions.test(LINK_ACTION))
+					native.setFlag(Qt::LinkAction);
+				if(actions.test(QT_ACTION_MASK))
+					native.setFlag(Qt::ActionMask);
+				if(actions.test(QT_TARGET_MOVE_ACTION))
+					native.setFlag(Qt::TargetMoveAction);
+				return native;
+			}
+#endif
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(QUARTZ)
+			DropActions _fromNative(NSDragOperation native, const DropActions* = nullptr) {
+				DropActions actions;
+				if((native & NSDragOperationCopy) != 0)
+					actions.set(COPY_ACTION);
+				if((native & NSDragOperationMove) != 0)
+					actions.set(MOVE_ACTION);
+				if((native & NSDragOperationLink) != 0)
+					actions.set(LINK_ACTION);
+				if((native & NSDragOperationGeneric) != 0)
+					actions.set(OSX_GENERIC_ACTION);
+				if((native & NSDragOperationPrivate) != 0)
+					actions.set(OSX_PRIVATE_ACTION);
+				if((native & NSDragOperationDelete) != 0)
+					actions.set(OSX_DELETE_ACTION);
+				if((native & NSDragOperationEvery) != 0)
+					actions.set(OSX_EVERY_ACTION);
+				return actions;
+			}
+#endif
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(WIN32)
+			DropActions _fromNative(DWORD native, const DropActions* = nullptr) {
+				DropActions actions;
+				if((native & DROPEFFECT_COPY) != 0)
+					actions.set(COPY_ACTION);
+				if((native & DROPEFFECT_MOVE) != 0)
+					actions.set(MOVE_ACTION);
+				if((native & DROPEFFECT_LINK) != 0)
+					actions.set(LINK_ACTION);
+				if((native & DROPEFFECT_SCROLL) != 0)
+					actions.set(WIN32_SCROLL_ACTION);
+				return actions;
+			}
+			DWORD _toNative(const DropActions& actions, const DWORD* = nullptr) {
+				DWORD native = DROPEFFECT_NONE;
+				if(actions.test(COPY_ACTION))
+					native |= DROPEFFECT_COPY;
+				if(actions.test(MOVE_ACTION))
+					native |= DROPEFFECT_MOVE;
+				if(actions.test(LINK_ACTION))
+					native |= DROPEFFECT_LINK;
+				if(actions.test(WIN32_SCROLL_ACTION))
+					native |= DROPEFFECT_SCROLL;
+				return native;
+			}
+#endif
+
+			boost::optional<DropAction> resolveDefaultDropAction(
+				const DropActions& possibleActions,
 				const event::MouseButtons& buttons, const event::KeyboardModifiers& modifiers);
 
 			class DragContext {
 			public:
 				explicit DragContext(Widget::reference source) BOOST_NOEXCEPT : source_(source) {}
 				DropAction defaultAction() const;
-				DropAction execute(DropAction supportedActions
+				DropAction execute(const DropActions& supportedActions
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 					, int mouseButton, GdkEvent* event
 #endif
 				);
 				void setData(const InterprocessData& data);
 				void setImage(const graphics::Image& image, const boost::geometry::model::d2::point_xy<std::uint32_t>& hotspot);
-				DropAction supportedActions() const;
+				DropActions supportedActions() const;
 			private:
 				Widget::reference source_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -111,22 +202,22 @@ namespace ascension {
 				 * Returns the action to be performed on the data by the target.
 				 * @see #setDropAction
 				 */
-				DropAction dropAction() const BOOST_NOEXCEPT {return action_;}
+				boost::optional<DropAction> dropAction() const BOOST_NOEXCEPT {return action_;}
 				/**
 				 * Returns the possible drop actions.
 				 * @see #dropAction
 				 */
-				DropAction possibleActions() const BOOST_NOEXCEPT {return possibleActions_;}
+				const DropActions& possibleActions() const BOOST_NOEXCEPT {return possibleActions_;}
 				/**
 				 * Returns the proposed drop action.
 				 * @see #dropAction
 				 */
-				DropAction proposedAction() const BOOST_NOEXCEPT {return defaultAction_;}
+				boost::optional<DropAction> proposedAction() const BOOST_NOEXCEPT {return defaultAction_;}
 				/**
 				 * Sets the specified @a action to be performed on the data by the target.
 				 * @see #dropAction
 				 */
-				void setDropAction(DropAction action) {action_ = action;}
+				void setDropAction(boost::optional<DropAction> action) {action_ = action;}
 
 			protected:
 				/**
@@ -134,13 +225,14 @@ namespace ascension {
 				 * @param userInput The base input information
 				 * @param possibleActions The possible drop actions
 				 */
-				DragInputBase(const LocatedUserInput& userInput, DropAction possibleActions) :
+				DragInputBase(const LocatedUserInput& userInput, const DropActions& possibleActions) :
 					event::LocatedUserInput(userInput), possibleActions_(possibleActions),
 					defaultAction_(resolveDefaultDropAction(possibleActions, userInput.buttons(), userInput.modifiers())) {}
 
 			private:
-				const DropAction possibleActions_, defaultAction_;
-				DropAction action_;
+				const DropActions possibleActions_;
+				const boost::optional<DropAction> defaultAction_;
+				boost::optional<DropAction> action_;
 			};
 
 			/**
@@ -156,7 +248,7 @@ namespace ascension {
 				 * @param data The data that was dropped on the target
 				 * @throw NullPointerException @a data is @c null
 				 */
-				DropInput(const LocatedUserInput& userInput, DropAction possibleActions, std::shared_ptr<const InterprocessData> data) : DragInputBase(userInput, possibleActions), data_(data) {
+				DropInput(const LocatedUserInput& userInput, const DropActions& possibleActions, std::shared_ptr<const InterprocessData> data) : DragInputBase(userInput, possibleActions), data_(data) {
 					if(data.get() == nullptr)
 						throw NullPointerException("data");
 				}
@@ -180,7 +272,7 @@ namespace ascension {
 				 * @param formats The formats of the data that was moved on the target
 				 * @throw NullPointerException @a formats is @c null
 				 */
-				DragMoveInput(const LocatedUserInput& userInput, DropAction possibleActions,
+				DragMoveInput(const LocatedUserInput& userInput, const DropActions& possibleActions,
 						std::shared_ptr<const InterprocessDataFormats> formats) : DragInputBase(userInput, possibleActions), formats_(formats) {
 					if(formats.get() == nullptr)
 						throw NullPointerException("formats");
@@ -215,7 +307,7 @@ namespace ascension {
 				 * @param formats The formats of the data that was moved on the target
 				 * @throw NullPointerException @a formats is @c null
 				 */
-				DragEnterInput(const LocatedUserInput& userInput, DropAction possibleActions,
+				DragEnterInput(const LocatedUserInput& userInput, const DropActions& possibleActions,
 					std::shared_ptr<const InterprocessDataFormats> formats) : DragMoveInput(userInput, possibleActions, formats) {}
 			};
 
