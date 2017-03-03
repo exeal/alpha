@@ -30,7 +30,7 @@ namespace ascension {
 		class CaretPainter {
 		public:
 			/// Destructor.
-			virtual ~CaretPainter() BOOST_NOEXCEPT;
+			virtual ~CaretPainter() BOOST_NOEXCEPT {}
 			/// Hides the cursor.
 			virtual void hide() = 0;
 			/**
