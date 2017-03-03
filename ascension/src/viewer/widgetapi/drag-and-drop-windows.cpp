@@ -10,6 +10,7 @@
 
 #include <ascension/corelib/native-conversion.hpp>
 #include <ascension/graphics/geometry/native-conversions.hpp>
+#include <ascension/graphics/image.hpp>
 #include <ascension/viewer/widgetapi/event/mouse-button-input.hpp>
 #include <ascension/win32/com/com.hpp>
 #ifdef _DEBUG
@@ -21,6 +22,45 @@
 namespace ascension {
 	namespace viewer {
 		namespace widgetapi {
+			namespace {
+				DropAction firstAction(const DropActions& actions) {
+					assert(actions.any());
+					for(std::size_t i = 0; i < actions.size(); ++i) {
+						if(actions.test(i))
+							return static_cast<DropAction>(i);
+					}
+					ASCENSION_ASSERT_NOT_REACHED();
+				}
+			}
+
+			boost::optional<DropAction> DragContext::execute(const DropActions& supportedActions, win32::com::SmartPointer<IDropSource> source) {
+				DWORD effect;
+				const auto hr = ::DoDragDrop(mimeData_.get(), source.get(), toNative<DWORD>(supportedActions), &effect);
+				if(FAILED(hr))
+					throw makePlatformError();
+				const auto action(fromNative<DropActions>(effect));
+				return action.any() ? boost::make_optional(firstAction(action)) : boost::none;
+			}
+			
+			void DragContext::setData(InterprocessData&& data) {
+				mimeData_ = data.native();
+			}
+
+			void DragContext::setImage(const graphics::Image& image, const boost::geometry::model::d2::point_xy<std::uint32_t>& hotspot) {
+				if(mimeData_.get() == nullptr)
+					return;
+				if(imageProvider_.get() == nullptr)
+					imageProvider_ = win32::com::SmartPointer<IDragSourceHelper>::create(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
+				SHDRAGIMAGE shdi;
+				shdi.sizeDragImage.cx = image.width();
+				shdi.sizeDragImage.cy = image.height();
+				shdi.ptOffset.x = hotspot.x();
+				shdi.ptOffset.y = hotspot.y();
+				shdi.hbmpDragImage = image.asNative().get();
+				imageProvider_->InitializeFromBitmap(&shdi, mimeData_.get());
+			}
+
+
 			namespace detail {
 				namespace {
 					win32::com::SmartPointer<IDropTargetHelper> dropTargetHelper() {
@@ -154,17 +194,6 @@ namespace ascension {
 						helper->DragOver(&p2, *effect);
 					}
 					return hr;
-				}
-			}
-
-			namespace {
-				DropAction firstAction(const DropActions& actions) {
-					assert(actions.any());
-					for(std::size_t i = 0; i < actions.size(); ++i) {
-						if(actions.test(i))
-							return static_cast<DropAction>(i);
-					}
-					ASCENSION_ASSERT_NOT_REACHED();
 				}
 			}
 
