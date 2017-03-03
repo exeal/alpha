@@ -334,7 +334,7 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			d.execute(possibleActions, input.modifiers().native(), nullptr);
 #else
-			d.execute(possibleActions);
+			d.execute(possibleActions, win32::com::SmartPointer<IDropSource>(static_cast<IDropSource*>(this)));
 #endif
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
