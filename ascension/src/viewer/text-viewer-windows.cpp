@@ -850,7 +850,7 @@ namespace ascension {
 
 		/// @see WM_SETCURSOR
 		void TextViewer::onSetCursor(const win32::Handle<HWND>&, UINT, UINT, bool& consumed) {
-			restoreHiddenCursor();
+			mouseVanisher_.restoreHiddenCursor();
 			auto mouseInputStrategy(textArea()->mouseInputStrategy().lock());
 			if(consumed = (mouseInputStrategy.get() != nullptr))
 				mouseInputStrategy->showCursor(widgetapi::mapFromGlobal(*this, widgetapi::Cursor::position()));
@@ -1057,7 +1057,7 @@ namespace ascension {
 							HWND pointedWindow = ::WindowFromPoint(toNative<POINT>(widgetapi::Cursor::position()));
 							if(pointedWindow != nullptr
 									&& ::GetWindowThreadProcessId(pointedWindow, nullptr) == ::GetWindowThreadProcessId(handle().get(), nullptr))
-								hideCursor();
+								mouseVanisher_.hideCursor();
 						}
 					} else
 						break;

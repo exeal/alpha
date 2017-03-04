@@ -104,14 +104,14 @@ namespace ascension {
 
 		/// @internal Calls @c #mouseMoved.
 		void TextViewer::fireMouseMoved(widgetapi::event::LocatedUserInput& input) {
-			restoreHiddenCursor();
+			mouseVanisher_.restoreHiddenCursor();
 			if(allowsMouseInput())
 				mouseMoved(input);
 		}
 
 		/// @internal Calls @c #mousePressed.
 		void TextViewer::fireMousePressed(widgetapi::event::MouseButtonInput& input) {
-			restoreHiddenCursor();
+			mouseVanisher_.restoreHiddenCursor();
 			if(allowsMouseInput())
 				mousePressed(input);
 		}
@@ -119,7 +119,7 @@ namespace ascension {
 		/// @internal Calls @c #mouseReleased.
 		void TextViewer::fireMouseReleased(widgetapi::event::MouseButtonInput& input) {
 			if(allowsMouseInput() || input.button() == widgetapi::event::BUTTON3_DOWN)
-				restoreHiddenCursor();
+				mouseVanisher_.restoreHiddenCursor();
 			if(allowsMouseInput())
 				mouseReleased(input);
 		}
@@ -132,7 +132,7 @@ namespace ascension {
 
 		/// @internal Calls @c #mouseWheelChanged.
 		void TextViewer::fireMouseWheelChanged(widgetapi::event::MouseWheelInput& input) {
-			restoreHiddenCursor();
+			mouseVanisher_.restoreHiddenCursor();
 			if(allowsMouseInput())
 				mouseWheelChanged(input);
 		}
@@ -613,7 +613,7 @@ namespace ascension {
 		/// Invoked when a key has been released.
 		void TextViewer::keyReleased(widgetapi::event::KeyInput& input) {
 			if(input.hasModifier(widgetapi::event::ALT_DOWN)) {
-				restoreHiddenCursor();
+				mouseVanisher_.restoreHiddenCursor();
 				if(const auto mouseInputStrategy = textArea()->mouseInputStrategy().lock())
 					mouseInputStrategy->interruptMouseReaction(true);
 			}

@@ -74,19 +74,6 @@ namespace ascension {
 		class VisualPoint;
 
 		namespace detail {
-			/// @internal Implementes "Mouse Vanish" feature.
-			template<typename Derived>
-			class MouseVanish {
-			protected:
-				MouseVanish() BOOST_NOEXCEPT;
-				virtual ~MouseVanish();
-				void hideCursor();
-				bool hidesCursor() const BOOST_NOEXCEPT;
-				void restoreHiddenCursor();
-			private:
-				bool hidden_;
-			};
-
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			class AbstractAccessibleProxy : public IAccessible {
 			public:
@@ -120,8 +107,7 @@ namespace ascension {
 					ASCENSION_WIN32_COM_INTERFACE(IDropTarget), win32::com::NoReferenceCounting
 				>,
 #endif
-				protected TextViewerComponent::Locator, protected MouseInputStrategy::TargetLocker,
-				private detail::MouseVanish<TextViewer> {
+				protected TextViewerComponent::Locator, protected MouseInputStrategy::TargetLocker {
 		public:
 			/**
 			 * A general configuration of the viewer.
@@ -421,6 +407,18 @@ namespace ascension {
 			boost::value_initialized<std::size_t> frozenCount_;
 
 			// input state
+			/// @internal Implementes "Mouse Vanish" feature.
+			class MouseVanisher {
+			public:
+				explicit MouseVanisher(TextViewer& target) BOOST_NOEXCEPT;
+				virtual ~MouseVanisher() BOOST_NOEXCEPT;
+				void hideCursor();
+				bool hidesCursor() const BOOST_NOEXCEPT;
+				void restoreHiddenCursor();
+			private:
+				TextViewer& target_;
+				bool hidden_;
+			} mouseVanisher_;
 			boost::value_initialized<std::size_t> mouseInputDisabledCount_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			std::shared_ptr<GtkIMContext> inputMethodContext_;
