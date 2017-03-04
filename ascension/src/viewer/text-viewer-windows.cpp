@@ -1427,7 +1427,7 @@ namespace ascension {
 
 		void TextViewer::windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT {
 			out.name = L"ascension.TextViewer";
-			out.styles = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS;
+			out.styles = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW;
 			out.background = COLOR_WINDOW;
 			out.cursor = win32::WindowClass::Cursor(MAKEINTRESOURCEW(32513));	// IDC_IBEAM
 		}

@@ -71,8 +71,6 @@ namespace alpha {
 			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
 			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 		};
-		// ascension.win32.CustomControl
-		void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 #endif
 		struct Child {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
