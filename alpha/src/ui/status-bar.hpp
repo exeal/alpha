@@ -28,8 +28,6 @@ namespace alpha {
 			win32::StatusBar
 #endif
 		{
-		public:
-			StatusBar();
 		};
 	}
 }

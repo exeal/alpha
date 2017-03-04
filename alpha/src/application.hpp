@@ -85,10 +85,9 @@ namespace alpha {
 
 		/// @name Settings
 		/// @{
-		typedef boost::property_tree::basic_ptree<std::string, PlatformString> Settings;
 		void saveSettings();
-		Settings& settings() BOOST_NOEXCEPT;
-		const Settings& settings() const BOOST_NOEXCEPT;
+		boost::property_tree::ptree& settings() BOOST_NOEXCEPT;
+		const boost::property_tree::ptree& settings() const BOOST_NOEXCEPT;
 		/// @}
 
 	private:
@@ -122,7 +121,7 @@ namespace alpha {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		static std::shared_ptr<Application> instance_;
 #endif
-		std::unique_ptr<Settings> settings_;
+		std::unique_ptr<boost::property_tree::ptree> settings_;
 	};
 
 

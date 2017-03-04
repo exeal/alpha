@@ -171,17 +171,11 @@ namespace alpha {
 		setFont(fd);
 
 		// Migemo DLL & é´èëÉpÉX
-		const auto migemoRuntimePath(settings().get<PlatformString>("find.migemo-runtime-path", PlatformString()));
-		const auto migemoDictionaryPath(settings().get<PlatformString>("find.migemo-dictionary-path", PlatformString()));
+		const auto migemoRuntimePath(settings().get<std::string>("find.migemo-runtime-path", std::string()));	// UTF-8
+		const auto migemoDictionaryPath(settings().get<std::string>("find.migemo-dictionary-path", std::string()));	// UTF-8
 		if(!migemoRuntimePath.empty() && !migemoDictionaryPath.empty())
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			ascension::regex::MigemoPattern::initialize(
-				boost::filesystem::path(migemoRuntimePath.c_str(), std::codecvt_utf8_utf16<wchar_t>()),
-				boost::filesystem::path(migemoDictionaryPath.c_str(), std::codecvt_utf8_utf16<wchar_t>()));
-#else
 			ascension::regex::MigemoPattern::initialize(
 				boost::filesystem::path(migemoRuntimePath), boost::filesystem::path(migemoDictionaryPath));
-#endif
 
 		// search and replacement strings
 		std::list<ascension::String> findWhats, replacesWiths;
@@ -211,9 +205,9 @@ namespace alpha {
 		// search and replacement strings
 		const auto& s = BufferList::instance().editorSession().textSearcher();
 		for(std::size_t i = 0, c = s.numberOfStoredPatterns(); ; ++i)
-			settings().put("find.find-what", s.pattern(i));
+			settings().put("find.find-what", ascension::text::utf::fromString<std::string>(s.pattern(i)));
 		for(std::size_t i = 0, c = s.numberOfStoredReplacements(); ; ++i)
-			settings().put("find.replace-with", s.replacement(i));
+			settings().put("find.replace-with", ascension::text::utf::fromString<std::string>(s.replacement(i)));
 
 		boost::property_tree::write_xml("./settings.xml", settings());
 	}

@@ -15,7 +15,7 @@ namespace ascension {
 			template<typename UtfString>
 			inline UtfString fromString(const StringPiece& s, typename std::enable_if<CodeUnitSizeOf<typename boost::range_iterator<UtfString>::type>::value != sizeof(Char)>::type* = nullptr) {
 				const std::basic_string<CodePoint> temp(makeCharacterDecodeIterator(s.cbegin(), s.cend()), makeCharacterDecodeIterator(s.cbegin(), s.cend(), s.cend()));
-				typedef CodeUnitTraits<CodeUnitSizeOf<UtfString>::value>::value_type CodeUnit;
+				typedef CodeUnitTraits<CodeUnitSizeOf<typename boost::range_iterator<UtfString>::type>::value>::value_type CodeUnit;
 				return UtfString(makeCharacterEncodeIterator<CodeUnit>(temp.cbegin()), makeCharacterEncodeIterator<CodeUnit>(temp.cend()));
 			}
 
