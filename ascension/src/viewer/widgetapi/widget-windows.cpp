@@ -13,6 +13,7 @@
 #include <ascension/graphics/geometry/point-xy.hpp>
 #include <ascension/graphics/geometry/rectangle-odxdy.hpp>
 #include <ascension/graphics/geometry/rectangle-sides.hpp>
+#include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/win32/windows.hpp>
 #include <ShellAPI.h>
 
@@ -165,6 +166,10 @@ namespace ascension {
 					static_cast<int>(graphics::geometry::left(bounds)), static_cast<int>(graphics::geometry::top(bounds)),
 					static_cast<int>(graphics::geometry::dx(bounds)), static_cast<int>(graphics::geometry::dy(bounds)), SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER)))
 					throw makePlatformError();
+			}
+
+			void setCursor(Proxy<Window> window, const Cursor& cursor) {
+				::SetClassLongPtrW(window->handle().get(), GCLP_HCURSOR, reinterpret_cast<LONG_PTR>(cursor.native().get()));
 			}
 
 			void setFocus() {
