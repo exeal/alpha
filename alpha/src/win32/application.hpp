@@ -111,7 +111,7 @@ namespace alpha {
 			 * @param window The main window
 			 * @throw ascension#NullPointerException @a window is @c null
 			 */
-			explicit WindowApplication(std::unique_ptr<MainWindow> window) : window_(window) {
+			explicit WindowApplication(std::unique_ptr<MainWindow> window) : window_(std::move(window)) {
 				if(window_.get() == nullptr)
 					throw ascension::NullPointerException("window");
 			}
