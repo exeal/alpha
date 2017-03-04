@@ -133,7 +133,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::CustomControl<TextViewer>(WIDGET),
 #endif
-				document_(document) {
+				document_(document), mouseVanisher_(*this){
 			if(document_.get() == nullptr)
 				throw NullPointerException("document");
 			initialize(nullptr);
@@ -151,7 +151,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				: win32::CustomControl<TextViewer>(win32::Window::WIDGET)
 #endif
-		{
+				, mouseVanisher_(*this) {
 			initialize(&other);
 			modeState_ = other.modeState_;
 		}
@@ -171,7 +171,7 @@ namespace ascension {
 
 		/// Invoked when the widget is about to lose the keyboard focus.
 		void TextViewer::focusAboutToBeLost(widgetapi::event::Event& event) {
-			restoreHiddenCursor();
+			mouseVanisher_.restoreHiddenCursor();
 			if(const auto mouseInputStrategy = textArea_->mouseInputStrategy().lock())
 				mouseInputStrategy->interruptMouseReaction(false);
 /*			if(caret_->getMatchBracketsTrackingMode() != Caret::DONT_TRACK
@@ -893,40 +893,34 @@ namespace ascension {
 #endif // _WIN32_WINNT >= 0x0501
 		}
 
-		namespace detail {
-			// viewer.detail.MouseVanish<> ///////////////////////////////////////////////////////////////////////////
 
-			template<typename Derived> MouseVanish<Derived>::MouseVanish() BOOST_NOEXCEPT : hidden_(false) {
-			}
+		// TextViewer.MouseVanisher ///////////////////////////////////////////////////////////////////////////////////
 
-			template<typename Derived> MouseVanish<Derived>::~MouseVanish() BOOST_NOEXCEPT {
-				restoreHiddenCursor();
-			}
-/*
-			template<typename Derived> void MouseVanish<Derived>::MouseVanish::install(TextViewer& viewer) {
-				assert(viewer_ == nullptr);
-				viewer_ = &viewer;
-			}
-*/
-			template<typename Derived> void MouseVanish<Derived>::restoreHiddenCursor() {
-				if(hidesCursor()) {
-					widgetapi::Cursor::show();
-					widgetapi::releaseInput(*static_cast<Derived*>(this));
-					hidden_ = false;
-				}
-			}
+		TextViewer::MouseVanisher::MouseVanisher(TextViewer& target) BOOST_NOEXCEPT : target_(target), hidden_(false) {
+		}
 
-			template<typename Derived> void MouseVanish<Derived>::hideCursor() {
-				if(!vanished_ && viewer_->configuration().vanishesCursor && widgetapi::hasFocus(*static_cast<Derived*>(this))) {
-					vanished_ = true;
-					widgetapi::Cursor::hide();
-					widgetapi::grabInput(*static_cast<Derived*>(this));
-				}
-			}
+		TextViewer::MouseVanisher::~MouseVanisher() BOOST_NOEXCEPT {
+			restoreHiddenCursor();
+		}
 
-			template<typename Derived> bool MouseVanish<Derived>::hidesCursor() const BOOST_NOEXCEPT {
-				return hidden_;
+		void TextViewer::MouseVanisher::restoreHiddenCursor() {
+			if(hidesCursor()) {
+				widgetapi::Cursor::show();
+				widgetapi::releaseInput(target_);
+				hidden_ = false;
 			}
+		}
+
+		void TextViewer::MouseVanisher::hideCursor() {
+			if(!hidesCursor() && target_.configuration().vanishesCursor && widgetapi::hasFocus(target_)) {
+				hidden_ = true;
+				widgetapi::Cursor::hide();
+				widgetapi::grabInput(target_);
+			}
+		}
+
+		bool TextViewer::MouseVanisher::hidesCursor() const BOOST_NOEXCEPT {
+			return hidden_;
 		}
 	}
 }
