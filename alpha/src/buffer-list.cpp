@@ -119,12 +119,15 @@ namespace alpha {
 
 		return newBuffer;
 	}
-/*
-	/// Shows "New with Format" dialog box and opens the new empty buffer.
-	/// @param name the name of the buffer
-	/// @return the buffer added or @c null if the user canceled
-	Buffer* BufferList::addNewDialog(const ascension::String& name) {
-		Alpha& app = Alpha::instance();
+
+	/**
+	 * Shows "New with Format" dialog box and opens the new empty buffer.
+	 * @param name the name of the buffer
+	 * @return the buffer added or @c null if the user canceled
+	 */
+	std::shared_ptr<Buffer> BufferList::addNewDialog(const PlatformString& name /* = PlatformString() */) {
+#if 0
+		Application& app = Application::instance();
 		TextFileFormat format;
 		format.encoding = e::Encoder::forMIB(e::fundamental::US_ASCII)->fromUnicode(app.readStringProfile(L"File", L"defaultEncoding"));
 		if(!e::Encoder::supports(format.encoding))
@@ -135,8 +138,11 @@ namespace alpha {
 		if(dlg.doModal(app.getMainWindow()) != IDOK)
 			return 0;
 		return &addNew(name, dlg.encoding(), dlg.newline());
+#else
+		return std::shared_ptr<Buffer>();
+#endif
 	}
-*/
+
 	/// Returns the @c BufferAboutToBeRemovedSignal signal connector.
 	ascension::SignalConnector<BufferList::BufferAboutToBeRemovedSignal> BufferList::bufferAboutToBeRemovedSignal() BOOST_NOEXCEPT {
 		return ascension::makeSignalConnector(bufferAboutToBeRemovedSignal_);
