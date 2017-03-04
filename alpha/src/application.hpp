@@ -151,6 +151,16 @@ namespace alpha {
 		return *window_;
 	}
 #endif
+
+	/// Returns the application-global settings in UTF-8.
+	inline boost::property_tree::ptree& Application::settings() BOOST_NOEXCEPT {
+		return *settings_;
+	}
+
+	/// @overload
+	inline const boost::property_tree::ptree& Application::settings() const BOOST_NOEXCEPT {
+		return *settings_;
+	}
 } // namespace alpha
 
 #endif // ALPHA_APPLICATION_HPP
