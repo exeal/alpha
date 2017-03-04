@@ -1431,6 +1431,14 @@ namespace ascension {
 			out.background = COLOR_WINDOW;
 			out.cursor = win32::WindowClass::Cursor(MAKEINTRESOURCEW(32513));	// IDC_IBEAM
 		}
+
+		namespace detail {
+			void resetInputMethod(TextViewer& textViewer) {
+				auto im(win32::inputMethod(textViewer));
+				::ImmNotifyIME(im.get(), NI_CLOSECANDIDATE, 0, 0);
+				::ImmNotifyIME(im.get(), NI_COMPOSITIONSTR, CPS_CANCEL, 0);
+			}
+		}
 	}
 }
 
