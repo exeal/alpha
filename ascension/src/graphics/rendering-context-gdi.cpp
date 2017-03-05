@@ -22,6 +22,14 @@
 namespace ascension {
 	namespace graphics {
 		/**
+		 * Move-constructor.
+		 * @param other The source object
+		 */
+		RenderingContext2D::RenderingContext2D(RenderingContext2D&& other) BOOST_NOEXCEPT : nativeObject_(std::move(other.nativeObject_)),
+				currentState_(std::move(other.currentState_)), savedStates_(std::move(other.savedStates_)), hasCurrentSubpath_(other.hasCurrentSubpath_) {
+		}
+
+		/**
 		 * Constructor.
 		 * @param nativeObject The Win32 @c HDC value to hold
 		 */
