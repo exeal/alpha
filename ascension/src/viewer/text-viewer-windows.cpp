@@ -552,8 +552,7 @@ namespace ascension {
 			::SendMessageW(toolTip_.get(), TTM_UPDATE, 0, 0L);
 		}
 
-		/// @internal Initializes the window of the viewer.
-		void TextViewer::initializeNativeObjects() {
+		void TextViewer::initializeNativeWidget() {
 			// create the tooltip belongs to the window
 			toolTip_.reset(::CreateWindowExW(
 				WS_EX_TOOLWINDOW | WS_EX_TOPMOST, TOOLTIPS_CLASSW, 0, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
@@ -744,6 +743,13 @@ namespace ascension {
 				return;
 			}
 			consumed = true;
+		}
+
+		/// @see WM_CREATE
+		LRESULT TextViewer::onCreate(CREATESTRUCTW&, bool& consumed) {
+			realizeWidget();
+			consumed = true;
+			return 0;
 		}
 
 		/// @see WM_DESTROY
@@ -992,6 +998,12 @@ namespace ascension {
 						consumed = true;
 					}
 					return 0L;
+				case WM_CREATE: {
+					const LRESULT result = onCreate(*reinterpret_cast<CREATESTRUCTW*>(lp), consumed);
+					if(consumed)
+						return result;
+					break;
+				}
 				case WM_CUT:
 					if(auto caret = tryCaret(*this)) {
 						cutSelection(*caret, true);

@@ -209,8 +209,8 @@ namespace ascension {
 		protected:
 			virtual void doBeep() BOOST_NOEXCEPT;
 			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::Rectangle& rect);
-			virtual void initialized() BOOST_NOEXCEPT;
 			std::shared_ptr<MouseInputStrategy> mouseInputStrategy(const graphics::Point& p);
+			virtual void realized() BOOST_NOEXCEPT;
 			virtual void unfrozen();
 			void updateTextAreaAllocationRectangle();
 			// TextViewerComponent.Locator
@@ -222,11 +222,9 @@ namespace ascension {
 			// helpers
 		private:
 			void doShowContextMenu(void* nativeEvent);
-			graphics::Scalar inlineProgressionOffsetInViewport() const;
-			void initialize(const TextViewer* other);
-			void initializeGraphics();
-			void initializeNativeObjects();
 			void initializeNativeWidget();
+			graphics::Scalar inlineProgressionOffsetInViewport() const;
+			void realizeWidget();
 			void updateScrollBars(
 				const presentation::FlowRelativeTwoAxes<bool>& positions,
 				const presentation::FlowRelativeTwoAxes<bool>& properties);
@@ -303,6 +301,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			virtual void onCaptureChanged(const win32::Handle<HWND>& newWindow, bool& consumed);
 			virtual void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>& control, bool& consumed);
+			virtual LRESULT onCreate(CREATESTRUCTW& cs, bool& consumed);
 			virtual void onDestroy(bool& consumed);
 			virtual void onEraseBkgnd(const win32::Handle<HDC>& dc, bool& consumed);
 			virtual const win32::Handle<HFONT> onGetFont() const;

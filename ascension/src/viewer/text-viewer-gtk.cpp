@@ -124,7 +124,31 @@ namespace ascension {
 			// TODO: Not implemented.
 		}
 
-		void TextViewer::initializeNativeObjects() {
+		void TextViewer::initializeNativeWidget() {
+			assert(GTK_IS_WIDGET(static_cast<Gtk::Widget&>(*this).gobj()));
+#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+			assert(GTK_IS_SCROLLABLE(static_cast<Gtk::Scrollable&>(*this).gobj()));
+#endif
+			set_can_focus(true);
+			set_has_window(true);
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
+			set_double_buffered(false);
+#endif
+
+			inputMethodContext_.reset(::gtk_im_multicontext_new(), &::g_object_unref);
+			::g_signal_connect(inputMethodContext_.get(), "commit",
+				G_CALLBACK(TextViewer::handleInputMethodContextCommitSignal), this);
+			::g_signal_connect(inputMethodContext_.get(), "delete-surrounding",
+				G_CALLBACK(TextViewer::handleInputMethodContextDeleteSurroundingSignal), this);
+			::g_signal_connect(inputMethodContext_.get(), "preedit-changed",
+				G_CALLBACK(TextViewer::handleInputMethodContextPreeditChangedSignal), this);
+			::g_signal_connect(inputMethodContext_.get(), "preedit-end",
+				G_CALLBACK(TextViewer::handleInputMethodContextPreeditEndSignal), this);
+			::g_signal_connect(inputMethodContext_.get(), "preedit-start",
+				G_CALLBACK(TextViewer::handleInputMethodContextPreeditStartSignal), this);
+			::g_signal_connect(inputMethodContext_.get(), "retrieve-surrounding",
+				G_CALLBACK(TextViewer::handleInputMethodContextRetrieveSurroundingSignal), this);
+
 			set_redraw_on_allocate(false);
 //			drag_dest_set_target_list();
 
@@ -153,32 +177,6 @@ namespace ascension {
 				});
 			}
 #endif // ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
-		}
-
-		void TextViewer::initializeNativeWidget() {
-			assert(GTK_IS_WIDGET(static_cast<Gtk::Widget&>(*this).gobj()));
-#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
-			assert(GTK_IS_SCROLLABLE(static_cast<Gtk::Scrollable&>(*this).gobj()));
-#endif
-			set_can_focus(true);
-			set_has_window(true);
-#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-			set_double_buffered(false);
-#endif
-
-			inputMethodContext_.reset(::gtk_im_multicontext_new(), &::g_object_unref);
-			::g_signal_connect(inputMethodContext_.get(), "commit",
-				G_CALLBACK(TextViewer::handleInputMethodContextCommitSignal), this);
-			::g_signal_connect(inputMethodContext_.get(), "delete-surrounding",
-				G_CALLBACK(TextViewer::handleInputMethodContextDeleteSurroundingSignal), this);
-			::g_signal_connect(inputMethodContext_.get(), "preedit-changed",
-				G_CALLBACK(TextViewer::handleInputMethodContextPreeditChangedSignal), this);
-			::g_signal_connect(inputMethodContext_.get(), "preedit-end",
-				G_CALLBACK(TextViewer::handleInputMethodContextPreeditEndSignal), this);
-			::g_signal_connect(inputMethodContext_.get(), "preedit-start",
-				G_CALLBACK(TextViewer::handleInputMethodContextPreeditStartSignal), this);
-			::g_signal_connect(inputMethodContext_.get(), "retrieve-surrounding",
-				G_CALLBACK(TextViewer::handleInputMethodContextRetrieveSurroundingSignal), this);
 		}
 
 		namespace {
