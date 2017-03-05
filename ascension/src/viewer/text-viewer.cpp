@@ -136,7 +136,6 @@ namespace ascension {
 				document_(document), mouseVanisher_(*this){
 			if(document_.get() == nullptr)
 				throw NullPointerException("document");
-			initialize(nullptr);
 
 			// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
 		}
@@ -152,7 +151,6 @@ namespace ascension {
 				: win32::CustomControl<TextViewer>(win32::Window::WIDGET)
 #endif
 				, mouseVanisher_(*this) {
-			initialize(&other);
 			modeState_ = other.modeState_;
 		}
 
@@ -438,47 +436,6 @@ namespace ascension {
 			}
 			return nullptr;
 		}
-
-		/// @internal Called by constructors.
-		void TextViewer::initialize(const TextViewer* other) {
-			initializeNativeWidget();
-//			updateScrollBars(FlowRelativeTwoAxes<bool>(true, true), FlowRelativeTwoAxes<bool>(true, true));
-		}
-
-		/**
-		 * Initialization process completed.
-		 */
-		void TextViewer::initialized() BOOST_NOEXCEPT {
-		}
-
-		/// @internal
-		void TextViewer::initializeGraphics() {
-			textArea_.reset(new TextArea());
-			static_cast<TextViewerComponent*>(textArea_.get())->install(*this, *this);
-			writingModesChangedConnection_ =
-				textArea()->textRenderer()->writingModesChangedSignal().connect(
-					std::bind(&TextViewer::writingModesChanged, this, std::placeholders::_1));
-
-			const auto viewport(textArea()->viewport());
-//			viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
-//				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
-//			});
-			viewportScrolledConnection_ = viewport->scrolledSignal().connect(
-				[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
-					assert(!this->isFrozen());
-					// update the scroll positions
-					this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(false, false));
-//					this->closeCompletionProposalsPopup(*this);
-					this->hideToolTip();
-				}
-			);
-			viewportScrollPropertiesChangedConnection_ = viewport->scrollPropertiesChangedSignal().connect([this](const presentation::FlowRelativeTwoAxes<bool>&) {
-				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
-			});
-
-			initializeNativeObjects();
-			initialized();
-		}
 #if 0
 		/**
 		 * Returns an offset from left/top-edge of local-bounds to one of the content-area in user units.
@@ -624,6 +581,42 @@ namespace ascension {
 			if(TextViewerComponent* const component = hitTest(p))
 				return component->mouseInputStrategy().lock();
 			return std::shared_ptr<MouseInputStrategy>();
+		}
+
+		/**
+		 * Widget realization process completed.
+		 */
+		void TextViewer::realized() BOOST_NOEXCEPT {
+		}
+
+		/// @internal
+		void TextViewer::realizeWidget() {
+			initializeNativeWidget();
+
+			textArea_.reset(new TextArea());
+			static_cast<TextViewerComponent*>(textArea_.get())->install(*this, *this);
+			writingModesChangedConnection_ =
+				textArea()->textRenderer()->writingModesChangedSignal().connect(
+					std::bind(&TextViewer::writingModesChanged, this, std::placeholders::_1));
+
+			const auto viewport(textArea()->viewport());
+			//			viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
+			//				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
+			//			});
+			viewportScrolledConnection_ = viewport->scrolledSignal().connect(
+				[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
+				assert(!this->isFrozen());
+				// update the scroll positions
+				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(false, false));
+				//					this->closeCompletionProposalsPopup(*this);
+				this->hideToolTip();
+			}
+			);
+			viewportScrollPropertiesChangedConnection_ = viewport->scrollPropertiesChangedSignal().connect([this](const presentation::FlowRelativeTwoAxes<bool>&) {
+				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
+			});
+
+			realized();
 		}
 
 		/**

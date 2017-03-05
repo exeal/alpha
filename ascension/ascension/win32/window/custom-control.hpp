@@ -67,7 +67,8 @@ namespace ascension {
 
 		/**
 		 * A @c CustomControl has unique window class and window message procedure.
-		 * @tparam Derived The derived class
+		 * @tparam Derived The derived class. This type should provide @c windowClass class method which takes a
+		 *                 parameter as a reference to @c WindowClass type
 		 * @see SubclassedWindow
 		 */
 		template<typename Derived>
@@ -89,18 +90,13 @@ namespace ascension {
 			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 				return (consumed = true), ::DefWindowProcW(handle().get(), message, wp, lp);
 			}
-			/**
-			 * Returns the window class data.
-			 * @param[out] classInformation
-			 */
-			virtual void windowClass(WindowClass& out) const BOOST_NOEXCEPT = 0;
 
 		private:
 			static const std::basic_string<WCHAR>& registerAndCreate(CustomControl& self) {
 				static std::basic_string<WCHAR> windowClassName;
 				if(windowClassName.empty()) {
 					WindowClass klassData;
-					self.windowClass(klassData);
+					Derived::windowClass(klassData);
 					assert(!klassData.name.empty());
 
 					WNDCLASSEXW classData;
