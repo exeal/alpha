@@ -39,6 +39,10 @@ namespace alpha {
 			StatusBar& statusBar() const BOOST_NOEXCEPT;
 			/// @}
 
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			static void windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT;
+#endif
+
 		private:
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			bool onCommand(WORD id, WORD notifyCode, HWND control);
@@ -60,7 +64,6 @@ namespace alpha {
 			void onTimer(UINT_PTR timerID, TIMERPROC procedure);
 			// ascension.win32.CustomControl
 			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
-			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 #endif
 		private:
 			EditorPanes editorPanes_;

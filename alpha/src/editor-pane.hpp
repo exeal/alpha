@@ -67,9 +67,9 @@ namespace alpha {
 		class Container : public ascension::win32::CustomControl<Container> {
 		public:
 			Container();
+			static void windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT;
 		private:
 			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
-			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 		};
 #endif
 		struct Child {

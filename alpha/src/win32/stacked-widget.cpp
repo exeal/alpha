@@ -144,8 +144,8 @@ namespace alpha {
 			});
 		}
 
-		/// @see ascension#win32#CustomControl#windowClass
-		void StackedWidget::windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT {
+		/// @see ascension#win32#CustomControl
+		void StackedWidget::windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT {
 			out.name = L"alpha.win32.StackedWidget";
 			out.styles = CS_HREDRAW | CS_VREDRAW;
 		}

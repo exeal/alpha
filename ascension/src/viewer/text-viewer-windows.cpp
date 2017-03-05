@@ -1437,7 +1437,7 @@ namespace ascension {
 				::DeleteMenu(toplevelPopup.get(), c--, MF_BYPOSITION);
 		}
 
-		void TextViewer::windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT {
+		void TextViewer::windowClass(win32::WindowClass& out) BOOST_NOEXCEPT {
 			out.name = L"ascension.TextViewer";
 			out.styles = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW;
 			out.background = COLOR_WINDOW;
