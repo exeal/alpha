@@ -206,6 +206,10 @@ namespace ascension {
 			SignalConnector<FrozenStateChangedSignal> frozenStateChangedSignal() BOOST_NOEXCEPT;
 			/// @}
 
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			static void windowClass(win32::WindowClass& out) BOOST_NOEXCEPT;
+#endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+
 		protected:
 			virtual void doBeep() BOOST_NOEXCEPT;
 			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::Rectangle& rect);
@@ -342,10 +346,7 @@ namespace ascension {
 			static void handleInputMethodContextPreeditEndSignal(GtkIMContext* context, gpointer userData);
 			static void handleInputMethodContextPreeditStartSignal(GtkIMContext* context, gpointer userData);
 			static gboolean handleInputMethodContextRetrieveSurroundingSignal(GtkIMContext* context, gpointer userData);
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			// win32.CustomControl<TextViewer>
-			void windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT;
-#endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#endif
 
 			// enumerations
 		private:

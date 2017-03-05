@@ -229,7 +229,7 @@ namespace alpha {
 		return 0l;
 	}
 
-	void EditorPane::Container::windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT {
+	void EditorPane::Container::windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT {
 		out.name = L"alpha.Container";
 		out.styles = CS_HREDRAW | CS_VREDRAW;
 	}

@@ -290,8 +290,8 @@ namespace alpha {
 //			}
 		}
 
-		/// @see ascension#win32#CustomControl#windowClass
-		void MainWindow::windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT {
+		/// @see ascension#win32#CustomControl
+		void MainWindow::windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT {
 			out.name = L"alpha.MainWindow";
 			out.styles = CS_HREDRAW | CS_VREDRAW;
 		}

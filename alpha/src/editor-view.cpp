@@ -106,8 +106,8 @@ namespace alpha {
 		BufferList::instance().select(*document());
 	}
 
-	/// @see TextViewer#initialized
-	void EditorView::initialized() BOOST_NOEXCEPT {
+	/// @see TextViewer#realized
+	void EditorView::realized() BOOST_NOEXCEPT {
 		std::unique_ptr<ascension::presentation::PresentativeTextRenderer> renderer(
 			new ascension::presentation::PresentativeTextRenderer(document()->presentation(), boost::geometry::make_zero<ascension::graphics::Dimension>()));
 		renderer->setStrategy(std::unique_ptr<ascension::viewer::TextAreaRenderingStrategy>(new ascension::viewer::TextAreaRenderingStrategy(*textArea())));

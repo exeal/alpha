@@ -38,10 +38,11 @@ namespace alpha {
 			void setVerticallyHomogeneous(bool set = true) BOOST_NOEXCEPT;
 			/// @}
 
+			static void windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT;
+
 		protected:
 			// ascension.win32.CustomControl
 			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
-			virtual void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 
 		private:
 			template<typename Function> void foreachChildren(Function function) const;
