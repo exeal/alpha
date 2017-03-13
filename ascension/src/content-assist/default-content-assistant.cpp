@@ -384,7 +384,7 @@ namespace ascension {
 		namespace utils {
 			/// Closes the opened completion proposals popup immediately.
 			void closeCompletionProposalsPopup(TextViewer& viewer) BOOST_NOEXCEPT {
-				if(contentassist::ContentAssistant* ca = viewer.contentAssistant()) {
+				if(const auto ca = viewer.contentAssistant()) {
 					if(contentassist::ContentAssistant::CompletionProposalsUI* cpui = ca->completionProposalsUI())
 						cpui->close();
 				}

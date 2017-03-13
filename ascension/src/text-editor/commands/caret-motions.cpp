@@ -45,7 +45,7 @@ namespace ascension {
 				}
 				inline bool selectCompletionProposal(viewer::TextViewer& target, kernel::Position(*procedure)(const kernel::locations::PointProxy&, Direction, Index), Direction direction, long n) {
 					if(procedure == &kernel::locations::nextLine) {
-						if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
+						if(const auto ca = target.contentAssistant()) {
 							if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI())
 								return cpui->nextProposal((direction == Direction::forward()) ? +n : -n), true;
 						}
@@ -54,7 +54,7 @@ namespace ascension {
 				}
 				inline bool selectCompletionProposal(viewer::TextViewer& target, viewer::VisualDestinationProxy(*procedure)(const viewer::VisualPoint&, Direction, Index), Direction direction, long n) {
 					if(procedure == &viewer::locations::nextPage || procedure == &viewer::locations::nextVisualLine) {
-						if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
+						if(const auto ca = target.contentAssistant()) {
 							if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI()) {
 								if(procedure == &viewer::locations::nextPage)
 									return cpui->nextPage((direction == Direction::forward()) ? +n : -n), true;

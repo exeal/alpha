@@ -122,7 +122,7 @@ namespace ascension {
 				if(numericPrefix() <= 0)
 					return true;
 
-				if(contentassist::ContentAssistant* const ca = target().contentAssistant()) {
+				if(const auto ca = target().contentAssistant()) {
 					if(contentassist::ContentAssistant::CompletionProposalsUI* cpui = ca->completionProposalsUI()) {
 						if(cpui->complete())
 							return true;
