@@ -51,7 +51,7 @@ namespace ascension {
 				throwIfTargetIsReadOnly();
 //				ASCENSION_CHECK_GUI_EDITABILITY();
 				abortIncrementalSearch(*viewer::document(target()));
-				if(contentassist::ContentAssistant* ca = target().contentAssistant()) {
+				if(const auto ca = target().contentAssistant()) {
 					ca->showPossibleCompletions();
 					return true;
 				}

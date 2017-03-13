@@ -174,7 +174,7 @@ namespace ascension {
 
 			/// @name Content Assist
 			/// @{
-			contentassist::ContentAssistant* contentAssistant() const BOOST_NOEXCEPT;
+			std::shared_ptr<contentassist::ContentAssistant> contentAssistant() const BOOST_NOEXCEPT;
 			void setContentAssistant(std::unique_ptr<contentassist::ContentAssistant> newContentAssistant) BOOST_NOEXCEPT;
 			/// @}
 
@@ -371,7 +371,7 @@ namespace ascension {
 			std::basic_string<WCHAR> tipText_;
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// strategies and listeners
-			std::unique_ptr<contentassist::ContentAssistant> contentAssistant_;
+			std::shared_ptr<contentassist::ContentAssistant> contentAssistant_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			win32::com::SmartPointer<detail::AbstractAccessibleProxy> accessibleProxy_;
 #endif
@@ -486,8 +486,8 @@ namespace ascension {
 		}
 		
 		/// Returns the content assistant or @c null if not registered.
-		inline contentassist::ContentAssistant* TextViewer::contentAssistant() const BOOST_NOEXCEPT {
-			return contentAssistant_.get();
+		inline std::shared_ptr<contentassist::ContentAssistant> TextViewer::contentAssistant() const BOOST_NOEXCEPT {
+			return contentAssistant_;
 		}
 
 		/// Returns the document.
