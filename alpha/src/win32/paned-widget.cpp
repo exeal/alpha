@@ -15,8 +15,8 @@
 
 namespace alpha {
 	namespace win32 {
-		/// Creates a @c PanedWidget with the specified orientation.
-		PanedWidget::PanedWidget() : ascension::win32::CustomControl<PanedWidget>(ascension::win32::Window::WIDGET), horizontal_(true), firstChildSizeRatio_(0.5f) {
+		/// Creates a @c PanedWidget instance.
+		PanedWidget::PanedWidget() : horizontal_(true), firstChildSizeRatio_(0.5f) {
 		}
 
 		/// Destructor.
