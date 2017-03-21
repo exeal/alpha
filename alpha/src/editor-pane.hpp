@@ -37,8 +37,8 @@ namespace alpha {
 #endif
 	{
 	public:
-		explicit EditorPane(std::unique_ptr<EditorView> initialViewer = std::unique_ptr<EditorView>());
-		EditorPane::EditorPane(const EditorPane& other);
+		EditorPane();
+		std::unique_ptr<EditorPane> clone() const;
 
 		/// @name Buffer
 		/// @{
@@ -64,12 +64,13 @@ namespace alpha {
 
 	private:
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		void realized(const Type& type) override;
 		class Container : public ascension::win32::CustomControl<Container> {
 		public:
-			Container();
-			static void windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT;
+			explicit Container(EditorPane& parent);
 		private:
 			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
+			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 		};
 #endif
 		struct Child {

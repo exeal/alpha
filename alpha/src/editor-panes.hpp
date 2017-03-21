@@ -115,6 +115,7 @@ namespace alpha {
 
 	private:
 		EditorPane* firstPane() const;
+		void initializeWidget();
 		EditorPane* lastPane() const;
 		void split(EditorPane& pane, bool sideBySide);
 		// BufferList signals
@@ -125,6 +126,9 @@ namespace alpha {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		// Gtk.Widget
 		bool on_focus_in_event(GdkEventFocus* event) override;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		// ascension.win32.CustomControl
+		void realized(const Type& type) override;
 #endif
 
 	private:

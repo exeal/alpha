@@ -28,7 +28,16 @@ namespace ascension {
 			 * @param document The document
 			 * @throw NullPointerException @a document is @c null
 			 */
-			SourceViewer::SourceViewer(std::shared_ptr<kernel::Document> document) : TextViewer(document) {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			SourceViewer::SourceViewer(std::shared_ptr<kernel::Document> document) : TextViewer(document)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+			SourceViewer::SourceViewer(std::shared_ptr<kernel::Document> document, QWidget* parent /* = Q_NULLPTR */) : TextViewer(document, parent)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+			???
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			SourceViewer::SourceViewer(std::shared_ptr<kernel::Document> document, const Type& type) : TextViewer(document, type)
+#endif
+			{
 				setRulerAlignment(graphics::font::TextAlignment::START);
 			}
 

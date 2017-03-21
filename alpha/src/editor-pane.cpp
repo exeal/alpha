@@ -9,6 +9,7 @@
 #include "application.hpp"
 #include "buffer-list.hpp"
 #include "editor-pane.hpp"
+#include "editor-panes.hpp"
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
 #include <ascension/graphics/font/text-viewport.hpp>
@@ -26,15 +27,17 @@ namespace alpha {
 	 * @see #bufferSelectionChangedSignal, #selectedBuffer;
 	 */
 
-	/// Constructor.
-	EditorPane::EditorPane(std::unique_ptr<EditorView> initialViewer /* = std::unique_ptr<EditorView> */) {
+	/// Creates a @c EditorPane instance.
+	EditorPane::EditorPane()
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+			: QStackedWidget(EditorPanes::instance())
+#endif
+	{
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		set_homogeneous(false);
 #endif
-		if(initialViewer.get() != nullptr)
-			add(std::move(initialViewer));
 	}
-
+#if 0
 	/// Copy-constructor.
 	EditorPane::EditorPane(const EditorPane& other) {
 		BOOST_FOREACH(const Child& child, other.children_) {
@@ -45,7 +48,7 @@ namespace alpha {
 			add(std::move(newView));
 		}
 	}
-
+#endif
 	/**
 	 * Adds the new viewer.
 	 * @param viewer The viewer to add
@@ -62,7 +65,7 @@ namespace alpha {
 		std::unique_ptr<Gtk::Box> container(new Gtk::Box(Gtk::ORIENTATION_VERTICAL));
 		std::unique_ptr<Gtk::ScrolledWindow> scroller(new Gtk::ScrolledWindow());
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		std::unique_ptr<Container> container(new Container);
+		std::unique_ptr<Container> container(new Container(*this));
 #endif
 //		std::unique_ptr<ModeLine> modeLine(new ModeLine());
 
@@ -95,6 +98,25 @@ namespace alpha {
 #endif
 		ascension::viewer::widgetapi::show(*this);
 	}
+
+	/**
+	 * Clones this object.
+	 * @return A cloned object
+	 */
+	std::unique_ptr<EditorPane> EditorPane::clone() const {
+		// TODO: Not implemented.
+		std::unique_ptr<EditorPane> p(new EditorPane());
+		return p;
+	}
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+	/// @see ascension::win32::CustomControl#realized
+	void EditorPane::realized(const Type& type) {
+		win32::StackedWidget::realized(type);
+		setHorizontallyHomogeneous(false);
+		setVerticallyHomogeneous(false);
+	}
+#endif
 
 	/**
 	 * Removes the specified viewer from this @c EditorPane.
@@ -222,14 +244,17 @@ namespace alpha {
 	}
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-	EditorPane::Container::Container() : ascension::win32::CustomControl<Container>(ascension::win32::Window::WIDGET) {
+	EditorPane::Container::Container(EditorPane& parent) {
+		ascension::win32::realize(*this, Type::widget(parent.handle()));
 	}
 
+	/// @see ascension#win32#CustomControl#processMessage
 	LRESULT EditorPane::Container::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 		return 0l;
 	}
 
-	void EditorPane::Container::windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT {
+	/// @see ascension#win32#CustomControl#windowClass
+	void EditorPane::Container::windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT {
 		out.name = L"alpha.Container";
 		out.styles = CS_HREDRAW | CS_VREDRAW;
 	}

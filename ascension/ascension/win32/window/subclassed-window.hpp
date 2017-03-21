@@ -39,7 +39,7 @@ namespace ascension {
 			 * @param className The window class name
 			 * @param type The window type
 			 */
-			SubclassedWindow(const std::basic_string<WCHAR>& className, Type type) : Window(className, type) {
+			SubclassedWindow(const std::basic_string<WCHAR>& className, const Type& type) : Window(className, type) {
 				originalWindowProcedure_ = reinterpret_cast<WNDPROC>(getWindowLong(handle().get(), GWLP_WNDPROC));
 				setWindowLong(handle().get(), GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 				setWindowLong(handle().get(), GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(SubclassedWindow<Derived>::windowProcedure));

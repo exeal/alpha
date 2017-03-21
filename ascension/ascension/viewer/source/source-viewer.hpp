@@ -22,8 +22,15 @@ namespace ascension {
 
 			class SourceViewer : public TextViewer, private RulerAllocationWidthSink {
 			public:
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				explicit SourceViewer(std::shared_ptr<kernel::Document> document);
-				SourceViewer(const SourceViewer& other);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#	error Not implemented.
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+				explicit SourceViewer(std::shared_ptr<kernel::Document> document, QWidget* parent = Q_NULLPTR);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				explicit SourceViewer(std::shared_ptr<kernel::Document> document, const Type& type);
+#endif
 				// TextViewer
 				virtual const TextViewerComponent* hitTest(const graphics::Point& location) const BOOST_NOEXCEPT override;
 

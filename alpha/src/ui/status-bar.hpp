@@ -12,6 +12,9 @@
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/label.h>
 #	include <gtkmm/statusbar.h>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#	include <QStatusBar>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include "win32/status-bar.hpp"
 #endif
@@ -24,10 +27,24 @@ namespace alpha {
 		class StatusBar : public
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			Gtk::Statusbar
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+			QStatusBar
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+			???
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			win32::StatusBar
 #endif
 		{
+		public:
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			StatusBar();
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+			explicit StatusBar(QWidget* parent = Q_NULLPTR);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+			???
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			explicit StatusBar(const Type& type);
+#endif
 		};
 	}
 }

@@ -82,11 +82,8 @@ namespace ascension {
 		 * Constructor.
 		 * @param viewer The text viewer. The widget becomes the child of this viewer
 		 */
-		AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer)
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				: win32::CustomControl<AutoScrollOriginMark>(POPUP)
-#endif
-		{
+		AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) {
+			win32::realize(*this, win32::Window::Type::popup());
 //			resetWidgetShape();
 			widgetapi::setParentWidget(*this, viewer);
 		}

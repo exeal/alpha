@@ -34,21 +34,21 @@ namespace alpha {
 #endif
 
 	/// Default constructor.
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 	EditorView::EditorView(std::shared_ptr<Buffer> buffer) :
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && defined(ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
+#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
 			Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME),
 #endif
-			ascension::viewer::TextViewer(buffer), buffer_(buffer) {
+			ascension::viewer::TextViewer(buffer),
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+	EditorView::EditorView(std::shared_ptr<Buffer> buffer, QWidget* parent /* = Q_NULLPTR */) : ascension::viewer::TextViewer(buffer, parent),
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+	EditorView::EditorView(std::shared_ptr<Buffer> buffer, const Type& type) : ascension::viewer::TextViewer(buffer, type),
+#endif
+			buffer_(buffer) {
 		document()->bookmarker().addListener(*this);
 //		caretObject_.reset(new CaretProxy(caret()));
-	}
-
-	/// Copy-constructor.
-	EditorView::EditorView(const EditorView& other) :
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && defined(ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
-			Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME),
-#endif
-			ascension::viewer::TextViewer(other), buffer_(other.buffer_) {
 	}
 
 	/// Destructor.

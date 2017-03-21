@@ -65,10 +65,14 @@ namespace ascension {
 			WindowClass() : styles(0) {}
 		};
 
+		template<typename Derived> class CustomControl;
+
+		template<typename Derived>
+		void realize(CustomControl<Derived>& widget, const Window::Type& type);
+
 		/**
 		 * A @c CustomControl has unique window class and window message procedure.
-		 * @tparam Derived The derived class. This type should provide @c windowClass class method which takes a
-		 *                 parameter as a reference to @c WindowClass type
+		 * @tparam Derived The derived class
 		 * @see SubclassedWindow
 		 */
 		template<typename Derived>
@@ -76,9 +80,11 @@ namespace ascension {
 		protected:
 			/**
 			 * Creates a @c CustomControl instance.
-			 * @param type The window type
+			 * @note This constructor does not create a window. You should call @c realize(widget) after the object
+			 *       construction.
+			 * @post handle().get() == nullptr
 			 */
-			explicit CustomControl(Type type) : Window(registerAndCreate(*this).c_str(), type) {}
+			CustomControl() : Window(Handle<HWND>()) {}
 			/**
 			 * The window procedure.
 			 * @param message The window message
@@ -90,13 +96,27 @@ namespace ascension {
 			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 				return (consumed = true), ::DefWindowProcW(handle().get(), message, wp, lp);
 			}
+			/**
+			 * This custom control was realized.
+			 * @param type The window type
+			 * @note The default implementation does nothing.
+			 * @see #realize
+			 */
+			virtual void realized(const Type& type) {}
+			/**
+			 * Returns the window class data.
+			 * @param[out] out The window class data
+			 */
+			virtual void windowClass(WindowClass& out) const BOOST_NOEXCEPT = 0;
 
 		private:
-			static const std::basic_string<WCHAR>& registerAndCreate(CustomControl& self) {
+			void realize(const Type& type) {
+				if(handle().get() != nullptr)
+					throw IllegalStateException("The CustomControl is already realized.");
 				static std::basic_string<WCHAR> windowClassName;
 				if(windowClassName.empty()) {
 					WindowClass klassData;
-					Derived::windowClass(klassData);
+					windowClass(klassData);
 					assert(!klassData.name.empty());
 
 					WNDCLASSEXW classData;
@@ -116,7 +136,13 @@ namespace ascension {
 					windowClassName = klassData.name;
 				}
 
-				return windowClassName;
+				::CreateWindowExW(
+					0, windowClassName.c_str(), nullptr, type.styles(),
+					CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+					type.parent().get(), nullptr, ::GetModuleHandleW(nullptr), this);
+				if(handle().get() == nullptr)
+					throw makePlatformError();
+				realized(type);
 			}
 			static LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wp, LPARAM lp) {
 				return messageDispatcher_.dispatch(window, message, wp, lp);
@@ -124,9 +150,22 @@ namespace ascension {
 		private:
 			static detail::MessageDispatcher<CustomControl<Derived>> messageDispatcher_;
 			friend class detail::MessageDispatcher<CustomControl<Derived>>;
+			template<typename D> friend void realize(CustomControl<D>& widget, const Type& type);
 		};
 
-		template<typename Derived> detail::MessageDispatcher<CustomControl<Derived>> CustomControl<Derived>::messageDispatcher_;
+		template<typename Derived>
+		detail::MessageDispatcher<CustomControl<Derived>> CustomControl<Derived>::messageDispatcher_;
+
+		/**
+		 * Realizes the custom control.
+		 * @tparam Derived The template parameter of @c CustomControl
+		 * @param widget The custom control to realize
+		 * @param type The window type
+		 */
+		template<typename Derived>
+		inline void realize(CustomControl<Derived>& widget, const Window::Type& type) {
+			return widget.realize(type);
+		}
 	}
 }
 

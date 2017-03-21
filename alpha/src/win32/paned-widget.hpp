@@ -14,7 +14,7 @@ namespace alpha {
 	namespace win32 {
 		class PanedWidget : public ascension::win32::CustomControl<PanedWidget> {
 		public:
-			PanedWidget();
+			explicit PanedWidget();
 			virtual ~PanedWidget() BOOST_NOEXCEPT;
 
 			/// @name Children
@@ -39,11 +39,10 @@ namespace alpha {
 			void setGap(unsigned int newGap) BOOST_NOEXCEPT;
 			/// @}
 
-			static void windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT;
-
 		protected:
 			// ascension.win32.CustomControl
 			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
+			virtual void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 
 		private:
 			template<std::size_t> BOOST_CONSTEXPR bool hasChild() const BOOST_NOEXCEPT;

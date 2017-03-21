@@ -24,7 +24,7 @@ namespace ascension {
 		 */
 		DefaultContentAssistant::CompletionProposalsPopup::CompletionProposalsPopup(
 				viewer::TextViewer& parent, ContentAssistant::CompletionProposalsUI& ui)
-				: win32::SubclassedWindow<CompletionProposalsPopup>(L"LISTBOX", POPUP), ui_(ui) {
+				: win32::SubclassedWindow<CompletionProposalsPopup>(L"LISTBOX", win32::Window::Type::popup()), ui_(ui) {
 			viewer::widgetapi::setParentWidget(*this, parent);
 			win32::setWindowLong(handle().get(), GWL_STYLE, WS_CHILD | WS_TABSTOP | WS_VSCROLL | LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY);
 			win32::setWindowLong(handle().get(), GWL_EXSTYLE, WS_EX_DLGMODALFRAME | WS_EX_NOPARENTNOTIFY | WS_EX_TOOLWINDOW);

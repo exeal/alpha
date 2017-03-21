@@ -196,8 +196,8 @@ namespace alpha {
 			ascension::viewer::widgetapi::setBounds(*std::get<1>(children_), ascension::graphics::geometry::make<ascension::graphics::Rectangle>(std::make_pair(xrange[1], yrange[1])));
 		}
 
-		/// @see ascension#win32#CustomControl
-		void PanedWidget::windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT {
+		/// @see ascension#win32#CustomControl#windowClass
+		void PanedWidget::windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT {
 			out.name = L"alpha.win32.PanedWidget";
 			out.styles = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW;
 		}
