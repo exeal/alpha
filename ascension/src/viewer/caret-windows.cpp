@@ -72,7 +72,7 @@ namespace ascension {
 #endif
 		/// Moves the IME form to valid position.
 		void Caret::adjustInputMethodCompositionWindow() {
-			assert(win32::boole(::IsWindow(textArea().textViewer().handle().get())));
+			assert(widgetapi::isRealized(textArea().textViewer()));
 			if(!context_.inputMethodCompositionActivated)
 				return;
 			if(auto imc = win32::inputMethod(textArea().textViewer())) {
