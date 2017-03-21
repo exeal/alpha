@@ -61,9 +61,10 @@ namespace ascension {
 			private:
 				LRESULT dispatch(HWND window, UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 					if(message == WM_NCCREATE) {
-						void* const p = reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams;
+						Window* const p = static_cast<Window*>(reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);
 						assert(p != nullptr);
-						handleToObjects_.insert(std::make_pair(window, static_cast<Window*>(p)));
+						handleToObjects_.insert(std::make_pair(window, p));
+						p->handle_.reset(window);
 					}
 					const auto i(handleToObjects_.find(window));
 					const auto result = (i != std::end(handleToObjects_)) ?
