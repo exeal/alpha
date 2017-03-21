@@ -203,12 +203,14 @@ namespace alpha {
 #endif
 				boost::geometry::assign_zero(rebarBounds);
 
-			const auto editorBounds(ascension::graphics::geometry::make<ascension::graphics::Rectangle>((
-				ascension::graphics::geometry::_left = static_cast<ascension::graphics::Scalar>(0),
-				ascension::graphics::geometry::_top = ascension::graphics::geometry::dy(rebarBounds),
-				ascension::graphics::geometry::_right = static_cast<ascension::graphics::Scalar>(width),
-				ascension::graphics::geometry::_bottom = height - ascension::graphics::geometry::dy(statusBarBounds))));
-			ascension::viewer::widgetapi::setBounds(EditorPanes::instance(), editorBounds);
+			if(ascension::viewer::widgetapi::isRealized(EditorPanes::instance())) {
+				const auto editorBounds(ascension::graphics::geometry::make<ascension::graphics::Rectangle>((
+					ascension::graphics::geometry::_left = static_cast<ascension::graphics::Scalar>(0),
+					ascension::graphics::geometry::_top = ascension::graphics::geometry::dy(rebarBounds),
+					ascension::graphics::geometry::_right = static_cast<ascension::graphics::Scalar>(width),
+					ascension::graphics::geometry::_bottom = height - ascension::graphics::geometry::dy(statusBarBounds))));
+				ascension::viewer::widgetapi::setBounds(EditorPanes::instance(), editorBounds);
+			}
 		}
 
 		/**
