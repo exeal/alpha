@@ -357,6 +357,12 @@ namespace ascension {
 			/// Returns the desktop widget.
 			Proxy<Widget> desktop();
 
+			/**
+			 * Returns true if the widget is realized.
+			 * @param widget
+			 */
+			bool isRealized(Proxy<const Widget> widget);
+
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			template<typename Point>
 			Point mapFromGlobal(Proxy<const Widget> widget, const Point& position,
