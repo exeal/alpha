@@ -9,6 +9,7 @@
 #ifndef ALPHA_WIN32_APPLICATION_HPP
 #define ALPHA_WIN32_APPLICATION_HPP
 #include "win32/module.hpp"
+#include <ascension/win32/window/window.hpp>
 #include <set>
 
 
@@ -52,12 +53,17 @@ namespace alpha {
 						} else
 							++i;
 					}
-					if(!dialogMessage && accelerators().get() != nullptr && !ascension::win32::boole(::TranslateAcceleratorW(message.hwnd, accelerators().get(), &message))) {
+
+					if(!dialogMessage) {
 						bool consumed = false;
-						preTranslateMessage(message, consumed);
+						if(accelerators().get() != nullptr && ::TranslateAcceleratorW(message.hwnd, accelerators().get(), &message) != 0)
+							consumed = true;
 						if(!consumed) {
-							::TranslateMessage(&message);
-							::DispatchMessageW(&message);
+							preTranslateMessage(message, consumed);
+							if(!consumed) {
+								::TranslateMessage(&message);
+								::DispatchMessageW(&message);
+							}
 						}
 					}
 				}
@@ -118,11 +124,16 @@ namespace alpha {
 
 			/// Returns the main window.
 			MainWindow& mainWindow() const {
-				return *window_;
+				return static_cast<MainWindow&>(*window_);
 			}
 
 		private:
-			std::unique_ptr<MainWindow> window_;
+			bool initialize(int command) override {
+				::ShowWindow(window_->handle().get(), command);
+				return Application::initialize(command);
+			}
+		private:
+			std::unique_ptr<ascension::win32::Window> window_;
 		};
 	}
 } // namespace alpha.win32
