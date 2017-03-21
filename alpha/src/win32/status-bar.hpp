@@ -23,7 +23,7 @@ namespace alpha {
 			static const Context DEFAULT_CONTEXT = 0;
 			typedef std::size_t MessageID;
 
-			StatusBar();
+			explicit StatusBar(const Type& type);
 			virtual ~StatusBar() BOOST_NOEXCEPT;
 
 			/// @name Messages

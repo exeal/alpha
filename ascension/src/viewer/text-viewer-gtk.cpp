@@ -23,6 +23,20 @@
 
 namespace ascension {
 	namespace viewer {
+		/**
+		 * Creates a @c TextViewer instance.
+		 * @param document The document
+		 * @throw NullPointerException @a document is @c null
+		 */
+		TextViewer::TextViewer(std::shared_ptr<kernel::Document> document) :
+#ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
+				Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME),
+#endif
+				document_(document), mouseVanisher_(*this) {
+			if(document_.get() == nullptr)
+				throw NullPointerException("document");
+		}
+
 		void TextViewer::doBeep() BOOST_NOEXCEPT {
 #if 1
 			::gdk_beep();

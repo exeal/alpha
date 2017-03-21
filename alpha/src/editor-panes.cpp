@@ -13,6 +13,7 @@
 #include "editor-panes.hpp"
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
+#include "ui/main-window.hpp"
 #include <ascension/log.hpp>
 #include <boost/foreach.hpp>
 //#include <boost/range/algorithm/find.hpp>
@@ -33,29 +34,8 @@ namespace alpha {
 		: QSplitter(Qt::Horizontal)
 #endif
 	{
-		BufferList& bufferList = BufferList::instance();
-		bufferAboutToBeRemovedConnection_ =
-			bufferList.bufferAboutToBeRemovedSignal().connect(
-				std::bind(&EditorPanes::bufferAboutToBeRemoved, this, std::placeholders::_1, std::placeholders::_2));
-		bufferAddedConnection_ =
-			bufferList.bufferAddedSignal().connect(
-				std::bind(&EditorPanes::bufferAdded, this, std::placeholders::_1, std::placeholders::_2));
-		auto firstPane(std::make_shared<EditorPane>());
-		activePane_ = firstPane.get();
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-		add1(*Gtk::manage(activePane_ = new EditorPane()));
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-		addWidget(firstPane.release());
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-		// TODO: Not implemented.
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		resetChild<0>(firstPane);
-#endif
-#ifdef ALPHA_NO_AMBIENT
-		BufferList::instance().addNew();
-#endif
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-		show_all_children();
+#if !ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		initializeWidget();
 #endif
 	}
 
@@ -81,7 +61,22 @@ namespace alpha {
 		// create new views for each panes
 		EditorView* originalView = nullptr;
 		BOOST_FOREACH(EditorPane& pane, *this) {
-			std::unique_ptr<EditorView> newView((originalView == nullptr) ? new EditorView(buffer) : new EditorView(*originalView));
+			std::unique_ptr<EditorView> newView;
+			if(originalView == nullptr)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				newView.reset(new EditorView(buffer));
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+				newView.reset(new EditorView(buffer, &pane));
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+				???
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				newView.reset(new EditorView(buffer, ascension::win32::Window::Type::widget(pane.handle())));
+#endif
+			else
+				newView.reset(new EditorView(originalView->document(), ascension::win32::Window::Type::widget(pane.handle())));
+#ifdef ALPHA_NO_AMBIENT
+			BufferList::instance().addNew();
+#endif
 			if(originalView == nullptr)
 				originalView = newView.get();
 			if(originalView != newView.get())
@@ -152,8 +147,11 @@ namespace alpha {
 					break;
 				else if(const auto* const p = boost::any_cast<std::shared_ptr<win32::PanedWidget>>(&child))
 					paned = p->get();
-				else
-					return boost::any_cast<EditorPane>(&child);
+				else {
+					const auto* const p2 = boost::any_cast<std::shared_ptr<EditorPane>>(&child);
+					assert(p2 != nullptr);
+					return p2->get();
+				}
 			}
 #endif
 			return nullptr;
@@ -176,6 +174,34 @@ namespace alpha {
 		}
 	}
 
+	/// @internal Initializes the widget.
+	void EditorPanes::initializeWidget() {
+		BufferList& bufferList = BufferList::instance();
+		bufferAboutToBeRemovedConnection_ =
+			bufferList.bufferAboutToBeRemovedSignal().connect(
+				std::bind(&EditorPanes::bufferAboutToBeRemoved, this, std::placeholders::_1, std::placeholders::_2));
+		bufferAddedConnection_ =
+			bufferList.bufferAddedSignal().connect(
+				std::bind(&EditorPanes::bufferAdded, this, std::placeholders::_1, std::placeholders::_2));
+		auto firstPane(std::make_shared<EditorPane>());
+		activePane_ = firstPane.get();
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		add1(*Gtk::manage(activePane_ = new EditorPane()));
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+		addWidget(firstPane.release());
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+		// TODO: Not implemented.
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		resetChild<0>(firstPane);
+#endif
+#ifdef ALPHA_NO_AMBIENT
+		BufferList::instance().addNew();
+#endif
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		show_all_children();
+#endif
+	}
+
 	/// @internal Returns the last editor pane, or @c null if empty.
 	inline EditorPane* EditorPanes::lastPane() const {
 		return findFirstPane(*this, true);
@@ -187,6 +213,13 @@ namespace alpha {
 		if(pane.get_realized())
 			set_focus_child(pane);
 		return true;
+	}
+#endif
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+	void EditorPanes::realized(const Type& type) {
+		win32::PanedWidget::realized(type);
+		initializeWidget();
 	}
 #endif
 
@@ -222,8 +255,8 @@ namespace alpha {
 		std::pair<win32::PanedWidget*, std::size_t> findParentPaned(win32::PanedWidget& root, EditorPane& pane) {
 			if(!root.child<position>().empty()) {
 				auto& child = root.child<position>();
-				if(auto* const p = boost::any_cast<EditorPane>(&child)) {
-					if(p == &pane)
+				if(auto* const p = boost::any_cast<std::shared_ptr<EditorPane>>(&child)) {
+					if(p->get() == &pane)
 						return std::make_pair(&root, position);
 				} else if(auto* const p = boost::any_cast<std::shared_ptr<win32::PanedWidget>>(&child))
 					return findParentPaned(**p, pane);
@@ -261,13 +294,14 @@ namespace alpha {
 		const auto paned(findParentPaned(*this, pane));
 		if(std::get<0>(paned) == nullptr)
 			throw std::invalid_argument("'pane' is not a descendant of this EditorPanes.");
-		auto newPane(std::make_shared<EditorPane>(pane));
+		std::shared_ptr<EditorPane> newPane(pane.clone());
 		if(std::get<1>(paned) == 0 && std::get<0>(paned)->child<1>().empty())
 			std::get<0>(paned)->resetChild<1>(newPane);
 		else if(std::get<1>(paned) == 1 && std::get<0>(paned)->child<0>().empty())
 			std::get<0>(paned)->resetChild<0>(newPane);
 		else {
 			auto newPaned(std::make_shared<win32::PanedWidget>());
+			ascension::win32::realize(*newPaned, ascension::win32::Window::Type::widget(std::get<0>(paned)->handle()));
 			newPaned->resetChild<1>(newPane);
 			std::shared_ptr<EditorPane> original(boost::any_cast<std::shared_ptr<EditorPane>>((std::get<1>(paned) == 0) ? std::get<0>(paned)->child<0>() : std::get<0>(paned)->child<1>()));
 			if(std::get<1>(paned) == 0) {

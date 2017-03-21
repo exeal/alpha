@@ -136,8 +136,15 @@ namespace ascension {
 				Configuration() BOOST_NOEXCEPT;
 			};
 
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			explicit TextViewer(std::shared_ptr<kernel::Document> document);
-			TextViewer(const TextViewer& other);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#	error Not implemented.
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+			explicit TextViewer(std::shared_ptr<kernel::Document> document, QWidget* parent = Q_NULLPTR);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			explicit TextViewer(std::shared_ptr<kernel::Document> document, const Type& type);
+#endif
 			virtual ~TextViewer();
 
 			/// @name General Attributes
@@ -205,10 +212,6 @@ namespace ascension {
 			SignalConnector<FocusChangedSignal> focusChangedSignal() BOOST_NOEXCEPT;
 			SignalConnector<FrozenStateChangedSignal> frozenStateChangedSignal() BOOST_NOEXCEPT;
 			/// @}
-
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			static void windowClass(win32::WindowClass& out) BOOST_NOEXCEPT;
-#endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 		protected:
 			virtual void doBeep() BOOST_NOEXCEPT;
@@ -320,6 +323,8 @@ namespace ascension {
 			virtual void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
 			virtual void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
 			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
+			virtual void windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT override;
+
 			// IDropTarget
 			virtual STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect) override;
 			virtual STDMETHODIMP DragOver(DWORD keyState, POINTL location, DWORD* effect) override;

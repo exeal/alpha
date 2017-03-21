@@ -122,38 +122,6 @@ namespace ascension {
 		}
 #endif
 
-		/**
-		 * Creates a @c TextViewer instance.
-		 * @param document The document
-		 * @throw NullPointerException @a document is @c null
-		 */
-		TextViewer::TextViewer(std::shared_ptr<kernel::Document> document) :
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && defined(ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
-				Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME),
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				win32::CustomControl<TextViewer>(WIDGET),
-#endif
-				document_(document), mouseVanisher_(*this){
-			if(document_.get() == nullptr)
-				throw NullPointerException("document");
-
-			// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
-		}
-
-		/**
-		 * Copy-constructor. Unlike @c win32#Object class, this does not copy the window handle. For
-		 * more details, see the description of @c TextViewer.
-		 */
-		TextViewer::TextViewer(const TextViewer& other)
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && defined(ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE)
-				: Glib::ObjectBase(GLIBMM_CUSTOM_TYPE_NAME)
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				: win32::CustomControl<TextViewer>(win32::Window::WIDGET)
-#endif
-				, mouseVanisher_(*this) {
-			modeState_ = other.modeState_;
-		}
-
 		/// Destructor.
 		TextViewer::~TextViewer() {
 		}

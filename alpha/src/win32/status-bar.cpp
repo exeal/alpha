@@ -47,8 +47,11 @@ namespace alpha {
 			}
 		}
 
-		/// Creates a @c StatusBar widget.
-		StatusBar::StatusBar() : ascension::win32::Window(className(), ascension::win32::Window::WIDGET) {
+		/**
+		 * Creates a @c StatusBar widget.
+		 * @param type The window type
+		 */
+		StatusBar::StatusBar(const Type& type) : ascension::win32::Window(className(), type) {
 			const auto styles = ascension::win32::getWindowLong(handle().get(), GWL_STYLE);
 			ascension::win32::setWindowLong(handle().get(), GWL_STYLE, styles | WS_VISIBLE | CCS_BOTTOM | SBARS_SIZEGRIP);
 		}

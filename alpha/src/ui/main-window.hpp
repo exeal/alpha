@@ -39,10 +39,6 @@ namespace alpha {
 			StatusBar& statusBar() const BOOST_NOEXCEPT;
 			/// @}
 
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			static void windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT;
-#endif
-
 		private:
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			bool onCommand(WORD id, WORD notifyCode, HWND control);
@@ -64,10 +60,12 @@ namespace alpha {
 			void onTimer(UINT_PTR timerID, TIMERPROC procedure);
 			// ascension.win32.CustomControl
 			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
+			void realized(const Type& type) override;
+			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 #endif
 		private:
 			EditorPanes editorPanes_;
-			StatusBar statusBar_;
+			std::unique_ptr<StatusBar> statusBar_;
 			boost::signals2::scoped_connection bufferSelectionChangedConnection_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			Gtk::Box box_;	// TODO: Replace by Gtk.Grid.

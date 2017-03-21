@@ -15,26 +15,59 @@
 
 namespace ascension {
 	namespace win32 {
+		namespace detail {
+			template<typename T> class MessageDispatcher;
+		}
+
 		/// Holds a handle to the window.
 		class Window : private boost::noncopyable {
 		public:
-			/// The window types.
-			enum Type {
-				WIDGET,		///< A widget.
-				TOPLEVEL,	///< A toplevel window.
-				POPUP		///< A pop-up window.
+			/// Describes window type.
+			class Type {
+			public:
+				/// An independent popup-window.
+				static Type popup() BOOST_NOEXCEPT {
+					return Type(WS_POPUPWINDOW, Handle<HWND>());
+				}
+				/// A pop-up window with the given @a parent.
+				static Type popup(Handle<HWND> parent) {
+					return Type(WS_POPUPWINDOW, parent);
+				}
+				/// A toplevel window.
+				static Type toplevel() {
+					return Type(WS_OVERLAPPEDWINDOW, Handle<HWND>());
+				}
+				/// A widget with the given @a parent.
+				static Type widget(Handle<HWND> parent) {
+					if(parent.get() == nullptr)
+						throw NullPointerException("parent");
+					return Type(WS_CHILD | WS_VISIBLE, parent);
+				}
+
+				Handle<HWND> parent() const BOOST_NOEXCEPT {
+					return parent_;
+				}
+				DWORD styles() const BOOST_NOEXCEPT {
+					return styles_;
+				}
+
+			private:
+				Type(DWORD styles, Handle<HWND> parent) BOOST_NOEXCEPT : styles_(styles), parent_(parent) {}
+				DWORD styles_;
+				Handle<HWND> parent_;
 			};
+
 			/// Constructor takes a borrowed window handle.
-			explicit Window(const Handle<HWND>& handle) BOOST_NOEXCEPT : handle_(handle) {}
+			explicit Window(Handle<HWND> handle) BOOST_NOEXCEPT : handle_(handle) {}
 			/**
 			 * Creates @c Window instance.
 			 * @param className The window class name
-			 * @param styles The window style(s)
+			 * @param type The window type
 			 */
-			Window(const std::basic_string<WCHAR>& className, Type type) : handle_(::CreateWindowExW(
-					0, className.c_str(), nullptr, typeToStyles(type),
+			Window(const std::basic_string<WCHAR>& className, const Type& type) : handle_(::CreateWindowExW(
+					0, className.c_str(), nullptr, type.styles(),
 					CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-					nullptr, nullptr, ::GetModuleHandleW(nullptr), nullptr), &::DestroyWindow) {
+					type.parent().get(), nullptr, ::GetModuleHandleW(nullptr), nullptr), &::DestroyWindow) {
 				if(handle().get() == nullptr)
 					throw makePlatformError();
 			}
@@ -60,17 +93,7 @@ namespace ascension {
 			}
 
 		private:
-			static DWORD typeToStyles(Type type) {
-				switch(type) {
-					case WIDGET:
-						return WS_CHILD | WS_VISIBLE;
-					case TOPLEVEL:
-						return WS_OVERLAPPEDWINDOW;
-					case POPUP:
-						return WS_POPUPWINDOW;
-				}
-				ASCENSION_ASSERT_NOT_REACHED();
-			}
+			template<typename T> friend class detail::MessageDispatcher;
 			Handle<HWND> handle_;
 		};
 	}

@@ -21,11 +21,7 @@
 namespace alpha {
 	namespace ui {
 		/// Default constructor.
-		MainWindow::MainWindow() : ascension::win32::CustomControl<MainWindow>(ascension::win32::Window::TOPLEVEL) {
-			ascension::viewer::widgetapi::setParentWindow(statusBar_, *this);
-			bufferSelectionChangedConnection_ = editorPanes_.bufferSelectionChangedSignal().connect([this](EditorPanes&) {
-				this->updateTitle();
-			});
+		MainWindow::MainWindow() {
 		}
 
 		/***/
@@ -76,7 +72,7 @@ namespace alpha {
 				::DragFinish(droppedFiles.get());
 
 				auto activeView = EditorPanes::instance().activePane().currentWidget();
-				if(ascension::win32::boole(::IsWindow(activeView->handle().get())))
+				if(ascension::viewer::widgetapi::isRealized(activeView))
 					ascension::viewer::widgetapi::setFocus(activeView);
 			}
 		}
@@ -269,6 +265,15 @@ namespace alpha {
 			return ascension::win32::CustomControl<MainWindow>::processMessage(message, wp, lp, consumed);
 		}
 
+		/// @see ascension#win32#CustomControl#realized
+		void MainWindow::realized(const Type& type) {
+			CustomControl<MainWindow>::realized(type);
+			statusBar_.reset(new StatusBar(ascension::win32::Window::Type::widget(handle())));
+			bufferSelectionChangedConnection_ = editorPanes_.bufferSelectionChangedSignal().connect([this](EditorPanes&) {
+				this->updateTitle();
+			});
+		}
+
 		/// Updates the text string of the title bar.
 		void MainWindow::updateTitle() {
 //			if(isWindow()) {
@@ -290,8 +295,8 @@ namespace alpha {
 //			}
 		}
 
-		/// @see ascension#win32#CustomControl
-		void MainWindow::windowClass(ascension::win32::WindowClass& out) BOOST_NOEXCEPT {
+		/// @see ascension#win32#CustomControl#windowClass
+		void MainWindow::windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT {
 			out.name = L"alpha.MainWindow";
 			out.styles = CS_HREDRAW | CS_VREDRAW;
 		}

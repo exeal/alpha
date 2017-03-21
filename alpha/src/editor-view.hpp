@@ -21,8 +21,15 @@ namespace alpha {
 	class EditorView : public ascension::viewer::TextViewer, public ascension::kernel::BookmarkListener {
 	public:
 		// constructors
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		explicit EditorView(std::shared_ptr<Buffer> buffer);
-		EditorView(const EditorView& other);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+		explicit EditorView(std::shared_ptr<Buffer> buffer, QWidget* parent = Q_NULLPTR);
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+		???
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		explicit EditorView(std::shared_ptr<Buffer> buffer, const Type& type);
+#endif
 		~EditorView();
 		// attributes
 #ifndef ALPHA_NO_AMBIENT

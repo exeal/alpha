@@ -471,6 +471,17 @@ namespace ascension {
 			}
 		}
 
+		/**
+		 * Creates a @c TextViewer instance.
+		 * @param document The document
+		 * @throw NullPointerException @a document is @c null
+		 */
+		TextViewer::TextViewer(std::shared_ptr<kernel::Document> document, const Type& type) : document_(document), mouseVanisher_(*this) {
+			if(document_.get() == nullptr)
+				throw NullPointerException("document");
+			win32::realize(*this, type);
+		}
+
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		/// Returns the accessible proxy of the viewer.
 		HRESULT TextViewer::accessibleObject(IAccessible*& acc) const BOOST_NOEXCEPT {

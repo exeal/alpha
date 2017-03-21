@@ -13,6 +13,8 @@
 
 namespace alpha {
 	namespace ui {
+		StatusBar::StatusBar(const Type& type) : win32::StatusBar(type) {
+		}
 	}
 }
 
