@@ -82,7 +82,7 @@ namespace alpha {
 
 		/// Returns the status bar.
 		inline StatusBar& MainWindow::statusBar() const BOOST_NOEXCEPT {
-			return const_cast<MainWindow*>(this)->statusBar_;
+			return *const_cast<MainWindow*>(this)->statusBar_;
 		}
 	}
 } // namespace alpha
