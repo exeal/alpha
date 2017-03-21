@@ -91,6 +91,10 @@ namespace ascension {
 				return win32::boole(::IsIconic(widget->handle().get()));
 			}
 
+			bool isRealized(Proxy<const Widget> widget) {
+				return win32::boole(::IsWindow(widget->handle().get()));
+			}
+
 			bool isVisible(Proxy<const Widget> widget) {
 				return win32::boole(::IsWindowVisible(widget->handle().get()));
 			}
