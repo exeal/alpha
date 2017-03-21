@@ -60,7 +60,11 @@ namespace alpha {
 #endif
 
 /// The entry point.
+#if 0
 int main(int argc, char* argv[]) {
+#else
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int showCommand) {
+#endif
 #ifdef _DEBUG
 	{
 		std::locale::global(std::locale("Japanese_Japan.932"));
@@ -130,7 +134,8 @@ int main(int argc, char* argv[]) {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		std::unique_ptr<alpha::ui::MainWindow> window(new alpha::ui::MainWindow);
 		auto application(alpha::Application::create(std::move(window)));
-		application->run(0);
+		ascension::win32::realize(application->mainWindow(), ascension::win32::Window::Type::toplevel());
+		application->run(showCommand);
 #else
 #endif
 #if BOOST_OS_WINDOWS
