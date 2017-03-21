@@ -44,14 +44,6 @@ namespace ascension {
 				explicit AutoScrollOriginMark(TextViewer& viewer);
 				static const widgetapi::Cursor& cursorForScrolling(CursorType type);
 				void resetWidgetShape();
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				static void windowClass(win32::WindowClass& out) BOOST_NOEXCEPT {
-					out.name = L"AutoScrollOriginMark";
-					out.styles = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
-					out.background = COLOR_WINDOW;
-					out.cursor = win32::WindowClass::Cursor(MAKEINTRESOURCEW(32513));	// IDC_IBEAM
-				}
-#endif
 			private:
 				void paint(graphics::PaintContext& context) const;
 				void paintPattern(graphics::RenderingContext2D& context) const;
@@ -68,6 +60,12 @@ namespace ascension {
 						consumed = true;
 					}
 					return win32::CustomControl<AutoScrollOriginMark>::processMessage(message, wp, lp, consumed);
+				}
+				void windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT override {
+					out.name = L"AutoScrollOriginMark";
+					out.styles = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
+					out.background = COLOR_WINDOW;
+					out.cursor = win32::WindowClass::Cursor(MAKEINTRESOURCEW(32513));	// IDC_IBEAM
 				}
 #endif
 			private:
