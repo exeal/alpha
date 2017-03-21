@@ -476,7 +476,7 @@ namespace ascension {
 		HRESULT TextViewer::accessibleObject(IAccessible*& acc) const BOOST_NOEXCEPT {
 			TextViewer& self = *const_cast<TextViewer*>(this);
 			acc = nullptr;
-			if(accessibleProxy_.get() == nullptr && win32::boole(::IsWindow(handle().get())) && accLib.isAvailable()) {
+			if(accessibleProxy_.get() == nullptr && widgetapi::isRealized(*this) && accLib.isAvailable()) {
 				try {
 					self.accessibleProxy_.reset(new AccessibleProxy(self), IID_IAccessible);
 				} catch(const std::bad_alloc&) {
@@ -546,7 +546,7 @@ namespace ascension {
 
 		/// Hides the tool tip.
 		void TextViewer::hideToolTip() {
-			assert(::IsWindow(handle().get()));
+			assert(widgetapi::isRealized(*this));
 			tipText_.erase();
 			::KillTimer(handle().get(), TIMERID_CALLTIP);	// ”O‚Ì‚½‚ß...
 			::SendMessageW(toolTip_.get(), TTM_UPDATE, 0, 0L);
