@@ -71,7 +71,7 @@ namespace alpha {
 				}
 				::DragFinish(droppedFiles.get());
 
-				auto activeView = EditorPanes::instance().activePane().currentWidget();
+				auto& activeView = editorPanes().activePane().selectedView();
 				if(ascension::viewer::widgetapi::isRealized(activeView))
 					ascension::viewer::widgetapi::setFocus(activeView);
 			}
@@ -203,13 +203,13 @@ namespace alpha {
 #endif
 				boost::geometry::assign_zero(rebarBounds);
 
-			if(ascension::viewer::widgetapi::isRealized(EditorPanes::instance())) {
+			if(ascension::viewer::widgetapi::isRealized(editorPanes())) {
 				const auto editorBounds(ascension::graphics::geometry::make<ascension::graphics::Rectangle>((
 					ascension::graphics::geometry::_left = static_cast<ascension::graphics::Scalar>(0),
 					ascension::graphics::geometry::_top = ascension::graphics::geometry::dy(rebarBounds),
 					ascension::graphics::geometry::_right = static_cast<ascension::graphics::Scalar>(width),
 					ascension::graphics::geometry::_bottom = height - ascension::graphics::geometry::dy(statusBarBounds))));
-				ascension::viewer::widgetapi::setBounds(EditorPanes::instance(), editorBounds);
+				ascension::viewer::widgetapi::setBounds(editorPanes(), editorBounds);
 			}
 		}
 
@@ -270,10 +270,12 @@ namespace alpha {
 		/// @see ascension#win32#CustomControl#realized
 		void MainWindow::realized(const Type& type) {
 			CustomControl<MainWindow>::realized(type);
+			ascension::win32::realize(editorPanes(), ascension::win32::Window::Type::widget(handle()));
 			statusBar_.reset(new StatusBar(ascension::win32::Window::Type::widget(handle())));
 			bufferSelectionChangedConnection_ = editorPanes_.bufferSelectionChangedSignal().connect([this](EditorPanes&) {
 				this->updateTitle();
 			});
+			ascension::viewer::widgetapi::show(editorPanes());
 		}
 
 		/// Updates the text string of the title bar.
@@ -281,7 +283,7 @@ namespace alpha {
 //			if(isWindow()) {
 				// show the display name of the selected buffer and application credit
 				static PlatformString titleCache;
-				const auto& buffer = EditorPanes::instance().selectedBuffer();
+				const auto& buffer = editorPanes().selectedBuffer();
 #if 0
 				PlatformString title(BufferList::instance().displayName(buffer));
 #else

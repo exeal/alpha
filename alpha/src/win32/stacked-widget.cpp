@@ -79,15 +79,17 @@ namespace alpha {
 				case WM_SIZE:
 					if(isHorizontallyHomogeneous() || isVerticallyHomogeneous()) {
 						if(auto child = currentWidget()) {
-							auto bounds(ascension::viewer::widgetapi::bounds(child, false));
-							const auto thisBounds(ascension::viewer::widgetapi::bounds(*this, false));
-							if(isHorizontallyHomogeneous())
-								ascension::graphics::geometry::range<0>(bounds) = ascension::graphics::geometry::range<0>(thisBounds);
-							if(isVerticallyHomogeneous())
-								ascension::graphics::geometry::range<1>(bounds) = ascension::graphics::geometry::range<1>(thisBounds);
-							ascension::viewer::widgetapi::setBounds(child, bounds);
-							consumed = true;
-							return 0l;
+							if(ascension::viewer::widgetapi::isRealized(child)) {
+								auto bounds(ascension::viewer::widgetapi::bounds(child, false));
+								const auto thisBounds(ascension::viewer::widgetapi::bounds(*this, false));
+								if(isHorizontallyHomogeneous())
+									ascension::graphics::geometry::range<0>(bounds) = ascension::graphics::geometry::range<0>(thisBounds);
+								if(isVerticallyHomogeneous())
+									ascension::graphics::geometry::range<1>(bounds) = ascension::graphics::geometry::range<1>(thisBounds);
+								ascension::viewer::widgetapi::setBounds(child, bounds);
+								consumed = true;
+								return 0l;
+							}
 						}
 					}
 					break;

@@ -192,6 +192,7 @@ namespace alpha {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 		// TODO: Not implemented.
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		ascension::win32::realize(*firstPane, ascension::win32::Window::Type::widget(handle()));
 		resetChild<0>(firstPane);
 #endif
 #ifdef ALPHA_NO_AMBIENT

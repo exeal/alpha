@@ -10,12 +10,15 @@
 #include <boost/core/noncopyable.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/box.h>
+#	include <gtkmm/paned.hpp>
 #	include <gtkmm/scrolledwindow.h>
 #	include <gtkmm/stack.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#	include <QSplitter>
 #	include <QStackedWidget>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#	include "win32/container.hpp"
 #	include "win32/stacked-widget.hpp"
 #endif
 #include <list>
@@ -27,13 +30,13 @@ namespace alpha {
 
 	class EditorPane :
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-		public Gtk::Stack, private boost::noncopyable
+		public Gtk::Paned, private boost::noncopyable
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-		public QStackedWidget
+		public QSplitter
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 		???
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		public win32::StackedWidget
+		public win32::VerticalContainer
 #endif
 	{
 	public:
@@ -60,51 +63,41 @@ namespace alpha {
 		/// @}
 
 	private:
-		void touch(const EditorView& viewer);
-
-	private:
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		void realized(const Type& type) override;
-		class Container : public ascension::win32::CustomControl<Container> {
-		public:
-			explicit Container(EditorPane& parent);
-		private:
-			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
-			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
-		};
 #endif
-		struct Child {
+		void touch(const EditorView& viewer);
+	private:
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			Gtk::Box* container;	// child of EditorPane. managed by gtkmm
-			Glib::RefPtr<Gtk::ScrolledWindow> scroller;
+		Gtk::Stack stack_;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+		QStackedWidget stack_;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+		??? stack_;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			std::unique_ptr<Container> container;
+		win32::StackedWidget stack_;
 #endif
-			std::unique_ptr<EditorView> viewer;
-//			std::unique_ptr<ModeLine> modeLine;
-		};
-		std::list<Child> children_;	// visible and invisible children
+//		std::unique_ptr<ModeLine> modeLine_;
+		std::list<std::shared_ptr<EditorView>> viewers_;
 	};
 
 	/// Returns the number of the viewers.
 	inline std::size_t EditorPane::numberOfViews() const BOOST_NOEXCEPT {
-		return children_.size();
+		return viewers_.size();
 	}
 
 	/// Returns the visible viewer.
 	inline EditorView& EditorPane::selectedView() {
-		if(children_.empty())
+		if(viewers_.empty())
 			throw std::logic_error("There are no viewers.");
-		return *children_.front().viewer;
+		return *viewers_.front();
 	}
 
 	/// Returns the visible viewer.
 	inline const EditorView& EditorPane::selectedView() const {
-		if(children_.empty())
+		if(viewers_.empty())
 			throw std::logic_error("There are no viewers.");
-		return *children_.front().viewer;
+		return *viewers_.front();
 	}
 }
 
