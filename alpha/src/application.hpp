@@ -8,7 +8,6 @@
 #ifndef ALPHA_APPLICATION_HPP
 #define ALPHA_APPLICATION_HPP
 #include "resource.h"
-#include "buffer.hpp"
 //#include "search.hpp"	// ui.SearchDialog
 #include <ascension/graphics/font/font-description.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>

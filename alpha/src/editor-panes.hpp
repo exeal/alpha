@@ -11,6 +11,7 @@
 //#include "editor-pane.hpp"
 #include <ascension/corelib/signals.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <stack>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/paned.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
@@ -65,6 +66,13 @@ namespace alpha {
 		private:
 			typename iterator_facade_::pointer current_;
 			bool end_;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+			std::shared_ptr<std::stack<QSplitter*>> ancestors_;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+			std::shared_ptr<std::stack<???*>> ancestors_;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			std::shared_ptr<std::stack<win32::PanedWidget*>> ancestors_;
+#endif
 		};
 
 	public:
@@ -82,7 +90,6 @@ namespace alpha {
 
 	public:
 		EditorPanes();
-		static EditorPanes& instance() BOOST_NOEXCEPT;
 
 		/// @name Pane Access
 		/// @{
@@ -146,12 +153,6 @@ namespace alpha {
 	/// Returns the active editor pane.
 	inline const EditorPane& EditorPanes::activePane() const BOOST_NOEXCEPT {
 		return *activePane_;
-	}
-
-	/// Returns the singleton @c EditorPanes object.
-	inline EditorPanes& EditorPanes::instance() BOOST_NOEXCEPT {
-		static EditorPanes singleton;
-		return singleton;
 	}
 }
 

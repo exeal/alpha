@@ -33,8 +33,7 @@ namespace ascension {
 				if(includeFrame) {
 					if(!win32::boole(::GetWindowRect(widget->handle().get(), &temp)))
 						throw makePlatformError();
-				}
-				else {
+				} else {
 					if(!win32::boole(::GetClientRect(widget->handle().get(), &temp)))
 						throw makePlatformError();
 				}
