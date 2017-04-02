@@ -49,8 +49,8 @@ namespace ascension {
 				/// Creates a @c Cursor instance wirh a cursor handle.
 				Cursor(Handle<HCURSOR> handle) BOOST_NOEXCEPT : cursor_(handle) {}
 				/// Creates a @c Cursor instance with a numeric identifier for system cursor.
-				Cursor(const std::basic_string<WCHAR>& systemCursorID) BOOST_NOEXCEPT :
-					cursor_(static_cast<HCURSOR>(::LoadImageW(nullptr, systemCursorID.c_str(), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_SHARED)), &::DestroyCursor) {}
+				Cursor(const WCHAR* systemCursorID) BOOST_NOEXCEPT :
+					cursor_(static_cast<HCURSOR>(::LoadImageW(nullptr, systemCursorID, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_SHARED)), &::DestroyCursor) {}
 				/// Move-constructor.
 				Cursor(Cursor&& other) BOOST_NOEXCEPT : cursor_(std::move(other.cursor_)) {}
 				/// Move-assignment operator.
