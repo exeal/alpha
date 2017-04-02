@@ -130,6 +130,7 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::com::SmartPointer<IDragSourceHelper> dragSourceHelper;
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				explicit DragAndDrop(State initialState);
 			};
 			boost::optional<DragAndDrop> dragAndDrop_;
 			Timer<DefaultTextAreaMouseInputStrategy> timer_;
