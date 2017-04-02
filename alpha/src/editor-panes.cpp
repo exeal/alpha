@@ -19,6 +19,18 @@
 //#include <boost/range/algorithm/find.hpp>
 
 namespace alpha {
+	namespace detail {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+		Paned::Paned(Paned* parentPaned) : Gtk::Paned(Gtk::ORIENTATION_HORIZONTAL), parent_(parentPaned)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+		Paned::Paned(Paned* parentPaned, QWidget* parent /* = Q_NULLPTR */) : QSplitter(Qt::Horizontal, parent), parent_(parentPaned)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		Paned::Paned(Paned* parentPaned) : parent_(parentPaned)
+#endif
+		{}
+	}
+
 	/**
 	 * @typedef alpha::EditorPanes::BufferSelectionChangedSignal
 	 * The signal which gets emitted when the buffer selection was changed.
@@ -27,11 +39,10 @@ namespace alpha {
 	 */
 
 	/// Default constructor.
-	EditorPanes::EditorPanes()
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-		: Gtk::Paned(Gtk::ORIENTATION_HORIZONTAL)
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-		: QSplitter(Qt::Horizontal)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+	EditorPanes::EditorPanes(QWidget* parent /* = Q_NULLPTR */) : detail::Paned(std::weak_ptr<detail::Paned>(), parent)
+#else
+	EditorPanes::EditorPanes() : detail::Paned(nullptr)
 #endif
 	{
 #if !ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -40,12 +51,12 @@ namespace alpha {
 	}
 
 	/// Returns the iterator addresses the first editor pane.
-	EditorPanes::Iterator EditorPanes::begin() BOOST_NOEXCEPT {
-		return Iterator(firstPane());
+	EditorPanes::iterator EditorPanes::begin() BOOST_NOEXCEPT {
+		return iterator::makeFirst(*this);
 	}
 
 	/// Returns the iterator addresses the first editor pane.
-	EditorPanes::ConstIterator EditorPanes::begin() const BOOST_NOEXCEPT {
+	EditorPanes::const_iterator EditorPanes::begin() const BOOST_NOEXCEPT {
 		return cbegin();
 	}
 
@@ -90,24 +101,22 @@ namespace alpha {
 	}
 
 	/// Returns the iterator addresses the first editor pane.
-	EditorPanes::ConstIterator EditorPanes::cbegin() const BOOST_NOEXCEPT {
-		return ConstIterator(firstPane());
+	EditorPanes::const_iterator EditorPanes::cbegin() const BOOST_NOEXCEPT {
+		return const_iterator::makeFirst(*this);
 	}
 
 	/// Returns the iterator addresses one past the last editor pane.
-	EditorPanes::ConstIterator EditorPanes::cend() const BOOST_NOEXCEPT {
-		const EditorPane* const p = lastPane();
-		return (p != nullptr) ? ++ConstIterator(p) : ConstIterator(nullptr);
+	EditorPanes::const_iterator EditorPanes::cend() const BOOST_NOEXCEPT {
+		return const_iterator::makeLast(*this);
 	}
 
 	/// Returns the iterator addresses one past the last editor pane.
-	EditorPanes::Iterator EditorPanes::end() BOOST_NOEXCEPT {
-		EditorPane* const p = lastPane();
-		return (p != nullptr) ? ++Iterator(p) : Iterator(nullptr);
+	EditorPanes::iterator EditorPanes::end() BOOST_NOEXCEPT {
+		return iterator::makeLast(*this);
 	}
 
 	/// Returns the iterator addresses one past the last editor pane.
-	EditorPanes::ConstIterator EditorPanes::end() const BOOST_NOEXCEPT {
+	EditorPanes::const_iterator EditorPanes::end() const BOOST_NOEXCEPT {
 		return cend();
 	}
 
@@ -145,7 +154,7 @@ namespace alpha {
 					child = paned->child<0>();
 				if(child.empty())
 					break;
-				else if(const auto* const p = boost::any_cast<std::shared_ptr<win32::PanedWidget>>(&child))
+				else if(const auto* const p = boost::any_cast<std::shared_ptr<detail::Paned>>(&child))
 					paned = p->get();
 				else {
 					const auto* const p2 = boost::any_cast<std::shared_ptr<EditorPane>>(&child);
@@ -259,7 +268,7 @@ namespace alpha {
 				if(auto* const p = boost::any_cast<std::shared_ptr<EditorPane>>(&child)) {
 					if(p->get() == &pane)
 						return std::make_pair(&root, position);
-				} else if(auto* const p = boost::any_cast<std::shared_ptr<win32::PanedWidget>>(&child))
+				} else if(auto* const p = boost::any_cast<std::shared_ptr<detail::Paned>>(&child))
 					return findParentPaned(**p, pane);
 			}
 			return std::make_pair<win32::PanedWidget*, std::size_t>(nullptr, 0u);
@@ -335,28 +344,24 @@ namespace alpha {
 
 	// EditorPanes.InternalIterator ///////////////////////////////////////////////////////////////////////////////////
 
-	template<typename Derived, typename Reference>
-	EditorPanes::InternalIterator<Derived, Reference>::InternalIterator(typename iterator_facade_::pointer pane) : current_(pane), end_(pane == nullptr) {
+	template<typename Value>
+	bool EditorPanes::InternalIterator<Value>::equal(const InternalIterator<Value>& other) const {
+		return current_ == other.current_;
 	}
 
-	template<typename Derived, typename Reference>
-	bool EditorPanes::InternalIterator<Derived, Reference>::equal(const InternalIterator<Derived, Reference>& other) const {
-		return current_ == other.current_ && end_ == other.end_;
-	}
-
-	template<typename Derived, typename Reference>
-	typename EditorPanes::InternalIterator<Derived, Reference>::iterator_facade_::reference EditorPanes::InternalIterator<Derived, Reference>::dereference() const {
-		if(end_ /* || current_ == nullptr*/)
+	template<typename Value>
+	typename EditorPanes::InternalIterator<Value>::iterator_facade_::reference EditorPanes::InternalIterator<Value>::dereference() const {
+		if(current_ == nullptr)
 			throw ascension::NoSuchElementException();
 		return *current_;
 	}
 
-	template<typename Derived, typename Reference>
-	void EditorPanes::InternalIterator<Derived, Reference>::increment() {
-		if(end_ || current_ == nullptr)
+	template<typename Value>
+	void EditorPanes::InternalIterator<Value>::increment() {
+		if(current_.get() == nullptr || parent_ == nullptr)
 			throw ascension::NoSuchElementException();
 
-		const bool isConst = std::is_const<Reference>::value;
+		const bool isConst = std::is_const<Value>::value;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		typedef std::conditional<!isConst, Gtk::Paned, const Gtk::Paned>::type PanedType;
 		auto parent = static_cast<PanedType*>(current_->get_parent());
@@ -383,8 +388,60 @@ namespace alpha {
 		else
 			end_ = true;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		// TODO: Not implemented.
+		if(auto* const primary = boost::any_cast<std::shared_ptr<EditorPane>>(&parent_->child<0>())) {
+			if(*primary == current_) {
+				// current is the primary
+				if(auto* const secondary = boost::any_cast<std::shared_ptr<EditorPane>>(&parent_->child<1>())) {
+					current_ = *secondary;
+					return;
+				} else if(auto* const secondary = boost::any_cast<std::shared_ptr<detail::Paned>>(&parent_->child<1>())) {
+					// find the leftmost under the secondary
+					*this = make<0>(**secondary);
+					return;
+				}
+			}
+		}
+
+		// find branch not reached yet
+		for(auto* paned = parent_->parent(); paned != nullptr; paned = paned->parent()) {
+			if(auto* const primary = boost::any_cast<std::shared_ptr<detail::Paned>>(&paned->child<0>())) {
+				if(primary->get() == parent_) {
+					if(auto* const secondary = boost::any_cast<std::shared_ptr<detail::Paned>>(&paned->child<1>())) {
+						*this = make<0>(**secondary);
+						return;
+					}
+				}
+			}
+		}
 #endif
+		current_ = nullptr;
+	}
+
+	template<typename Value>
+	template<std::size_t branch>
+	inline EditorPanes::InternalIterator<Value> EditorPanes::InternalIterator<Value>::make(Paned& root) {
+		InternalIterator i;
+		i.parent_ = const_cast<detail::Paned*>(&root);
+		while(true) {
+			if(auto* const p = boost::any_cast<std::shared_ptr<detail::Paned>>(&i.parent_->child<branch>()))
+				i.parent_ = p->get();
+			else if(auto* const p = boost::any_cast<std::shared_ptr<EditorPane>>(&i.parent_->child<branch>())) {
+				i.current_ = *p;
+				break;
+			} else
+				break;
+		}
+		return i;
+	}
+
+	template<typename Value>
+	EditorPanes::InternalIterator<Value> EditorPanes::InternalIterator<Value>::makeFirst(Paned& root) {
+		return make<0>(root);
+	}
+
+	template<typename Value>
+	EditorPanes::InternalIterator<Value> EditorPanes::InternalIterator<Value>::makeLast(Paned& root) {
+		return make<1>(root);
 	}
 
 #ifndef ALPHA_NO_AMBIENT
