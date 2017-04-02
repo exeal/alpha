@@ -305,7 +305,7 @@ namespace ascension {
 
 		void DefaultTextAreaMouseInputStrategy::beginDragAndDrop(const widgetapi::event::LocatedUserInput& input) {
 			assert(isStateNeutral());
-			dragAndDrop_ = DragAndDrop();
+			dragAndDrop_ = DragAndDrop(DragAndDrop::PROCESSING_AS_SOURCE);
 			const auto caret(textArea_->caret());
 			if(!caret->isSelectionRectangle())
 				dragAndDrop_->numberOfRectangleLines = 0;
@@ -405,7 +405,7 @@ namespace ascension {
 
 			if(dragAndDrop_ == boost::none || dragAndDrop_->state != DragAndDrop::PROCESSING_AS_SOURCE) {
 				assert(isStateNeutral());
-				dragAndDrop_ = DragAndDrop();
+				dragAndDrop_ = DragAndDrop(DragAndDrop::PROCESSING_AS_TARGET);
 				// retrieve number of lines if text is rectangle
 				boost::get(dragAndDrop_).numberOfRectangleLines = 0;
 				if(isInterprocessDataAcceptable(input.dataFormats(), true)) {
@@ -424,7 +424,6 @@ namespace ascension {
 					}
 #endif
 				}
-				dragAndDrop_->state = DragAndDrop::PROCESSING_AS_TARGET;
 			}
 
 			widgetapi::setFocus(viewer);
@@ -695,8 +694,7 @@ namespace ascension {
 
 			// approach drag-and-drop
 			if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(*caret) && isPointOverSelection(*caret, input.location())) {
-				dragAndDrop_ = DragAndDrop();
-				dragAndDrop_->state = DragAndDrop::APPROACHING;
+				dragAndDrop_ = DragAndDrop(DragAndDrop::APPROACHING);
 				dragAndDrop_->approachedPosition = input.location();
 				if(caret->isSelectionRectangle())
 					boxDragging = true;
@@ -816,10 +814,6 @@ namespace ascension {
 			if(textArea_ != nullptr)
 				uninstall();
 			textArea_ = &textArea;
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			if(boost::get(dragAndDrop_).dragSourceHelper.get() == nullptr)
-				boost::get(dragAndDrop_).dragSourceHelper = win32::com::SmartPointer<IDragSourceHelper>::create(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
-#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			interruptMouseReaction(false);
 
 			// create the window for the auto scroll origin mark
@@ -1112,6 +1106,12 @@ namespace ascension {
 				autoScrollOriginMark_.reset();
 			textArea_ = nullptr;
 		}
+
+		DefaultTextAreaMouseInputStrategy::DragAndDrop::DragAndDrop(State initialState) : state(initialState)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				, dragSourceHelper(win32::com::SmartPointer<IDragSourceHelper>::create(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER))
+#endif
+		{}
 
 
 		// window system-dependent implementations ////////////////////////////////////////////////////////////////////
