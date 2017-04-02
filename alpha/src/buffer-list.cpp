@@ -408,7 +408,7 @@ namespace alpha {
 		const auto format(name + ascension::fromLatin1<PlatformString>("<%1%>"));
 		for(std::size_t n = 2; ; ++n) {
 			const auto newName((boost::basic_format<PlatformString::value_type>(format) % n).str());
-			if(forName(newName) == boost::python::object())
+			if(forName(newName) == nullptr)
 				return newName;
 			if(n == std::numeric_limits<decltype(n)>::max())
 				break;
