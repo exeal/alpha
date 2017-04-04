@@ -85,9 +85,7 @@ namespace alpha {
 #endif
 			else
 				newView.reset(new EditorView(originalView->document(), ascension::win32::Window::Type::widget(pane.handle())));
-#ifdef ALPHA_NO_AMBIENT
-			BufferList::instance().addNew();
-#endif
+
 			if(originalView == nullptr)
 				originalView = newView.get();
 			if(originalView != newView.get())
