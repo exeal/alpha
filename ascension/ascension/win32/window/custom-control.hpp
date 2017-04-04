@@ -137,7 +137,7 @@ namespace ascension {
 				}
 
 				::CreateWindowExW(
-					0, windowClassName.c_str(), nullptr, type.styles(),
+					0, windowClassName.c_str(), L"", type.styles(),
 					CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
 					type.parent().get(), nullptr, ::GetModuleHandleW(nullptr), this);
 				if(handle().get() == nullptr)
