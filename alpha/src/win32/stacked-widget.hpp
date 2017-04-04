@@ -26,7 +26,7 @@ namespace alpha {
 
 			/// @name Current Widget
 			/// @{
-			ascension::viewer::widgetapi::Proxy<ascension::viewer::widgetapi::Widget> currentWidget() const;
+			ascension::win32::Window currentWidget() const;
 			void setCurrentWidget(ascension::viewer::widgetapi::Proxy<ascension::viewer::widgetapi::Widget> widget);
 			/// @}
 
