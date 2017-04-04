@@ -7,6 +7,7 @@
 
 #include "win32/stacked-widget.hpp"
 #include <ascension/graphics/geometry/rectangle-range.hpp>
+#include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
 
 namespace alpha {
@@ -37,7 +38,7 @@ namespace alpha {
 		 * Returns the current widget, or @c null if there are no child widgets.
 		 * @see #setCurrentWidget
 		 */
-		ascension::viewer::widgetapi::Proxy<ascension::viewer::widgetapi::Widget> StackedWidget::currentWidget() const {
+		ascension::win32::Window StackedWidget::currentWidget() const {
 			ascension::win32::Handle<HWND> current;
 			foreachChildren([&current](ascension::win32::Handle<HWND> child) {
 				if(ascension::viewer::widgetapi::isVisible(ascension::win32::Window(child))) {
@@ -46,7 +47,7 @@ namespace alpha {
 				}
 				return true;
 			});
-			return ascension::viewer::widgetapi::Proxy<ascension::viewer::widgetapi::Widget>(ascension::win32::Window(current));
+			return ascension::win32::Window(current);
 		}
 
 		/// Returns the number of widgets contained by this @c StackedWidget.
@@ -69,14 +70,17 @@ namespace alpha {
 		/// @see ascension#win32#CustomControl#processMessage
 		LRESULT StackedWidget::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 			switch(message) {
-				case WM_SETFOCUS:
-					if(auto child = currentWidget()) {
+				case WM_SETFOCUS: {
+					auto child(currentWidget());
+					if(child.handle().get() != nullptr) {
 						ascension::viewer::widgetapi::setFocus(child);
 						consumed = true;
 						return 0l;
 					}
 					break;
+				}
 				case WM_SIZE:
+#if 0
 					if(isHorizontallyHomogeneous() || isVerticallyHomogeneous()) {
 						if(auto child = currentWidget()) {
 							if(ascension::viewer::widgetapi::isRealized(child)) {
@@ -92,6 +96,18 @@ namespace alpha {
 							}
 						}
 					}
+#else
+					{
+						auto child(currentWidget());
+						if(child.handle() != nullptr && ascension::viewer::widgetapi::isRealized(child)) {
+							ascension::viewer::widgetapi::setBounds(child,
+								ascension::graphics::geometry::make<ascension::graphics::Rectangle>(
+									boost::geometry::make_zero<ascension::graphics::Point>(),
+									ascension::graphics::Dimension(LOWORD(lp), HIWORD(lp))));
+							return (consumed = true), 0l;
+						}
+					}
+#endif
 					break;
 			}
 
