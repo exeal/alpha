@@ -36,6 +36,8 @@ namespace alpha {
 				Spaces(unsigned int before, unsigned int after) : before(before), after(after) {}
 			};
 
+			virtual ~Container() BOOST_NOEXCEPT;
+
 			/// @name Packing
 			/// @{
 			void pushBack(std::shared_ptr<ascension::win32::Window> child, const PackingOptions& options, const Spaces& spaces = Spaces());

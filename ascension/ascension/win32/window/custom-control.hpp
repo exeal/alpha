@@ -85,6 +85,11 @@ namespace ascension {
 			 * @post handle().get() == nullptr
 			 */
 			CustomControl() : Window(Handle<HWND>()) {}
+			/// Destructor.
+			virtual ~CustomControl() BOOST_NOEXCEPT {
+				if(handle() != nullptr)
+					messageDispatcher_.disconnect(handle());
+			}
 			/**
 			 * The window procedure.
 			 * @param message The window message

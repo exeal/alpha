@@ -26,6 +26,8 @@ namespace ascension {
 					Window(std::move(other)), originalWindowProcedure_(other.originalWindowProcedure_) {
 				other.originalWindowProcedure_ = nullptr;
 			}
+			/// Destructor.
+			virtual ~SubclassedWindow() BOOST_NOEXCEPT {}
 			/// Move-assignment operator.
 			SubclassedWindow& operator=(SubclassedWindow&& other) BOOST_NOEXCEPT {
 				Window::operator=(std::move(other));
