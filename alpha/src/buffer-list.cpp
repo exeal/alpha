@@ -254,7 +254,8 @@ namespace alpha {
 
 	/// @internal
 	inline void BufferList::fireDisplayNameChanged(const ascension::kernel::Document& buffer) {
-		Application::instance()->mainWindow().updateTitle();
+		if(auto application = Application::instance().lock())
+			application->mainWindow().updateTitle();
 		displayNameChangedSignal_(getConcreteDocument(buffer));
 	}
 
