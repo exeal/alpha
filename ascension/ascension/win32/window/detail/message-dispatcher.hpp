@@ -23,6 +23,13 @@ namespace ascension {
 			class MessageDispatcher {
 			public:
 				/**
+				 * Disconnects the specified window from this @c MessageDispatcher.
+				 * @param window A handle to the window to disconnect
+				 */
+				void disconnect(Handle<HWND> window) {
+					handleToObjects_.erase(window.get());
+				}
+				/**
 				 * Dispatches  the window message to the window.
 				 * @param window A handle to the window
 				 * @param message The message to dispatch
@@ -70,7 +77,7 @@ namespace ascension {
 					const auto result = (i != std::end(handleToObjects_)) ?
 						std::get<1>(*i)->processMessage(message, wp, lp, consumed) : (::DefWindowProcW(window, message, wp, lp), consumed = true);
 					if(message == WM_NCDESTROY)
-						handleToObjects_.erase(window);
+						disconnect(borrowed(window));
 					return result;
 				}
 

@@ -145,7 +145,8 @@ namespace ascension {
 					0, windowClassName.c_str(), L"", type.styles(),
 					CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
 					type.parent().get(), nullptr, ::GetModuleHandleW(nullptr), this);
-				if(handle().get() == nullptr)
+				assert(boole(::IsWindow(handle().get())));
+				if(handle() == nullptr)
 					throw makePlatformError();
 				realized(type);
 			}
