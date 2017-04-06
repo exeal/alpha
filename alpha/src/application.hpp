@@ -69,8 +69,9 @@ namespace alpha {
 		static Glib::RefPtr<Application> create(int& argc, char**& argv, Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
 		static Glib::RefPtr<Application> instance();
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		static std::shared_ptr<Application> create(std::unique_ptr<ui::MainWindow> window);
-		static std::shared_ptr<Application> instance();
+		explicit Application(std::unique_ptr<ui::MainWindow> window);
+		~Application() BOOST_NOEXCEPT;
+		static std::weak_ptr<Application> instance();
 #endif
 		/// @}
 
@@ -93,8 +94,6 @@ namespace alpha {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		explicit Application(Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
 		Application(int& argc, char**& argv, Gio::ApplicationFlags flags = Gio::APPLICATION_FLAGS_NONE);
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		explicit Application(std::unique_ptr<ui::MainWindow> window);
 #endif
 		void changeFont();
 		bool initInstance(int showCommand);
@@ -129,7 +128,7 @@ namespace alpha {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		Glib::RefPtr<Application>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		std::shared_ptr<Application>
+		std::weak_ptr<Application>
 #endif
 		Application::instance() {
 		if(!instance_)
