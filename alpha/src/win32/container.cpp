@@ -21,6 +21,9 @@ namespace alpha {
 		 */
 		Container::Container(bool horizontal) : padding_(0), horizontal_(horizontal), homogeneous_(false) {}
 
+		/// Destructor.
+		Container::~Container() BOOST_NOEXCEPT {}
+
 		/// @internal
 		std::list<Container::Child>::iterator Container::find(const ascension::win32::Window& widget) {
 			const auto e(std::end(children_));

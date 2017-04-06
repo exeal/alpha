@@ -73,6 +73,8 @@ namespace ascension {
 			}
 			/// Move-constructor.
 			Window(Window&& other) BOOST_NOEXCEPT : handle_(std::move(other.handle_)) {}
+			/// Destructor.
+			virtual ~Window() BOOST_NOEXCEPT {}
 			/// Move-assignment operator.
 			Window& operator=(Window&& other) BOOST_NOEXCEPT {
 				handle_ = std::move(other.handle_);
