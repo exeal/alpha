@@ -28,6 +28,14 @@ namespace alpha {
 	std::shared_ptr<Application> Application::instance_;
 
 	Application::Application(std::unique_ptr<ui::MainWindow> window) : win32::WindowApplication<ui::MainWindow>(std::move(window)) {
+		if(instance_ != nullptr)
+			throw ascension::IllegalStateException("");
+		instance_ = std::shared_ptr<Application>(this, boost::null_deleter());
+	}
+
+	Application::~Application() BOOST_NOEXCEPT {
+		assert(instance_ != nullptr);
+		instance_.reset();
 	}
 
 	void Application::changeFont() {
@@ -49,12 +57,6 @@ namespace alpha {
 			setFont(font);
 		}
 #endif
-	}
-
-	std::shared_ptr<Application> Application::create(std::unique_ptr<ui::MainWindow> window) {
-		if(instance_.get() != nullptr)
-			throw ascension::IllegalStateException("");
-		return instance_ = std::shared_ptr<Application>(new Application(std::move(window)));
 	}
 
 	/// 全てのエディタと一部のコントロールに新しいフォントを設定

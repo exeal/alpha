@@ -133,9 +133,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int showCommand) {
 		exitCode = application->run(application->mainWindow());
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		std::unique_ptr<alpha::ui::MainWindow> window(new alpha::ui::MainWindow);
-		auto application(alpha::Application::create(std::move(window)));
-		ascension::win32::realize(application->mainWindow(), ascension::win32::Window::Type::toplevel());
-		application->run(showCommand);
+		alpha::Application application(std::move(window));
+		ascension::win32::realize(application.mainWindow(), ascension::win32::Window::Type::toplevel());
+		application.run(showCommand);
 #else
 #endif
 #if BOOST_OS_WINDOWS
