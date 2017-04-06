@@ -18,6 +18,7 @@
 #	include <QTimer>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/windows.hpp>
+#	include <unordered_map>
 #endif
 
 namespace ascension {
@@ -118,6 +119,7 @@ namespace ascension {
 			identifier_ = ::SetTimer(nullptr, reinterpret_cast<UINT_PTR>(this), static_cast<UINT>(interval.count()), &function);
 			if(identifier_ == 0)
 				throw makePlatformError();
+			identifiersToTimers_.insert(std::make_pair(identifier_, this));
 #else
 			ASCENSION_CANT_DETECT_PLATFORM();
 #endif
@@ -132,6 +134,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				if(!win32::boole(::KillTimer(nullptr, identifier_)))
 					throw makePlatformError();
+				identifiersToTimers_.erase(identifier_);
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif
@@ -149,9 +152,13 @@ namespace ascension {
 			object_->timeElapsed(*this);
 		}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-		static void CALLBACK function(HWND, UINT, UINT_PTR id, DWORD) {
-			auto& self = *reinterpret_cast<Timer<T>*>(id);
-			self.object_->timeElapsed(self);
+		static void CALLBACK function(HWND, UINT, UINT_PTR identifier, DWORD) {
+			auto i(identifiersToTimers_.find(identifier));
+			if(i != std::end(identifiersToTimers_)) {
+				auto& self = *std::get<1>(*i);
+				if(auto* const p = self.object_)
+					p->timeElapsed(self);
+			}
 		}
 #else
 		ASCENSION_CANT_DETECT_PLATFORM();
@@ -162,10 +169,13 @@ namespace ascension {
 		sigc::connection connection_;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		UINT_PTR identifier_;
+		static std::unordered_map<UINT_PTR, Timer<T>*> identifiersToTimers_;
 #endif
 		boost::chrono::milliseconds interval_;
 	};
 
+	template<typename T>
+	std::unordered_map<UINT_PTR, Timer<T>*> Timer<T>::identifiersToTimers_;
 }
 
 #endif // !ASCENSION_TIMER_HPP
