@@ -55,6 +55,13 @@ namespace ascension {
 				Super::operator=(std::move(other));
 				return *this;
 			}
+			void reset() {
+				Super::reset();
+			}
+			template<typename Deleter>
+			void reset(T handle, Deleter deleter) {
+				Super::reset(handle, deleter);
+			}
 		};
 
 		/**

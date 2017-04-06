@@ -64,7 +64,7 @@ namespace ascension {
 						Window* const p = static_cast<Window*>(reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);
 						assert(p != nullptr);
 						handleToObjects_.insert(std::make_pair(window, p));
-						p->handle_.reset(window);
+						p->handle_.reset(window, &::DestroyWindow);
 					}
 					const auto i(handleToObjects_.find(window));
 					const auto result = (i != std::end(handleToObjects_)) ?
