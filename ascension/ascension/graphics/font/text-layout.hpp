@@ -385,7 +385,7 @@ namespace ascension {
 				assert(line <= numberOfLines());
 				if(firstRunsInLines_.get() == nullptr) {
 					assert(numberOfLines() == 1);
-					return std::begin(runs_);
+					return (line == 0) ? std::begin(runs_) : std::end(runs_);
 				}
 				return (line < numberOfLines()) ? firstRunsInLines_[line] : std::end(runs_);
 			}
