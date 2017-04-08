@@ -1228,6 +1228,123 @@ namespace ascension {
 			return win32::CustomControl<TextViewer>::processMessage(message, wp, lp, consumed);
 		}
 
+		namespace {
+			template<typename Items>
+			win32::Handle<HMENU> createPopupMenu(const Items& items) {
+				auto menu(win32::makeHandle(::CreatePopupMenu(), &::DestroyMenu));
+				auto item(win32::makeZeroSize<MENUITEMINFOW>());
+				for(std::size_t i = 0; i < items.size(); ++i) {
+					if(!std::get<1>(items[i]).empty()) {
+						item.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
+						item.fType = MFT_STRING;
+						item.wID = std::get<0>(items[i]);
+						item.dwTypeData = const_cast<WCHAR*>(std::get<1>(items[i]).c_str());
+					}
+					else {
+						item.fMask = MIIM_FTYPE;
+						item.fType = MFT_SEPARATOR;
+					}
+					::InsertMenuItemW(menu.get(), i, true, &item);
+				}
+				return menu;
+			}
+
+			win32::Handle<HMENU> buildContextMenu(bool japanese) {
+				// TODO: Localize text.
+				static win32::Handle<HMENU> toplevelPopup;
+				if(toplevelPopup == nullptr) {	// first initialization
+					// under "Insert Unicode control character"
+					const std::array<std::pair<UINT, const std::basic_string<WCHAR>>, 22> insertUnicodeControlCharacterItems = {{
+						std::make_pair(ID_INSERT_LRM, L"LRM\t&Left-To-Right Mark"),
+						std::make_pair(ID_INSERT_RLM, L"RLM\t&Right-To-Left Mark"),
+						std::make_pair(ID_INSERT_ZWJ, L"ZWJ\t&Zero Width Joiner"),
+						std::make_pair(ID_INSERT_ZWNJ, L"ZWNJ\tZero Width &Non-Joiner"),
+						std::make_pair(ID_INSERT_LRE, L"LRE\tLeft-To-Right &Embedding"),
+						std::make_pair(ID_INSERT_RLE, L"RLE\tRight-To-Left E&mbedding"),
+						std::make_pair(ID_INSERT_LRO, L"LRO\tLeft-To-Right &Override"),
+						std::make_pair(ID_INSERT_RLO, L"RLO\tRight-To-Left O&verride"),
+						std::make_pair(ID_INSERT_PDF, L"PDF\t&Pop Directional Formatting"),
+						std::make_pair(ID_INSERT_WJ, L"WJ\t&Word Joiner"),
+						std::make_pair(ID_INSERT_NADS, L"NADS\tN&ational Digit Shapes (deprecated)"),
+						std::make_pair(ID_INSERT_NODS, L"NODS\tNominal &Digit Shapes (deprecated)"),
+						std::make_pair(ID_INSERT_ASS, L"ASS\tActivate &Symmetric Swapping (deprecated)"),
+						std::make_pair(ID_INSERT_ISS, L"ISS\tInhibit S&ymmetric Swapping (deprecated)"),
+						std::make_pair(ID_INSERT_AAFS, L"AAFS\tActivate Arabic &Form Shaping (deprecated)"),
+						std::make_pair(ID_INSERT_IAFS, L"IAFS\tInhibit Arabic Form S&haping (deprecated)"),
+						std::make_pair(ID_INSERT_RS, L"RS\tRe&cord Separator"),
+						std::make_pair(ID_INSERT_US, L"US\tUnit &Separator"),
+						std::make_pair(0, L""),
+						std::make_pair(ID_INSERT_IAA, L"IAA\tInterlinear Annotation Anchor"),
+						std::make_pair(ID_INSERT_IAT, L"IAT\tInterlinear Annotation Terminator"),
+						std::make_pair(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator")
+					}};
+					static auto insertUnicodeControlCharacterPopup(createPopupMenu(insertUnicodeControlCharacterItems));
+
+					// under "Insert Unicode white space character"
+					const std::array<std::pair<UINT, const std::basic_string<WCHAR>>, 23> insertUnicodeWhiteSpaceCharacterItems = {{
+						std::make_pair(ID_INSERT_U0020, L"U+0020\tSpace"),
+						std::make_pair(ID_INSERT_NBSP, L"NBSP\tNo-Break Space"),
+						std::make_pair(ID_INSERT_U1680, L"U+1680\tOgham Space Mark"),
+						std::make_pair(ID_INSERT_MVS, L"MVS\tMongolian Vowel Separator"),
+						std::make_pair(ID_INSERT_U2000, L"U+2000\tEn Quad"),
+						std::make_pair(ID_INSERT_U2001, L"U+2001\tEm Quad"),
+						std::make_pair(ID_INSERT_U2002, L"U+2002\tEn Space"),
+						std::make_pair(ID_INSERT_U2003, L"U+2003\tEm Space"),
+						std::make_pair(ID_INSERT_U2004, L"U+2004\tThree-Per-Em Space"),
+						std::make_pair(ID_INSERT_U2005, L"U+2005\tFour-Per-Em Space"),
+						std::make_pair(ID_INSERT_U2006, L"U+2006\tSix-Per-Em Space"),
+						std::make_pair(ID_INSERT_U2007, L"U+2007\tFigure Space"),
+						std::make_pair(ID_INSERT_U2008, L"U+2008\tPunctuation Space"),
+						std::make_pair(ID_INSERT_U2009, L"U+2009\tThin Space"),
+						std::make_pair(ID_INSERT_U200A, L"U+200A\tHair Space"),
+						std::make_pair(ID_INSERT_ZWSP, L"ZWSP\tZero Width Space"),
+						std::make_pair(ID_INSERT_NNBSP, L"NNBSP\tNarrow No-Break Space"),
+						std::make_pair(ID_INSERT_MMSP, L"MMSP\tMedium Mathematical Space"),
+						std::make_pair(ID_INSERT_U3000, L"U+3000\tIdeographic Space"),
+						std::make_pair(0, L""),
+						std::make_pair(ID_INSERT_NEL, L"NEL\tNext Line"),
+						std::make_pair(ID_INSERT_LS, L"LS\tLine Separator"),
+						std::make_pair(ID_INSERT_PS, L"PS\tParagraph Separator")
+					}};
+					static auto insertUnicodeWhiteSpaceCharacterPopup(createPopupMenu(insertUnicodeWhiteSpaceCharacterItems));
+
+					// toplevel
+					const std::array<std::pair<UINT, const std::basic_string<WCHAR>>, 14> toplevelItems = {{
+						std::make_pair(WM_UNDO, !japanese ? L"&Undo" : L"\x5143\x306b\x623b\x3059(&U)"),
+						std::make_pair(WM_REDO, !japanese ? L"&Redo" : L"\x3084\x308a\x76f4\x3057(&R)"),
+						std::make_pair(0, L""),
+						std::make_pair(WM_CUT, !japanese ? L"Cu&t" : L"\x5207\x308a\x53d6\x308a(&T)"),
+						std::make_pair(WM_COPY, !japanese ? L"&Copy" : L"\x30b3\x30d4\x30fc(&C)"),
+						std::make_pair(WM_PASTE, !japanese ? L"&Paste" : L"\x8cbc\x308a\x4ed8\x3051(&P)"),
+						std::make_pair(WM_CLEAR, !japanese ? L"&Delete" : L"\x524a\x9664(&D)"),
+						std::make_pair(0, L""),
+						std::make_pair(WM_SELECTALL, !japanese ? L"Select &All" : L"\x3059\x3079\x3066\x9078\x629e(&A)"),
+						std::make_pair(0, L""),
+						std::make_pair(ID_RTLREADING, !japanese ? L"&Right to left Reading order" : L"\x53f3\x304b\x3089\x5de6\x306b\x8aad\x3080(&R)"),
+						std::make_pair(ID_DISPLAYSHAPINGCONTROLS, !japanese ? L"&Show Unicode control characters" : L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x8868\x793a(&S)"),
+						std::make_pair(0, !japanese ? L"&Insert Unicode control character" : L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x633f\x5165(&I)"),
+						std::make_pair(0, !japanese ? L"Insert Unicode &white space character" : L"Unicode \x7a7a\x767d\x6587\x5b57\x306e\x633f\x5165(&W)")
+					}};
+					toplevelPopup = createPopupMenu(toplevelItems);
+					auto item(win32::makeZeroSize<MENUITEMINFOW>());
+					item.fMask = MIIM_SUBMENU;
+					item.hSubMenu = insertUnicodeControlCharacterPopup.get();
+					::SetMenuItemInfoW(toplevelPopup.get(), 12, true, &item);
+					item.hSubMenu = insertUnicodeWhiteSpaceCharacterPopup.get();
+					::SetMenuItemInfoW(toplevelPopup.get(), 13, true, &item);
+
+					// check if the system supports bidi
+					if(!graphics::font::supportsComplexScripts()) {
+						::EnableMenuItem(toplevelPopup.get(), ID_RTLREADING, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+						::EnableMenuItem(toplevelPopup.get(), ID_DISPLAYSHAPINGCONTROLS, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+						::EnableMenuItem(toplevelPopup.get(), 12, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+						::EnableMenuItem(toplevelPopup.get(), 13, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+					}
+				}
+				return toplevelPopup;
+			}
+		}
+
 		/// @see Widget#showContextMenu
 		void TextViewer::showContextMenu(const widgetapi::event::LocatedUserInput& input, const void* nativeEvent) {
 			auto caret(tryCaret(*this));
@@ -1237,129 +1354,8 @@ namespace ascension {
 			const bool hasSelection = !isSelectionEmpty(*caret);
 			const bool readOnly = doc.isReadOnly();
 			const bool japanese = PRIMARYLANGID(win32::userDefaultUILanguage()) == LANG_JAPANESE;
-
-			static auto toplevelPopup(win32::makeHandle(::CreatePopupMenu(), &::DestroyMenu));
-			if(::GetMenuItemCount(toplevelPopup.get()) == 0) {	// first initialization
-				// under "Insert Unicode control character"
-				static const std::pair<UINT, const std::basic_string<WCHAR>> insertUnicodeControlCharacterItems[] = {
-					std::make_pair(ID_INSERT_LRM, L"LRM\t&Left-To-Right Mark"),
-					std::make_pair(ID_INSERT_RLM, L"RLM\t&Right-To-Left Mark"),
-					std::make_pair(ID_INSERT_ZWJ, L"ZWJ\t&Zero Width Joiner"),
-					std::make_pair(ID_INSERT_ZWNJ, L"ZWNJ\tZero Width &Non-Joiner"),
-					std::make_pair(ID_INSERT_LRE, L"LRE\tLeft-To-Right &Embedding"),
-					std::make_pair(ID_INSERT_RLE, L"RLE\tRight-To-Left E&mbedding"),
-					std::make_pair(ID_INSERT_LRO, L"LRO\tLeft-To-Right &Override"),
-					std::make_pair(ID_INSERT_RLO, L"RLO\tRight-To-Left O&verride"),
-					std::make_pair(ID_INSERT_PDF, L"PDF\t&Pop Directional Formatting"),
-					std::make_pair(ID_INSERT_WJ, L"WJ\t&Word Joiner"),
-					std::make_pair(ID_INSERT_NADS, L"NADS\tN&ational Digit Shapes (deprecated)"),
-					std::make_pair(ID_INSERT_NODS, L"NODS\tNominal &Digit Shapes (deprecated)"),
-					std::make_pair(ID_INSERT_ASS, L"ASS\tActivate &Symmetric Swapping (deprecated)"),
-					std::make_pair(ID_INSERT_ISS, L"ISS\tInhibit S&ymmetric Swapping (deprecated)"),
-					std::make_pair(ID_INSERT_AAFS, L"AAFS\tActivate Arabic &Form Shaping (deprecated)"),
-					std::make_pair(ID_INSERT_IAFS, L"IAFS\tInhibit Arabic Form S&haping (deprecated)"),
-					std::make_pair(ID_INSERT_RS, L"RS\tRe&cord Separator"),
-					std::make_pair(ID_INSERT_US, L"US\tUnit &Separator"),
-					std::make_pair(0, L""),
-					std::make_pair(ID_INSERT_IAA, L"IAA\tInterlinear Annotation Anchor"),
-					std::make_pair(ID_INSERT_IAT, L"IAT\tInterlinear Annotation Terminator"),
-					std::make_pair(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator")
-				};
-				auto insertUnicodeControlCharacterPopup(win32::makeHandle(::CreatePopupMenu(), &::DestroyMenu));
-				auto item(win32::makeZeroSize<MENUITEMINFOW>());
-				for(size_t i = 0; i < std::extent<decltype(insertUnicodeControlCharacterItems)>::value; ++i) {
-					if(!insertUnicodeControlCharacterItems[i].second.empty()) {
-						item.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
-						item.wID = insertUnicodeControlCharacterItems[i].first;
-						item.dwTypeData = const_cast<WCHAR*>(insertUnicodeControlCharacterItems[i].second.c_str());
-					} else {
-						item.fMask = MIIM_FTYPE;
-						item.fType = MFT_SEPARATOR;
-					}
-					::InsertMenuItemW(insertUnicodeControlCharacterPopup.get(), i, true, &item);
-				}
-
-				// under "Insert Unicode white space character"
-				static const std::pair<UINT, const std::basic_string<WCHAR>> insertUnicodeWhiteSpaceCharacterItems[] = {
-					std::make_pair(ID_INSERT_U0020, L"U+0020\tSpace"),
-					std::make_pair(ID_INSERT_NBSP, L"NBSP\tNo-Break Space"),
-					std::make_pair(ID_INSERT_U1680, L"U+1680\tOgham Space Mark"),
-					std::make_pair(ID_INSERT_MVS, L"MVS\tMongolian Vowel Separator"),
-					std::make_pair(ID_INSERT_U2000, L"U+2000\tEn Quad"),
-					std::make_pair(ID_INSERT_U2001, L"U+2001\tEm Quad"),
-					std::make_pair(ID_INSERT_U2002, L"U+2002\tEn Space"),
-					std::make_pair(ID_INSERT_U2003, L"U+2003\tEm Space"),
-					std::make_pair(ID_INSERT_U2004, L"U+2004\tThree-Per-Em Space"),
-					std::make_pair(ID_INSERT_U2005, L"U+2005\tFour-Per-Em Space"),
-					std::make_pair(ID_INSERT_U2006, L"U+2006\tSix-Per-Em Space"),
-					std::make_pair(ID_INSERT_U2007, L"U+2007\tFigure Space"),
-					std::make_pair(ID_INSERT_U2008, L"U+2008\tPunctuation Space"),
-					std::make_pair(ID_INSERT_U2009, L"U+2009\tThin Space"),
-					std::make_pair(ID_INSERT_U200A, L"U+200A\tHair Space"),
-					std::make_pair(ID_INSERT_ZWSP, L"ZWSP\tZero Width Space"),
-					std::make_pair(ID_INSERT_NNBSP, L"NNBSP\tNarrow No-Break Space"),
-					std::make_pair(ID_INSERT_MMSP, L"MMSP\tMedium Mathematical Space"),
-					std::make_pair(ID_INSERT_U3000, L"U+3000\tIdeographic Space"),
-					std::make_pair(0, L""),
-					std::make_pair(ID_INSERT_NEL, L"NEL\tNext Line"),
-					std::make_pair(ID_INSERT_LS, L"LS\tLine Separator"),
-					std::make_pair(ID_INSERT_PS, L"PS\tParagraph Separator")
-				};
-				auto insertUnicodeWhiteSpaceCharacterPopup(win32::makeHandle(::CreatePopupMenu(), &::DestroyMenu));
-				for(size_t i = 0; i < std::extent<decltype(insertUnicodeWhiteSpaceCharacterItems)>::value; ++i) {
-					if(!insertUnicodeWhiteSpaceCharacterItems[i].second.empty()) {
-						item.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
-						item.wID = insertUnicodeWhiteSpaceCharacterItems[i].first;
-						item.dwTypeData = const_cast<WCHAR*>(insertUnicodeWhiteSpaceCharacterItems[i].second.c_str());
-					} else {
-						item.fMask = MIIM_FTYPE;
-						item.fType = MFT_SEPARATOR;
-					}
-					::InsertMenuItemW(insertUnicodeWhiteSpaceCharacterPopup.get(), i, true, &item);
-				}
-
-				// toplevel
-				static const std::pair<UINT, const std::basic_string<WCHAR>> toplevelItems[] = {
-					std::make_pair(WM_UNDO, !japanese ? L"&Undo" : L"\x5143\x306b\x623b\x3059(&U)"),
-					std::make_pair(WM_REDO, !japanese ? L"&Redo" : L"\x3084\x308a\x76f4\x3057(&R)"),
-					std::make_pair(0, L""),
-					std::make_pair(WM_CUT, !japanese ? L"Cu&t" : L"\x5207\x308a\x53d6\x308a(&T)"),
-					std::make_pair(WM_COPY, !japanese ? L"&Copy" : L"\x30b3\x30d4\x30fc(&C)"),
-					std::make_pair(WM_PASTE, !japanese ? L"&Paste" : L"\x8cbc\x308a\x4ed8\x3051(&P)"),
-					std::make_pair(WM_CLEAR, !japanese ? L"&Delete" : L"\x524a\x9664(&D)"),
-					std::make_pair(0, L""),
-					std::make_pair(WM_SELECTALL, !japanese ? L"Select &All" : L"\x3059\x3079\x3066\x9078\x629e(&A)"),
-					std::make_pair(0, L""),
-					std::make_pair(ID_RTLREADING, !japanese ? L"&Right to left Reading order" : L"\x53f3\x304b\x3089\x5de6\x306b\x8aad\x3080(&R)"),
-					std::make_pair(ID_DISPLAYSHAPINGCONTROLS, !japanese ? L"&Show Unicode control characters" : L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x8868\x793a(&S)"),
-					std::make_pair(0, !japanese ? L"&Insert Unicode control character" : L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x633f\x5165(&I)"),
-					std::make_pair(0, !japanese ? L"Insert Unicode &white space character" : L"Unicode \x7a7a\x767d\x6587\x5b57\x306e\x633f\x5165(&W)")
-				};
-				for(size_t i = 0; i < std::extent<decltype(toplevelItems)>::value; ++i) {
-					if(toplevelItems[i].second.empty()) {
-						item.fMask = MIIM_FTYPE;
-						item.fType = MFT_SEPARATOR;
-					} else {
-						item.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
-						item.wID = insertUnicodeWhiteSpaceCharacterItems[i].first;
-						item.dwTypeData = const_cast<WCHAR*>(insertUnicodeWhiteSpaceCharacterItems[i].second.c_str());
-						if(i == 12 || i == 13) {
-							item.fMask |= MIIM_SUBMENU;
-							item.hSubMenu = (i == 12) ? insertUnicodeControlCharacterPopup.get() : insertUnicodeWhiteSpaceCharacterPopup.get();
-						}
-					}
-					::InsertMenuItemW(insertUnicodeControlCharacterPopup.get(), i, true, &item);
-				}
-
-				// check if the system supports bidi
-				if(!graphics::font::supportsComplexScripts()) {
-					::EnableMenuItem(toplevelPopup.get(), ID_RTLREADING, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
-					::EnableMenuItem(toplevelPopup.get(), ID_DISPLAYSHAPINGCONTROLS, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
-					::EnableMenuItem(toplevelPopup.get(), 12, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
-					::EnableMenuItem(toplevelPopup.get(), 13, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
-				}
-			}
-#undef GET_CAPTION
+			auto toplevelPopup(buildContextMenu(japanese));
+			const auto numberOfBasicItems = ::GetMenuItemCount(toplevelPopup.get());
 
 			// modify menu items
 			::EnableMenuItem(toplevelPopup.get(), WM_UNDO, MF_BYCOMMAND | (!readOnly && doc.numberOfUndoableChanges() != 0) ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
@@ -1444,8 +1440,8 @@ namespace ascension {
 
 			// ...finally erase all items
 			int c = ::GetMenuItemCount(toplevelPopup.get());
-			while(c > 13)
-				::DeleteMenu(toplevelPopup.get(), c--, MF_BYPOSITION);
+			while(c > numberOfBasicItems)
+				::DeleteMenu(toplevelPopup.get(), --c, MF_BYPOSITION);
 		}
 
 		void TextViewer::windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT {
