@@ -270,7 +270,10 @@ namespace ascension {
 				if(::SetGraphicsMode(dc.get(), GM_ADVANCED) != 0 && ::SetMapMode(dc.get(), MM_TEXT) != 0 && ::SetWorldTransform(dc.get(), &xform)) {
 					::SelectObject(dc.get(), native().get());
 					if(const UINT bytes = ::GetOutlineTextMetricsW(dc.get(), 0, nullptr)) {
-						OUTLINETEXTMETRICW* const otm = static_cast<OUTLINETEXTMETRICW*>(::operator new(bytes));
+						std::unique_ptr<std::uint8_t[]> temp(new std::uint8_t[bytes]);
+						OUTLINETEXTMETRICW* const otm = reinterpret_cast<OUTLINETEXTMETRICW*>(temp.get());
+						*otm = win32::makeZero<OUTLINETEXTMETRICW>();
+						otm->otmSize = bytes;
 						if(::GetOutlineTextMetricsW(dc.get(), bytes, otm) != 0) {
 							lm.reset(new LineMetricsImpl);
 							std::get<0>(lm->adl) = static_cast<Scalar>(otm->otmAscent);
