@@ -200,10 +200,11 @@ namespace ascension {
 				} else if(characterUnit == UTF32_CODE_UNIT) {
 					// TODO: there is more efficient implementation.
 					DocumentCharacterIterator i(document(p), position(p));
+					// std.advance can't use because NoSuchElementException
 					if(direction == Direction::forward())
-						while(offset-- > 0) ++i;	// TODO: Use std.advance instead.
+						while(i.hasNext() && offset-- > 0) ++i;
 					else
-						while(offset-- > 0) --i;	// TODO: Use std.advance instead.
+						while(i.hasPrevious() && offset-- > 0) --i;
 					return i.tell();
 				} else if(characterUnit == locations::GRAPHEME_CLUSTER) {
 					text::GraphemeBreakIterator<DocumentCharacterIterator> i(
