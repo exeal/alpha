@@ -36,6 +36,7 @@
 #include <ascension/graphics/geometry/algorithms/make.hpp>
 #include <ascension/graphics/geometry/algorithms/translate.hpp>
 #include <ascension/log.hpp>
+#include <ascension/presentation/single-styled-text-run-iterator.hpp>
 #include <ascension/presentation/styled-text-run-iterator.hpp>
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
@@ -2289,6 +2290,8 @@ namespace ascension {
 						const FontCollection& fontCollection, const FontRenderContext& frc, const presentation::Pixels& parentFontSize,
 						std::vector<TextRunImpl*>& textRuns, std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>>& calculatedStyles) {
 					raiseIfNullOrEmpty(textString, "textString");
+					if(textRunStyles == nullptr)
+						throw NullPointerException("textRunStyles");
 
 					// split the text line into text runs as following steps:
 					// 1. split the text into script runs (SCRIPT_ITEMs) by Uniscribe
@@ -2349,16 +2352,10 @@ namespace ascension {
 							nextScriptRun((numberOfScriptRuns > 1) ?
 								boost::const_begin(textString) + scriptRuns[1].iCharPos : boost::const_end(textString), scriptRun.attribute + 1);
 						// style cursors
-						AttributedCharacterRange<presentation::ComputedTextRunStyle> styleRun, nextStyleRun;
-						if(textRunStyles.get() != nullptr) {
-							styleRun.attribute = textRunStyles->style();
-							styleRun.position = boost::const_begin(textString) + kernel::offsetInLine(textRunStyles->position());
-							textRunStyles->next();
-						} else {
-							styleRun.attribute = presentation::ComputedTextRunStyle();
-							styleRun.position = boost::const_begin(textString);
-						}
-						if(textRunStyles.get() != nullptr && !textRunStyles->isDone()) {
+						AttributedCharacterRange<presentation::ComputedTextRunStyle>
+							styleRun(boost::const_begin(textString) + kernel::offsetInLine(textRunStyles->position()), textRunStyles->style()), nextStyleRun;
+						textRunStyles->next();
+						if(!textRunStyles->isDone()) {
 							nextStyleRun.attribute = textRunStyles->style();
 							nextStyleRun.position = boost::const_begin(textString) + kernel::offsetInLine(textRunStyles->position());
 						} else
@@ -2403,7 +2400,7 @@ namespace ascension {
 								assert(nextStyleRun.position <= boost::const_end(textString));
 								styleRun = std::move(nextStyleRun);	// C2668 if included <boost/log/trivial.hpp> without 'std::' ???
 								styleRuns.push_back(AttributedCharacterRange<presentation::ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
-								if(textRunStyles.get() != nullptr && !textRunStyles->isDone()) {
+								if(!textRunStyles->isDone()) {
 									textRunStyles->next();
 									if(!textRunStyles->isDone()) {
 										nextStyleRun.attribute = textRunStyles->style();
@@ -3218,6 +3215,11 @@ namespace ascension {
 					// 2. split each script runs into text runs with StyledRunIterator
 					std::vector<TextRunImpl*> textRuns;
 					std::vector<AttributedCharacterRange<presentation::ComputedTextRunStyle>> calculatedStyles;
+					if(textRunStyles == nullptr)
+						textRunStyles.reset(
+							new presentation::SingleStyledTextRunIterator<presentation::ComputedStyledTextRunIterator>(
+								kernel::Region::makeSingleLine(0, boost::irange<Index>(0, textString_.length())),	// TextLayout does not use line number
+								defaultRunStyle()));
 					TextRunImpl::generate(textString_, style(), std::move(textRunStyles),
 						lengthContext, actualMeasure, fontCollection, fontRenderContext, nominalFontSize, textRuns, calculatedStyles);
 
