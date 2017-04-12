@@ -40,7 +40,13 @@ namespace ascension {
 				boost::optional<boost::chrono::milliseconds> timeout;
 
 				/// Creates a @c BlinkIntervals with showing rate is 2 and hiding rate is 1.
-				BlinkIntervals() : showingRate(2), hidingRate(1) {}
+				BlinkIntervals() :
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+					showingRate(2),
+#else
+					showingRate(1),
+#endif
+					hidingRate(1) {}
 			};
 
 			StandardCaretPainter();
