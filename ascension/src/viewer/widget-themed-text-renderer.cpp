@@ -165,7 +165,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			assert(blockFlowDirection() == presentation::HORIZONTAL_TB);
 			const auto style = ::GetWindowLongPtrW(textViewer_.handle().get(), GWL_EXSTYLE);
-			bool normal = 0;
+			bool normal = true;
 			if((style & WS_EX_RIGHT) != 0)
 				normal = !normal;
 			if((style & WS_EX_RTLREADING) != 0)
