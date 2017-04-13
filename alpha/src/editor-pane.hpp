@@ -64,6 +64,7 @@ namespace alpha {
 
 	private:
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+		LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
 		void realized(const Type& type) override;
 #endif
 		void touch(const EditorView& viewer);

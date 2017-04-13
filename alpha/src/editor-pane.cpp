@@ -85,6 +85,16 @@ namespace alpha {
 	}
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+	/// @see ascension#win32#CustomControl#processMessage
+	LRESULT EditorPane::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+		if(message == WM_SETFOCUS) {
+			ascension::viewer::widgetapi::setFocus(stack_);
+			consumed = true;
+			return 0;
+		}
+		return win32::VerticalContainer::processMessage(message, wp, lp, consumed);
+	}
+
 	/// @see ascension::win32::CustomControl#realized
 	void EditorPane::realized(const Type& type) {
 		win32::VerticalContainer::realized(type);

@@ -54,6 +54,7 @@ namespace alpha {
 			void onNotify(UINT_PTR id, NMHDR& nmhdr, bool& consumed);
 			void onRebarChevronPushed(const NMREBARCHEVRON& nmRebarChevron);
 			void onSetCursor(ascension::win32::Handle<HWND> window, UINT hitTest, UINT message, bool& consumed);
+			void onSetFocus(ascension::win32::Handle<HWND> oldWindow);
 			void onSettingChange(UINT flags, const wchar_t* section);
 			void onSize(UINT type, int cx, int cy);
 			void onToolExecuteCommand();
