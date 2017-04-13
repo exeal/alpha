@@ -173,6 +173,14 @@ namespace alpha {
 		}
 
 		/**
+		 * Handles @c WM_SETFOCUS window message.
+		 * @param oldWindow A handle to the window that has lost the keyboard focus.
+		 */
+		void MainWindow::onSetFocus(ascension::win32::Handle<HWND>) {
+			ascension::viewer::widgetapi::setFocus(editorPanes());
+		}
+
+		/**
 		 * Handles @c WM_SIZE window message.
 		 * @param type The type of resizing requested
 		 * @param width The new width of the client area
@@ -256,6 +264,9 @@ namespace alpha {
 					if(consumed)
 						return TRUE;
 					break;
+				case WM_SETFOCUS:
+					onSetFocus(ascension::win32::borrowed(reinterpret_cast<HWND>(wp)));
+					return (consumed = true), 0;
 				case WM_SIZE:
 					onSize(wp, LOWORD(lp), HIWORD(lp));
 					return (consumed = true), 0;
