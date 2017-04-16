@@ -263,11 +263,11 @@ namespace ascension {
 				}
 				if(pageSize != boost::none) {
 					si.fMask |= SIF_PAGE;
-					si.nPage = *pageSize;
+					si.nPage = boost::get(pageSize) + 1;
 				}
 				if(position != boost::none) {
 					si.fMask |= SIF_POS;
-					si.nPos = *position;
+					si.nPos = boost::get(position);
 				}
 				::SetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si, true);
 #endif
