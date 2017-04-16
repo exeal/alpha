@@ -789,7 +789,10 @@ namespace ascension {
 
 		/// @see WM_GETFONT
 		const win32::Handle<HFONT> TextViewer::onGetFont() const {
-			return textArea()->textRenderer()->defaultFont()->native();
+			if(const auto font = textArea()->textRenderer()->defaultFont())
+				return font->native();
+			else
+				return nullptr;
 		}
 
 		/// @see WM_HSCROLL
