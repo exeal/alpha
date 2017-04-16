@@ -1157,19 +1157,33 @@ namespace ascension {
 				case WM_KILLFOCUS:
 					return (consumed = true), focusAboutToBeLost(widgetapi::event::Event()), 0;
 				case WM_LBUTTONDBLCLK:
-					return (consumed = true), fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, wp, lp)), 0;
+					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, wp, lp));
+					consumed = true;
+					break;
 				case WM_LBUTTONDOWN:
-					return (consumed = true), fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, wp, lp)), 0;
+					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, wp, lp));
+					consumed = true;
+					break;
 				case WM_LBUTTONUP:
-					return (consumed = true), fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, wp, lp)), 0;
+					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, wp, lp));
+					consumed = true;
+					break;
 				case WM_MBUTTONDBLCLK:
-					return (consumed = true), fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, wp, lp)), 0;
+					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, wp, lp));
+					consumed = true;
+					break;
 				case WM_MBUTTONDOWN:
-					return (consumed = true), fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, wp, lp)), 0;
+					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, wp, lp));
+					consumed = true;
+					break;
 				case WM_MBUTTONUP:
-					return (consumed = true), fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, wp, lp)), 0;
+					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, wp, lp));
+					consumed = true;
+					break;
 				case WM_MOUSEMOVE:
-					return (consumed = true), fireMouseMoved(win32::makeLocatedUserInput(wp, win32::makeMouseLocation<graphics::Point>(lp))), 0;
+					fireMouseMoved(win32::makeLocatedUserInput(wp, win32::makeMouseLocation<graphics::Point>(lp))), 0;
+					consumed = true;
+					break;
 				case WM_MOUSEWHEEL:
 				case WM_MOUSEHWHEEL:
 					return
@@ -1196,11 +1210,17 @@ namespace ascension {
 					return 0;
 				}
 				case WM_RBUTTONDBLCLK:
-					return (consumed = true), fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, wp, lp)), 0;
+					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, wp, lp));
+					consumed = true;
+					break;
 				case WM_RBUTTONDOWN:
-					return (consumed = true), fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, wp, lp)), 0;
+					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, wp, lp));
+					consumed = true;
+					break;
 				case WM_RBUTTONUP:
-					return (consumed = true), fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, wp, lp)), 0;
+					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, wp, lp));
+					consumed = true;
+					break;
 				case WM_SETCURSOR:
 					onSetCursor(win32::borrowed(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
 					return consumed ? TRUE : FALSE;
