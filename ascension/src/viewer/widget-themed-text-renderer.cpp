@@ -15,6 +15,9 @@
 #if (ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)) && BOOST_OS_WINDOWS
 #	include <ascension/graphics/rendering-context.hpp>
 #endif
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#	include <ascension/win32/system-default-font.hpp>
+#endif
 
 namespace ascension {
 	namespace viewer {
@@ -26,23 +29,29 @@ namespace ascension {
 				: graphics::font::StandardTextRenderer(*document(textViewer), initialSize), textViewer_(textViewer) {
 		}
 
-		/// @see TextRenderer#actualLineBackgroundColor
-		graphics::Color WidgetThemedTextRenderer::actualLineBackgroundColor(const graphics::font::TextLayout&) const BOOST_NOEXCEPT {
+		namespace {
+			graphics::Color backgroundColor(const TextViewer& textViewer) BOOST_NOEXCEPT {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			if(const auto context = textViewer_.get_style_context())
-				return fromNative<graphics::Color>(context->get_background_color());	// deprecated api
+				if(const auto context = textViewer.get_style_context())
+					return fromNative<graphics::Color>(context->get_background_color());	// deprecated api
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			auto brush(win32::borrowed(reinterpret_cast<HBRUSH>(::GetClassLongPtrW(textViewer_.handle().get(), GCLP_HBRBACKGROUND))));
-			if(brush.get() != nullptr) {
-				LOGBRUSH lb;
-				if(::GetObject(brush.get(), sizeof(decltype(lb)), &lb) != 0 && lb.lbStyle == BS_SOLID)
-					return fromNative<graphics::Color>(lb.lbColor);
-			}
-			return fromNative<graphics::Color>(::GetSysColor(COLOR_WINDOW));
+				auto brush(win32::borrowed(reinterpret_cast<HBRUSH>(::GetClassLongPtrW(textViewer.handle().get(), GCLP_HBRBACKGROUND))));
+				if(brush.get() != nullptr) {
+					LOGBRUSH lb;
+					if(::GetObject(brush.get(), sizeof(decltype(lb)), &lb) != 0 && lb.lbStyle == BS_SOLID)
+						return fromNative<graphics::Color>(lb.lbColor);
+				}
+				return fromNative<graphics::Color>(::GetSysColor(COLOR_WINDOW));
 #endif
-			return graphics::Color::OPAQUE_WHITE;
+				return graphics::Color::OPAQUE_WHITE;
+			}
+		}
+
+		/// @see TextRenderer#actualLineBackgroundColor
+		graphics::Color WidgetThemedTextRenderer::actualLineBackgroundColor(const graphics::font::TextLayout&) const BOOST_NOEXCEPT {
+			return backgroundColor(textViewer_);
 		}
 
 		/// @see TextRenderer#blockFlowDirection
@@ -57,9 +66,50 @@ namespace ascension {
 			std::unique_ptr<presentation::ComputedStyledTextRunIterator>,
 			const presentation::ComputedTextRunStyle&
 		> WidgetThemedTextRenderer::buildStylesForLineLayout(Index line, const graphics::RenderingContext2D& renderingContext) const {
-			static const presentation::ComputedTextToplevelStyle toplevel((presentation::SpecifiedTextToplevelStyle()));
-			static const presentation::ComputedTextLineStyle lines((presentation::SpecifiedTextLineStyle()));
-			static const presentation::ComputedTextRunStyle runs;
+			static presentation::ComputedTextToplevelStyle toplevel((presentation::SpecifiedTextToplevelStyle()));
+			static presentation::ComputedTextLineStyle lines((presentation::SpecifiedTextLineStyle()));
+			static presentation::ComputedTextRunStyle runs;
+
+			boost::fusion::at_key<presentation::styles::WritingMode>(toplevel) = blockFlowDirection();
+			boost::fusion::at_key<presentation::styles::Direction>(lines) = inlineFlowDirection();
+			boost::fusion::at_key<presentation::styles::TextOrientation>(lines) = textOrientation();
+			boost::fusion::at_key<presentation::styles::TextAlignment>(lines) = static_cast<BOOST_SCOPED_ENUM_NATIVE(graphics::font::TextAlignment)>(boost::underlying_cast<int>(textAnchor()));
+			{
+				boost::optional<graphics::Color> color;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				if(const auto context = textViewer_.get_style_context())
+					color = fromNative<graphics::Color>(context->get_color());
+#endif
+				if(color == boost::none)
+					color = graphics::SystemColors::get(graphics::SystemColors::WINDOW_TEXT);
+				boost::fusion::at_key<presentation::styles::Color>(runs.colors) = boost::get_optional_value_or(color, graphics::Color::OPAQUE_BLACK);
+			}
+			boost::fusion::at_key<presentation::styles::BackgroundColor>(runs.backgroundsAndBorders) = backgroundColor(textViewer_);
+			{
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				if(const auto context = textViewer.get_style_context())
+					font = fromNative<graphics::Color>(context->get_font());
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				LOGFONTW lf;
+				auto fontHandle = reinterpret_cast<HFONT>(::SendMessageW(textViewer_.handle().get(), WM_GETFONT, 0, 0));
+				if(fontHandle != nullptr) {
+					if(::GetObjectW(fontHandle, sizeof(LOGFONTW), &lf) == 0)
+						fontHandle = nullptr;
+				}
+				if(fontHandle == nullptr)
+					win32::systemDefaultFont(lf);
+				const auto font(fromNative<graphics::font::FontDescription>(lf));
+#endif
+				boost::fusion::at_key<presentation::styles::FontFamily>(runs.fonts).clear();
+				boost::fusion::at_key<presentation::styles::FontFamily>(runs.fonts).push_back(font.family().name());
+				boost::fusion::at_key<presentation::styles::FontWeight>(runs.fonts) = font.properties().weight;
+				boost::fusion::at_key<presentation::styles::FontStretch>(runs.fonts) = font.properties().stretch;
+				boost::fusion::at_key<presentation::styles::FontStyle>(runs.fonts) = font.properties().style;
+				boost::fusion::at_key<presentation::styles::FontSize>(runs.fonts) = presentation::styles::Length(static_cast<presentation::styles::Number>(font.pointSize()), presentation::styles::Length::POINTS);
+			}
+			boost::fusion::at_key<presentation::styles::Direction>(runs.writingModes) = inlineFlowDirection();
 #if 0
 			return std::make_tuple(toplevel, lines, std::unique_ptr<presentation::ComputedStyledTextRunIterator>(), runs);
 #else
