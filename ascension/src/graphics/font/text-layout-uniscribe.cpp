@@ -2701,7 +2701,7 @@ namespace ascension {
 				inline AffineTransform fontRotationForWritingMode(presentation::BlockFlowDirection blockFlowDirection) {
 					switch(blockFlowDirection) {
 						case presentation::HORIZONTAL_TB:
-							return AffineTransform();
+							return geometry::makeQuadrantRotationTransform(0);
 						case presentation::VERTICAL_RL:
 							return geometry::makeQuadrantRotationTransform(1);
 						case presentation::VERTICAL_LR:
