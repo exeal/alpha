@@ -872,8 +872,8 @@ namespace ascension {
 		void TextViewer::onSetCursor(const win32::Handle<HWND>&, UINT, UINT, bool& consumed) {
 			mouseVanisher_.restoreHiddenCursor();
 			auto mouseInputStrategy(textArea()->mouseInputStrategy().lock());
-			if(consumed = (mouseInputStrategy.get() != nullptr))
-				mouseInputStrategy->showCursor(widgetapi::mapFromGlobal(*this, widgetapi::Cursor::position()));
+			if(mouseInputStrategy != nullptr)
+				consumed = mouseInputStrategy->showCursor(widgetapi::mapFromGlobal(*this, widgetapi::Cursor::position()));
 		}
 
 		/// @see WM_STYLECHANGED
@@ -1223,7 +1223,9 @@ namespace ascension {
 					break;
 				case WM_SETCURSOR:
 					onSetCursor(win32::borrowed(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
-					return consumed ? TRUE : FALSE;
+					if(consumed)
+						return TRUE;
+					break;
 				case WM_SETFOCUS:
 					return (consumed = true), focusGained(widgetapi::event::Event()), 0;
 				case WM_SIZE:
