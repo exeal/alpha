@@ -993,8 +993,7 @@ namespace ascension {
 			static const UINT WM_THEMECHANGED = 0x31a;
 #endif
 
-			using namespace ascension::texteditor::commands;
-
+			LRESULT result = 0;	// should return 0 if processed almost all window messages
 			switch(message) {
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 				case WM_CLEAR:
@@ -1005,25 +1004,22 @@ namespace ascension {
 							texteditor::commands::CharacterDeletionCommand(*this, Direction::forward())();
 					}
 					consumed = true;
-					return 0L;
+					break;
 				case WM_COPY:
 					if(auto caret = tryCaret(*this)) {
 						copySelection(*caret, true);
 						consumed = true;
 					}
-					return 0L;
-				case WM_CREATE: {
-					const LRESULT result = onCreate(*reinterpret_cast<CREATESTRUCTW*>(lp), consumed);
-					if(consumed)
-						return result;
 					break;
-				}
+				case WM_CREATE:
+					result = onCreate(*reinterpret_cast<CREATESTRUCTW*>(lp), consumed);
+					break;
 				case WM_CUT:
 					if(auto caret = tryCaret(*this)) {
 						cutSelection(*caret, true);
 						consumed = true;
 					}
-					return 0L;
+					break;
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 				case WM_GETOBJECT:
@@ -1051,7 +1047,7 @@ namespace ascension {
 				case WM_PASTE:
 					texteditor::commands::PasteCommand(*this, false)();
 					consumed = true;
-					return 0L;
+					break;
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 				case WM_SETTEXT:
 					if(auto caret = tryCaret(*this)) {
@@ -1059,17 +1055,19 @@ namespace ascension {
 						caret->replaceSelection(String(reinterpret_cast<const Char*>(lp)), false);
 						consumed = true;
 					}
-					return 0L;
+					break;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 				case WM_UNDO:
 					texteditor::commands::UndoCommand(*this, false)();
 					consumed = true;
-					return 0L;
+					break;
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 					// dispatch message into handler
 				case WM_CAPTURECHANGED:
 					onCaptureChanged(win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
-					return consumed ? 0 : 1;
+					if(consumed)
+						return 0;
+					break;
 				case WM_CHAR:
 				case WM_SYSCHAR:
 				case WM_UNICHAR:
@@ -1085,29 +1083,33 @@ namespace ascension {
 									&& ::GetWindowThreadProcessId(pointedWindow, nullptr) == ::GetWindowThreadProcessId(handle().get(), nullptr))
 								mouseVanisher_.hideCursor();
 						}
-					} else
-						break;
-					return consumed ? 0 : 1;
+					}
+					break;
 				case WM_COMMAND:
 					onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
-					return consumed ? 0 : 1;
+					break;
 				case WM_CONTEXTMENU: {
 					const widgetapi::event::LocatedUserInput input(win32::makeMouseLocation<graphics::Point>(lp), widgetapi::event::MouseButtons(), win32::makeKeyboardModifiers());
 					MSG native;
 					nativeMessage(*this, message, wp, lp, native);
 					showContextMenu(input, &native);
-					return (consumed = true), 0;
+					consumed = true;
+					break;
 				}
 				case WM_DESTROY:
 					onDestroy(consumed);
-					return consumed ? 0 : 1;
+					break;
 				case WM_ERASEBKGND:
 					onEraseBkgnd(win32::Handle<HDC>(reinterpret_cast<HDC>(wp)), consumed);
 					return consumed ? TRUE : FALSE;
 				case WM_GETFONT:
-					return (consumed = true), reinterpret_cast<LRESULT>(onGetFont().get());
+					result = reinterpret_cast<LRESULT>(onGetFont().get());
+					consumed = true;
+					break;
 				case WM_HSCROLL:
-					return (consumed = true), onHScroll(LOWORD(wp), HIWORD(wp), win32::borrowed(reinterpret_cast<HWND>(lp))), 0;
+					onHScroll(LOWORD(wp), HIWORD(wp), win32::borrowed(reinterpret_cast<HWND>(lp)));
+					consumed = true;
+					break;
 //				case WM_INPUTLANGCHANGE:
 //					if(auto caret = tryCaret(*this))
 //						return static_cast<detail::InputEventHandler&>(*caret).handleInputEvent(message, wp, lp, consumed);	// $friendly-access
@@ -1149,13 +1151,23 @@ namespace ascension {
 					break;
 				}
 				case WM_KEYDOWN:
-				case WM_SYSKEYDOWN:
-					return (consumed = true), keyPressed(makeKeyInput(wp, lp)), 0;
+				case WM_SYSKEYDOWN: {
+					auto e(makeKeyInput(wp, lp));
+					keyPressed(e);
+					consumed = e.isConsumed();
+					break;
+				}
 				case WM_KEYUP:
-				case WM_SYSKEYUP:
-					return (consumed = true), keyReleased(makeKeyInput(wp, lp)), 0;
+				case WM_SYSKEYUP: {
+					auto e(makeKeyInput(wp, lp));
+					keyReleased(e);
+					consumed = e.isConsumed();
+					break;
+				}
 				case WM_KILLFOCUS:
-					return (consumed = true), focusAboutToBeLost(widgetapi::event::Event()), 0;
+					focusAboutToBeLost(widgetapi::event::Event());
+					consumed = true;
+					break;
 				case WM_LBUTTONDBLCLK:
 					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, wp, lp));
 					consumed = true;
@@ -1207,7 +1219,8 @@ namespace ascension {
 					const auto dc(win32::borrowed(ps.hdc));
 					paint(graphics::PaintContext(graphics::RenderingContext2D(dc), fromNative<graphics::Rectangle>(ps.rcPaint)));
 					::EndPaint(handle().get(), &ps);
-					return 0;
+					consumed = true;
+					break;
 				}
 				case WM_RBUTTONDBLCLK:
 					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, wp, lp));
@@ -1227,30 +1240,52 @@ namespace ascension {
 						return TRUE;
 					break;
 				case WM_SETFOCUS:
-					return (consumed = true), focusGained(widgetapi::event::Event()), 0;
+					focusGained(widgetapi::event::Event());
+					consumed = true;
+					break;
 				case WM_SIZE:
-					return (consumed = true), resized(graphics::Dimension(graphics::geometry::_dx = LOWORD(lp), graphics::geometry::_dy = HIWORD(lp))), 0;
+					resized(graphics::Dimension(graphics::geometry::_dx = LOWORD(lp), graphics::geometry::_dy = HIWORD(lp)));
+					consumed = true;
+					break;
 				case WM_STYLECHANGED:
-					return (consumed = true), onStyleChanged(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
+					onStyleChanged(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp));
+					consumed = true;
+					break;
 				case WM_STYLECHANGING:
-					return (consumed = true), onStyleChanging(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
+					onStyleChanging(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp));
+					consumed = true;
+					break;
 				case WM_SYSCOLORCHANGE:
-					return (consumed = true), onSysColorChange(), 0;
+					onSysColorChange();
+					consumed = true;
+					break;
 				case WM_THEMECHANGED:
-					return (consumed = true), onThemeChanged(), 0;
+					onThemeChanged();
+					consumed = true;
+					break;
 				case WM_TIMER:
-					return (consumed = true), onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<TIMERPROC>(lp)), 0;
+					onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<TIMERPROC>(lp));
+					consumed = true;
+					break;
 				case WM_VSCROLL:
-					return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::borrowed(reinterpret_cast<HWND>(lp))), 0;
+					onVScroll(LOWORD(wp), HIWORD(wp), win32::borrowed(reinterpret_cast<HWND>(lp)));
+					consumed = true;
+					break;
 				case WM_XBUTTONDBLCLK:
-					return (consumed = true), fireMouseDoubleClicked(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+					fireMouseDoubleClicked(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp));
+					consumed = true;
+					break;
 				case WM_XBUTTONDOWN:
-					return (consumed = true), fireMousePressed(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+					fireMousePressed(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp));
+					consumed = true;
+					break;
 				case WM_XBUTTONUP:
-					return (consumed = true), fireMouseReleased(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+					fireMouseReleased(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp));
+					consumed = true;
+					break;
 			}
 
-			return win32::CustomControl<TextViewer>::processMessage(message, wp, lp, consumed);
+			return consumed ? result : win32::CustomControl<TextViewer>::processMessage(message, wp, lp, consumed);
 		}
 
 		namespace {

@@ -38,7 +38,7 @@ namespace ascension {
 				 * @return The returned value from the window
 				 */
 				LRESULT dispatch(HWND window, UINT message, WPARAM wp, LPARAM lp) {
-					bool dummy;
+					bool dummy = false;
 					return dispatch(window, message, wp, lp, dummy);
 				}
 
@@ -56,7 +56,7 @@ namespace ascension {
 				template<typename DefaultProcedure>
 				LRESULT dispatch(HWND window, UINT message, WPARAM wp, LPARAM lp, DefaultProcedure defaultProcedure) {
 					assert(defaultProcedure != nullptr);
-					bool consumed;
+					bool consumed = false;
 					const LRESULT result = dispatch(window, message, wp, lp, consumed);
 					if(consumed)
 						return result;
