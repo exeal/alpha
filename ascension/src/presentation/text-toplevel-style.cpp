@@ -11,6 +11,11 @@
 
 namespace ascension {
 	namespace presentation {
+		/// Creates a @c SpecifiedTextToplevelStyle and initializes the all members with the initial values.
+		SpecifiedTextToplevelStyle::SpecifiedTextToplevelStyle() {
+			boost::fusion::at_key<styles::WritingMode>(*this) = styles::WritingMode::initialValue();
+		}
+
 		/**
 		 * Computes and creates a @c ComputedTextToplevelStyle.
 		 * @param specifiedValues The "Specified Value"s of @c TextToplevelStyle properties

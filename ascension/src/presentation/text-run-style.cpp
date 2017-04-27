@@ -6,6 +6,7 @@
 
 #include <ascension/presentation/text-run-style.hpp>
 #include <boost/flyweight.hpp>
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
 
 namespace boost {
 	template<typename T>
@@ -26,6 +27,34 @@ namespace ascension {
 		const DeclaredTextRunStyle& DeclaredTextRunStyle::unsetInstance() {
 			static const DeclaredTextRunStyle SINGLETON;
 			return SINGLETON;
+		}
+
+		namespace {
+			struct Initializer {
+				template<typename Property>
+				void operator()(Property& specifiedValue) const {
+					specifiedValue = Property::first_type::initialValue();
+				}
+
+				template<typename First, typename Second>
+				void operator()(boost::fusion::pair<FlowRelativeFourSides<First>, FlowRelativeFourSides<Second>>& specifiedValues) const {
+					for(std::size_t i = 0; i < specifiedValues.second.size(); ++i)
+						specifiedValues.second[i] = First::initialValue();
+				}
+			};
+		}
+
+		/// Creates a @c SpecifiedTextRunStyle and initializes the all members with the initial values.
+		SpecifiedTextRunStyle::SpecifiedTextRunStyle() {
+			boost::fusion::for_each(colors, Initializer());
+			boost::fusion::for_each(backgroundsAndBorders, Initializer());
+			boost::fusion::for_each(basicBoxModel, Initializer());
+			boost::fusion::for_each(fonts, Initializer());
+			boost::fusion::for_each(inlineLayout, Initializer());
+			boost::fusion::for_each(text, Initializer());
+			boost::fusion::for_each(textDecoration, Initializer());
+			boost::fusion::for_each(writingModes, Initializer());
+			boost::fusion::for_each(auxiliary, Initializer());
 		}
 
 		namespace {
