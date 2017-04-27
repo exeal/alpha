@@ -117,37 +117,58 @@ namespace ascension {
 			}
 		}
 
+		namespace {
+			void compute(ComputedTextLineStyle& computedValues, const SpecifiedTextLineStyle& specifiedValues, const styles::Length::Context* context) {
+				styles::computeAsSpecified<styles::Direction>(specifiedValues, computedValues);
+//				styles::computeAsSpecified<styles::UnicodeBidi>(specifiedValues, computedValues);
+				styles::computeAsSpecified<styles::TextOrientation>(specifiedValues, computedValues);
+
+				computeLineHeight(
+					boost::fusion::at_key<styles::LineHeight>(specifiedValues),
+					boost::fusion::at_key<styles::LineHeight>(computedValues));
+				styles::computeAsSpecified<styles::LineBoxContain>(specifiedValues, computedValues);
+				styles::computeAsSpecified<styles::DominantBaseline>(specifiedValues, computedValues);
+				styles::computeAsSpecified<styles::BaselineShift>(specifiedValues, computedValues);
+				styles::computeAsSpecified<styles::InlineBoxAlignment>(specifiedValues, computedValues);
+
+				styles::computeAsSpecified<styles::WhiteSpace>(specifiedValues, computedValues);
+				if(context != nullptr)
+					computeTabSize(boost::fusion::at_key<styles::TabSize>(specifiedValues), *context, boost::fusion::at_key<styles::TabSize>(computedValues));
+				else
+					styles::computeAsSpecified<styles::TabSize>(specifiedValues, computedValues);
+				styles::computeAsSpecified<styles::LineBreak>(specifiedValues, computedValues);
+				styles::computeAsSpecified<styles::WordBreak>(specifiedValues, computedValues);
+				styles::computeAsSpecified<styles::OverflowWrap>(specifiedValues, computedValues);
+				styles::computeAsSpecified<styles::TextAlignment>(specifiedValues, computedValues);	// TODO: Handle 'match-parent' keyword correctly.
+				styles::computeAsSpecified<styles::TextAlignmentLast>(specifiedValues, computedValues);
+				styles::computeAsSpecified<styles::TextJustification>(specifiedValues, computedValues);
+				if(context != nullptr)
+					computeTextIndent(boost::fusion::at_key<styles::TextIndent>(specifiedValues), *context, boost::fusion::at_key<styles::TextIndent>(computedValues));
+				else
+					styles::computeAsSpecified<styles::TextIndent>(specifiedValues, computedValues);
+				styles::computeAsSpecified<styles::HangingPunctuation>(specifiedValues, computedValues);
+
+				styles::computeAsSpecified<styles::Measure>(specifiedValues, computedValues);
+
+				styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, computedValues);
+			}
+		}
+
 		/**
-		 * Computes and creates a @c ComputedTextLineStyle.
+		 * Computes and creates a @c ComputedTextLineStyle without a @c styles#Length#Context.
 		 * @param specifiedValues The "Specified Value"s of @c TextLineStyle
 		 */
 		ComputedTextLineStyle::ComputedTextLineStyle(const SpecifiedTextLineStyle& specifiedValues) {
-			styles::computeAsSpecified<styles::Direction>(specifiedValues, *this);
-//			styles::computeAsSpecified<styles::UnicodeBidi>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::TextOrientation>(specifiedValues, *this);
+			compute(*this, specifiedValues, nullptr);
+		}
 
-			computeLineHeight(
-				boost::fusion::at_key<styles::LineHeight>(specifiedValues),
-				boost::fusion::at_key<styles::LineHeight>(*this));
-			styles::computeAsSpecified<styles::LineBoxContain>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::DominantBaseline>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::BaselineShift>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::InlineBoxAlignment>(specifiedValues, *this);
-
-			styles::computeAsSpecified<styles::WhiteSpace>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::TabSize>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::LineBreak>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::WordBreak>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::OverflowWrap>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::TextAlignment>(specifiedValues, *this);	// TODO: Handle 'match-parent' keyword correctly.
-			styles::computeAsSpecified<styles::TextAlignmentLast>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::TextJustification>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::TextIndent>(specifiedValues, *this);
-			styles::computeAsSpecified<styles::HangingPunctuation>(specifiedValues, *this);
-
-			styles::computeAsSpecified<styles::Measure>(specifiedValues, *this);
-
-			styles::computeAsSpecified<styles::NumberSubstitution>(specifiedValues, *this);
+		/**
+		* Computes and creates a @c ComputedTextLineStyle.
+		* @param specifiedValues The "Specified Value"s of @c TextLineStyle
+		* @param context
+		*/
+		ComputedTextLineStyle::ComputedTextLineStyle(const SpecifiedTextLineStyle& specifiedValues, const styles::Length::Context& context) {
+			compute(*this, specifiedValues, &context);
 		}
 
 		namespace {

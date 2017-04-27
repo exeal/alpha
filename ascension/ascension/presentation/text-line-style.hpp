@@ -107,6 +107,7 @@ namespace ascension {
 			>::type,
 			private boost::equality_comparable<ComputedTextLineStyle> {
 			explicit ComputedTextLineStyle(const SpecifiedTextLineStyle& specifiedValues);
+			ComputedTextLineStyle(const SpecifiedTextLineStyle& specifiedValues, const styles::Length::Context& context);
 			BOOST_CONSTEXPR bool operator==(const ComputedTextLineStyle& other) const {
 				return boost::fusion::equal_to(*this, other);
 			}
