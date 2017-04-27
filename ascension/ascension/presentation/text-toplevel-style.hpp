@@ -66,6 +66,7 @@ namespace ascension {
 				TextToplevelStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
 			>::type,
 			private boost::equality_comparable<SpecifiedTextToplevelStyle> {
+			SpecifiedTextToplevelStyle();
 			BOOST_CONSTEXPR bool operator==(const SpecifiedTextToplevelStyle& other) const {
 				return boost::fusion::equal_to(*this, other);
 			}

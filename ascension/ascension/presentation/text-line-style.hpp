@@ -94,6 +94,7 @@ namespace ascension {
 				TextLineStyle, presentation::detail::KeyValueConverter<styles::SpecifiedValue>
 			>::type,
 			private boost::equality_comparable<SpecifiedTextLineStyle> {
+			SpecifiedTextLineStyle();
 			BOOST_CONSTEXPR bool operator==(const SpecifiedTextLineStyle& other) const {
 				return boost::fusion::equal_to(*this, other);
 			}

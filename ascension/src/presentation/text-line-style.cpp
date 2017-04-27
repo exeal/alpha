@@ -7,9 +7,24 @@
 #include <ascension/presentation/text-line-style.hpp>
 #include <ascension/presentation/text-run-style.hpp>
 #include <boost/core/null_deleter.hpp>
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
 
 namespace ascension {
 	namespace presentation {
+		namespace {
+			struct Initializer {
+				template<typename Property>
+				void operator()(Property& specifiedValue) const {
+					specifiedValue = Property::first_type::initialValue();
+				}
+			};
+		}
+
+		/// Creates a @c SpecifiedTextLineStyle and initializes the all members with the initial values.
+		SpecifiedTextLineStyle::SpecifiedTextLineStyle() {
+			boost::fusion::for_each(*this, Initializer());
+		}
+
 		namespace {
 #if 1
 			inline void computeLineHeight(

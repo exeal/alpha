@@ -159,6 +159,7 @@ namespace ascension {
 		/// "Specified Value"s of @c TextRunStyle.
 		struct SpecifiedTextRunStyle :
 				BasicTextRunStyle<styles::SpecifiedValuesOfParts>, private boost::equality_comparable<SpecifiedTextRunStyle> {
+			SpecifiedTextRunStyle();
 			BOOST_CONSTEXPR bool operator==(const SpecifiedTextRunStyle& other) const {
 				return static_cast<const BasicTextRunStyle<styles::SpecifiedValuesOfParts>&>(*this) == other;
 			}
