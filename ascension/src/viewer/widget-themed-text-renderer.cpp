@@ -66,9 +66,13 @@ namespace ascension {
 			std::unique_ptr<presentation::ComputedStyledTextRunIterator>,
 			const presentation::ComputedTextRunStyle&
 		> WidgetThemedTextRenderer::buildStylesForLineLayout(Index line, const graphics::RenderingContext2D& renderingContext) const {
+			const presentation::styles::Length::Context lengthContext(*strategy().renderingContext(), strategy().lengthContextViewport());
 			static presentation::ComputedTextToplevelStyle toplevel((presentation::SpecifiedTextToplevelStyle()));
-			static presentation::ComputedTextLineStyle lines((presentation::SpecifiedTextLineStyle()));
+			static presentation::ComputedTextLineStyle lines(presentation::SpecifiedTextLineStyle(), lengthContext);
 			static presentation::ComputedTextRunStyle runs;
+
+			static const presentation::SpecifiedTextRunStyle defaultTextRunStyle;
+			runs = presentation::ComputedTextRunStyle(std::make_tuple(&defaultTextRunStyle, presentation::styles::HANDLE_AS_ROOT));
 
 			boost::fusion::at_key<presentation::styles::WritingMode>(toplevel) = blockFlowDirection();
 			boost::fusion::at_key<presentation::styles::Direction>(lines) = inlineFlowDirection();
