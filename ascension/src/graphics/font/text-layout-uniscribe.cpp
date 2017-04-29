@@ -1164,7 +1164,7 @@ namespace ascension {
 
 					const std::unique_ptr<const FontMetrics<Scalar>> fontMetrics(context.fontMetrics(glyphs_->font.get().font()));
 					const auto tabExpander(makeFixedWidthTabExpander(tabSize, *fontMetrics, lengthContext));
-					glyphs_->advances[0] = static_cast<int>(tabExpander.get().nextTabStop(ipd, boost::const_begin(*this) - layoutString.data()));
+					glyphs_->advances[0] = static_cast<int>(tabExpander.get().nextTabStop(ipd, boost::const_begin(*this) - layoutString.data()) - ipd);
 					if(maximumMeasure != boost::none)
 						glyphs_->advances[0] = std::min(glyphs_->advances[0], static_cast<int>(boost::get(maximumMeasure)));
 					justified_ = false;
