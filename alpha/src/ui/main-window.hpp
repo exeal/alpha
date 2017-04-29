@@ -60,7 +60,7 @@ namespace alpha {
 			void onToolExecuteCommand();
 			void onTimer(UINT_PTR timerID, TIMERPROC procedure);
 			// ascension.win32.CustomControl
-			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
+			LRESULT processMessage(ascension::win32::WindowMessageEvent& event) override;
 			void realized(const Type& type) override;
 			void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 #endif

@@ -122,7 +122,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
+				LRESULT processMessage(win32::WindowMessageEvent& event) override;
 				void setFont(const HFONT newFont);
 				void updateDefaultFont();
 				HFONT defaultFont_;

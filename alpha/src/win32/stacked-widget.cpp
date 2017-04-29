@@ -68,14 +68,13 @@ namespace alpha {
 		}
 	
 		/// @see ascension#win32#CustomControl#processMessage
-		LRESULT StackedWidget::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
-			switch(message) {
+		LRESULT StackedWidget::processMessage(ascension::win32::WindowMessageEvent& event) {
+			switch(event.message()) {
 				case WM_SETFOCUS: {
 					auto child(currentWidget());
 					if(child.handle().get() != nullptr) {
 						ascension::viewer::widgetapi::setFocus(child);
-						consumed = true;
-						return 0l;
+						return event.consume(), 0l;
 					}
 					break;
 				}
@@ -91,8 +90,7 @@ namespace alpha {
 								if(isVerticallyHomogeneous())
 									ascension::graphics::geometry::range<1>(bounds) = ascension::graphics::geometry::range<1>(thisBounds);
 								ascension::viewer::widgetapi::setBounds(child, bounds);
-								consumed = true;
-								return 0l;
+								return event.consume(), 0l;
 							}
 						}
 					}
@@ -103,15 +101,15 @@ namespace alpha {
 							ascension::viewer::widgetapi::setBounds(child,
 								ascension::graphics::geometry::make<ascension::graphics::Rectangle>(
 									boost::geometry::make_zero<ascension::graphics::Point>(),
-									ascension::graphics::Dimension(LOWORD(lp), HIWORD(lp))));
-							return (consumed = true), 0l;
+									ascension::graphics::Dimension(LOWORD(event.lp()), HIWORD(event.lp()))));
+							return event.consume(), 0l;
 						}
 					}
 #endif
 					break;
 			}
 
-			return ascension::win32::CustomControl<StackedWidget>::processMessage(message, wp, lp, consumed);
+			return ascension::win32::CustomControl<StackedWidget>::processMessage(event);
 		}
 
 		/**

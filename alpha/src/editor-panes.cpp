@@ -225,13 +225,13 @@ namespace alpha {
 #endif
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-	LRESULT EditorPanes::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
-		if(message == WM_SETFOCUS) {
+	LRESULT EditorPanes::processMessage(ascension::win32::WindowMessageEvent& event) {
+		if(event.message() == WM_SETFOCUS) {
 			ascension::viewer::widgetapi::setFocus(activePane());
-			consumed = true;
+			event.consume();
 			return 0l;
 		}
-		return detail::Paned::processMessage(message, wp, lp, consumed);
+		return detail::Paned::processMessage(event);
 	}
 
 	void EditorPanes::realized(const Type& type) {

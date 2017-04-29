@@ -145,7 +145,7 @@ namespace alpha {
 		bool on_focus_in_event(GdkEventFocus* event) override;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		// ascension.win32.CustomControl
-		LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
+		LRESULT processMessage(ascension::win32::WindowMessageEvent& event) override;
 		void realized(const Type& type) override;
 #endif
 

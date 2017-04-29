@@ -322,7 +322,7 @@ namespace ascension {
 			virtual void onThemeChanged();
 			virtual void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
 			virtual void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
-			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
+			virtual LRESULT processMessage(win32::WindowMessageEvent& event) override;
 			virtual void windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT override;
 
 			// IDropTarget

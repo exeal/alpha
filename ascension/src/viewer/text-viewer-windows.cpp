@@ -960,11 +960,11 @@ namespace ascension {
 				return widgetapi::event::KeyInput(wp, win32::makeKeyboardModifiers());
 			}
 
-			void nativeMessage(TextViewer& self, UINT message, WPARAM wp, LPARAM lp, MSG& out) BOOST_NOEXCEPT {
+			void nativeMessage(TextViewer& self, const win32::WindowMessageEvent& event, MSG& out) BOOST_NOEXCEPT {
 				out.hwnd = self.handle().get();
-				out.message = message;
-				out.wParam = wp;
-				out.lParam = lp;
+				out.message = event.message();
+				out.wParam = event.wp();
+				out.lParam = event.lp();
 				out.time = ::GetMessageTime();
 				const auto p(::GetMessagePos());
 				out.pt.x = GET_X_LPARAM(p);
@@ -974,7 +974,7 @@ namespace ascension {
 		}
 
 		/// @see win32#Window#processMessage
-		LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+		LRESULT TextViewer::processMessage(win32::WindowMessageEvent& event) {
 #ifndef WM_UNICHAR
 			static const UINT WM_UNICHAR = 0x109;
 #endif
@@ -994,7 +994,7 @@ namespace ascension {
 #endif
 
 			LRESULT result = 0;	// should return 0 if processed almost all window messages
-			switch(message) {
+			switch(event.message()) {
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 				case WM_CLEAR:
 					if(auto caret = tryCaret(*this)) {
@@ -1003,80 +1003,87 @@ namespace ascension {
 						else
 							texteditor::commands::CharacterDeletionCommand(*this, Direction::forward())();
 					}
-					consumed = true;
+					event.consume();
 					break;
 				case WM_COPY:
 					if(auto caret = tryCaret(*this)) {
 						copySelection(*caret, true);
-						consumed = true;
+						event.consume();
 					}
 					break;
-				case WM_CREATE:
-					result = onCreate(*reinterpret_cast<CREATESTRUCTW*>(lp), consumed);
+				case WM_CREATE: {
+					bool consumed = false;
+					result = onCreate(*event.lp<CREATESTRUCTW*>(), consumed);
+					if(consumed)
+						event.consume();
 					break;
+				}
 				case WM_CUT:
 					if(auto caret = tryCaret(*this)) {
 						cutSelection(*caret, true);
-						consumed = true;
+						event.consume();
 					}
 					break;
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 				case WM_GETOBJECT:
-					if(lp == OBJID_CLIENT) {
+					if(event.lp() == OBJID_CLIENT) {
 						win32::com::SmartPointer<IAccessible> acc;
 						if(SUCCEEDED(accessibleObject(*acc.initialize())) && accLib.isAvailable())
-							return accLib.lresultFromObject(IID_IAccessible, wp, acc.get());
-					} else if(lp == OBJID_WINDOW) {
+							return accLib.lresultFromObject(IID_IAccessible, event.wp(), acc.get());
+					} else if(event.lp() == OBJID_WINDOW) {
 					}
 					return 0;
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 				case WM_GETTEXT: {
 					std::basic_ostringstream<Char> s;
 					kernel::writeDocumentToStream(s, *document(), document()->region(), text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED);
-					consumed = true;
+					event.consume();
 					return reinterpret_cast<LRESULT>(s.str().c_str());
 				}
 				case WM_GETTEXTLENGTH:
 					// ウィンドウ関係だし改行は CRLF でいいか。Newline.USE_INTRINSIC_VALUE だと遅いし
-					consumed = true;
+					event.consume();
 					return document()->length(text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED);
 //				case WM_NCPAINT:
 //					return 0;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 				case WM_PASTE:
 					texteditor::commands::PasteCommand(*this, false)();
-					consumed = true;
+					event.consume();
 					break;
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 				case WM_SETTEXT:
 					if(auto caret = tryCaret(*this)) {
 						texteditor::commands::EntireDocumentSelectionCreationCommand(*this)();
-						caret->replaceSelection(String(reinterpret_cast<const Char*>(lp)), false);
-						consumed = true;
+						caret->replaceSelection(String(event.lp<const Char*>()), false);
+						event.consume();
 					}
 					break;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 				case WM_UNDO:
 					texteditor::commands::UndoCommand(*this, false)();
-					consumed = true;
+					event.consume();
 					break;
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 					// dispatch message into handler
-				case WM_CAPTURECHANGED:
-					onCaptureChanged(win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
+				case WM_CAPTURECHANGED: {
+					bool consumed = false;
+					onCaptureChanged(win32::Handle<HWND>(event.lp<HWND>()), consumed);
 					if(consumed)
-						return 0;
+						event.consume();
 					break;
+				}
 				case WM_CHAR:
 				case WM_SYSCHAR:
 				case WM_UNICHAR:
-					if(message == WM_UNICHAR && wp == UNICODE_NOCHAR)
+					if(event.message() == WM_UNICHAR && event.wp() == UNICODE_NOCHAR)
 						return TRUE;
 					else if(auto caret = tryCaret(*this)) {
-						consumed = texteditor::commands::CharacterInputCommand(*this, wp)() != 0;
+						if(texteditor::commands::CharacterInputCommand(*this, event.wp())() != 0)
+							event.consume();
 						// vanish the cursor when the GUI user began typing
-						if(consumed) {
+						if(event.isConsumed()) {
 							// ignore if the cursor is not over a window belongs to the same thread
 							HWND pointedWindow = ::WindowFromPoint(toNative<POINT>(widgetapi::Cursor::position()));
 							if(pointedWindow != nullptr
@@ -1085,30 +1092,42 @@ namespace ascension {
 						}
 					}
 					break;
-				case WM_COMMAND:
-					onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
-					break;
-				case WM_CONTEXTMENU: {
-					const widgetapi::event::LocatedUserInput input(win32::makeMouseLocation<graphics::Point>(lp), widgetapi::event::MouseButtons(), win32::makeKeyboardModifiers());
-					MSG native;
-					nativeMessage(*this, message, wp, lp, native);
-					showContextMenu(input, &native);
-					consumed = true;
+				case WM_COMMAND: {
+					bool consumed = false;
+					onCommand(LOWORD(event.wp()), HIWORD(event.wp()), win32::Handle<HWND>(event.lp<HWND>()), consumed);
+					if(consumed)
+						event.consume();
 					break;
 				}
-				case WM_DESTROY:
-					onDestroy(consumed);
+				case WM_CONTEXTMENU: {
+					const widgetapi::event::LocatedUserInput input(win32::makeMouseLocation<graphics::Point>(event.lp()), widgetapi::event::MouseButtons(), win32::makeKeyboardModifiers());
+					MSG native;
+					nativeMessage(*this, event, native);
+					showContextMenu(input, &native);
+					event.consume();
 					break;
-				case WM_ERASEBKGND:
-					onEraseBkgnd(win32::Handle<HDC>(reinterpret_cast<HDC>(wp)), consumed);
-					return consumed ? TRUE : FALSE;
+				}
+				case WM_DESTROY: {
+					bool consumed = false;
+					onDestroy(consumed);
+					if(consumed)
+						event.consume();
+					break;
+				}
+				case WM_ERASEBKGND: {
+					bool consumed = false;
+					onEraseBkgnd(win32::Handle<HDC>(event.wp<HDC>()), consumed);
+					if(consumed)
+						event.consume();
+					return event.isConsumed() ? TRUE : FALSE;
+				}
 				case WM_GETFONT:
 					result = reinterpret_cast<LRESULT>(onGetFont().get());
-					consumed = true;
+					event.consume();
 					break;
 				case WM_HSCROLL:
-					onHScroll(LOWORD(wp), HIWORD(wp), win32::borrowed(reinterpret_cast<HWND>(lp)));
-					consumed = true;
+					onHScroll(LOWORD(event.wp()), HIWORD(event.wp()), win32::borrowed(event.lp<HWND>()));
+					event.consume();
 					break;
 //				case WM_INPUTLANGCHANGE:
 //					if(auto caret = tryCaret(*this))
@@ -1116,8 +1135,8 @@ namespace ascension {
 //					break;
 				case WM_IME_COMPOSITION: {
 					MSG native;
-					nativeMessage(*this, message, wp, lp, native);
-					if((lp & GCS_RESULTSTR) != 0) {	// completed
+					nativeMessage(*this, event, native);
+					if((event.lp() & GCS_RESULTSTR) != 0) {	// completed
 						if(auto im = win32::inputMethod(*this)) {
 							auto nbytes = ::ImmGetCompositionStringW(im.get(), GCS_RESULTSTR, nullptr, 0);
 							if(nbytes > 0) {
@@ -1127,18 +1146,18 @@ namespace ascension {
 								if(nbytes > 0) {
 									auto e(widgetapi::event::ConstantInputMethodEvent::createCompletedInstance(&native, String(win32::wideString<const Char>(buffer.get()))));
 									handleInputMethodEvent(e);
-									if(consumed = e.isConsumed())
-										return 0L;	// block WM_CHARs
+									if(e.isConsumed())
+										event.consume();	// block WM_CHARs
 								}
 							}
 						}
-					} else if((lp & (GCS_COMPSTR | CS_INSERTCHAR)) != 0)	// changed
+					} else if((event.lp() & (GCS_COMPSTR | CS_INSERTCHAR)) != 0)	// changed
 						;
 					break;
 				}
 				case WM_IME_ENDCOMPOSITION: {
 					MSG native;
-					nativeMessage(*this, message, wp, lp, native);
+					nativeMessage(*this, event, native);
 					handleInputMethodEvent(widgetapi::event::ConstantInputMethodEvent::createCanceledInstance(&native));
 					break;
 				}
@@ -1146,146 +1165,154 @@ namespace ascension {
 					break;
 				case WM_IME_STARTCOMPOSITION: {
 					MSG native;
-					nativeMessage(*this, message, wp, lp, native);
+					nativeMessage(*this, event, native);
 					handleInputMethodEvent(widgetapi::event::ConstantInputMethodEvent::createStartedInstance(&native));
 					break;
 				}
 				case WM_KEYDOWN:
 				case WM_SYSKEYDOWN: {
-					auto e(makeKeyInput(wp, lp));
+					auto e(makeKeyInput(event.wp(), event.lp()));
 					keyPressed(e);
-					consumed = e.isConsumed();
+					if(e.isConsumed())
+						event.consume();
 					break;
 				}
 				case WM_KEYUP:
 				case WM_SYSKEYUP: {
-					auto e(makeKeyInput(wp, lp));
+					auto e(makeKeyInput(event.wp(), event.lp()));
 					keyReleased(e);
-					consumed = e.isConsumed();
+					if(e.isConsumed())
+						event.consume();
 					break;
 				}
 				case WM_KILLFOCUS:
 					focusAboutToBeLost(widgetapi::event::Event());
-					consumed = true;
+					event.consume();
 					break;
 				case WM_LBUTTONDBLCLK:
-					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, wp, lp));
-					consumed = true;
+					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, event.wp(), event.lp()));
+					event.consume();
 					break;
 				case WM_LBUTTONDOWN:
-					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, wp, lp));
-					consumed = true;
+					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, event.wp(), event.lp()));
+					event.consume();
 					break;
 				case WM_LBUTTONUP:
-					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, wp, lp));
-					consumed = true;
+					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, event.wp(), event.lp()));
+					event.consume();
 					break;
 				case WM_MBUTTONDBLCLK:
-					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, wp, lp));
-					consumed = true;
+					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, event.wp(), event.lp()));
+					event.consume();
 					break;
 				case WM_MBUTTONDOWN:
-					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, wp, lp));
-					consumed = true;
+					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, event.wp(), event.lp()));
+					event.consume();
 					break;
 				case WM_MBUTTONUP:
-					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, wp, lp));
-					consumed = true;
+					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, event.wp(), event.lp()));
+					event.consume();
 					break;
 				case WM_MOUSEMOVE:
-					fireMouseMoved(win32::makeLocatedUserInput(wp, win32::makeMouseLocation<graphics::Point>(lp))), 0;
-					consumed = true;
+					fireMouseMoved(win32::makeLocatedUserInput(event.wp(), win32::makeMouseLocation<graphics::Point>(event.lp()))), 0;
+					event.consume();
 					break;
 				case WM_MOUSEWHEEL:
 				case WM_MOUSEHWHEEL:
 					return
-						(consumed = true),
+						event.consume(),
 						fireMouseWheelChanged(widgetapi::event::MouseWheelInput(
-							widgetapi::mapFromGlobal(*this, win32::makeMouseLocation<graphics::Point>(lp)),
-							fromNative<widgetapi::event::MouseButtons>(GET_KEYSTATE_WPARAM(wp)),
-							fromNative<widgetapi::event::KeyboardModifiers>(GET_KEYSTATE_WPARAM(wp)),
+							widgetapi::mapFromGlobal(*this, win32::makeMouseLocation<graphics::Point>(event.lp())),
+							fromNative<widgetapi::event::MouseButtons>(GET_KEYSTATE_WPARAM(event.wp())),
+							fromNative<widgetapi::event::KeyboardModifiers>(GET_KEYSTATE_WPARAM(event.wp())),
 							graphics::geometry::BasicDimension<double>(
-								graphics::geometry::_dx = (message == WM_MOUSEHWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0,
-								graphics::geometry::_dy = (message == WM_MOUSEWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0))),
+								graphics::geometry::_dx = (event.message() == WM_MOUSEHWHEEL) ? GET_WHEEL_DELTA_WPARAM(event.wp()) : 0,
+								graphics::geometry::_dy = (event.message() == WM_MOUSEWHEEL) ? GET_WHEEL_DELTA_WPARAM(event.wp()) : 0))),
 						0;
 				case WM_NCCREATE:
-					return (consumed = true), onNcCreate(*reinterpret_cast<CREATESTRUCTW*>(lp));
-				case WM_NOTIFY:
-					return onNotify(static_cast<int>(wp), *reinterpret_cast<NMHDR*>(lp), consumed), 0;
+					return event.consume(), onNcCreate(*event.lp<CREATESTRUCTW*>());
+				case WM_NOTIFY: {
+					bool dummy = false;
+					return onNotify(static_cast<int>(event.wp()), *event.lp<NMHDR*>(), dummy), 0;
+				}
 				case WM_PAINT: {
 					PAINTSTRUCT ps;
 					::BeginPaint(handle().get(), &ps);
-					consumed = true;
+					event.consume();
 					const auto dc(win32::borrowed(ps.hdc));
 					paint(graphics::PaintContext(graphics::RenderingContext2D(dc), fromNative<graphics::Rectangle>(ps.rcPaint)));
 					::EndPaint(handle().get(), &ps);
-					consumed = true;
+					event.consume();
 					break;
 				}
 				case WM_RBUTTONDBLCLK:
-					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, wp, lp));
-					consumed = true;
+					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, event.wp(), event.lp()));
+					event.consume();
 					break;
 				case WM_RBUTTONDOWN:
-					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, wp, lp));
-					consumed = true;
+					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, event.wp(), event.lp()));
+					event.consume();
 					break;
 				case WM_RBUTTONUP:
-					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, wp, lp));
-					consumed = true;
+					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, event.wp(), event.lp()));
+					event.consume();
 					break;
-				case WM_SETCURSOR:
-					onSetCursor(win32::borrowed(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
+				case WM_SETCURSOR: {
+					bool consumed = false;
+					onSetCursor(win32::borrowed(event.wp<HWND>()), LOWORD(event.lp()), HIWORD(event.lp()), consumed);
 					if(consumed)
+						event.consume();
+					if(event.isConsumed())
 						return TRUE;
 					break;
+				}
 				case WM_SETFOCUS:
 					focusGained(widgetapi::event::Event());
-					consumed = true;
+					event.consume();
 					break;
 				case WM_SIZE:
-					resized(graphics::Dimension(graphics::geometry::_dx = LOWORD(lp), graphics::geometry::_dy = HIWORD(lp)));
-					consumed = true;
+					resized(graphics::Dimension(graphics::geometry::_dx = LOWORD(event.lp()), graphics::geometry::_dy = HIWORD(event.lp())));
+					event.consume();
 					break;
 				case WM_STYLECHANGED:
-					onStyleChanged(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp));
-					consumed = true;
+					onStyleChanged(static_cast<int>(event.wp()), *event.lp<STYLESTRUCT*>());
+					event.consume();
 					break;
 				case WM_STYLECHANGING:
-					onStyleChanging(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp));
-					consumed = true;
+					onStyleChanging(static_cast<int>(event.wp()), *event.lp<STYLESTRUCT*>());
+					event.consume();
 					break;
 				case WM_SYSCOLORCHANGE:
 					onSysColorChange();
-					consumed = true;
+					event.consume();
 					break;
 				case WM_THEMECHANGED:
 					onThemeChanged();
-					consumed = true;
+					event.consume();
 					break;
 				case WM_TIMER:
-					onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<TIMERPROC>(lp));
-					consumed = true;
+					onTimer(static_cast<UINT_PTR>(event.wp()), event.lp<TIMERPROC>());
+					event.consume();
 					break;
 				case WM_VSCROLL:
-					onVScroll(LOWORD(wp), HIWORD(wp), win32::borrowed(reinterpret_cast<HWND>(lp)));
-					consumed = true;
+					onVScroll(LOWORD(event.wp()), HIWORD(event.wp()), win32::borrowed(event.lp<HWND>()));
+					event.consume();
 					break;
 				case WM_XBUTTONDBLCLK:
-					fireMouseDoubleClicked(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp));
-					consumed = true;
+					fireMouseDoubleClicked(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(event.wp()) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(event.wp()), event.lp()));
+					event.consume();
 					break;
 				case WM_XBUTTONDOWN:
-					fireMousePressed(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp));
-					consumed = true;
+					fireMousePressed(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(event.wp()) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(event.wp()), event.lp()));
+					event.consume();
 					break;
 				case WM_XBUTTONUP:
-					fireMouseReleased(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp));
-					consumed = true;
+					fireMouseReleased(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(event.wp()) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(event.wp()), event.lp()));
+					event.consume();
 					break;
 			}
 
-			return consumed ? result : win32::CustomControl<TextViewer>::processMessage(message, wp, lp, consumed);
+			return event.isConsumed() ? result : win32::CustomControl<TextViewer>::processMessage(event);
 		}
 
 		namespace {

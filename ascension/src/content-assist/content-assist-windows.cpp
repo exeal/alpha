@@ -79,8 +79,8 @@ namespace ascension {
 		}
 #endif
 
-		LRESULT DefaultContentAssistant::CompletionProposalsPopup::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
-			switch(message) {
+		LRESULT DefaultContentAssistant::CompletionProposalsPopup::processMessage(win32::WindowMessageEvent& event) {
+			switch(event.message()) {
 				case WM_DESTROY:
 					::DeleteObject(defaultFont_);
 					break;
@@ -88,20 +88,20 @@ namespace ascension {
 					ui_.complete();
 					break;
 				case WM_LBUTTONDOWN: {
-					const LRESULT item = ::SendMessageW(handle().get(), LB_ITEMFROMPOINT, 0, lp);
+					const LRESULT item = ::SendMessageW(handle().get(), LB_ITEMFROMPOINT, 0, event.lp());
 					::SendMessageW(handle().get(), LB_SETCURSEL, (HIWORD(item) == 0) ? LOWORD(item) : -1, 0);
 					break;
 				}
 				case WM_SETFOCUS:
 					::SetFocus(::GetParent(handle().get()));
-					consumed = true;
+					event.consume();
 					return 0;
 				case WM_SETTINGCHANGE:
 				case WM_THEMECHANGED:
 					updateDefaultFont();
 					break;
 			}
-			return SubclassedWindow::processMessage(message, wp, lp, consumed);
+			return SubclassedWindow::processMessage(event);
 		}
 
 		void DefaultContentAssistant::CompletionProposalsPopup::resetContent(std::shared_ptr<const CompletionProposal> proposals[], size_t numberOfProposals) {

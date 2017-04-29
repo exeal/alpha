@@ -50,16 +50,16 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				void on_realize() override {resetWidgetShape();}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override {
-					if(message == WM_PAINT) {
+				LRESULT processMessage(win32::WindowMessageEvent& event) override {
+					if(event.message() == WM_PAINT) {
 						PAINTSTRUCT ps;
 						::BeginPaint(handle().get(), &ps);
 						graphics::RenderingContext2D temp(win32::borrowed(ps.hdc));
 						paint(graphics::PaintContext(std::move(temp), fromNative<graphics::Rectangle>(ps.rcPaint)));
 						::EndPaint(handle().get(), &ps);
-						consumed = true;
+						event.consume();
 					}
-					return win32::CustomControl<AutoScrollOriginMark>::processMessage(message, wp, lp, consumed);
+					return win32::CustomControl<AutoScrollOriginMark>::processMessage(event);
 				}
 				void windowClass(win32::WindowClass& out) const BOOST_NOEXCEPT override {
 					out.name = L"AutoScrollOriginMark";
