@@ -48,10 +48,10 @@ namespace alpha {
 		}
 
 		/// @see ascension#win32#CustomControl#processMessage
-		LRESULT Container::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
-			if(message == WM_SIZE)
+		LRESULT Container::processMessage(ascension::win32::WindowMessageEvent& event) {
+			if(event.message() == WM_SIZE)
 				updatePlacement();
-			return ascension::win32::CustomControl<Container>::processMessage(message, wp, lp, consumed);
+			return ascension::win32::CustomControl<Container>::processMessage(event);
 		}
 
 		/// @internal Implementes @c #pushBack and @c #pushFront methods.

@@ -92,14 +92,11 @@ namespace ascension {
 			}
 			/**
 			 * The window procedure.
-			 * @param message The window message
-			 * @param wp The first parameter
-			 * @param lp The second parameter
-			 * @param[out] consumed
+			 * @param event The window message event
 			 * @note The default implementation calls @c DefWindowProcW.
 			 */
-			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
-				return (consumed = true), ::DefWindowProcW(handle().get(), message, wp, lp);
+			virtual LRESULT processMessage(WindowMessageEvent& event) {
+				return event.consume(), ::DefWindowProcW(handle().get(), event.message(), event.wp(), event.lp());
 			}
 			/**
 			 * This custom control was realized.

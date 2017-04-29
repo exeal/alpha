@@ -113,20 +113,24 @@ namespace alpha {
 		}
 
 		/// @see ascension#win32#CustomControl#processMessage
-		LRESULT PanedWidget::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
-			switch(message) {
-				case WM_SETCURSOR:
-					onSetCursor(reinterpret_cast<HWND>(wp), LOWORD(lp), HIWORD(lp), consumed);
+		LRESULT PanedWidget::processMessage(ascension::win32::WindowMessageEvent& event) {
+			switch(event.message()) {
+				case WM_SETCURSOR: {
+					bool consumed = false;
+					onSetCursor(event.wp<HWND>(), LOWORD(event.lp()), HIWORD(event.lp()), consumed);
 					if(consumed)
-						return TRUE;
+						return event.consume(), TRUE;
 					break;
-				case WM_SIZE:
-					onSize(wp, LOWORD(lp), HIWORD(lp), consumed);
+				}
+				case WM_SIZE: {
+					bool consumed = false;
+					onSize(event.wp(), LOWORD(event.lp()), HIWORD(event.lp()), consumed);
 					if(consumed)
-						return 0l;
+						return event.consume(), 0l;
 					break;
+				}
 			}
-			return ascension::win32::CustomControl<PanedWidget>::processMessage(message, wp, lp, consumed);
+			return ascension::win32::CustomControl<PanedWidget>::processMessage(event);
 		}
 
 		/**

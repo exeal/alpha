@@ -48,13 +48,10 @@ namespace ascension {
 			}
 			/**
 			 * Hooks and process window messages.
-			 * @param message The message
-			 * @param wp The additional message information of type @c WPARAM
-			 * @param lp The additional message information of type @c LPARAM
-			 * @param[out] consumed Set to @c true if the subclass consumed this message
+			 * @param event The window message event
 			 * @return The result of message processing
 			 */
-			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+			virtual LRESULT processMessage(WindowMessageEvent& event) {
 				return 0;
 			}
 

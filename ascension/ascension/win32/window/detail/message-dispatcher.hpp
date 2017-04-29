@@ -9,6 +9,7 @@
 
 #ifndef ASCENSION_MESSAGE_DISPATCHER_HPP
 #define ASCENSION_MESSAGE_DISPATCHER_HPP
+#include <ascension/win32/window-message-event.hpp>
 #include <ascension/win32/windows.hpp>
 #include <map>
 
@@ -38,8 +39,7 @@ namespace ascension {
 				 * @return The returned value from the window
 				 */
 				LRESULT dispatch(HWND window, UINT message, WPARAM wp, LPARAM lp) {
-					bool dummy = false;
-					return dispatch(window, message, wp, lp, dummy);
+					return dispatch(window, WindowMessageEvent(message, wp, lp));
 				}
 
 				/**
@@ -56,9 +56,9 @@ namespace ascension {
 				template<typename DefaultProcedure>
 				LRESULT dispatch(HWND window, UINT message, WPARAM wp, LPARAM lp, DefaultProcedure defaultProcedure) {
 					assert(defaultProcedure != nullptr);
-					bool consumed = false;
-					const LRESULT result = dispatch(window, message, wp, lp, consumed);
-					if(consumed)
+					WindowMessageEvent event(message, wp, lp);
+					const LRESULT result = dispatch(window, event);
+					if(event.isConsumed())
 						return result;
 					auto i(handleToObjects_.find(window));
 					assert(i != std::end(handleToObjects_));
@@ -66,17 +66,22 @@ namespace ascension {
 				}
 
 			private:
-				LRESULT dispatch(HWND window, UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
-					if(message == WM_NCCREATE) {
-						Window* const p = static_cast<Window*>(reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);
+				LRESULT dispatch(HWND window, WindowMessageEvent& event) {
+					if(event.message() == WM_NCCREATE) {
+						Window* const p = static_cast<Window*>(event.lp<CREATESTRUCTW*>()->lpCreateParams);
 						assert(p != nullptr);
 						handleToObjects_.insert(std::make_pair(window, p));
 						p->handle_.reset(window, &::DestroyWindow);
 					}
 					const auto i(handleToObjects_.find(window));
-					const auto result = (i != std::end(handleToObjects_)) ?
-						std::get<1>(*i)->processMessage(message, wp, lp, consumed) : (::DefWindowProcW(window, message, wp, lp), consumed = true);
-					if(message == WM_NCDESTROY)
+					LRESULT result;
+					if(i != std::end(handleToObjects_))
+						result = std::get<1>(*i)->processMessage(event);
+					else {
+						result = ::DefWindowProcW(window, event.message(), event.wp(), event.lp());
+						event.consume();
+					}
+					if(event.message() == WM_NCDESTROY)
 						disconnect(borrowed(window));
 					return result;
 				}

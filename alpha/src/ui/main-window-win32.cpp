@@ -231,51 +231,53 @@ namespace alpha {
 		}
 
 		/// @see ascension#win32#CustomControl#processMessage
-		LRESULT MainWindow::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
-			switch(message) {
+		LRESULT MainWindow::processMessage(ascension::win32::WindowMessageEvent& event) {
+			switch(event.message()) {
 				case WM_COPYDATA:
-					if(lp != 0l) {
-						onCopyData(ascension::win32::borrowed(reinterpret_cast<HWND>(wp)), *reinterpret_cast<const COPYDATASTRUCT*>(lp));
-						return (consumed = true), TRUE;
+					if(event.lp() != 0l) {
+						onCopyData(ascension::win32::borrowed(event.wp<HWND>()), *event.lp<const COPYDATASTRUCT*>());
+						return event.consume(), TRUE;
 					}
 					break;
 				case WM_DESTROY:
 					onDestroy();
-					return (consumed = true), 0;
+					return event.consume(), 0;
 				case WM_DRAWITEM:
-					onDrawItem(wp, *reinterpret_cast<const DRAWITEMSTRUCT*>(lp));
-					return (consumed = true), TRUE;
+					onDrawItem(event.wp(), *event.lp<const DRAWITEMSTRUCT*>());
+					return event.consume(), TRUE;
 				case WM_DROPFILES:
-					onDropFiles(ascension::win32::borrowed(reinterpret_cast<HDROP>(wp)));
-					return (consumed = true), 0;
+					onDropFiles(ascension::win32::borrowed(event.wp<HDROP>()));
+					return event.consume(), 0;
 				case WM_ENTERMENULOOP:
-					onEnterMenuLoop(ascension::win32::boole(wp));
-					return (consumed = true), 0;
+					onEnterMenuLoop(ascension::win32::boole(event.wp()));
+					return event.consume(), 0;
 				case WM_EXITMENULOOP:
-					onExitMenuLoop(ascension::win32::boole(wp));
-					return (consumed = true), 0;
+					onExitMenuLoop(ascension::win32::boole(event.wp()));
+					return event.consume(), 0;
 				case WM_MEASUREITEM:
-					onMeasureItem(wp, *reinterpret_cast<MEASUREITEMSTRUCT*>(lp));
-					return (consumed = true), TRUE;
+					onMeasureItem(event.wp(), *event.lp<MEASUREITEMSTRUCT*>());
+					return event.consume(), TRUE;
 				case WM_MENUCHAR:
-					return (consumed = true), onMenuChar(LOWORD(wp), HIWORD(wp), ascension::win32::borrowed(reinterpret_cast<HMENU>(lp)));
-				case WM_SETCURSOR:
-					onSetCursor(ascension::win32::borrowed(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
+					return event.consume(), onMenuChar(LOWORD(event.wp()), HIWORD(event.wp()), ascension::win32::borrowed(event.lp<HMENU>()));
+				case WM_SETCURSOR: {
+					bool consumed = false;
+					onSetCursor(ascension::win32::borrowed(event.wp<HWND>()), LOWORD(event.lp()), HIWORD(event.lp()), consumed);
 					if(consumed)
-						return TRUE;
+						return event.consume(), TRUE;
 					break;
+				}
 				case WM_SETFOCUS:
-					onSetFocus(ascension::win32::borrowed(reinterpret_cast<HWND>(wp)));
-					return (consumed = true), 0;
+					onSetFocus(ascension::win32::borrowed(event.wp<HWND>()));
+					return event.consume(), 0;
 				case WM_SIZE:
-					onSize(wp, LOWORD(lp), HIWORD(lp));
-					return (consumed = true), 0;
+					onSize(event.wp(), LOWORD(event.lp()), HIWORD(event.lp()));
+					return event.consume(), 0;
 				case WM_TIMER:
-					onTimer(wp, reinterpret_cast<TIMERPROC>(lp));
-					return (consumed = true), 0;
+					onTimer(event.wp(), event.lp<TIMERPROC>());
+					return event.consume(), 0;
 			}
 
-			return ascension::win32::CustomControl<MainWindow>::processMessage(message, wp, lp, consumed);
+			return ascension::win32::CustomControl<MainWindow>::processMessage(event);
 		}
 
 		/// @see ascension#win32#CustomControl#realized

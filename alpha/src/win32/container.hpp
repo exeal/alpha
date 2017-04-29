@@ -63,7 +63,7 @@ namespace alpha {
 		protected:
 			explicit Container(bool horizontal);
 			// ascension.win32.CustomControl
-			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) override;
+			virtual LRESULT processMessage(ascension::win32::WindowMessageEvent& event) override;
 			virtual void windowClass(ascension::win32::WindowClass& out) const BOOST_NOEXCEPT override;
 
 		private:
