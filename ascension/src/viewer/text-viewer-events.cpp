@@ -268,8 +268,8 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_TAB:
 #endif
-					if(input.modifiers().none())
-						texteditor::commands::CharacterInputCommand(*this, 0x0009u)();
+//					if(input.modifiers().none())
+//						texteditor::commands::CharacterInputCommand(*this, 0x0009u)();
 					break;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Clear:
