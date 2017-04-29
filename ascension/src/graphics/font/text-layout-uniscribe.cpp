@@ -3264,7 +3264,7 @@ namespace ascension {
 //						expandTabsWithoutWrapping();
 					} else {
 						const auto textJustification(boost::fusion::at_key<presentation::styles::TextJustification>(style()));
-						const bool justifyRuns = textJustification != TextJustification::NONE;
+						const bool justifyRuns = boost::fusion::at_key<presentation::styles::TextAlignment>(style()) == TextAlignment::JUSTIFY && textJustification != TextJustification::NONE;
 						// 5-1. expand horizontal tabs and wrap into lines
 						runs_.reserve(boost::size(textRuns));
 						BOOST_FOREACH(TextRunImpl* run, textRuns) {
