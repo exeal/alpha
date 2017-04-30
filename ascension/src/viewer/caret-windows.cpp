@@ -12,6 +12,8 @@
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/graphics/font/font.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/geometry/native-conversions.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
@@ -77,14 +79,33 @@ namespace ascension {
 				return;
 			if(auto imc = win32::inputMethod(textArea().textViewer())) {
 				// composition window placement
+				const auto p(TextHit::leading(*boost::const_begin(selectedRegion())));
 				COMPOSITIONFORM cf;
 				cf.rcArea = toNative<RECT>(textArea().contentRectangle());
 				cf.dwStyle = CFS_POINT;
-				cf.ptCurrentPos = toNative<POINT>(modelToView(textArea().textViewer(), TextHit::leading(*boost::const_begin(selectedRegion())) /*, false */));
-				if(cf.ptCurrentPos.y == std::numeric_limits<graphics::Scalar>::max() || cf.ptCurrentPos.y == std::numeric_limits<graphics::Scalar>::min())
-					cf.ptCurrentPos.y = (cf.ptCurrentPos.y == std::numeric_limits<graphics::Scalar>::min()) ? cf.rcArea.top : cf.rcArea.bottom;
-				else
-					cf.ptCurrentPos.y = std::max(cf.ptCurrentPos.y, cf.rcArea.top);
+				cf.ptCurrentPos = toNative<POINT>(modelToView(textArea().textViewer(), p /*, false */));
+				const auto& layout = textArea().textRenderer()->layouts().at(kernel::line(insertionPosition(document(), p)), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);
+				if(presentation::isHorizontal(graphics::font::writingMode(layout))) {
+					if(cf.ptCurrentPos.y == std::numeric_limits<graphics::Scalar>::min())
+						cf.ptCurrentPos.y = cf.rcArea.top;
+					else if(cf.ptCurrentPos.y == std::numeric_limits<graphics::Scalar>::max())
+						cf.ptCurrentPos.y = cf.rcArea.bottom;
+					else {
+						const auto c = kernel::offsetInLine(p.characterIndex());
+						const auto lm(layout.lineMetrics(layout.lineAt(p.isLeadingEdge() ? graphics::font::TextHit<>::leading(c) : graphics::font::TextHit<>::trailing(c))));
+						cf.ptCurrentPos.y -= static_cast<LONG>(lm.ascent());
+					}
+				} else {
+					if(cf.ptCurrentPos.x == std::numeric_limits<graphics::Scalar>::min())
+						cf.ptCurrentPos.x = cf.rcArea.left;
+					else if(cf.ptCurrentPos.x == std::numeric_limits<graphics::Scalar>::max())
+						cf.ptCurrentPos.x = cf.rcArea.right;
+					else {
+						const auto c = kernel::offsetInLine(p.characterIndex());
+						const auto lm(layout.lineMetrics(layout.lineAt(p.isLeadingEdge() ? graphics::font::TextHit<>::leading(c) : graphics::font::TextHit<>::trailing(c))));
+						cf.ptCurrentPos.x -= static_cast<LONG>((presentation::resolveTextOrientation(graphics::font::writingMode(layout)) != presentation::SIDEWAYS_LEFT) ? lm.descent() : lm.ascent());
+					}
+				}
 				::ImmSetCompositionWindow(imc.get(), &cf);
 				cf.dwStyle = CFS_RECT;
 				::ImmSetCompositionWindow(imc.get(), &cf);
