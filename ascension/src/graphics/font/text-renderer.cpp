@@ -164,8 +164,6 @@ namespace ascension {
 				layouts_.reset(new LineLayoutVector(document,
 					std::bind(&TextRenderer::generateLineLayout, this, std::placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 //				viewport_ = detail::createTextViewport(*this);
-	//			updateDefaultFont();
-	//			assert(defaultFont_.get() != nullptr);
 //				presentation::FlowRelativeFourSides<presentation::styles::Length> zeroSpaces;
 //				zeroSpaces.fill(presentation::styles::Length(0));
 //				spacePainter_->update(*this, initialSize, zeroSpaces);
@@ -517,7 +515,7 @@ namespace ascension {
 			}
 
 			/// @internal Updates the @c defaultFont_.
-			inline void TextRenderer::updateDefaultFont() {
+			void TextRenderer::updateDefaultFont() {
 				auto newFont(newDefaultFont());
 				if(newFont.get() == nullptr) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)

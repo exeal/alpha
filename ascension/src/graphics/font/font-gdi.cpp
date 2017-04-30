@@ -379,7 +379,20 @@ namespace ascension {
 		namespace font {
 			template<> FontDescription _fromNative<font::FontDescription>(const LOGFONTW& object, const FontDescription* /* = nullptr */) {
 				const String familyName(object.lfFaceName, object.lfFaceName + std::wcslen(object.lfFaceName));
-				return FontDescription(FontFamily(familyName), -object.lfHeight * 72 / defaultDpiY(),
+				double characterHeight;	// see https://support.microsoft.com/en-us/help/74299/info-calculating-the-logical-height-and-point-size-of-a-font
+				if(object.lfHeight < 0)
+					characterHeight = -object.lfHeight;
+				else {
+					auto dc(win32::detail::screenDC());
+					auto font(win32::makeHandle(::CreateFontIndirectW(&object), &::DeleteObject));
+					auto oldFont(win32::borrowed(static_cast<HFONT>(::SelectObject(dc.get(), font.get()))));
+					TEXTMETRICW tm;
+					if(!win32::boole(::GetTextMetricsW(dc.get(), &tm)))
+						throw makePlatformError();
+					::SelectObject(dc.get(), oldFont.get());
+					characterHeight = tm.tmHeight - tm.tmInternalLeading;
+				}
+				return FontDescription(FontFamily(familyName), characterHeight * 72 / defaultDpiY(),
 					FontProperties(static_cast<FontWeight>(object.lfWeight),
 						FontStretch::NORMAL, win32::boole(object.lfItalic) ? FontStyle::ITALIC : FontStyle::NORMAL));
 			}

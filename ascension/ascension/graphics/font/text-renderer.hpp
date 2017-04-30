@@ -148,6 +148,8 @@ namespace ascension {
 
 			/// Returns the primary font. The returned value can't be @c null.
 			inline std::shared_ptr<const Font> TextRenderer::defaultFont() const BOOST_NOEXCEPT {
+				if(defaultFont_ == nullptr)
+					const_cast<TextRenderer*>(this)->updateDefaultFont();
 				return defaultFont_;
 			}
 
