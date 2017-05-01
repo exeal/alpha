@@ -157,7 +157,7 @@ namespace ascension {
 		}
 
 		void DefaultContentAssistant::CompletionProposalsPopup::setWritingMode(const presentation::WritingMode& writingMode) {
-			LONG_PTR style = ::GetWindowLongPtrW(handle().get(), GWL_EXSTYLE);
+			auto style = win32::getWindowLong(handle().get(), GWL_EXSTYLE);
 			if(writingMode.inlineFlowDirection == presentation::LEFT_TO_RIGHT) {
 				style &= ~(WS_EX_LAYOUTRTL | WS_EX_RTLREADING);
 				style |= WS_EX_LTRREADING;
@@ -166,7 +166,7 @@ namespace ascension {
 				style &= ~WS_EX_LTRREADING;
 				style |= WS_EX_LAYOUTRTL | WS_EX_RTLREADING;
 			}
-			::SetWindowLongPtrW(handle().get(), GWL_EXSTYLE, style);
+			win32::setWindowLong(handle().get(), GWL_EXSTYLE, style);
 			// TODO: Change the orientation.
 		}
 

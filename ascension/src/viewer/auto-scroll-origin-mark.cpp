@@ -253,8 +253,8 @@ namespace ascension {
 			// TODO: Implement by using [NSWindow setBackgroundColor:[NSColor clearColor]] and [NSWindow setOpaque:NO].
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// calling CreateWindowExW with WS_EX_LAYERED will fail on NT 4.0
-			::SetWindowLongW(handle().get(), GWL_EXSTYLE,
-				::GetWindowLongW(handle().get(), GWL_EXSTYLE) | WS_EX_LAYERED);
+			win32::setWindowLong(handle().get(), GWL_EXSTYLE,
+				win32::getWindowLong(handle().get(), GWL_EXSTYLE) | WS_EX_LAYERED);
 			::SetLayeredWindowAttributes(handle().get(), maskColor_ = ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
 //			win32::Handle<HRGN> rgn(::CreateEllipticRgn(0, 0, width_ + 1, width_ + 1), &::DeleteObject);
 //			::SetWindowRgn(asNativeObject().get(), rgn.get(), true);

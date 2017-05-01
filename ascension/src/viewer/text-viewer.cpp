@@ -624,7 +624,7 @@ namespace ascension {
 							set_direction((direction == presentation::LEFT_TO_RIGHT) ? Gtk::TEXT_DIR_LTR : Gtk::TEXT_DIR_RTL);
 //						set_placement();
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-						LONG style = ::GetWindowLongW(handle().get(), GWL_EXSTYLE);
+						auto style = win32::getWindowLong(handle().get(), GWL_EXSTYLE);
 						if(direction == presentation::LEFT_TO_RIGHT) {
 							style &= ~(WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
 							style |= WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR;
@@ -632,7 +632,7 @@ namespace ascension {
 							style &= ~(WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR);
 							style |= WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR;
 						}
-						::SetWindowLongW(handle().get(), GWL_EXSTYLE, style);
+						win32::setWindowLong(handle().get(), GWL_EXSTYLE, style);
 #endif
 					}
 				}

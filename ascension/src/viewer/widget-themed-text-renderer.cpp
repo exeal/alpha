@@ -145,7 +145,7 @@ namespace ascension {
 				}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				const auto style = ::GetWindowLongPtrW(widget->handle().get(), GWL_EXSTYLE);
+				const auto style = win32::getWindowLong(widget->handle().get(), GWL_EXSTYLE);
 				if(style != 0) {
 					static_assert(WS_EX_LTRREADING == 0, "");
 //					static_assert(WS_EX_LAYOUTLTR == 0, "");
@@ -215,7 +215,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			assert(blockFlowDirection() == presentation::HORIZONTAL_TB);
-			const auto style = ::GetWindowLongPtrW(textViewer_.handle().get(), GWL_EXSTYLE);
+			const auto style = win32::getWindowLong(textViewer_.handle().get(), GWL_EXSTYLE);
 			bool normal = true;
 			if((style & WS_EX_RIGHT) != 0)
 				normal = !normal;

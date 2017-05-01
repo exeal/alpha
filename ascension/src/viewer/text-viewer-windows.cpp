@@ -568,7 +568,7 @@ namespace ascension {
 			toolTip_.reset(::CreateWindowExW(
 				WS_EX_TOOLWINDOW | WS_EX_TOPMOST, TOOLTIPS_CLASSW, 0, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
 				CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, handle().get(), nullptr,
-				reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(handle().get(), GWLP_HINSTANCE))), nullptr),
+				reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(win32::getWindowLong(handle().get(), GWLP_HINSTANCE))), nullptr),
 				&::DestroyWindow);
 			if(toolTip_.get() != nullptr) {
 				auto ti(win32::makeZeroSize<TOOLINFOW>());
@@ -852,8 +852,8 @@ namespace ascension {
 
 		/// @see WM_NCCREATE
 		bool TextViewer::onNcCreate(CREATESTRUCTW&) {
-			const LONG s = ::GetWindowLongW(handle().get(), GWL_EXSTYLE);
-			::SetWindowLongW(handle().get(), GWL_EXSTYLE, s & ~WS_EX_LAYOUTRTL);
+			const auto s = win32::getWindowLong(handle().get(), GWL_EXSTYLE);
+			win32::setWindowLong(handle().get(), GWL_EXSTYLE, s & ~WS_EX_LAYOUTRTL);
 			return true;
 		}
 

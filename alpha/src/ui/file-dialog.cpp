@@ -171,7 +171,7 @@ namespace {
 				if(!e::Encoder::supports(format.first) && e::EncodingDetector::forName(format.first) == 0) {
 					// reject for invalid encoding name
 					Alpha::instance().messageBox(MSG_IO__UNSUPPORTED_ENCODING, MB_OK | MB_ICONEXCLAMATION);
-					::SetWindowLongPtrW(window, DWLP_MSGRESULT, true);
+					ascension::win32::setWindowLong(window, DWLP_MSGRESULT, true);
 					return true;
 				}
 				if(newlineCombobox.isWindow()) {
