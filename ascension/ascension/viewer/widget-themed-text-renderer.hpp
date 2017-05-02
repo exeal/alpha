@@ -27,6 +27,8 @@ namespace ascension {
 			// graphics.font.TextRenderer
 			graphics::Color actualLineBackgroundColor(const graphics::font::TextLayout& layout) const BOOST_NOEXCEPT override;
 			std::shared_ptr<const graphics::font::Font> newDefaultFont() const BOOST_NOEXCEPT override;
+			// graphics.font.TextRenderer
+			virtual std::shared_ptr<const graphics::Paint> actualBackground() const BOOST_NOEXCEPT override;
 			// graphics.font.StandardTextRenderer
 			virtual std::tuple<
 				const presentation::ComputedTextToplevelStyle&,

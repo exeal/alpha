@@ -32,6 +32,7 @@ namespace ascension {
 	}
 
 	namespace graphics {
+		class Paint;
 		class PaintContext;
 		template<typename T> class PhysicalFourSides;
 		class RenderingContext2D;
@@ -112,6 +113,7 @@ namespace ascension {
 
 			protected:
 				TextRenderer(kernel::Document& document, const Dimension& initialSize);
+				virtual std::shared_ptr<const Paint> actualBackground() const BOOST_NOEXCEPT = 0;
 				virtual Color actualLineBackgroundColor(const TextLayout& layout) const BOOST_NOEXCEPT = 0;
 				virtual std::shared_ptr<const Font> newDefaultFont() const BOOST_NOEXCEPT = 0;
 

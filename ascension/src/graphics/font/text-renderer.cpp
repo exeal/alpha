@@ -192,9 +192,17 @@ namespace ascension {
 			}
 
 			/**
+			 * @fn ascension::graphics::font::TextRenderer::actualBackground
+			 * Returns the fill style used to paint the background.
+			 * @return A @c Paint object describes the fill style to paint the background
+			 * @see #actualLineBackgroundColor, #paint
+			 */
+
+			/**
 			 * @fn ascension::graphics::font::TextRenderer::actualLineBackgroundColor
 			 * Returns the "Actual Value" of background color of the specified line.
 			 * @param layout The line layout
+			 * @see #actualBackground
 			 */
 
 			/**
@@ -232,11 +240,6 @@ namespace ascension {
 			 * Returns the computed block-flow-direction.
 			 */
 
-			/// Returns the @c DefaultFontChangedSignal signal connector.
-			SignalConnector<TextRenderer::DefaultFontChangedSignal> TextRenderer::defaultFontChangedSignal() BOOST_NOEXCEPT {
-				return makeSignalConnector(defaultFontChangedSignal_);
-			}
-
 			/**
 			 * @fn ascension::graphics::font::TextRenderer::createLineLayout
 			 * Creates and returns the text layout for the specified line.
@@ -244,6 +247,11 @@ namespace ascension {
 			 * @return The generated line layout
 			 * @see #buildLineLayoutConstructionParameters
 			 */
+
+			/// Returns the @c DefaultFontChangedSignal signal connector.
+			SignalConnector<TextRenderer::DefaultFontChangedSignal> TextRenderer::defaultFontChangedSignal() BOOST_NOEXCEPT {
+				return makeSignalConnector(defaultFontChangedSignal_);
+			}
 
 			/// @internal Calls @c #createLineLayout overridable method.
 			std::unique_ptr<const TextLayout> TextRenderer::generateLineLayout(Index line) const {
@@ -357,6 +365,23 @@ namespace ascension {
 						if(boost::get(baseline.line()).subline < layout.numberOfLines() - 1)
 							std::advance(baseline, layout.numberOfLines() - 1 - boost::get(baseline.line()).subline);	// skip to the next logical line
 					}
+				}
+
+				// paint background outside of the lines
+				{
+					const presentation::FlowRelativeFourSides<graphics::Scalar> abstractOutside(
+						presentation::_blockStart = *boost::const_end(linesToPaint.back().extent), presentation::_blockEnd = std::numeric_limits<graphics::Scalar>::max(),
+						presentation::_inlineStart = std::numeric_limits<graphics::Scalar>::lowest(), presentation::_inlineEnd = std::numeric_limits<graphics::Scalar>::max()
+					);
+					Rectangle physicalOutside;
+					{
+						PhysicalFourSides<Scalar> temp;
+						presentation::mapDimensions(writingModes(), presentation::_from = abstractOutside, presentation::_to = temp);
+						boost::geometry::assign(physicalOutside, geometry::make<Rectangle>(temp));
+					}
+					boost::geometry::intersection(physicalOutside, context.boundsToPaint(), physicalOutside);
+					context.setFillStyle(actualBackground());
+					context.fillRectangle(physicalOutside);
 				}
 
 				// paint marked logical lines

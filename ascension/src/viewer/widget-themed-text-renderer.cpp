@@ -48,10 +48,20 @@ namespace ascension {
 			}
 		}
 
+		/// @see TextRenderer#actualBackground
+		std::shared_ptr<const graphics::Paint> WidgetThemedTextRenderer::actualBackground() const BOOST_NOEXCEPT {
+			const auto color(backgroundColor(textViewer_));
+			static graphics::SolidColor background(color);
+			background = graphics::SolidColor(color);
+			return std::shared_ptr<const graphics::Paint>(&background, boost::null_deleter());
+		}
+
 		/// @see TextRenderer#actualLineBackgroundColor
 		graphics::Color WidgetThemedTextRenderer::actualLineBackgroundColor(const graphics::font::TextLayout&) const BOOST_NOEXCEPT {
 			return backgroundColor(textViewer_);
 		}
+
+		/// @see TextRenderer#background
 
 		/// @see TextRenderer#blockFlowDirection
 		presentation::BlockFlowDirection WidgetThemedTextRenderer::blockFlowDirection() const BOOST_NOEXCEPT {
