@@ -852,8 +852,6 @@ namespace ascension {
 
 		/// @see WM_NCCREATE
 		bool TextViewer::onNcCreate(CREATESTRUCTW&) {
-			const auto s = win32::getWindowLong(handle().get(), GWL_EXSTYLE);
-			win32::setWindowLong(handle().get(), GWL_EXSTYLE, s & ~WS_EX_LAYOUTRTL);
 			return true;
 		}
 
