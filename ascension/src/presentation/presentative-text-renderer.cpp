@@ -27,22 +27,33 @@ namespace ascension {
 //				throw NullPointerException("presentation");
 		}
 
-		inline graphics::Color alphaBlend(const graphics::Color& background, const graphics::Color& foreground) BOOST_NOEXCEPT {
-			// TODO: This code is adhoc.
-			const Byte a = foreground.alpha() + background.alpha() - foreground.alpha() * background.alpha() / 255;
-			return graphics::Color(
-				(foreground.red() * foreground.alpha() + background.red() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
-				(foreground.green() * foreground.alpha() + background.green() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
-				(foreground.blue() * foreground.alpha() + background.blue() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
-				a);
+		namespace {
+			inline graphics::Color alphaBlend(const graphics::Color& background, const graphics::Color& foreground) BOOST_NOEXCEPT {
+				// TODO: This code is adhoc.
+				const Byte a = foreground.alpha() + background.alpha() - foreground.alpha() * background.alpha() / 255;
+				return graphics::Color(
+					(foreground.red() * foreground.alpha() + background.red() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
+					(foreground.green() * foreground.alpha() + background.green() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
+					(foreground.blue() * foreground.alpha() + background.blue() * (255 - foreground.alpha()) * background.alpha() / 255) / a,
+					a);
+			}
+
+			inline graphics::Color actualToplevelBackgroundColor(const presentation::Presentation& p) {
+				const auto computed(boost::fusion::at_key<styles::BackgroundColor>(p.computedTextRunStyle().backgroundsAndBorders));
+				return alphaBlend(graphics::Color::OPAQUE_WHITE, computed);
+			}
+		}
+
+		/// @see TextRenderer#actualBackground
+		std::shared_ptr<const graphics::Paint> PresentativeTextRenderer::actualBackground() const BOOST_NOEXCEPT {
+			const auto color(actualToplevelBackgroundColor(*presentation_));
+			static graphics::SolidColor background(color);
+			background = graphics::SolidColor(color);
+			return std::shared_ptr<const graphics::Paint>(&background, boost::null_deleter());
 		}
 
 		/// @see TextRenderer#actualLineBackgroundColor
 		graphics::Color PresentativeTextRenderer::actualLineBackgroundColor(const graphics::font::TextLayout& layout) const BOOST_NOEXCEPT {
-			const auto computedToplevelBackgroundColor(
-				boost::fusion::at_key<styles::BackgroundColor>(presentation_->computedTextRunStyle().backgroundsAndBorders));
-			const auto actualToplevelBackgroundColor(alphaBlend(graphics::Color::OPAQUE_WHITE, computedToplevelBackgroundColor));
-
 			boost::optional<graphics::Color> foregroundOverride, backgroundOverride;
 #ifdef ASCENSION_ENABLE_TEXT_LINE_COLOR_SPECIFIER
 			presentation().textLineColors(lineToPaint.lineNumber, foregroundOverride, backgroundOverride);
@@ -51,7 +62,7 @@ namespace ascension {
 				boost::get_optional_value_or(
 					backgroundOverride,
 					boost::fusion::at_key<styles::BackgroundColor>(layout.defaultRunStyle().backgroundsAndBorders)));
-			return alphaBlend(actualToplevelBackgroundColor, usedLineBackgroundColor);
+			return alphaBlend(actualToplevelBackgroundColor(*presentation_), usedLineBackgroundColor);
 		}
 
 		/// @see TextRenderer#blockFlowDirection

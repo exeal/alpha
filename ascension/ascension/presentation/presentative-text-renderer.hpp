@@ -23,6 +23,7 @@ namespace ascension {
 			TextOrientation textOrientation() const BOOST_NOEXCEPT override;
 
 		protected:
+			std::shared_ptr<const graphics::Paint> actualBackground() const BOOST_NOEXCEPT override;
 			graphics::Color actualLineBackgroundColor(const graphics::font::TextLayout& layout) const BOOST_NOEXCEPT override;
 			std::tuple<
 				const ComputedTextToplevelStyle&,
