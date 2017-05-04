@@ -967,7 +967,13 @@ namespace ascension {
 				const auto p(::GetMessagePos());
 				out.pt.x = GET_X_LPARAM(p);
 				out.pt.y = GET_Y_LPARAM(p);
+			}
 
+			template<typename Input, typename Function>
+			inline void processInputMessage(Input& input, Function function, win32::WindowMessageEvent& event) {
+				function(input);
+				if(input.isConsumed())
+					event.consume();
 			}
 		}
 
@@ -1168,65 +1174,50 @@ namespace ascension {
 					break;
 				}
 				case WM_KEYDOWN:
-				case WM_SYSKEYDOWN: {
-					auto e(makeKeyInput(event.wp(), event.lp()));
-					keyPressed(e);
-					if(e.isConsumed())
-						event.consume();
+				case WM_SYSKEYDOWN:
+					processInputMessage(makeKeyInput(event.wp(), event.lp()), std::bind(&TextViewer::keyPressed, this, std::placeholders::_1), event);
 					break;
-				}
 				case WM_KEYUP:
-				case WM_SYSKEYUP: {
-					auto e(makeKeyInput(event.wp(), event.lp()));
-					keyReleased(e);
-					if(e.isConsumed())
-						event.consume();
+				case WM_SYSKEYUP:
+					processInputMessage(makeKeyInput(event.wp(), event.lp()), std::bind(&TextViewer::keyReleased, this, std::placeholders::_1), event);
 					break;
-				}
 				case WM_KILLFOCUS:
-					focusAboutToBeLost(widgetapi::event::Event());
-					event.consume();
+					processInputMessage(widgetapi::event::Event(), std::bind(&TextViewer::focusAboutToBeLost, this, std::placeholders::_1), event);
 					break;
 				case WM_LBUTTONDBLCLK:
-					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, event.wp(), event.lp()));
-					event.consume();
+					processInputMessage(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, event.wp(), event.lp()), std::bind(&TextViewer::fireMouseDoubleClicked, this, std::placeholders::_1), event);
 					break;
 				case WM_LBUTTONDOWN:
-					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, event.wp(), event.lp()));
-					event.consume();
+					processInputMessage(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, event.wp(), event.lp()), std::bind(&TextViewer::fireMousePressed, this, std::placeholders::_1), event);
 					break;
 				case WM_LBUTTONUP:
-					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, event.wp(), event.lp()));
-					event.consume();
+					processInputMessage(win32::makeMouseButtonInput(widgetapi::event::BUTTON1_DOWN, event.wp(), event.lp()), std::bind(&TextViewer::fireMouseReleased, this, std::placeholders::_1), event);
 					break;
 				case WM_MBUTTONDBLCLK:
-					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, event.wp(), event.lp()));
-					event.consume();
+					processInputMessage(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, event.wp(), event.lp()), std::bind(&TextViewer::fireMouseDoubleClicked, this, std::placeholders::_1), event);
 					break;
 				case WM_MBUTTONDOWN:
-					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, event.wp(), event.lp()));
-					event.consume();
+					processInputMessage(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, event.wp(), event.lp()), std::bind(&TextViewer::fireMousePressed, this, std::placeholders::_1), event);
 					break;
 				case WM_MBUTTONUP:
-					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, event.wp(), event.lp()));
-					event.consume();
+					processInputMessage(win32::makeMouseButtonInput(widgetapi::event::BUTTON2_DOWN, event.wp(), event.lp()), std::bind(&TextViewer::fireMouseReleased, this, std::placeholders::_1), event);
 					break;
 				case WM_MOUSEMOVE:
-					fireMouseMoved(win32::makeLocatedUserInput(event.wp(), win32::makeMouseLocation<graphics::Point>(event.lp()))), 0;
-					event.consume();
+					processInputMessage(win32::makeLocatedUserInput(event.wp(), win32::makeMouseLocation<graphics::Point>(event.lp())), std::bind(&TextViewer::fireMouseMoved, this, std::placeholders::_1), event);
 					break;
 				case WM_MOUSEWHEEL:
 				case WM_MOUSEHWHEEL:
-					return
-						event.consume(),
-						fireMouseWheelChanged(widgetapi::event::MouseWheelInput(
+					processInputMessage(
+						widgetapi::event::MouseWheelInput(
 							widgetapi::mapFromGlobal(*this, win32::makeMouseLocation<graphics::Point>(event.lp())),
 							fromNative<widgetapi::event::MouseButtons>(GET_KEYSTATE_WPARAM(event.wp())),
 							fromNative<widgetapi::event::KeyboardModifiers>(GET_KEYSTATE_WPARAM(event.wp())),
 							graphics::geometry::BasicDimension<double>(
 								graphics::geometry::_dx = (event.message() == WM_MOUSEHWHEEL) ? GET_WHEEL_DELTA_WPARAM(event.wp()) : 0,
-								graphics::geometry::_dy = (event.message() == WM_MOUSEWHEEL) ? GET_WHEEL_DELTA_WPARAM(event.wp()) : 0))),
-						0;
+								graphics::geometry::_dy = (event.message() == WM_MOUSEWHEEL) ? GET_WHEEL_DELTA_WPARAM(event.wp()) : 0)),
+						std::bind(&TextViewer::fireMouseWheelChanged, this, std::placeholders::_1),
+						event);
+					break;
 				case WM_NCCREATE:
 					return event.consume(), onNcCreate(*event.lp<CREATESTRUCTW*>());
 				case WM_NOTIFY: {
@@ -1244,16 +1235,13 @@ namespace ascension {
 					break;
 				}
 				case WM_RBUTTONDBLCLK:
-					fireMouseDoubleClicked(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, event.wp(), event.lp()));
-					event.consume();
+					processInputMessage(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, event.wp(), event.lp()), std::bind(&TextViewer::fireMouseDoubleClicked, this, std::placeholders::_1), event);
 					break;
 				case WM_RBUTTONDOWN:
-					fireMousePressed(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, event.wp(), event.lp()));
-					event.consume();
+					processInputMessage(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, event.wp(), event.lp()), std::bind(&TextViewer::fireMousePressed, this, std::placeholders::_1), event);
 					break;
 				case WM_RBUTTONUP:
-					fireMouseReleased(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, event.wp(), event.lp()));
-					event.consume();
+					processInputMessage(win32::makeMouseButtonInput(widgetapi::event::BUTTON3_DOWN, event.wp(), event.lp()), std::bind(&TextViewer::fireMouseReleased, this, std::placeholders::_1), event);
 					break;
 				case WM_SETCURSOR: {
 					bool consumed = false;
@@ -1297,16 +1285,28 @@ namespace ascension {
 					event.consume();
 					break;
 				case WM_XBUTTONDBLCLK:
-					fireMouseDoubleClicked(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(event.wp()) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(event.wp()), event.lp()));
-					event.consume();
+					processInputMessage(
+						win32::makeMouseButtonInput(
+							(GET_XBUTTON_WPARAM(event.wp()) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN,
+							GET_KEYSTATE_WPARAM(event.wp()), event.lp()),
+						std::bind(&TextViewer::fireMouseDoubleClicked, this, std::placeholders::_1),
+						event);
 					break;
 				case WM_XBUTTONDOWN:
-					fireMousePressed(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(event.wp()) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(event.wp()), event.lp()));
-					event.consume();
+					processInputMessage(
+						win32::makeMouseButtonInput(
+							(GET_XBUTTON_WPARAM(event.wp()) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN,
+							GET_KEYSTATE_WPARAM(event.wp()), event.lp()),
+						std::bind(&TextViewer::fireMousePressed, this, std::placeholders::_1),
+						event);
 					break;
 				case WM_XBUTTONUP:
-					fireMouseReleased(win32::makeMouseButtonInput((GET_XBUTTON_WPARAM(event.wp()) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(event.wp()), event.lp()));
-					event.consume();
+					processInputMessage(
+						win32::makeMouseButtonInput(
+							(GET_XBUTTON_WPARAM(event.wp()) == XBUTTON1) ? widgetapi::event::BUTTON4_DOWN : widgetapi::event::BUTTON5_DOWN,
+							GET_KEYSTATE_WPARAM(event.wp()), event.lp()),
+						std::bind(&TextViewer::fireMouseReleased, this, std::placeholders::_1),
+						event);
 					break;
 			}
 

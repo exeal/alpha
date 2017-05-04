@@ -568,9 +568,9 @@ namespace ascension {
 					std::bind(&TextViewer::writingModesChanged, this, std::placeholders::_1));
 
 			const auto viewport(textArea()->viewport());
-			//			viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
-			//				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
-			//			});
+//			viewportResizedConnection_ = viewport->resizedSignal().connect([this](const graphics::Dimension&) {
+//				this->updateScrollBars(presentation::FlowRelativeTwoAxes<bool>(true, true), presentation::FlowRelativeTwoAxes<bool>(true, true));
+//			});
 			viewportScrolledConnection_ = viewport->scrolledSignal().connect(
 				[this](const presentation::FlowRelativeTwoAxes<graphics::font::TextViewport::ScrollOffset>&, const graphics::font::VisualLine&) {
 				assert(!this->isFrozen());
