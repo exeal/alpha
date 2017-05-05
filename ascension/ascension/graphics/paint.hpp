@@ -7,12 +7,10 @@
 
 #ifndef ASCENSION_PAINT_HPP
 #define ASCENSION_PAINT_HPP
-
+#include <ascension/corelib/native-wrappers.hpp>
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/geometry/point.hpp>
-#include <ascension/graphics/object.hpp>
 #include <memory>
-//#include <boost/operators.hpp>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <cairomm/cairomm.h>
 #endif
@@ -25,7 +23,7 @@ namespace ascension {
 		 * @see RenderingContext2D#fillStyle, RenderingContext2D#strokeStyle,
 		 *      RenderingContext2D#setFillStyle, RenderingContext2D#setStrokeStyle
 		 */
-		class Paint : public Wrapper<Paint>, public std::enable_shared_from_this<Paint>
+		class Paint : public UniqueWrapper<Paint>, public std::enable_shared_from_this<Paint>
 			 /*, private boost::equality_comparable<Paint>*/ {
 		public:
 			/// Constructor.

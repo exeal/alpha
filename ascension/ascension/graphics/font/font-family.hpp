@@ -8,12 +8,11 @@
 
 #ifndef ASCENSION_FONT_FAMILY_HPP
 #define ASCENSION_FONT_FAMILY_HPP
-
 #include <ascension/config.hpp>	// ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <ascension/corelib/basic-types.hpp>		// std.uint32_t, ...
-#include <ascension/graphics/object.hpp>
+#include <ascension/corelib/native-wrappers.hpp>
 #include <functional>	// std.hash
 #include <locale>
 #include <memory>		// std.unique_ptr, std.shared_ptr
@@ -67,7 +66,7 @@ namespace ascension {
 			 */
 			class FontFamily :
 #if ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE) || ASCENSION_SELECTS_SHAPING_ENGINE(PANGO) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
-				public Wrapper<FontFamily>,
+				public SharedWrapper<FontFamily>,
 #endif
 				private boost::totally_ordered<FontFamily> {
 			public:

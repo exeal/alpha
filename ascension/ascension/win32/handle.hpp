@@ -8,6 +8,7 @@
 
 #ifndef ASCENSION_WIN32_HANDLE_HPP
 #define ASCENSION_WIN32_HANDLE_HPP
+#include <ascension/corelib/native-wrappers.hpp>
 #include <ascension/win32/windows.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <functional>	// std.bind, std.placeholders
@@ -20,7 +21,7 @@ namespace ascension {
 		 * Safe handle type using @c std#shared_ptr.
 		 * @tparam T The raw handle type
 		 */
-		template<typename T> class Handle : public std::shared_ptr<typename std::remove_pointer<T>::type> {
+		template<typename T> class Handle : public std::shared_ptr<typename std::remove_pointer<T>::type>, public SharedWrapper<Handle<T>> {
 		public:
 			typedef std::shared_ptr<typename std::remove_pointer<T>::type> Super;
 		public:

@@ -7,7 +7,7 @@
 #ifndef ASCENSION_IMAGE_HPP
 #define ASCENSION_IMAGE_HPP
 #include <ascension/platforms.hpp>
-#include <ascension/graphics/object.hpp>
+#include <ascension/corelib/native-wrappers.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <cairomm/surface.h>
@@ -23,7 +23,7 @@
 
 namespace ascension {
 	namespace graphics {
-		class Image : public RenderingDevice, public Wrapper<Image>, private boost::noncopyable {
+		class Image : public RenderingDevice, public UniqueWrapper<Image>, private boost::noncopyable {
 		public:
 			/**
 			 * <table>

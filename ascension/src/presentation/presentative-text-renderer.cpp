@@ -48,7 +48,7 @@ namespace ascension {
 		std::shared_ptr<const graphics::Paint> PresentativeTextRenderer::actualBackground() const BOOST_NOEXCEPT {
 			const auto color(actualToplevelBackgroundColor(*presentation_));
 			static graphics::SolidColor background(color);
-			background = graphics::SolidColor(color);
+			background.graphics::SolidColor::SolidColor(color);
 			return std::shared_ptr<const graphics::Paint>(&background, boost::null_deleter());
 		}
 
