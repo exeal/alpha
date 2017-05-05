@@ -8,12 +8,12 @@
 #ifndef ASCENSION_FONT_HPP
 #define ASCENSION_FONT_HPP
 #include <ascension/config.hpp>
+#include <ascension/corelib/native-wrappers.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/code-point.hpp>
 #include <ascension/graphics/font/glyph-code.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/geometry/affine-transform.hpp>
-#include <ascension/graphics/object.hpp>
 #include <locale>
 #include <memory>
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -26,7 +26,6 @@
 #endif
 
 namespace ascension {
-
 	namespace graphics {
 		namespace font {
 			class FontDescription;
@@ -82,7 +81,7 @@ namespace ascension {
 			 * Represents a single physical instance of a font, or a set of fonts.
 			 * @see FontFamily, FontDescription, Fontset, FontFace, FontCollection
 			 */
-			class Font : public Wrapper<Font>, public std::enable_shared_from_this<Font> {
+			class Font : public SharedWrapper<Font>, public std::enable_shared_from_this<Font> {
 			public:
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CAIRO)
 				explicit Font(Cairo::RefPtr<Cairo::ScaledFont> nativeObject);

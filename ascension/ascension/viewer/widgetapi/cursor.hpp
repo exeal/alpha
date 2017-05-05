@@ -6,6 +6,7 @@
 
 #ifndef ASCENSION_CURSOR_HPP
 #define ASCENSION_CURSOR_HPP
+#include <ascension/corelib/native-wrappers.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/platforms.hpp>
@@ -30,7 +31,7 @@ namespace ascension {
 	namespace viewer {
 		namespace widgetapi {
 			/// Provides a (mouse) cursor.
-			class Cursor {
+			class Cursor : public SharedWrapper<Cursor> {
 			public:
 				/// The coordinate type for images.
 				typedef std::uint16_t Coordinate;

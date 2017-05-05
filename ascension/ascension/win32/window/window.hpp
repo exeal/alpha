@@ -20,7 +20,7 @@ namespace ascension {
 		}
 
 		/// Holds a handle to the window.
-		class Window : private boost::noncopyable {
+		class Window : public UniqueWrapper<Window>, private boost::noncopyable {
 		public:
 			/// Describes window type.
 			class Type {

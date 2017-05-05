@@ -8,9 +8,8 @@
 
 #ifndef ASCENSION_FONT_COLLECTION_HPP
 #define ASCENSION_FONT_COLLECTION_HPP
+#include <ascension/corelib/native-wrappers.hpp>
 #include <ascension/graphics/geometry/affine-transform.hpp>
-#include <ascension/graphics/object.hpp>
-//#include <ascension/graphics/font/font.hpp>
 #if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
 #	include <ascension/win32/handle.hpp>
 #endif
@@ -32,7 +31,7 @@ namespace ascension {
 			 * context, and provides a method to enumerate font families.
 			 * @see Fontset, RenderingContext2D
 			 */
-			class FontCollection : public Wrapper<FontCollection> {
+			class FontCollection : public SharedWrapper<FontCollection> {
 			public:
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)

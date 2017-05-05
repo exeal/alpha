@@ -8,6 +8,7 @@
 #ifndef ASCENSION_RENDERING_CONTEXT_HPP
 #define ASCENSION_RENDERING_CONTEXT_HPP
 #include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
+#include <ascension/corelib/native-wrappers.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
@@ -17,7 +18,6 @@
 #include <ascension/graphics/geometry/named-parameters.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/geometry/rectangle.hpp>
-#include <ascension/graphics/object.hpp>
 #include <ascension/graphics/rendering-context-options.hpp>
 #include <boost/geometry/algorithms/make.hpp>	// boost.geometry.make_zero
 #include <boost/optional.hpp>
@@ -91,7 +91,7 @@ namespace ascension {
 		 *       is one pixel on pixel-based devices and one point on printing devices.
 		 * @see RenderingDevice
 		 */
-		class RenderingContext2D : public Wrapper<RenderingContext2D> {
+		class RenderingContext2D : public UniqueWrapper<RenderingContext2D> {
 		public:
 			/// @name Platform-native Interfaces
 			/// @{
