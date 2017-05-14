@@ -870,7 +870,7 @@ namespace ascension {
 							widgetapi::show(*autoScrollOriginMark_);
 							widgetapi::raise(widgetapi::window(*autoScrollOriginMark_));
 							beginLocationTracking(viewer, &targetLocker, false, false);
-							showCursor(input.location());
+//							updateLocationalCursor(input.location());
 							input.consume();
 						}
 					} else if(action == RELEASED) {
@@ -994,56 +994,6 @@ namespace ascension {
 		}
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
-		/// @see MouseInputStrategy#showCursor
-		bool DefaultTextAreaMouseInputStrategy::showCursor(const graphics::Point& position) {
-			boost::optional<widgetapi::Cursor::BuiltinShape> builtinShape;
-			const presentation::hyperlink::Hyperlink* newlyHoveredHyperlink = nullptr;
-			TextViewer& viewer = textArea_->textViewer();
-
-			if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(*textArea_->caret()) && isPointOverSelection(*textArea_->caret(), position))	// on a draggable text selection?
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				builtinShape = Gdk::ARROW;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				builtinShape = Qt::ArrowCursor;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-				builtinShape = [NSCursor arrowCursor];
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				builtinShape = IDC_ARROW;
-#else
-				ASCENSION_CANT_DETECT_PLATFORM();
-#endif
-			else {
-				// on a hyperlink?
-				if(const boost::optional<graphics::font::TextHit<kernel::Position>> p = viewToModelInBounds(viewer, position, kernel::locations::UTF16_CODE_UNIT))
-					newlyHoveredHyperlink = utils::getPointedHyperlink(viewer, p->characterIndex());
-				if(newlyHoveredHyperlink != nullptr && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				builtinShape = Gdk::HAND1;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				builtinShape = Qt::PointingHandCursor;
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-				builtinShape = [NSCursor pointingHandCursor];
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				builtinShape = IDC_HAND;
-#else
-				ASCENSION_CANT_DETECT_PLATFORM();
-#endif
-			}
-
-			if(builtinShape != boost::none) {
-				const widgetapi::Cursor cursor(*builtinShape);
-				AbstractMouseInputStrategy::showCursor(viewer, cursor);
-				return true;
-			}
-			if(newlyHoveredHyperlink != nullptr) {
-				if(newlyHoveredHyperlink != lastHoveredHyperlink_)
-					viewer.showToolTip(newlyHoveredHyperlink->description(), 1000, 30000);
-			} else
-				viewer.hideToolTip();
-			lastHoveredHyperlink_ = newlyHoveredHyperlink;
-			return false;
-		}
-
 		/// @see Timer#timeElapsed
 		void DefaultTextAreaMouseInputStrategy::timeElapsed(Timer<DefaultTextAreaMouseInputStrategy>& timer) {
 			if(textArea_ != nullptr) {
@@ -1081,11 +1031,19 @@ namespace ascension {
 						timer.start(interval, *this);
 						const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(
 							(graphics::geometry::dy(scrollOffsets) > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD);
-						AbstractMouseInputStrategy::showCursor(viewer, cursor);
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+						::SetCursor(cursor.native().get());
+#else
+						widgetapi::setCursor(widgetapi::window(viewer), cursor);
+#endif
 					} else {
 						timer.start(boost::chrono::milliseconds(300), *this);
 						const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL);
-						AbstractMouseInputStrategy::showCursor(viewer, cursor);
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+						::SetCursor(cursor.native().get());
+#else
+						widgetapi::setCursor(widgetapi::window(viewer), cursor);
+#endif
 					}
 #if 0
 				} else if(self.dnd_.enabled && (self.state_ & DND_MASK) == DND_MASK) {	// scroll automatically during dragging
@@ -1105,6 +1063,54 @@ namespace ascension {
 			if(autoScrollOriginMark_.get() != nullptr)
 				autoScrollOriginMark_.reset();
 			textArea_ = nullptr;
+		}
+
+		/// @see MouseInputStrategy#updateLocationalCursor
+		boost::optional<widgetapi::Cursor> DefaultTextAreaMouseInputStrategy::updateLocationalCursor(const graphics::Point& position) {
+			boost::optional<widgetapi::Cursor::BuiltinShape> builtinShape;
+			const presentation::hyperlink::Hyperlink* newlyHoveredHyperlink = nullptr;
+			TextViewer& viewer = textArea_->textViewer();
+
+			if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(*textArea_->caret()) && isPointOverSelection(*textArea_->caret(), position))	// on a draggable text selection?
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				builtinShape = Gdk::ARROW;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+				builtinShape = Qt::ArrowCursor;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+				builtinShape = [NSCursor arrowCursor];
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				builtinShape = IDC_ARROW;
+#else
+				ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+			else {
+				// on a hyperlink?
+				if(const boost::optional<graphics::font::TextHit<kernel::Position>> p = viewToModelInBounds(viewer, position, kernel::locations::UTF16_CODE_UNIT))
+					newlyHoveredHyperlink = utils::getPointedHyperlink(viewer, p->characterIndex());
+				if(newlyHoveredHyperlink != nullptr && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+					builtinShape = Gdk::HAND1;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+					builtinShape = Qt::PointingHandCursor;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+					builtinShape = [NSCursor pointingHandCursor];
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+					builtinShape = IDC_HAND;
+#else
+					ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+			}
+
+			if(builtinShape != boost::none)
+				return widgetapi::Cursor(boost::get(builtinShape));
+			if(newlyHoveredHyperlink != nullptr) {
+				if(newlyHoveredHyperlink != lastHoveredHyperlink_)
+					viewer.showToolTip(newlyHoveredHyperlink->description(), 1000, 30000);
+			}
+			else
+				viewer.hideToolTip();
+			lastHoveredHyperlink_ = newlyHoveredHyperlink;
+			return boost::none;
 		}
 
 		DefaultTextAreaMouseInputStrategy::DragAndDrop::DragAndDrop(State initialState) : state(initialState)

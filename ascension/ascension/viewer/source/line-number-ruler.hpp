@@ -60,7 +60,7 @@ namespace ascension {
 				void interruptMouseReaction(bool forKeyboardInput) override;
 				void mouseButtonInput(Action, widgetapi::event::MouseButtonInput& input, TargetLocker& targetLocker) override;
 				void mouseInputTargetUnlocked() override;
-				bool showCursor(const graphics::Point& position) override;
+				boost::optional<widgetapi::Cursor> updateLocationalCursor(const graphics::Point& position) override;
 				// AbstractMouseInputStrategy
 				void trackedLocationChanged(const kernel::Position& position) override;
 				// graphics.font.VisualLinesListener

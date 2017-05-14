@@ -103,7 +103,7 @@ namespace ascension {
 			void mouseInputTargetUnlocked() override;
 			void mouseMoved(widgetapi::event::LocatedUserInput& input, TargetLocker& targetLocker) override;
 			void mouseWheelRotated(widgetapi::event::MouseWheelInput& input, TargetLocker& targetLocker) override;
-			bool showCursor(const graphics::Point& position) override;
+			boost::optional<widgetapi::Cursor> updateLocationalCursor(const graphics::Point& position) override;
 			// TextAreaMouseInputStrategy
 			void install(TextArea& viewer) override;
 			void uninstall() override;
