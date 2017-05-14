@@ -48,6 +48,24 @@ namespace ascension {
 		AbstractMouseInputStrategy::~AbstractMouseInputStrategy() BOOST_NOEXCEPT {
 		}
 
+		/// Returns the built-in arrow cursor.
+		widgetapi::Cursor AbstractMouseInputStrategy::arrowCursor() {
+			boost::optional<widgetapi::Cursor::BuiltinShape> builtinShape(
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				Gdk::ARROW
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+				Qt::ArrowCursor
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+				[NSCursor arrowCursor]
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				IDC_ARROW
+#else
+				ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+			);
+			return widgetapi::Cursor(boost::get(builtinShape));
+		}
+
 		/**
 		 * Begins tracking of the mouse location. See the descriptions of the parameters.
 		 * @param viewer The text viewer
@@ -123,46 +141,10 @@ namespace ascension {
 		void AbstractMouseInputStrategy::mouseWheelRotated(widgetapi::event::MouseWheelInput& input, TargetLocker&) {
 			return input.ignore();
 		}
-
-		/**
-		 * Shows the built-in arrow cursor.
-		 * @param viewer The text viewer
-		 * @return @c true
-		 * @see #showCursor
-		 */
-		bool AbstractMouseInputStrategy::showArrowCursor(TextViewer& viewer) {
-			boost::optional<widgetapi::Cursor::BuiltinShape> builtinShape(
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Gdk::ARROW
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				Qt::ArrowCursor
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
-				[NSCursor arrowCursor]
-#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				IDC_ARROW
-#else
-				ASCENSION_CANT_DETECT_PLATFORM();
-#endif
-			);
-			const widgetapi::Cursor cursor(*builtinShape);
-			showCursor(viewer, cursor);
-			return true;
-		}
-
-		/**
-		 * Shows the specified cursor.
-		 * @param viewer The text viewer
-		 * @param cursor The cursor to show
-		 * @return @c true
-		 */
-		bool AbstractMouseInputStrategy::showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor) {
-			widgetapi::setCursor(widgetapi::window(viewer), cursor);
-			return true;
-		}
 		
-		/// Returns @c false.
-		bool AbstractMouseInputStrategy::showCursor(const graphics::Point&) {
-			return false;
+		/// Returns @c boost#none.
+		boost::optional<widgetapi::Cursor> AbstractMouseInputStrategy::updateLocationalCursor(const graphics::Point&) {
+			return boost::none;
 		}
 
 		/// @see HasTimer#timeElapsed

@@ -111,12 +111,12 @@ namespace ascension {
 			 */
 			virtual void mouseWheelRotated(widgetapi::event::MouseWheelInput& input, TargetLocker& targetLocker) = 0;
 			/**
-			 * Shows a cursor on the viewer.
-			 * @param position The cursor position (client coordinates)
-			 * @retval @c true if the callee showed a cursor
-			 * @retval @c false if the callee did not know the appropriate cursor
+			 * Update the mouse cursor after @c #mouseMoved was invoked.
+			 * @param position The cursor position (viewer-local coordinates)
+			 * @return The mouse cursor to show
+			 * @retval @c boost#none The callee did not know the appropriate cursor
 			 */
-			virtual bool showCursor(const graphics::Point& position) = 0;
+			virtual boost::optional<widgetapi::Cursor> updateLocationalCursor(const graphics::Point& position) = 0;
 		};
 
 		class TextViewer;
@@ -132,10 +132,10 @@ namespace ascension {
 			virtual void mouseInputTargetUnlocked() override;
 			virtual void mouseMoved(widgetapi::event::LocatedUserInput& input, TargetLocker&) override;
 			virtual void mouseWheelRotated(widgetapi::event::MouseWheelInput& input, TargetLocker&) override;
-			virtual bool showCursor(const graphics::Point&) override;
+			virtual boost::optional<widgetapi::Cursor> updateLocationalCursor(const graphics::Point&) override;
 
 		protected:
-			/// @name
+			/// @name Location Tracking Helper Methods
 			/// @{
 			void beginLocationTracking(TextViewer& viewer, TargetLocker* targetLocker, bool autoScroll, bool locateCursor);
 			void endLocationTracking();
@@ -143,10 +143,9 @@ namespace ascension {
 			virtual void trackedLocationChanged(const kernel::Position& position);
 			/// @}
 
-			/// @name
+			/// @name Mouse Cursor Helper Method
 			/// @{
-			bool showArrowCursor(TextViewer& viewer);
-			static bool showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor);
+			static widgetapi::Cursor arrowCursor();
 			/// @}
 			static const boost::chrono::milliseconds SELECTION_EXPANSION_INTERVAL;	// TODO: Replace with std.chrono.
 			static const boost::chrono::milliseconds DRAGGING_TRACK_INTERVAL;	// TODO: Replace with std.chrono.

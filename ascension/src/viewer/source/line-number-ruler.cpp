@@ -21,6 +21,7 @@
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/text-area.hpp>
 #include <ascension/viewer/text-viewer-model-conversion.hpp>
+#include <ascension/viewer/widgetapi/cursor.hpp>
 
 namespace ascension {
 	namespace viewer {
@@ -197,9 +198,12 @@ namespace ascension {
 				updateWidth();
 			}
 
-			/// @see MouseInputStrategy#showCursor
-			bool LineNumberRuler::showCursor(const graphics::Point& position) {
-				return (viewer() != nullptr) ? showArrowCursor(*viewer()) : AbstractMouseInputStrategy::showCursor(position);
+			/// @see MouseInputStrategy#updateLocationalCursor
+			boost::optional<widgetapi::Cursor> LineNumberRuler::updateLocationalCursor(const graphics::Point& position) {
+				if(viewer() != nullptr)
+					return arrowCursor();
+				else
+					return AbstractMouseInputStrategy::updateLocationalCursor(position);
 			}
 
 			/// @see AbstractMouseInputStrategy#trackedLocationChanged

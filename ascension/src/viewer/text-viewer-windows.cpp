@@ -870,8 +870,14 @@ namespace ascension {
 		void TextViewer::onSetCursor(const win32::Handle<HWND>&, UINT, UINT, bool& consumed) {
 			mouseVanisher_.restoreHiddenCursor();
 			auto mouseInputStrategy(textArea()->mouseInputStrategy().lock());
+			boost::optional<widgetapi::Cursor> newCursor;
 			if(mouseInputStrategy != nullptr)
-				consumed = mouseInputStrategy->showCursor(widgetapi::mapFromGlobal(*this, widgetapi::Cursor::position()));
+				newCursor = mouseInputStrategy->updateLocationalCursor(widgetapi::mapFromGlobal(*this, widgetapi::Cursor::position()));
+			if(newCursor != boost::none)
+				boost::get(newCursor).show();
+			else
+				::SetCursor(widgetapi::Cursor(IDC_IBEAM).native().get());
+			consumed = true;
 		}
 
 		/// @see WM_STYLECHANGED
@@ -1533,7 +1539,7 @@ namespace ascension {
 			out.name = L"ascension.TextViewer";
 			out.styles = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW;
 			out.background = COLOR_WINDOW;
-			out.cursor = win32::WindowClass::Cursor(MAKEINTRESOURCEW(32513));	// IDC_IBEAM
+			out.cursor = nullptr;// win32::WindowClass::Cursor(MAKEINTRESOURCEW(32513));	// IDC_IBEAM
 		}
 
 		namespace detail {
