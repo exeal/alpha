@@ -49,7 +49,7 @@ namespace ascension {
 				::SelectObject(dc.get(), oldBitmap);
 #endif
 			}
-
+#if 0
 			Cursor::Cursor(const Cursor& other) {
 				const Glib::RefPtr<const Gdk::Cursor> native(other.asNativeObject());
 				const Gdk::CursorType type = native->get_cursor_type();
@@ -63,7 +63,7 @@ namespace ascension {
 #endif
 				}
 			}
-
+#endif
 			std::unique_ptr<Cursor> Cursor::createMonochrome(
 					const graphics::geometry::BasicDimension<Cursor::Coordinate>& size,
 					const std::uint8_t* bitmap, const std::uint8_t* mask,
