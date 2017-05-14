@@ -64,9 +64,9 @@ namespace ascension {
 				explicit Cursor(const graphics::Image& shape,
 					const boost::optional<boost::geometry::model::d2::point_xy<Coordinate>>& hotspot = boost::none);
 				/// Copy-constructor.
-				Cursor(const Cursor& other);
+//				Cursor(const Cursor& other);
 				/// Copy-assignment operator.
-				Cursor& operator=(const Cursor& other);
+//				Cursor& operator=(const Cursor& other);
 				/**
 				 * Creates a @c Cursor from the window system-native object.
 				 * @param native The native object

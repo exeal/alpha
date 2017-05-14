@@ -17,13 +17,13 @@ namespace ascension {
 					throw std::invalid_argument("shape");
 				native_ = win32::borrowed(static_cast<HCURSOR>(::LoadImageW(nullptr, shape, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
 			}
-
+#if 0
 			Cursor::Cursor(const Cursor& other) : native_(::CopyIcon(other.native_.get()), &::DestroyCursor) {
 				// TODO: MSDN says "Do not use the CopyCursor function for animated cursor."
 				if(native_.get() == nullptr)
 					throw makePlatformError();
 			}
-
+#endif
 			void Cursor::hide() {
 				::ShowCursor(false);	// this may not hide
 			}
