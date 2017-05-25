@@ -244,7 +244,7 @@ namespace ascension {
 					graphics::geometry::translate(
 						graphics::geometry::_from = selectionBounds, graphics::geometry::_to = selectionExtent,
 						graphics::geometry::_tx = -geometry::left(selectionExtent), graphics::geometry::_ty = -geometry::top(selectionExtent));
-					graphics::PaintContext context(move(image->createRenderingContext()), selectionExtent);
+					graphics::PaintContext context(image->createRenderingContext()->native(), selectionExtent);
 					Scalar y = geometry::top(selectionBounds);
 					BOOST_FOREACH(Index line, selectedRegion.lines()) {
 						renderer->paint(line, context,

@@ -36,12 +36,12 @@ namespace ascension {
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				auto brush(win32::borrowed(reinterpret_cast<HBRUSH>(::GetClassLongPtrW(textViewer.handle().get(), GCLP_HBRBACKGROUND))));
-				if(brush.get() != nullptr) {
-					LOGBRUSH lb;
-					if(::GetObject(brush.get(), sizeof(decltype(lb)), &lb) != 0 && lb.lbStyle == BS_SOLID)
-						return fromNative<graphics::Color>(lb.lbColor);
-				}
+//				auto brush(win32::borrowed(reinterpret_cast<HBRUSH>(::GetClassLongPtrW(textViewer.handle().get(), GCLP_HBRBACKGROUND))));
+//				if(brush.get() != nullptr) {
+//					LOGBRUSH lb;
+//					if(::GetObject(brush.get(), sizeof(decltype(lb)), &lb) != 0 && lb.lbStyle == BS_SOLID)
+//						return fromNative<graphics::Color>(lb.lbColor);
+//				}
 				return fromNative<graphics::Color>(::GetSysColor(COLOR_WINDOW));
 #endif
 				return graphics::Color::OPAQUE_WHITE;
@@ -51,9 +51,9 @@ namespace ascension {
 		/// @see TextRenderer#actualBackground
 		std::shared_ptr<const graphics::Paint> WidgetThemedTextRenderer::actualBackground() const BOOST_NOEXCEPT {
 			const auto color(backgroundColor(textViewer_));
-			static graphics::SolidColor background(color);
-			background.graphics::SolidColor::SolidColor(color);
-			return std::shared_ptr<const graphics::Paint>(&background, boost::null_deleter());
+			if(actualBackground_ == nullptr || actualBackground_->color() != color)
+				const_cast<WidgetThemedTextRenderer*>(this)->actualBackground_ = std::make_shared<graphics::SolidColor>(color);
+			return actualBackground_;
 		}
 
 		/// @see TextRenderer#actualLineBackgroundColor

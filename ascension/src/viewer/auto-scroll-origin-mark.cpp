@@ -54,8 +54,7 @@ namespace ascension {
 					if(event.message() == WM_PAINT) {
 						PAINTSTRUCT ps;
 						::BeginPaint(handle().get(), &ps);
-						graphics::RenderingContext2D temp(win32::borrowed(ps.hdc));
-						paint(graphics::PaintContext(std::move(temp), fromNative<graphics::Rectangle>(ps.rcPaint)));
+						paint(graphics::PaintContext(win32::borrowed(ps.hdc), fromNative<graphics::Rectangle>(ps.rcPaint)));
 						::EndPaint(handle().get(), &ps);
 						event.consume();
 					}

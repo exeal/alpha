@@ -1234,8 +1234,8 @@ namespace ascension {
 					PAINTSTRUCT ps;
 					::BeginPaint(handle().get(), &ps);
 					event.consume();
-					const auto dc(win32::borrowed(ps.hdc));
-					paint(graphics::PaintContext(graphics::RenderingContext2D(dc), fromNative<graphics::Rectangle>(ps.rcPaint)));
+					graphics::PaintContext context(win32::borrowed(ps.hdc), fromNative<graphics::Rectangle>(ps.rcPaint));
+					paint(context);
 					::EndPaint(handle().get(), &ps);
 					event.consume();
 					break;
