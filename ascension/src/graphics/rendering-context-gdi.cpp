@@ -34,8 +34,9 @@ namespace ascension {
 		 * @param nativeObject The Win32 @c HDC value to hold
 		 */
 		RenderingContext2D::RenderingContext2D(win32::Handle<HDC> nativeObject) : nativeObject_(nativeObject), hasCurrentSubpath_(false) {
-			setFillStyle(std::make_shared<SolidColor>(Color::OPAQUE_BLACK));
-			setStrokeStyle(std::make_shared<SolidColor>(Color::OPAQUE_BLACK));
+			static const auto black(std::make_shared<SolidColor>(Color::OPAQUE_BLACK));
+			setFillStyle(black);
+			setStrokeStyle(black);
 
 			auto fontHandle(win32::borrowed(static_cast<HFONT>(::GetCurrentObject(nativeObject.get(), OBJ_FONT))));
 			if(fontHandle.get() == nullptr)
@@ -272,7 +273,7 @@ namespace ascension {
 		}
 
 		std::shared_ptr<const Paint> RenderingContext2D::fillStyle() const {
-			return currentState_.fillStyle.first;
+			return std::get<0>(currentState_.fillStyle);
 		}
 
 		std::shared_ptr<const font::Font> RenderingContext2D::font() const {
@@ -861,7 +862,7 @@ namespace ascension {
 		}
 
 		std::shared_ptr<const Paint> RenderingContext2D::strokeStyle() const {
-			return currentState_.strokeStyle.first;
+			return std::get<0>(currentState_.strokeStyle);
 		}
 
 		RenderingContext2D& RenderingContext2D::strokeText(const StringPiece& text,
@@ -910,10 +911,10 @@ namespace ascension {
 		void RenderingContext2D::updatePenAndBrush() {
 			win32::Handle<HPEN> newPen;
 			win32::Handle<HBRUSH> newBrush;
-			if(currentState_.strokeStyle.second != currentState_.strokeStyle.first->revisionNumber())
+			if(std::get<1>(currentState_.strokeStyle) != std::get<0>(currentState_.strokeStyle)->revisionNumber())
 				newPen = createModifiedPen(nullptr, boost::none, boost::none, boost::none);
-			if(currentState_.fillStyle.second != currentState_.fillStyle.first->revisionNumber())
-				newBrush.reset(::CreateBrushIndirect(&currentState_.fillStyle.first->native()), &::DeleteObject);
+			if(std::get<1>(currentState_.fillStyle) != std::get<0>(currentState_.fillStyle)->revisionNumber())
+				newBrush.reset(::CreateBrushIndirect(&std::get<0>(currentState_.fillStyle)->native()), &::DeleteObject);
 
 			win32::Handle<HPEN> oldPen;
 			win32::Handle<HBRUSH> oldBrush;
@@ -932,12 +933,12 @@ namespace ascension {
 			}
 
 			if(oldPen.get() != nullptr) {
-				currentState_.strokeStyle.second = currentState_.strokeStyle.first->revisionNumber();
+				std::get<1>(currentState_.strokeStyle) = std::get<0>(currentState_.strokeStyle)->revisionNumber();
 				std::swap(currentState_.pen, newPen);
 				std::swap(currentState_.previousPen, oldPen);
 			}
 			if(oldBrush.get() != nullptr) {
-				currentState_.fillStyle.second = savedStates_.top().state.fillStyle.first->revisionNumber();
+				std::get<1>(currentState_.fillStyle) = std::get<0>(savedStates_.top().state.fillStyle)->revisionNumber();
 				std::swap(currentState_.brush, newBrush);
 				std::swap(currentState_.previousBrush, oldBrush);
 			}

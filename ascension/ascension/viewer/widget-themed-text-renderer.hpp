@@ -39,6 +39,7 @@ namespace ascension {
 
 		private:
 			TextViewer& textViewer_;
+			std::shared_ptr<graphics::SolidColor> actualBackground_;
 		};
 	}
 }

@@ -100,6 +100,7 @@ namespace ascension {
 			Cairo::RefPtr<Cairo::Context> native();
 			Cairo::RefPtr<const Cairo::Context> native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
+			explicit RenderingContext2D(CGContextRef nativeObject);
 			CGContextRef native();
 			const CGContextRef native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(DIRECT2D)
