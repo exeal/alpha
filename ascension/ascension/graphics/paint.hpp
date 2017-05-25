@@ -83,7 +83,9 @@ namespace ascension {
 			 */
 			explicit SolidColor(const Color& color);
 			/// Returns the solid color value for this object.
-			const Color& color() const BOOST_NOEXCEPT;
+			const Color& color() const BOOST_NOEXCEPT {
+				return color_;
+			}
 		private:
 			Color color_;
 		};
