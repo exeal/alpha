@@ -90,13 +90,13 @@ namespace ascension {
 						if(SUCCEEDED(hr = data->EnumFormatEtc(DATADIR_GET, formats.initialize()))) {
 							FORMATETC format;
 							ULONG fetched;
-							ASCENSION_LOG_TRIVIAL(debug) << L"DragEnter received a data object exposes the following formats.\n";
+							ASCENSION_LOG_TRIVIAL(trace) << L"DragEnter received a data object exposes the following formats.\n";
 							for(formats->Reset(); formats->Next(1, &format, &fetched) == S_OK; ) {
 								std::array<WCHAR, 256> name;
 								if(::GetClipboardFormatNameW(format.cfFormat, name.data(), name.size() - 1) != 0)
-									ASCENSION_LOG_TRIVIAL(debug) << L"\t" << name.data() << L"\n";
+									ASCENSION_LOG_TRIVIAL(trace) << L"\t" << name.data() << L"\n";
 								else
-									ASCENSION_LOG_TRIVIAL(debug) << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
+									ASCENSION_LOG_TRIVIAL(trace) << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
 								if(format.ptd != nullptr)
 									::CoTaskMemFree(format.ptd);
 							}

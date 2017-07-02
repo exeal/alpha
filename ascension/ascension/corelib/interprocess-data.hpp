@@ -97,6 +97,7 @@ namespace ascension {
 		 * @param format The format
 		 * @param[out] out The result data
 		 * @throw UnsupportedFormatException @a format is not supported
+		 * @throw ... Any platform specific exception
 		 */
 		void data(Format format, std::vector<std::uint8_t>& out) const;
 //		graphics::Image image() const;

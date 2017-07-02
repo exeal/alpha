@@ -1257,10 +1257,13 @@ namespace ascension {
 				std::pair<std::size_t, HRESULT> GlyphVectorImpl::generateGlyphs(win32::Handle<HDC> dc,
 						const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs) {
 #ifdef _DEBUG
-					if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(dc.get(), OBJ_FONT))) {
-						LOGFONTW lf;
-						if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0)
-							ASCENSION_LOG_TRIVIAL(debug) << L"[TextLayout.TextRun.generateGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
+					static bool reportSelectedFont = false;
+					if(reportSelectedFont) {
+						if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(dc.get(), OBJ_FONT))) {
+							LOGFONTW lf;
+							if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0)
+								ASCENSION_LOG_TRIVIAL(debug) << L"[TextLayout.TextRun.generateGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
+						}
 					}
 #endif
 

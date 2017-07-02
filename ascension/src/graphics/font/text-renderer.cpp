@@ -417,7 +417,7 @@ namespace ascension {
 #	ifdef _DEBUG
 				if(!boost::empty(linesToPaint)) {
 					static unsigned long n;
-					ASCENSION_LOG_TRIVIAL(debug)
+					ASCENSION_LOG_TRIVIAL(trace)
 						<< "Repainted lines [" << linesToPaint.front().lineNumber << "," << linesToPaint.back().lineNumber << "]"
 						<< " for area " << boost::geometry::dsv(context.boundsToPaint())
 						<< " [#" << (n++) << "]" << std::endl;
