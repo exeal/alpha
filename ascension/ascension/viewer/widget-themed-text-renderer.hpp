@@ -35,7 +35,7 @@ namespace ascension {
 				const presentation::ComputedTextLineStyle&,
 				std::unique_ptr<presentation::ComputedStyledTextRunIterator>,
 				const presentation::ComputedTextRunStyle&
-			> buildStylesForLineLayout(Index line, const graphics::RenderingContext2D& renderingContext) const override;
+			> buildStylesForLineLayout(boost::optional<Index> line, const graphics::RenderingContext2D& renderingContext) const override;
 
 		private:
 			TextViewer& textViewer_;

@@ -30,7 +30,7 @@ namespace ascension {
 				const ComputedTextLineStyle&,
 				std::unique_ptr<ComputedStyledTextRunIterator>,
 				const ComputedTextRunStyle&
-			> buildStylesForLineLayout(Index line, const graphics::RenderingContext2D& renderingContext) const override;
+			> buildStylesForLineLayout(boost::optional<Index> line, const graphics::RenderingContext2D& renderingContext) const override;
 			std::shared_ptr<const graphics::font::Font> newDefaultFont() const BOOST_NOEXCEPT override;
 
 		private:

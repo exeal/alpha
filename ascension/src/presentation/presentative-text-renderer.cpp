@@ -76,17 +76,18 @@ namespace ascension {
 			const ComputedTextLineStyle&,
 			std::unique_ptr<ComputedStyledTextRunIterator>,
 			const ComputedTextRunStyle&
-		> PresentativeTextRenderer::buildStylesForLineLayout(Index line, const graphics::RenderingContext2D& renderingContext) const {
+		> PresentativeTextRenderer::buildStylesForLineLayout(boost::optional<Index> line, const graphics::RenderingContext2D& renderingContext) const {
 //			const styles::Length::Context lengthContext(renderingContext, lengthContextViewport());
+			// TODO: Use std.make_tuple instead.
 			return std::tuple<
 				const ComputedTextToplevelStyle&,
 				const ComputedTextLineStyle&,
 				std::unique_ptr<ComputedStyledTextRunIterator>,
 				const ComputedTextRunStyle&>(
 				presentation_->computedTextToplevelStyle(),
-				presentation_->computeTextLineStyle(line),
-				std::move(presentation_->computeTextRunStyles(line/*, lengthContext*/)),
-				presentation_->computeTextRunStyleForLine(line));	// TODO: Use std.make_tuple instead.
+				(line != boost::none) ? presentation_->computeTextLineStyle(boost::get(line)) : presentation_->computedTextLineStyle(),
+				(line != boost::none) ? std::move(presentation_->computeTextRunStyles(boost::get(line)/*, lengthContext*/)) : std::unique_ptr<ComputedStyledTextRunIterator>(),
+				(line != boost::none) ? presentation_->computeTextRunStyleForLine(boost::get(line)) : presentation_->computedTextRunStyle());
 		}
 
 		/// @see TextRenderer#inlineFlowDirection
