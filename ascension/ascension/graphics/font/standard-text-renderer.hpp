@@ -38,6 +38,7 @@ namespace ascension {
 				};
 			public:
 				virtual ~StandardTextRenderer() BOOST_NOEXCEPT;
+				std::unique_ptr<const TextLayout> createEmptyLineLayout() const override;
 				std::unique_ptr<const TextLayout> createLineLayout(Index line) const override;
 				void setStrategy(std::unique_ptr<const Strategy> newStrategy);
 

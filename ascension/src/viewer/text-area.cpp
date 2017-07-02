@@ -540,6 +540,22 @@ namespace ascension {
 			redrawLines(boost::irange(line, following ? caret()->document().numberOfLines() : line + 1));
 		}
 
+		namespace {
+			class DefaultLayout {
+			public:
+				explicit DefaultLayout(std::shared_ptr<const graphics::font::TextRenderer> textRenderer) : textRenderer_(textRenderer) {
+				}
+				const graphics::font::TextLayout& get() {
+					if(layout_ == nullptr)
+						layout_ = textRenderer_->createEmptyLineLayout();
+					return *layout_;
+				}
+			private:
+				const std::shared_ptr<const graphics::font::TextRenderer> textRenderer_;
+				std::unique_ptr<const graphics::font::TextLayout> layout_;
+			};
+		}
+
 		/**
 		 * Redraws the specified lines on the view. If the viewer is frozen, redraws after unfrozen.
 		 * @param lines The lines to be redrawn
@@ -567,20 +583,21 @@ namespace ascension {
 			using graphics::Scalar;
 			std::array<Scalar, 2> beforeAndAfter;	// in viewport (distances from before-edge of the viewport)
 			{
+				DefaultLayout defaultLayout(textRenderer());
 				graphics::font::BaselineIterator baseline(*viewport(), graphics::font::VisualLine(*boost::const_begin(lines), 0), false);
 				std::get<0>(beforeAndAfter) = *baseline;
 				if(std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::min() && std::get<0>(beforeAndAfter) != std::numeric_limits<Scalar>::max()) {
-					const graphics::font::TextLayout* const layout = textRenderer()->layouts().at(baseline.line()->line);
-					// TODO: Handle the case if the layout is null, by using the default line metrics.
-					assert(layout != nullptr);
+					const graphics::font::TextLayout* layout = textRenderer()->layouts().at(baseline.line()->line);
+					if(layout == nullptr)
+						layout = &defaultLayout.get();
 					std::get<0>(beforeAndAfter) += *boost::const_begin(layout->lineMetrics(0).extent());
 				}
 				baseline = graphics::font::BaselineIterator(*viewport(), graphics::font::VisualLine(*boost::const_end(lines) - 1, 0), false);
 				std::get<1>(beforeAndAfter) = *baseline;
 				if(std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::min() && std::get<1>(beforeAndAfter) != std::numeric_limits<Scalar>::max()) {
-					const graphics::font::TextLayout* const layout = textRenderer()->layouts().at(baseline.line()->line);
-					// TODO: Handle the case if the layout is null, by using the default line metrics.
-					assert(layout != nullptr);
+					const graphics::font::TextLayout* layout = textRenderer()->layouts().at(baseline.line()->line);
+					if(layout == nullptr)
+						layout = &defaultLayout.get();
 					std::get<1>(beforeAndAfter) += *boost::const_end(layout->lineMetrics(layout->numberOfLines() - 1).extent());
 				}
 
@@ -739,8 +756,11 @@ namespace ascension {
 			presentation::FlowRelativeTwoAxes<std::int32_t> abstractScrollOffsetInPixels;
 			// 1-1. block dimension
 			{
+				DefaultLayout defaultLayout(textRenderer());
 				graphics::font::VisualLine p(viewport()->firstVisibleLine());
 				const graphics::font::TextLayout* layout = textRenderer()->layouts().at(p.line);
+				if(layout == nullptr)
+					layout = &defaultLayout.get();
 				abstractScrollOffsetInPixels.bpd() = 0;
 				while(layout != nullptr && p < firstVisibleLineBeforeScroll) {
 					abstractScrollOffsetInPixels.bpd() -= static_cast<std::uint32_t>(layout->lineMetrics(p.subline).height());
@@ -748,6 +768,8 @@ namespace ascension {
 						++p.subline;
 					else if(p.line < caret()->document().numberOfLines() - 1) {
 						layout = textRenderer()->layouts().at(++p.line);
+						if(layout == nullptr)
+							layout = &defaultLayout.get();
 						p.subline = 0;
 					} else
 						break;
@@ -757,6 +779,8 @@ namespace ascension {
 						--p.subline;
 					else if(p.line > 0) {
 						layout = textRenderer()->layouts().at(--p.line);
+						if(layout == nullptr)
+							layout = &defaultLayout.get();
 						p.subline = layout->numberOfLines() - 1;
 					} else
 						break;
