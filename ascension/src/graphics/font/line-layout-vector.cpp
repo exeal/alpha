@@ -77,8 +77,9 @@ namespace ascension {
 					newLayout.lineNumber = line;
 					newLayout.layout = layoutGenerator_->generate(line);
 					self.layouts_.push_front(std::move(newLayout));
+					auto& temp = *layouts_.front().layout;
 					self.fireVisualLinesModified(boost::irange(line, line + 1), layouts_.front().layout->numberOfLines(), 1, documentChangePhase_ == CHANGING);
-					return *layouts_.front().layout;
+					return temp;
 				}
 			}
 
