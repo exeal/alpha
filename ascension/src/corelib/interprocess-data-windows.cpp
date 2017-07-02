@@ -197,7 +197,7 @@ namespace ascension {
 
 	void InterprocessData::data(Format format, std::vector<std::uint8_t>& out) const {
 		if(impl_.get() == nullptr)
-			throw IllegalStateException("An empty MimeData.");
+			throw UnsupportedFormatException();
 
 		FORMATETC formatEtc;
 		formatEtc.cfFormat = format;
@@ -210,7 +210,7 @@ namespace ascension {
 		if(FAILED(hr)) {
 			if(hr == DV_E_FORMATETC)
 				throw UnsupportedFormatException();
-			throw hr;
+			throw makePlatformError(hr);
 		}
 
 		if(medium.tymed == TYMED_FILE || medium.tymed == TYMED_HGLOBAL) {
@@ -261,7 +261,7 @@ namespace ascension {
 
 		::ReleaseStgMedium(&medium);
 		if(FAILED(hr))
-			throw hr;
+			throw makePlatformError(hr);
 	}
 
 	void InterprocessData::formats(std::vector<Format>& out) const {
@@ -305,7 +305,7 @@ namespace ascension {
 
 	void InterprocessData::setData(Format format, const boost::iterator_range<const std::uint8_t*>& range) {
 		if(impl_ == nullptr)
-			throw IllegalStateException("An empty MimeData.");
+			impl_.reset(new IDataObjectImpl);
 
 		FORMATETC formatEtc;
 		formatEtc.cfFormat = format;
@@ -324,7 +324,7 @@ namespace ascension {
 					::ReleaseStgMedium(&medium);
 					if(hr == DV_E_FORMATETC)
 						throw UnsupportedFormatException();
-					throw hr;
+					throw makePlatformError(hr);
 				}
 			}
 		}
