@@ -1077,7 +1077,7 @@ namespace ascension {
 					const presentation::styles::Length::Context& lengthContext, LineBoxContain lineBoxContain, const Font& nominalFont) {
 				// TODO: this code is temporary. should rewrite later.
 				assert(numberOfLines() > 0);
-				std::unique_ptr<Adl[]> newLineMetrics(new Adl[numberOfLines()]);
+				std::unique_ptr<detail::Adl<Scalar>[]> newLineMetrics(new detail::Adl<Scalar>[numberOfLines()]);
 				// calculate allocation-rectangle of the lines according to line-stacking-strategy
 				const std::unique_ptr<const FontMetrics<Scalar>> nominalFontMetrics(context.fontMetrics(nominalFont.shared_from_this()));
 				const Scalar textAltitude = nominalFontMetrics->ascent();
@@ -1121,10 +1121,8 @@ namespace ascension {
 							ASCENSION_ASSERT_NOT_REACHED();
 					}
 #else
-					newLineMetrics[line].ascent = textAltitude;
-					newLineMetrics[line].descent = textDepth;
+					newLineMetrics[line] = detail::Adl<Scalar>(textAltitude, textDepth, 0);
 #endif
-					newLineMetrics[line].leading = 0;
 				}
 
 				std::swap(newLineMetrics, lineMetrics_);
@@ -1189,9 +1187,9 @@ namespace ascension {
 				assert(line() <= layout_->numberOfLines());
 				if(--line_ < layout_->numberOfLines()) {
 					const bool negativeVertical = isNegativeVertical();
-					baselineOffset_ -= negativeVertical ? layout_->lineMetrics_[line() + 1].ascent : layout_->lineMetrics_[line() + 1].descent;
-					baselineOffset_ -= layout_->lineMetrics_[line()].leading;
-					baselineOffset_ -= negativeVertical ? layout_->lineMetrics_[line()].descent : layout_->lineMetrics_[line()].ascent;
+					baselineOffset_ -= negativeVertical ? layout_->lineMetrics_[line() + 1].ascent() : layout_->lineMetrics_[line() + 1].descent();
+					baselineOffset_ -= layout_->lineMetrics_[line()].leading();
+					baselineOffset_ -= negativeVertical ? layout_->lineMetrics_[line()].descent() : layout_->lineMetrics_[line()].ascent();
 				}
 			}
 
@@ -1201,9 +1199,9 @@ namespace ascension {
 				assert(line() < layout_->numberOfLines());
 				if(++line_ < layout_->numberOfLines()) {
 					const bool negativeVertical = isNegativeVertical();
-					baselineOffset_ += negativeVertical ? layout_->lineMetrics_[line() - 1].descent : layout_->lineMetrics_[line() - 1].ascent;
-					baselineOffset_ += layout_->lineMetrics_[line() - 1].leading;
-					baselineOffset_ += negativeVertical ? layout_->lineMetrics_[line()].ascent : layout_->lineMetrics_[line()].descent;
+					baselineOffset_ += negativeVertical ? layout_->lineMetrics_[line() - 1].descent() : layout_->lineMetrics_[line() - 1].ascent();
+					baselineOffset_ += layout_->lineMetrics_[line() - 1].leading();
+					baselineOffset_ += negativeVertical ? layout_->lineMetrics_[line()].ascent() : layout_->lineMetrics_[line()].descent();
 				}
 			}
 
@@ -1212,14 +1210,14 @@ namespace ascension {
 				Scalar newOffset = 0;
 				if(line() != 0) {
 					const bool negativeVertical = isNegativeVertical();
-					const TextLayout::Adl* current;
-					const TextLayout::Adl* next = &layout_->lineMetrics_[0];
+					const detail::Adl<Scalar>* current;
+					const detail::Adl<Scalar>* next = &layout_->lineMetrics_[0];
 					for(Index i = 0; i != line(); ++i) {
 						current = next;
 						next = &layout_->lineMetrics_[i + 1];
-						newOffset += !negativeVertical ? current->descent : current->ascent;
-						newOffset += current->leading;
-						newOffset += !negativeVertical ? next->ascent : next->descent;
+						newOffset += !negativeVertical ? current->descent() : current->ascent();
+						newOffset += current->leading();
+						newOffset += !negativeVertical ? next->ascent() : next->descent();
 					}
 				}
 				baselineOffset_ = newOffset;

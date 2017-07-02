@@ -49,16 +49,16 @@
 
 #ifdef _DEBUG
 #	define ASCENSION_REDRAW_TEXT_AREA_LINE(lineNumber)											\
-		ASCENSION_LOG_TRIVIAL(debug) << "Requested redraw line: " << lineNumber << std::endl;	\
+		ASCENSION_LOG_TRIVIAL(trace) << "Requested redraw line: " << lineNumber << std::endl;	\
 		redrawLine(lineNumber, false)
 #	define ASCENSION_REDRAW_TEXT_AREA_LINES(lineNumbersRange)												\
-		ASCENSION_LOG_TRIVIAL(debug)																		\
+		ASCENSION_LOG_TRIVIAL(trace)																		\
 			<< "Requested redraw lines: ["																	\
 			<< *boost::const_begin(lineNumbersRange) << "," << *boost::const_end(lineNumbersRange) << ")"	\
 			<< std::endl;																					\
 		redrawLines(lineNumbersRange)
 #	define ASCENSION_REDRAW_TEXT_AREA_LINE_AND_FOLLOWINGS(firstLineNumber)	\
-		ASCENSION_LOG_TRIVIAL(debug)										\
+		ASCENSION_LOG_TRIVIAL(trace)										\
 			<< "Requested redraw line: [" << firstLineNumber << ",..)"		\
 			<< std::endl;													\
 		redrawLine(firstLineNumber, true)
@@ -624,10 +624,10 @@ namespace ascension {
 #ifdef _DEBUG
 			{
 				static unsigned long n;
-				ASCENSION_LOG_TRIVIAL(debug)
-					<< "[#" << std::dec << (n++) << "]" << std::endl
-					<< "Invalidated lines: [" << std::dec << *boost::const_begin(lines) << "," << std::dec << *boost::const_end(lines) << ")" << std::endl
-					<< "Sheduled redraw: " << boost::geometry::dsv(boundsToRedraw) << std::endl;
+				ASCENSION_LOG_TRIVIAL(trace)
+					<< "TextArea.redrawLines() [#" << std::dec << (n++) << "]" << std::endl
+					<< "  Invalidated lines: [" << std::dec << *boost::const_begin(lines) << "," << std::dec << *boost::const_end(lines) << ")" << std::endl
+					<< "  Scheduled redraw: " << boost::geometry::dsv(boundsToRedraw) << std::endl;
 			}
 #endif
 		}

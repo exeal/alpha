@@ -14,6 +14,7 @@
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
+#include <ascension/graphics/font/detail/adl.hpp>
 //#include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/geometry/rectangle.hpp>
@@ -322,10 +323,7 @@ namespace ascension {
 				RunVector runs_;
 				Index numberOfLines_;	// TODO: The following 3 std.unique_ptr<T[]> members can be packed for compaction.
 				std::unique_ptr<RunVector::const_iterator[]> firstRunsInLines_;	// size is numberOfLines_, or null if not wrapped
-				struct Adl {
-					Scalar ascent, descent, leading;
-				};
-				std::unique_ptr<Adl[]> lineMetrics_;		// size is numberOfLines_
+				std::unique_ptr<detail::Adl<Scalar>[]> lineMetrics_;			// size is numberOfLines_
 				std::unique_ptr<Scalar[]> lineMeasures_;	// size is numberOfLines_, or null if not wrapped
 				boost::optional<Scalar> maximumMeasure_;	// cached measure of the longest line
 				friend class LineLayoutVector;
@@ -466,7 +464,7 @@ namespace ascension {
 			inline Scalar TextLayout::LineMetricsIterator::ascent() const {
 				if(isDone())
 					throw NoSuchElementException();
-				return layout_->lineMetrics_[line()].ascent;
+				return layout_->lineMetrics_[line()].ascent();
 			}
 
 			/**
@@ -491,7 +489,7 @@ namespace ascension {
 			inline Scalar TextLayout::LineMetricsIterator::descent() const {
 				if(isDone())
 					throw NoSuchElementException();
-				return layout_->lineMetrics_[line()].descent;
+				return layout_->lineMetrics_[line()].descent();
 			}
 
 			/// @internal Implements relational and subtract operators.
@@ -525,10 +523,7 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline NumericRange<Scalar> TextLayout::LineMetricsIterator::extent() const {
-				const Scalar bsln = baselineOffset();	// may throw NoSuchElementException
-				return !isNegativeVertical() ?
-					nrange(bsln - layout_->lineMetrics_[line()].ascent, bsln + layout_->lineMetrics_[line()].descent)
-					: nrange(bsln - layout_->lineMetrics_[line()].descent, bsln + layout_->lineMetrics_[line()].ascent);
+				return layout_->lineMetrics_[line()].extent(baselineOffset(), isNegativeVertical());	// baselineOffset() may throw NoSuchElementException
 			}
 
 			/**
@@ -539,9 +534,7 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline NumericRange<Scalar> TextLayout::LineMetricsIterator::extentWithHalfLeadings() const {
-				Scalar lineUnder = *boost::const_end(extent());	// may throw NoSuchElementException
-				lineUnder += layout_->lineMetrics_[line()].leading / 2;
-				return nrange(lineUnder - height(), lineUnder);
+				return layout_->lineMetrics_[line()].extentWithHalfLeadings(baselineOffset(), isNegativeVertical());	// baselineOffset() may throw NoSuchElementException
 			}
 
 			/**
@@ -553,7 +546,7 @@ namespace ascension {
 			inline Scalar TextLayout::LineMetricsIterator::height() const {
 				if(isDone())
 					throw NoSuchElementException();
-				return layout_->lineMetrics_[line()].ascent + layout_->lineMetrics_[line()].descent + layout_->lineMetrics_[line()].leading;
+				return layout_->lineMetrics_[line()].height();
 			}
 
 			/**
@@ -566,7 +559,7 @@ namespace ascension {
 			inline Scalar TextLayout::LineMetricsIterator::leading() const {
 				if(isDone())
 					throw NoSuchElementException();
-				return layout_->lineMetrics_[line()].leading;
+				return layout_->lineMetrics_[line()].leading();
 			}
 
 			/// Returns the line number of the current line.
