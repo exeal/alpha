@@ -241,11 +241,20 @@ namespace ascension {
 			 */
 
 			/**
+			 * @fn ascension::graphics::font::TextRenderer::createEmptyLineLayout
+			 * Creates and returns an empty text layout for the specified line. This method is like
+			 * @c #createLineLayout, but the text content is treated as an empty string.
+			 * @param line The line number
+			 * @return The generated line layout
+			 * @see #createLineLayout, LineLayoutVector#createIsolatedLayout
+			 */
+
+			/**
 			 * @fn ascension::graphics::font::TextRenderer::createLineLayout
 			 * Creates and returns the text layout for the specified line.
 			 * @param line The line number
 			 * @return The generated line layout
-			 * @see #buildLineLayoutConstructionParameters
+			 * @see #createEmptyLineLayout
 			 */
 
 			/// Returns the @c DefaultFontChangedSignal signal connector.

@@ -27,14 +27,25 @@ namespace ascension {
 			StandardTextRenderer::~StandardTextRenderer() BOOST_NOEXCEPT {
 			}
 
+			/// @see graphics#font#TextRenderer#createEmptyLineLayout
+			std::unique_ptr<const TextLayout> StandardTextRenderer::createEmptyLineLayout() const {
+				return createLineLayout(boost::none);
+			}
+
 			/// @see graphics#font#TextRenderer#createLineLayout
 			std::unique_ptr<const TextLayout> StandardTextRenderer::createLineLayout(Index line) const {
+				return createLineLayout(boost::make_optional(line));
+			}
+
+			/// @internal
+			std::unique_ptr<const TextLayout> StandardTextRenderer::createLineLayout(boost::optional<Index> line) const {
+				static const String emptyString;
 //				const std::unique_ptr<const RenderingContext2D> renderingContext(widgetapi::createRenderingContext(textArea_.textViewer()));
 				const std::unique_ptr<const RenderingContext2D> renderingContext(strategy().renderingContext());
 				auto styles(buildStylesForLineLayout(line, *renderingContext));
-				return std::unique_ptr<const graphics::font::TextLayout>(
-					new graphics::font::TextLayout(
-						layouts().document().lineString(line),
+				return std::unique_ptr<const TextLayout>(
+					new TextLayout(
+						(line == boost::none) ? emptyString : layouts().document().lineString(boost::get(line)),
 						std::get<0>(styles), std::get<1>(styles), std::move(std::get<2>(styles)), std::get<3>(styles),
 						presentation::styles::Length::Context(*renderingContext, strategy().lengthContextViewport()),
 						strategy().parentContentArea(), strategy().fontCollection(), renderingContext->fontRenderContext()));

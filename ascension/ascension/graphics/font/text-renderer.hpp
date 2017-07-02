@@ -70,6 +70,7 @@ namespace ascension {
 
 				/// @name Layout
 				/// @{
+				virtual std::unique_ptr<const TextLayout> createEmptyLineLayout() const = 0;
 				virtual std::unique_ptr<const TextLayout> createLineLayout(Index line) const = 0;
 				LineLayoutVector& layouts() BOOST_NOEXCEPT;
 				const LineLayoutVector& layouts() const BOOST_NOEXCEPT;
