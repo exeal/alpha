@@ -74,7 +74,7 @@ namespace ascension {
 			const presentation::ComputedTextLineStyle&,
 			std::unique_ptr<presentation::ComputedStyledTextRunIterator>,
 			const presentation::ComputedTextRunStyle&
-		> WidgetThemedTextRenderer::buildStylesForLineLayout(Index line, const graphics::RenderingContext2D& renderingContext) const {
+		> WidgetThemedTextRenderer::buildStylesForLineLayout(boost::optional<Index>, const graphics::RenderingContext2D& renderingContext) const {
 			const presentation::styles::Length::Context lengthContext(*strategy().renderingContext(), strategy().lengthContextViewport());
 			static presentation::ComputedTextToplevelStyle toplevel((presentation::SpecifiedTextToplevelStyle()));
 			static presentation::ComputedTextLineStyle lines(presentation::SpecifiedTextLineStyle(), lengthContext);

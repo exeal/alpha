@@ -56,7 +56,7 @@ namespace ascension {
 					const presentation::ComputedTextLineStyle&,
 					std::unique_ptr<presentation::ComputedStyledTextRunIterator>,
 					const presentation::ComputedTextRunStyle&
-				> buildStylesForLineLayout(Index line, const RenderingContext2D& renderingContext) const = 0;
+				> buildStylesForLineLayout(boost::optional<Index> line, const RenderingContext2D& renderingContext) const = 0;
 				/**
 				 * Returns the @c Strategy object.
 				 * @throw IllegalStateException No strategy is presented
