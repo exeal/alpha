@@ -45,7 +45,8 @@ namespace ascension {
 				StandardTextRenderer(kernel::Document& document, const Dimension& initialSize);
 				/**
 				 * Builds styles for @c TextLayout object construction.
-				 * @param line The line number
+				 * @param line The line number, or @c boost#none to request an empty line (see
+				 *             @c TextRenderer#createEmptyLineLayout method)
 				 * @param renderingContext The rendering context to pass to @c presentation#Length#Context object
 				 * @return The tuple of the computed styles. See the constructor of @c TextLayout class
 				 */
@@ -65,6 +66,8 @@ namespace ascension {
 					return *strategy_;
 				}
 
+			private:
+				std::unique_ptr<const TextLayout> createLineLayout(boost::optional<Index> line) const;
 			private:
 				std::unique_ptr<const Strategy> strategy_;
 			};

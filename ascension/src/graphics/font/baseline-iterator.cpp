@@ -212,10 +212,29 @@ namespace ascension {
 				const presentation::BlockFlowDirection blockFlowDirection(textRenderer->blockFlowDirection());
 				const NumericRange<Scalar> viewportExtent(viewportContentExtent(viewport()));
 
+				class LayoutPointer {
+				public:
+					explicit LayoutPointer(std::shared_ptr<const TextRenderer> textRenderer) : textRenderer_(textRenderer) {}
+					const TextLayout* get(Index line) const {
+						auto layout = textRenderer_->layouts().at(line);
+						if(layout == nullptr) {
+							if(emptyLayout_ == nullptr)
+								const_cast<LayoutPointer*>(this)->emptyLayout_ = textRenderer_->createEmptyLineLayout();
+							layout = emptyLayout_.get();
+						}
+						return layout;
+					}
+				private:
+					std::shared_ptr<const TextRenderer> textRenderer_;
+					const TextLayout* layout_;
+					std::unique_ptr<const TextLayout> emptyLayout_;
+				};
+
 				auto newLine(boost::get(line()));
 				auto newBaseline = **this;
 				difference_type n = 0;
-				const TextLayout* layout = /*tracksOutOfViewport() ? &renderer.layouts()[newLine.line] :*/ textRenderer->layouts().at(newLine.line);
+				LayoutPointer layouts(textRenderer);
+				const TextLayout* layout = /*tracksOutOfViewport() ? &layouts[newLine.line] :*/ layouts.get(newLine.line);
 				auto lineMetrics(layout->lineMetrics(newLine.subline));
 				bool negativeVertical = detail::isNegativeVertical(*layout);
 				if(forward) {
@@ -232,7 +251,7 @@ namespace ascension {
 						// move to forward visual line
 						if(newLine.subline == layout->numberOfLines() - 1) {
 							if(newLine.line < textRenderer->layouts().document().numberOfLines() - 1) {
-								layout = textRenderer->layouts().at(++newLine.line);
+								layout = layouts.get(++newLine.line);
 								lineMetrics = layout->lineMetrics(newLine.subline = 0);
 								negativeVertical = detail::isNegativeVertical(*layout);
 							} else
@@ -260,7 +279,7 @@ namespace ascension {
 
 						// move to backward visual line
 						if(newLine.subline == 0) {
-							layout = textRenderer->layouts().at(--newLine.line);
+							layout = layouts.get(--newLine.line);
 							lineMetrics = layout->lineMetrics(newLine.subline = layout->numberOfLines() - 1);
 							negativeVertical = detail::isNegativeVertical(*layout);
 						} else {

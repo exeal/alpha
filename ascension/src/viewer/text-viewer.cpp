@@ -216,60 +216,101 @@ namespace ascension {
 			void configureScrollBar(TextViewer& viewer, std::size_t coordinate, const boost::optional<widgetapi::NativeScrollPosition>& position,
 				const boost::optional<NumericRange<widgetapi::NativeScrollPosition>>& range, const boost::optional<widgetapi::NativeScrollPosition>& pageSize) {
 				assert(coordinate <= 1);
-#ifdef _DEBUG
-				std::ostringstream parametersMessage;
-				if(position != boost::none)
-					parametersMessage << "position=" << boost::get(position) << ", ";
-				if(range != boost::none)
-					parametersMessage << "range=[" << *boost::const_begin(boost::get(range)) << "," << *boost::const_end(boost::get(range)) << "), ";
-				if(pageSize != boost::none)
-					parametersMessage << "pagesize=" << boost::get(pageSize) << ", ";
-				ASCENSION_LOG_TRIVIAL(debug)
-					<< "A TextViewer 0x" << std::hex << reinterpret_cast<std::uintptr_t>(&viewer)
-					<< " was configured the scroll bar (" << coordinate << ") with: \n\t" << parametersMessage.str() << std::endl;
-#endif
+				bool nop = true;
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #ifdef ASCENSION_TEXT_VIEWER_IS_GTK_SCROLLABLE
 				Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
-				if(range != boost::none) {
-					adjustment->set_lower(*boost::const_begin(boost::get(range)));
-					adjustment->set_upper(*boost::const_end(boost::get(range)));
+				if(adjustment) {
+					std::array<double, 6> values = {{
+							adjustment->get_value(), adjustment->get_lower(), adjustment->get_upper(),
+							adjustment->get_step_increment(), adjustment->get_page_increment(), adjustment->get_page_size()
+						}};
+					if(position != boost::none) {
+						if(std::get<0>(values) != boost::get(position))
+							std::tie(std::get<0>(values), nop) = std::make_pair(boost::get(position), false);
+					}
+					if(range != boost::none) {
+						if(std::get<1>(values) != *boost::const_begin(boost::get(range)))
+							std::tie(std::get<1>(values), nop) = std::make_pair(*boost::const_begin(boost::get(range)), false);
+						if(std::get<2>(values) != *boost::const_end(boost::get(range)))
+							std::tie(std::get<2>(values), nop) = std::make_pair(*boost::const_end(boost::get(range)), false);
+					}
+					const auto stepSize = (coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer);
+					if(std::get<3>(values) != stepSize)
+						std::tie(std::get<3>(values), nop) = std::make_pair(stepSize, false);
+					if(pageSize != boost::none) {
+						if(std::get<4>(values) != boost::get(pageSize))
+							std::tie(std::get<4>(values), nop) = std::make_pair(boost::get(pageSize), false);
+						if(std::get<5>(values) != boost::get(pageSize))
+							std::tie(std::get<5>(values), nop) = std::make_pair(boost::get(pageSize), false);
+					}
+
+					if(!nop)
+						adjustment->configure(std::get<0>(values), std::get<1>(values), std::get<2>(values), std::get<3>(values), std::get<4>(values), std::get<5>(values));
 				}
-				adjustment->set_step_increment((coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer));
-				if(pageSize != boost::none) {
-					adjustment->set_page_increment(boost::get(pageSize));
-					adjustment->set_page_size(boost::get(pageSize));
-				}
-				if(position != boost::none)
-					adjustment->set_value(boost::get(position));
 #endif
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				QScrollBar* const scrollBar = (coordinate == 0) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
-				if(range != boost::none)
-					scrollBar->setRange(*boost::const_begin(boost::get(range)), *boost::const_end(boost::get(range)));
-				scrollBar->setSingleStep((coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer));
-				if(pageSize != boost::none)
-					scrollBar->setPageStep(boost::get(pageSize));
-				if(position != boost::none)
-					scrollBar->setSliderPosition(boost::get(position));
+				if(QScrollBar* const scrollBar = (coordinate == 0) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar()) {
+					if(position != boost::none && scrollBar->sliderPosition() != boost::get(position)) {
+						scrollBar->setSliderPosition(boost::get(position));
+						nop = false;
+					}
+					if(range != boost::none && (scrollBar->minimum() != *boost::const_begin(boost::get(range)) || scrollBar->maximum() != *boost::const_end(boost::get(range)))) {
+						scrollBar->setRange(*boost::const_begin(boost::get(range)), *boost::const_end(boost::get(range)));
+						nop = false;
+					}
+					const auto stepSize = (coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer);
+					if(scrollBar->singleStep() != stepSize) {
+						scrollBar->setSingleStep(stepSize);
+						nop = false;
+					}
+					if(pageSize != boost::none && scrollBar->pageSize() != boost::get(pageSize)) {
+						scrollBar->setPageStep(boost::get(pageSize));
+						nop = false;
+					}
+				}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#	error Not implemented.
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				auto si(win32::makeZeroSize<SCROLLINFO>());
-				if(range/* != boost::none*/) {
+				if(range != boost::none)
 					si.fMask |= SIF_RANGE;
-					si.nMin = *boost::const_begin(boost::get(range));
-					si.nMax = *boost::const_end(boost::get(range));
-				}
-				if(pageSize != boost::none) {
+				if(pageSize != boost::none)
 					si.fMask |= SIF_PAGE;
-					si.nPage = boost::get(pageSize) + 1;
-				}
-				if(position != boost::none) {
+				if(position != boost::none)
 					si.fMask |= SIF_POS;
-					si.nPos = boost::get(position);
+				if(si.fMask != 0) {
+					if(win32::boole(::GetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si)) || ::GetLastError() == ERROR_NO_SCROLLBARS) {
+						if(range != boost::none) {
+							if(si.nMin != *boost::const_begin(boost::get(range)))
+								std::tie(si.nMin, nop) = std::make_pair(*boost::const_begin(boost::get(range)), false);
+							if(si.nMax != *boost::const_end(boost::get(range)))
+								std::tie(si.nMax, nop) = std::make_pair(*boost::const_end(boost::get(range)), false);
+						}
+						if(pageSize != boost::none && si.nPage != boost::get(pageSize) + 1)
+							std::tie(si.nPage, nop) = std::make_pair(boost::get(pageSize) + 1, false);
+						if(position != boost::none && si.nPos != boost::get(position))
+							std::tie(si.nPos, nop) = std::make_pair(boost::get(position), false);
+						if(!nop)
+							::SetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si, true);
+					}
 				}
-				::SetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si, true);
+#endif
+
+#ifdef _DEBUG
+				if(!nop) {
+					std::ostringstream parametersMessage;
+					if(position != boost::none)
+						parametersMessage << "position=" << boost::get(position) << ", ";
+					if(range != boost::none)
+						parametersMessage << "range=[" << *boost::const_begin(boost::get(range)) << "," << *boost::const_end(boost::get(range)) << "), ";
+					if(pageSize != boost::none)
+						parametersMessage << "pagesize=" << boost::get(pageSize) << ", ";
+					ASCENSION_LOG_TRIVIAL(trace)
+						<< "[TextViewer.configureScrollBar] (this=0x" << std::hex << reinterpret_cast<std::uintptr_t>(&viewer) << ")" << std::endl
+						<< "  with coordinate=" << coordinate << ", " << parametersMessage.str() << std::endl;
+				}
 #endif
 			}
 		}

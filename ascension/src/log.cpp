@@ -1,6 +1,6 @@
 /**
  * @file log.cpp
- * Defines @c ASCENSION_TRIVIAL_LOG macro.
+ * Defines @c ASCENSION_LOG_TRIVIAL macro.
  * @author exeal
  * @date 2015-06-27 Created.
  */

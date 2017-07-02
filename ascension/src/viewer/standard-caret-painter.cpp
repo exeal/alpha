@@ -188,7 +188,7 @@ namespace ascension {
 			if(caret_ == nullptr)
 				return;
 #ifdef _DEBUG
-			ASCENSION_LOG_TRIVIAL(debug) << "StandardCaretPainter.paint() with line number " << kernel::line(*caret_) << std::endl;
+			ASCENSION_LOG_TRIVIAL(trace) << "StandardCaretPainter.paint() with line number " << kernel::line(*caret_) << std::endl;
 #endif
 			const auto writingMode(graphics::font::writingMode(layout));
 			const auto logicalBounds(computeCharacterLogicalBounds(*caret_, layout));
@@ -262,8 +262,8 @@ namespace ascension {
 				return;
 			visible_ = visible;
 #ifdef _DEBUG
-			ASCENSION_LOG_TRIVIAL(debug)
-				<< "Requested redraw line: " << kernel::line(*caret_)
+			ASCENSION_LOG_TRIVIAL(trace)
+				<< "StandardCaretPainter.setVisible() requested redraw line: " << kernel::line(*caret_)
 				<< (visible ? " (off => on)" : " (on => off)")
 				<< std::endl;
 #endif
