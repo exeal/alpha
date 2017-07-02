@@ -585,7 +585,6 @@ namespace ascension {
 			 * @see kernel#locations#nextLine
 			 */
 			VisualDestinationProxy nextVisualLine(const VisualPoint& p, Direction direction, Index lines /* = 1 */) {
-				// ISSUE: LineLayoutVector.offsetVisualLine(VisualLine&, SignedIndex) does not use calculated layouts.
 				const auto hit(p.hit());
 				auto line(kernel::line(hit.characterIndex()));
 				auto inlineHit(hit.isLeadingEdge() ?
@@ -603,18 +602,17 @@ namespace ascension {
 				}
 				graphics::font::VisualLine visualLine(line, subline);
 				renderer->layouts().offsetVisualLine(visualLine,
-					(direction == Direction::forward()) ? static_cast<SignedIndex>(lines) : -static_cast<SignedIndex>(lines));
+					(direction == Direction::forward()) ? static_cast<SignedIndex>(lines) : -static_cast<SignedIndex>(lines));	// ISSUE: This uses USE_CALCULATED_LAYOUT.
 				if(p.positionInVisualLine_ == boost::none)
 					const_cast<viewer::VisualPoint&>(p).rememberPositionInVisualLine();
 				line = visualLine.line;
-				if(nullptr != (layout = renderer->layouts().at(visualLine.line))) {
-					inlineHit = layout->hitTestCharacter(
-						presentation::FlowRelativeTwoAxes<graphics::Scalar>(
-							presentation::_ipd = *p.positionInVisualLine_ - graphics::font::lineStartEdge(*layout, p.textArea().viewport()->contentMeasure()),
-							presentation::_bpd = graphics::font::TextLayout::LineMetricsIterator(*layout, visualLine.subline).baselineOffset()));
-//					if(layout->lineAt(inlineHit) != visualLine.subline)
-//						np = nextCharacter(p.document(), np, Direction::backward(), GRAPHEME_CLUSTER);
-				}
+				layout = &const_cast<graphics::font::LineLayoutVector&>(renderer->layouts()).at(visualLine.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);
+				inlineHit = layout->hitTestCharacter(
+					presentation::FlowRelativeTwoAxes<graphics::Scalar>(
+						presentation::_ipd = *p.positionInVisualLine_ - graphics::font::lineStartEdge(*layout, p.textArea().viewport()->contentMeasure()),
+						presentation::_bpd = graphics::font::TextLayout::LineMetricsIterator(*layout, visualLine.subline).baselineOffset()));
+//				if(layout->lineAt(inlineHit) != visualLine.subline)
+//					np = nextCharacter(p.document(), np, Direction::backward(), GRAPHEME_CLUSTER);
 
 				const kernel::Position temp(line, inlineHit.characterIndex());
 				return viewer::detail::VisualDestinationProxyMaker::make(
