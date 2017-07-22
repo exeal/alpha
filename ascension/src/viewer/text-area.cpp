@@ -834,6 +834,8 @@ namespace ascension {
 #else
 					ASCENSION_CANT_DETECT_PLATFORM();
 #endif
+
+#if !ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && !ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					// invalidate bounds newly entered into the viewport
 					boost::optional<graphics::Point> originOfBoundsToRedraw;
 					if(graphics::geometry::x(scrollOffsetsInPixels) > 0)
@@ -864,6 +866,7 @@ namespace ascension {
 									graphics::geometry::_dx = graphics::geometry::dx(boundsToScroll),
 									graphics::geometry::_dy = static_cast<graphics::Scalar>(graphics::geometry::y(scrollOffsetsInPixels)))),
 							false);
+#endif
 				}
 
 				// 3. repaint
