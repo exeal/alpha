@@ -828,7 +828,7 @@ namespace ascension {
 					{
 						const auto temp(toNative<RECT>(boundsToScroll));
 						::ScrollWindowEx(textViewer().handle().get(),
-							graphics::geometry::x(scrollOffsetsInPixels), graphics::geometry::y(scrollOffsetsInPixels),
+							-graphics::geometry::x(scrollOffsetsInPixels), -graphics::geometry::y(scrollOffsetsInPixels),
 							nullptr, &temp, nullptr, nullptr, SW_INVALIDATE);
 					}
 #else
