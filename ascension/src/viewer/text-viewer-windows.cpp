@@ -800,10 +800,10 @@ namespace ascension {
 			const auto viewport(textArea()->viewport());
 			switch(sbCode) {
 				case SB_LINELEFT:
-					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(-1, 0));
+					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(graphics::_x = -1, graphics::_y = 0));
 					break;
 				case SB_LINERIGHT:
-					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(+1, 0));
+					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(graphics::_x = +1, graphics::_y = 0));
 					break;
 				case SB_PAGELEFT:	// a left page
 					graphics::font::scrollPage(*viewport, graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(graphics::_x = -1, graphics::_y = 0));
@@ -931,10 +931,10 @@ namespace ascension {
 					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(0, +1));
 					break;
 				case SB_PAGEUP:
-					graphics::font::scrollPage(*viewport, graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::_x = 0, graphics::geometry::_y = -1));
+					graphics::font::scrollPage(*viewport, graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(graphics::_x = 0, graphics::_y = -1));
 					break;
 				case SB_PAGEDOWN:
-					graphics::font::scrollPage(*viewport, graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(graphics::geometry::_x = 0, graphics::geometry::_y = +1));
+					graphics::font::scrollPage(*viewport, graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(graphics::_x = 0, graphics::_y = +1));
 					break;
 				case SB_TOP:
 					viewport->scrollTo(
