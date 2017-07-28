@@ -121,7 +121,7 @@ namespace ascension {
 						*effect = toNative<DWORD>(DropActions(boost::get(input.dropAction())));
 					if(auto helper = dropTargetHelper()) {
 						auto p2(toNative<POINT>(p));
-						helper->DragEnter(widget_.get()->handle().get(), data, &p2, *effect);
+						hr = helper->DragEnter(widget_.get()->handle().get(), data, &p2, *effect);
 					}
 
 					return S_OK;
