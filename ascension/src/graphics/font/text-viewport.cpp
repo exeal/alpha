@@ -1169,6 +1169,7 @@ namespace ascension {
 								if((bpdInPage += (lineMetrics = TextLayout::LineMetricsIterator(*layout, layout->numberOfLines() - 1)).height()) > bpd) {
 									layout = &layouts.at(++line, LineLayoutVector::USE_CALCULATED_LAYOUT);
 									lineMetrics = TextLayout::LineMetricsIterator(*layout, 0);
+									++newPositions.bpd();
 								}
 							} else
 								break;
