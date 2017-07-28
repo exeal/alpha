@@ -923,8 +923,10 @@ namespace ascension {
 				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT {
 			boost::optional<Index> firstLineToDraw;
 			if(sublinesDifference == 0) {	// number of visual lines was not changed
-				ASCENSION_REDRAW_TEXT_AREA_LINES(lines);
-				redrawIfNotFrozen(*this);
+				if(boost::size(lines) > 1 || textRenderer()->layouts().at(lines.front()) != nullptr) {
+					ASCENSION_REDRAW_TEXT_AREA_LINES(lines);
+					redrawIfNotFrozen(*this);
+				}
 			} else {
 				boost::optional<Index> firstLineToDraw;
 				if(*boost::const_end(lines) < viewport()->firstVisibleLine().line) {	// changed before visible area
