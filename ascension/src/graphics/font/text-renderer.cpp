@@ -339,8 +339,9 @@ namespace ascension {
 			 */
 			void TextRenderer::paint(PaintContext& context, const TextViewport& viewport, const LineRenderingOptions* options /* = nullptr */) const {
 				// scan lines in the text area
-				const bool horizontal = presentation::isHorizontal(blockFlowDirection());
-				const auto bpdRange(horizontal ? geometry::range<1>(context.boundsToPaint()) : geometry::range<0>(context.boundsToPaint()));
+				presentation::FlowRelativeFourSides<graphics::Scalar> abstractBoundsToPaint;
+				presentation::mapDimensions(writingModes(), presentation::_from = graphics::PhysicalFourSides<graphics::Scalar>(context.boundsToPaint()), presentation::_to = abstractBoundsToPaint);
+				const auto bpdRange(presentation::blockFlowRange(abstractBoundsToPaint));
 				struct LineToPaint {
 					Index lineNumber;
 					graphics::Scalar baseline;
@@ -355,7 +356,6 @@ namespace ascension {
 				for(Index logicalLine; baseline != lastBaseline; ++baseline) {
 					assert(baseline.line() != boost::none);
 					logicalLine = boost::get(baseline.line()).line;
-					const TextLayout& layout = const_cast<LineLayoutVector&>(layouts()).at(logicalLine, LineLayoutVector::USE_CALCULATED_LAYOUT);
 					if(overlaps(baseline.extentWithHalfLeadings(), bpdRange)) {	// this logical line should be painted
 						LineToPaint lineToPaint;
 						lineToPaint.lineNumber = logicalLine;
@@ -367,13 +367,15 @@ namespace ascension {
 								--i;
 							lineToPaint.baseline = *i;
 						}
+						const TextLayout& layout = const_cast<LineLayoutVector&>(layouts()).at(logicalLine, LineLayoutVector::USE_CALCULATED_LAYOUT);
 						lineToPaint.extent = layout.extentWithHalfLeadings();
 						lineToPaint.extent.advance_begin(lineToPaint.baseline);
 						lineToPaint.extent.advance_end(lineToPaint.baseline);
 						linesToPaint.push_back(lineToPaint);
 						if(boost::get(baseline.line()).subline < layout.numberOfLines() - 1)
 							std::advance(baseline, layout.numberOfLines() - 1 - boost::get(baseline.line()).subline);	// skip to the next logical line
-					}
+					} else if(*boost::const_end(baseline.extentWithHalfLeadings()) >= *boost::const_end(bpdRange))
+						break;
 				}
 
 				// paint background outside of the lines
