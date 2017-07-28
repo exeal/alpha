@@ -45,6 +45,7 @@
 #	include <boost/log/expressions.hpp>
 #	include <boost/log/sinks.hpp>
 #	include <boost/log/sinks/debug_output_backend.hpp>
+#	include <boost/log/trivial.hpp>
 #	include <boost/make_shared.hpp>
 #endif
 
@@ -68,16 +69,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int showCommand) {
 #ifdef _DEBUG
 	{
 		std::locale::global(std::locale("Japanese_Japan.932"));
-		auto loggingBackend(boost::make_shared<boost::log::sinks::debug_output_backend>());
-		auto loggingSink(boost::make_shared<boost::log::sinks::synchronous_sink<boost::log::sinks::debug_output_backend>>(loggingBackend));
-		loggingSink->set_formatter(
+		auto debugOutputBackend(boost::make_shared<boost::log::sinks::debug_output_backend>());
+		auto trivialFrontEnd(boost::make_shared<boost::log::sinks::synchronous_sink<boost::log::sinks::debug_output_backend>>(debugOutputBackend));
+		auto fatalFrontEnd(boost::make_shared<boost::log::sinks::synchronous_sink<boost::log::sinks::debug_output_backend>>(debugOutputBackend));
+		trivialFrontEnd->set_formatter(
+			boost::log::expressions::format("%1%")
+			% boost::log::expressions::message);
+		fatalFrontEnd->set_formatter(
 			boost::log::expressions::format("%1%(%2%) [%3%] : %4%")
 			% boost::log::expressions::attr<std::string>("file")
 			% boost::log::expressions::attr<int>("line")
 			% boost::log::expressions::attr<std::string>("function")
 			% boost::log::expressions::message);
+		trivialFrontEnd->set_filter(boost::log::trivial::severity < boost::log::trivial::warning);
+		fatalFrontEnd->set_filter(boost::log::trivial::severity >= boost::log::trivial::warning);
 //		boost::log::add_common_attributes();
-		boost::log::core::get()->add_sink(loggingSink);
+		boost::log::core::get()->add_sink(trivialFrontEnd);
+		boost::log::core::get()->add_sink(fatalFrontEnd);
 	}
 #endif // _DEBUG
 
