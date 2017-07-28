@@ -44,7 +44,7 @@ namespace ascension {
 #endif
 				LineLayoutVector& self = *const_cast<LineLayoutVector*>(this);
 				auto i(std::begin(self.layouts_));
-				for(const auto e(end(self.layouts_)); i != e; ++i) {
+				for(const auto e(std::end(self.layouts_)); i != e; ++i) {
 					if(i->lineNumber == line)
 						break;
 				}
@@ -69,6 +69,9 @@ namespace ascension {
 						// delete the last
 						NumberedLayout temp(std::move(self.layouts_.back()));
 						self.layouts_.pop_back();
+#ifdef _DEBUG
+						ASCENSION_LOG_TRIVIAL(trace) << "LineLayoutVector.operator[] popped layout at line " << temp.lineNumber << std::endl;
+#endif
 						self.fireVisualLinesModified(boost::irange(temp.lineNumber, temp.lineNumber + 1),
 							1, temp.layout->numberOfLines(), documentChangePhase_ == CHANGING);
 					}
@@ -77,6 +80,9 @@ namespace ascension {
 					newLayout.lineNumber = line;
 					newLayout.layout = layoutGenerator_->generate(line);
 					self.layouts_.push_front(std::move(newLayout));
+#ifdef _DEBUG
+					ASCENSION_LOG_TRIVIAL(trace) << "LineLayoutVector.operator[] pushed layout at line " << newLayout.lineNumber << std::endl;
+#endif
 					auto& temp = *layouts_.front().layout;
 					self.fireVisualLinesModified(boost::irange(line, line + 1), layouts_.front().layout->numberOfLines(), 1, documentChangePhase_ == CHANGING);
 					return temp;
@@ -153,6 +159,9 @@ namespace ascension {
 				} else {
 					for(auto i(boost::const_begin(layouts_)); i != boost::const_end(layouts_); ) {
 						if(includes(orderedLines, i->lineNumber)) {
+#ifdef _DEBUG
+							ASCENSION_LOG_TRIVIAL(trace) << "LineLayoutVector.clearCaches() popped layout at line " << i->lineNumber << std::endl;
+#endif
 							oldSublines += i->layout->numberOfLines();
 							i = layouts_.erase(i);
 							++cachedLines;
@@ -316,10 +325,16 @@ namespace ascension {
 							i->layout.reset();
 							i->layout = layoutGenerator_->generate(line);
 #endif
+#ifdef _DEBUG
+							ASCENSION_LOG_TRIVIAL(trace) << "LineLayoutVector.invalidate() repaired layout at line " << line << std::endl;
+#endif
 							fireVisualLinesModified(boost::irange(line, line + 1),
 								i->layout->numberOfLines(), oldSublines, documentChangePhase_ == CHANGING);
 						} else {
 							layouts_.erase(i);
+#ifdef _DEBUG
+							ASCENSION_LOG_TRIVIAL(trace) << "LineLayoutVector.invalidate() popped layout at line " << line << std::endl;
+#endif
 							fireVisualLinesModified(boost::irange(line, line + 1),
 								1, oldSublines, documentChangePhase_ == CHANGING);
 						}
