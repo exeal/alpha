@@ -381,8 +381,10 @@ namespace ascension {
 				// paint background outside of the lines
 				{
 					const presentation::FlowRelativeFourSides<graphics::Scalar> abstractOutside(
-						presentation::_blockStart = *boost::const_end(linesToPaint.back().extent), presentation::_blockEnd = std::numeric_limits<graphics::Scalar>::max(),
-						presentation::_inlineStart = std::numeric_limits<graphics::Scalar>::lowest(), presentation::_inlineEnd = std::numeric_limits<graphics::Scalar>::max()
+						presentation::_blockStart = !boost::empty(linesToPaint) ? *boost::const_end(linesToPaint.back().extent) : 0,
+						presentation::_blockEnd = std::numeric_limits<graphics::Scalar>::max(),
+						presentation::_inlineStart = std::numeric_limits<graphics::Scalar>::lowest(),
+						presentation::_inlineEnd = std::numeric_limits<graphics::Scalar>::max()
 					);
 					Rectangle physicalOutside;
 					{
