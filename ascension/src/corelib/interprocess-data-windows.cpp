@@ -9,6 +9,7 @@
 #include <ascension/corelib/interprocess-data.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #include <ascension/win32/com/unknown-impl.hpp>
+#include <ascension/win32/windows.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/range/algorithm/find.hpp>

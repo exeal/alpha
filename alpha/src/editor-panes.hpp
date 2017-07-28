@@ -10,6 +10,7 @@
 #define ALPHA_EDITOR_PANES_HPP
 //#include "editor-pane.hpp"
 #include <ascension/corelib/signals.hpp>
+#include <ascension/platforms.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/paned.h>

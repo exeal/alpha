@@ -9,6 +9,7 @@
 #define ASCENSION_INPUT_SEQUENCE_CHECKER_HPP
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/code-point.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <forward_list>
 #include <locale>
 #include <memory>

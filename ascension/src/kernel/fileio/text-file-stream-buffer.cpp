@@ -13,6 +13,7 @@
 #	include <sys/mman.h>	// mmap, munmap, ...
 #endif // !ASCENSION_OS_POSIX
 #if BOOST_OS_WINDOWS
+#	include <ascension/win32/windows.hpp>
 #	include <cwctype>
 #	include <limits>	// std.numeric_limits
 #endif

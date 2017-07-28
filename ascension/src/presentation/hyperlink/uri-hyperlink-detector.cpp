@@ -11,6 +11,7 @@
 #include <ascension/presentation/hyperlink/hyperlink-detector.hpp>
 #include <ascension/rules/uri-detector.hpp>
 #if BOOST_OS_WINDOWS
+#	include <ascension/win32/windows.hpp>
 #	include <shellapi.h>	// ShellExecuteW
 #else
 #endif

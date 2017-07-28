@@ -9,6 +9,7 @@
 
 #include <ascension/graphics/geometry/common.hpp>
 #include <ascension/graphics/geometry/named-parameters.hpp>
+#include <ascension/platforms.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/geometry/strategies/transform/matrix_transformers.hpp>
 #include <boost/operators.hpp>

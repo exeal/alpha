@@ -10,6 +10,7 @@
 #define ASCENSION_SCREEN_HPP
 
 #include <ascension/graphics/rendering-device.hpp>
+#include <ascension/platforms.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gdkmm/screen.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)

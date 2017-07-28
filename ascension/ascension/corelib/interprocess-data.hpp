@@ -8,7 +8,9 @@
 
 #ifndef ASCENSION_INTERPROCESS_DATA_HPP
 #define ASCENSION_INTERPROCESS_DATA_HPP
+#include <ascension/platforms.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
+#include <ascension/corelib/string-piece.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/selectiondata.h>
 #	include <gtkmm/targetlist.h>

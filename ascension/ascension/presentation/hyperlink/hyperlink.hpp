@@ -9,8 +9,8 @@
 
 #ifndef ASCENSION_HYPERLINK_HPP
 #define ASCENSION_HYPERLINK_HPP
-
 #include <ascension/corelib/basic-types.hpp>
+#include <ascension/corelib/text/character.hpp>
 #include <boost/range/irange.hpp>
 
 namespace ascension {
