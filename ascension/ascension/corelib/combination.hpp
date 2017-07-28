@@ -7,6 +7,7 @@
 
 #ifndef ASCENSION_COMBINATION_HPP
 #define ASCENSION_COMBINATION_HPP
+#include <boost/config.hpp>
 #include <bitset>
 #include <type_traits>
 #include <utility>	// std.tuple_size

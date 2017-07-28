@@ -10,6 +10,7 @@
 
 #ifndef ASCENSION_BASELINE_ITERATOR_HPP
 #define ASCENSION_BASELINE_ITERATOR_HPP
+#include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/numeric-range.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/font/visual-line.hpp>

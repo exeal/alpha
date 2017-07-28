@@ -4,6 +4,7 @@
  * @date 2015-04-26 Separated from string-piece.hpp.
  */
 
+#include <ascension/platforms.hpp>
 #if ASCENSION_SUPPORTS_WINDOW_SYSTEM(GTK) || ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO) || ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
 #	include <ascension/corelib/string-piece.hpp>
 #	include <glib.h>

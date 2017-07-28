@@ -10,6 +10,7 @@
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
 #include <boost/range/value_type.hpp>
+#include <cassert>
 #include <utility>	// std.max, std.min
 
 namespace ascension {

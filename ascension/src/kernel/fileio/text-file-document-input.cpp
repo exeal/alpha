@@ -18,6 +18,7 @@
 #	include <unistd.h>		// fcntl
 #endif // !ASCENSION_OS_POSIX
 #if BOOST_OS_WINDOWS
+#	include <ascension/win32/windows.hpp>
 #	include <cwctype>
 #endif
 
@@ -845,6 +846,9 @@ private:
 							try {
 								boost::filesystem::remove(fileName());
 							} catch(const boost::filesystem::filesystem_error& e) {
+#ifndef _DEBUG
+								boost::ignore_unused(e);
+#endif
 								assert(e.code().value() != boost::system::errc::no_such_file_or_directory);
 								boost::filesystem::remove(tempFileName, ignored);	// ignore the result
 								throw;

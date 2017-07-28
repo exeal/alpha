@@ -16,7 +16,7 @@
 #	include <???>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/corelib/text/character.hpp>
-#	include <winnt.h>
+#	include <ascension/win32/windows.hpp>	// this includes winnt.h
 #endif
 
 namespace alpha {

@@ -9,6 +9,7 @@
 #ifndef ASCENSION_FONT_METRICS_HPP
 #define ASCENSION_FONT_METRICS_HPP
 #include <ascension/corelib/basic-types.hpp>
+#include <cstdint>
 
 namespace ascension {
 	namespace graphics {

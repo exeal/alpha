@@ -7,8 +7,8 @@
 
 #ifndef ASCENSION_RENDERING_DEVICE_HPP
 #define ASCENSION_RENDERING_DEVICE_HPP
-
 #include <ascension/graphics/geometry/dimension.hpp>
+#include <memory>
 
 namespace ascension {	
 	namespace graphics {
