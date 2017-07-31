@@ -111,8 +111,8 @@ namespace ascension {
 		inline Point makeMouseLocation(LPARAM lp) {
 #ifndef GET_X_LPARAM
 	// <windowsx.h> defines the followings
-#	define GET_X_LPARAM(l) LOWORD(l)
-#	define GET_Y_LPARAM(l) HIWORD(l)
+#	define GET_X_LPARAM(l) static_cast<int>(static_cast<short>(LOWORD(l)))
+#	define GET_Y_LPARAM(l) static_cast<int>(static_cast<short>(HIWORD(l)))
 #endif
 			return boost::geometry::make<Point>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
 		}

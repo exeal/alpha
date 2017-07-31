@@ -506,6 +506,7 @@ namespace ascension {
 				throw std::bad_weak_ptr();
 			if(lockedMouseInputStrategy_.expired()) {
 				lockedMouseInputStrategy_ = strategy;
+				inputGrabber_ = widgetapi::grabInput(*this);
 				return true;
 			}
 			return false;
@@ -759,8 +760,10 @@ namespace ascension {
 
 		/// @see MouseInputStrategy#TargetLocker#unlockMouseInputTarget
 		void TextViewer::unlockMouseInputTarget(MouseInputStrategy& strategy) BOOST_NOEXCEPT {
-			if(&strategy == lockedMouseInputStrategy_.lock().get())
+			if(&strategy == lockedMouseInputStrategy_.lock().get()) {
 				lockedMouseInputStrategy_.reset();
+				inputGrabber_ = boost::none;
+			}
 		}
 
 		/**
