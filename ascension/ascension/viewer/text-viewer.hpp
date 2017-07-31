@@ -371,6 +371,7 @@ namespace ascension {
 			std::shared_ptr<TextArea> textArea_;
 			Configuration configuration_;
 			std::weak_ptr<MouseInputStrategy> lockedMouseInputStrategy_;
+			boost::optional<ascension::detail::ScopeGuard> inputGrabber_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			win32::Handle<HWND> toolTip_;
 			std::basic_string<WCHAR> tipText_;
