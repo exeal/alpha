@@ -190,7 +190,7 @@ namespace ascension {
 		/// @see VisualPoint#aboutToMove
 		void Caret::aboutToMove(TextHit& to) {
 			const auto ip(insertionPosition(document(), to));
-			if(kernel::positions::isOutsideOfDocumentRegion(document(), ip))
+			if(kernel::locations::isOutsideOfDocumentRegion(kernel::locations::makePointProxy(document(), ip)))
 				throw kernel::BadPositionException(ip, "Caret tried to move outside of document.");
 			VisualPoint::aboutToMove(to);
 		}

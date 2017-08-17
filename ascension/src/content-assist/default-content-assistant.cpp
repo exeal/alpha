@@ -150,7 +150,7 @@ namespace ascension {
 					close();
 				completionSession_->replacementRegion = kernel::Region(
 					*boost::const_begin(completionSession_->replacementRegion),
-					kernel::positions::updatePosition(*boost::const_end(completionSession_->replacementRegion), change, Direction::forward()));
+					kernel::locations::updatePosition(*boost::const_end(completionSession_->replacementRegion), change, Direction::forward()));
 				if(!boost::empty(change.insertedRegion()) && !encompasses(replacementRegion, change.insertedRegion()))
 					close();
 

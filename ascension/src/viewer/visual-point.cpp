@@ -390,16 +390,16 @@ namespace ascension {
 #endif
 		namespace {
 			inline bool isOutsideOfDocumentRegion(const kernel::Document& document, const TextHit& hit) BOOST_NOEXCEPT {
-				return kernel::positions::isOutsideOfDocumentRegion(document, insertionPosition(document, hit));
+				return kernel::locations::isOutsideOfDocumentRegion(kernel::locations::makePointProxy(document, insertionPosition(document, hit)));
 			}
 			inline TextHit shrinkToDocumentRegion(const kernel::Document& document, const TextHit& hit) BOOST_NOEXCEPT {
 				if(kernel::line(hit.characterIndex()) >= document.numberOfLines())
-					return TextHit::leading(kernel::locations::endOfDocument(std::make_pair(std::ref(document), hit.characterIndex())));
+					return TextHit::leading(kernel::locations::endOfDocument(kernel::locations::makePointProxy(document, hit.characterIndex())));
 				const Index line = kernel::line(hit.characterIndex());
 				if(kernel::offsetInLine(hit.characterIndex()) < document.lineLength(line))
 					return hit;
 				else
-					return TextHit::leading(kernel::locations::endOfLine(std::make_pair(std::ref(document), hit.characterIndex())));
+					return TextHit::leading(kernel::locations::endOfLine(kernel::locations::makePointProxy(document, hit.characterIndex())));
 			}
 		}
 
