@@ -36,16 +36,16 @@ namespace ascension {
 					return insertionPosition(document(p), hit(p));
 				}
 				inline kernel::Position normalPosition(const PointProxy& p) BOOST_NOEXCEPT {
-					return kernel::positions::shrinkToAccessibleRegion(document(p), position(p));
+					return kernel::locations::shrinkToAccessibleRegion(kernel::locations::makePointProxy(document(p), position(p)));
 				}
 				inline TextHit normalHit(const PointProxy& p) BOOST_NOEXCEPT {
-					const auto np(kernel::positions::shrinkToAccessibleRegion(document(p), hit(p).characterIndex()));
-					if(np != hit(p).characterIndex() || kernel::locations::isEndOfLine(std::make_pair(std::ref(document(p)), np)))
+					const auto np(kernel::locations::shrinkToAccessibleRegion(kernel::locations::makePointProxy(document(p), hit(p).characterIndex())));
+					if(np != hit(p).characterIndex() || kernel::locations::isEndOfLine(kernel::locations::makePointProxy(document(p), np)))
 						return TextHit::leading(np);
 					return hit(p);
 				}
 				inline std::pair<const kernel::Document&, kernel::Position> kernelProxy(const PointProxy& p) {
-					return std::make_pair(std::ref(document(p)), position(p));
+					return kernel::locations::makePointProxy(document(p), position(p));
 				}
 				inline graphics::font::TextHit<> inlineHit(const TextHit& hit) BOOST_NOEXCEPT {
 					return graphics::font::transformTextHit(hit, [](const kernel::Position& p) {

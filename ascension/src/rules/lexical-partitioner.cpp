@@ -10,6 +10,7 @@
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/kernel/locations.hpp>
 #include <ascension/log.hpp>
 #include <ascension/rules/lexical-partitioner.hpp>
 #include <ascension/rules/transition-rule.hpp>
@@ -61,8 +62,8 @@ namespace ascension {
 					if(p.start < *boost::const_begin(change.erasedRegion()))
 						continue;
 					else if(p.start > *boost::const_end(change.erasedRegion())) {
-						p.start = kernel::positions::updatePosition(p.start, change, Direction::forward());
-						p.tokenStart = kernel::positions::updatePosition(p.tokenStart, change, Direction::forward());
+						p.start = kernel::locations::updatePosition(p.start, change, Direction::forward());
+						p.tokenStart = kernel::locations::updatePosition(p.tokenStart, change, Direction::forward());
 					} else if(((i + 1 < c) ? partitions_[i + 1]->start : *boost::const_end(doc.region())) <= *boost::const_end(change.erasedRegion())) {
 						// this partition is encompassed with the deleted region
 						delete partitions_[i];
@@ -83,8 +84,8 @@ namespace ascension {
 			if(!boost::empty(change.insertedRegion())) {
 				for(std::size_t i = 1, c = partitions_.size(); i < c; ++i) {
 					Partition& p = *partitions_[i];
-					p.start = kernel::positions::updatePosition(p.start, change, Direction::forward());
-					p.tokenStart = kernel::positions::updatePosition(p.tokenStart, change, Direction::forward());
+					p.start = kernel::locations::updatePosition(p.start, change, Direction::forward());
+					p.tokenStart = kernel::locations::updatePosition(p.tokenStart, change, Direction::forward());
 				}
 			}
 			verify();

@@ -316,17 +316,6 @@ namespace ascension {
 			const Region& region, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 		/// @}
 
-		namespace positions {
-			Index absoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
-//			bool isOutsideOfAccessibleRegion(const Document& document, const Position& position) BOOST_NOEXCEPT;
-			bool isOutsideOfDocumentRegion(const Document& document, const Position& position) BOOST_NOEXCEPT;
-			Position shrinkToAccessibleRegion(const Document& document, const Position& position) BOOST_NOEXCEPT;
-			Region shrinkToAccessibleRegion(const Document& document, const Region& region) BOOST_NOEXCEPT;
-			Position shrinkToDocumentRegion(const Document& document, const Position& position) BOOST_NOEXCEPT;
-			Region shrinkToDocumentRegion(const Document& document, const Region& region) BOOST_NOEXCEPT;
-			Position updatePosition(const Position& position, const DocumentChange& change, Direction gravity) BOOST_NOEXCEPT;
-		} // namespace positions
-
 
 		// inline implementation //////////////////////////////////////////////////////////////////////////////////////
 
@@ -365,13 +354,6 @@ namespace ascension {
 			return document.replace(Region::makeEmpty(at), text);
 		}
 
-		/// Returns @c true if the given position is outside of the document.
-		inline bool positions::isOutsideOfDocumentRegion(
-				const Document& document, const Position& position) BOOST_NOEXCEPT {
-			return line(position) >= document.numberOfLines()
-				|| offsetInLine(position) > document.lineLength(line(position));
-		}
-
 		/**
 		 * @overload
 		 * @tparam InputIterator UTF-16 character sequence type
@@ -402,45 +384,6 @@ namespace ascension {
 		inline Position Document::replace(const Region& region, const SinglePassReadableRange& text,
 				typename std::enable_if<!std::is_same<SinglePassReadableRange, String>::value>::type* /* = nullptr */) {
 			return replace(region, boost::const_begin(text), boost::const_end(text));
-		}
-
-		/** 
-		 * Shrinks the given position into the accessible region of the document.
-		 * @param document The document
-		 * @param position The source position. This value can be outside of the document
-		 * @return The result
-		 */
-		inline Position positions::shrinkToAccessibleRegion(const Document& document, const Position& position) BOOST_NOEXCEPT {
-			if(!document.isNarrowed())
-				return shrinkToDocumentRegion(document, position);
-			const Region accessibleRegion(document.accessibleRegion());
-			if(position < *boost::const_begin(accessibleRegion))
-				return *boost::const_begin(accessibleRegion);
-			else if(position > *boost::const_end(accessibleRegion))
-				return *boost::const_end(accessibleRegion);
-			return Position(line(position), std::min(offsetInLine(position), document.lineLength(line(position))));
-		}
-		
-		/** 
-		 * Shrinks the given region into the accessible region of the document.
-		 * @param document The document
-		 * @param region The source region. This value can intersect with outside of the document
-		 * @return The result. This may not be normalized
-		 */
-		inline Region positions::shrinkToAccessibleRegion(const Document& document, const Region& region) BOOST_NOEXCEPT {
-			return Region(shrinkToAccessibleRegion(document, *boost::const_begin(region)), shrinkToAccessibleRegion(document, *boost::const_end(region)));
-		}
-		
-		/// Shrinks the given position into the document region.
-		inline Position positions::shrinkToDocumentRegion(const Document& document, const Position& position) BOOST_NOEXCEPT {
-			Position p(std::min(line(position), document.numberOfLines() - 1), 0);
-			p.offsetInLine = std::min(offsetInLine(position), document.lineLength(line(p)));
-			return p;
-		}
-		
-		/// Shrinks the given region into the document region. The result may not be normalized.
-		inline Region positions::shrinkToDocumentRegion(const Document& document, const Region& region) BOOST_NOEXCEPT {
-			return Region(shrinkToDocumentRegion(document, *boost::const_begin(region)), shrinkToDocumentRegion(document, *boost::const_end(region)));
 		}
 
 		/// Returns the bookmarker of the document.

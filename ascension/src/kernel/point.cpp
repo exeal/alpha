@@ -9,6 +9,7 @@
 #include <ascension/corelib/text/character-property.hpp>	// text.ucd.BinaryProperty
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/kernel/locations.hpp>
 #include <ascension/kernel/point.hpp>
 #include <boost/core/ignore_unused.hpp>
 
@@ -117,7 +118,7 @@ namespace ascension {
 			assert(!isDocumentDisposed());
 			assert(adaptsToDocument());
 //			normalize();
-			const Position newPosition(positions::updatePosition(position(), change, gravity()));
+			const Position newPosition(locations::updatePosition(position(), change, gravity()));
 			if(newPosition != position())
 				moveTo(newPosition);	// TODO: this may throw...
 		}
@@ -146,11 +147,11 @@ namespace ascension {
 		Point& Point::moveTo(const Position& to) {
 			if(isDocumentDisposed())
 				throw DocumentDisposedException();
-			else if(positions::isOutsideOfDocumentRegion(document(), to))
+			else if(locations::isOutsideOfDocumentRegion(locations::makePointProxy(document(), to)))
 				throw BadPositionException(to);
 			Position destination(to);
 			aboutToMove(destination);
-			destination = positions::shrinkToDocumentRegion(document(), destination);
+			destination = locations::shrinkToDocumentRegion(locations::makePointProxy(document(), destination));
 			const Position from(position());
 			position_ = destination;
 			moved(from);

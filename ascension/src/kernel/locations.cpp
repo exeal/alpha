@@ -7,7 +7,6 @@
  * @date 2016-05-22 Separated from point.cpp.
  */
 
-#include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/corelib/text/character-property.hpp>	// text.ucd.BinaryProperty
 #include <ascension/corelib/text/grapheme-break-iterator.hpp>
 #include <ascension/corelib/text/word-break-iterator.hpp>
@@ -29,15 +28,46 @@ namespace ascension {
 				inline const Position& position(const T& p) BOOST_NOEXCEPT {
 					return std::get<1>(p);
 				}
-				template<typename T>
-				inline Position shrinkToAccessibleRegion(const T& p) BOOST_NOEXCEPT {
-					return positions::shrinkToAccessibleRegion(document(p), position(p));
+				inline Index line(const PointProxy& p) BOOST_NOEXCEPT {
+					return kernel::line(position(p));
+				}
+				inline Index offsetInLine(const PointProxy& p) BOOST_NOEXCEPT {
+					return kernel::offsetInLine(position(p));
 				}
 				template<typename T>
 				inline void throwIfOutsideOfDocument(const T& p) {
-					if(positions::isOutsideOfDocumentRegion(document(p), position(p)))
+					if(isOutsideOfDocumentRegion(p))
 						throw BadPositionException(position(p));
 				}
+			}
+
+			/**
+			 * Returns absolute character offset of the specified position from the start of the document.
+			 * @param document The document
+			 * @param p The position
+			 * @param fromAccessibleStart
+			 * @throw BadPositionException @a p is outside of the document
+			 * @throw DocumentAccessViolationException @a fromAccessibleStart is @c true and @a p is before the
+			 *                                         accessible region of the document
+			 */
+			Index absoluteOffset(const PointProxy& p, bool fromAccessibleStart) {
+				if(position(p) > *boost::const_end(document(p).region()))
+					throw BadPositionException(position(p));
+				else if(fromAccessibleStart && position(p) < *boost::const_begin(document(p).accessibleRegion()))
+					throw DocumentAccessViolationException();
+				Index offset = 0;
+				const Position start(*boost::const_begin(fromAccessibleStart ? document(p).accessibleRegion() : document(p).region()));
+				for(Index i = line(start); ; ++i) {
+					if(i == line(p)) {
+						offset += offsetInLine(p);
+						break;
+					} else {
+						offset += document(p).lineLength(i) + 1;	// +1 is for a newline character
+						if(i == line(start))
+							offset -= offsetInLine(start);
+					}
+				}
+				return offset;
 			}
 
 			/**
@@ -57,7 +87,7 @@ namespace ascension {
 			 */
 			Position beginningOfLine(const PointProxy& p) {
 				throwIfOutsideOfDocument(p);
-				return positions::shrinkToAccessibleRegion(document(p), Position::bol(position(p)));
+				return shrinkToAccessibleRegion(makePointProxy(document(p), Position::bol(position(p))));
 			}
 
 			/**
@@ -68,10 +98,10 @@ namespace ascension {
 			 * @return The code point of the character, or @c INVALID_CODE_POINT if @a p is the end of the document
 			 */
 			CodePoint characterAt(const PointProxy& p, bool useLineFeed /* = false */) {
-				const String& lineString = document(p).lineString(line(position(p)));
-				if(offsetInLine(position(p)) == lineString.length())
-					return (line(position(p)) == document(p).numberOfLines() - 1) ? text::INVALID_CODE_POINT : (useLineFeed ? text::LINE_FEED : text::LINE_SEPARATOR);
-				return text::utf::decodeFirst(std::begin(lineString) + offsetInLine(position(p)), std::end(lineString));
+				const auto& lineString = document(p).lineString(line(p));
+				if(offsetInLine(p) == lineString.length())
+					return (line(p) == document(p).numberOfLines() - 1) ? text::INVALID_CODE_POINT : (useLineFeed ? text::LINE_FEED : text::LINE_SEPARATOR);
+				return text::utf::decodeFirst(std::begin(lineString) + offsetInLine(p), std::end(lineString));
 			}
 
 			/**
@@ -91,8 +121,8 @@ namespace ascension {
 			 */
 			Position endOfLine(const PointProxy& p) {
 				throwIfOutsideOfDocument(p);
-				const auto ln = line(position(p));
-				return positions::shrinkToAccessibleRegion(document(p), Position(ln, document(p).lineLength(ln)));
+				const auto ln = line(p);
+				return shrinkToAccessibleRegion(makePointProxy(document(p), Position(ln, document(p).lineLength(ln))));
 			}
 
 			/**
@@ -130,11 +160,20 @@ namespace ascension {
 			/**
 			 * Returns @c true if the given point is the end of the line.
 			 * @param p The point to check
-			 * @return true if @a is the end of the line
+			 * @return true if @a p is the end of the line
 			 * @throw BadPositionException @a p is outside of the document
 			 */
 			bool isEndOfLine(const PointProxy& p) {
 				return position(p) == endOfLine(p);	// this may throw BadPositionException
+			}
+
+			/**
+			 * Returns @c true if the given position is outside of the document.
+			 * @param p The point to check
+			 * @return true if @a p is outside of the document
+			 */
+			bool isOutsideOfDocumentRegion(const PointProxy& p) BOOST_NOEXCEPT {
+				return line(p) >= document(p).numberOfLines() || offsetInLine(p) > document(p).lineLength(line(p));
 			}
 
 			/**
@@ -149,7 +188,7 @@ namespace ascension {
 			 */
 			boost::optional<Position> nextBookmark(const PointProxy& p, Direction direction, Index marks /* = 1 */) {
 				throwIfOutsideOfDocument(p);
-				const auto temp(document(p).bookmarker().next(line(position(p)), direction, true, marks));
+				const auto temp(document(p).bookmarker().next(line(p), direction, true, marks));
 				if(temp != boost::none) {
 					const auto bookmark = boost::get(temp);
 					const auto accessibleRegion(document(p).accessibleRegion());
@@ -207,8 +246,7 @@ namespace ascension {
 						while(i.hasPrevious() && offset-- > 0) --i;
 					return i.tell();
 				} else if(characterUnit == locations::GRAPHEME_CLUSTER) {
-					text::GraphemeBreakIterator<DocumentCharacterIterator> i(
-						DocumentCharacterIterator(document(p), document(p).accessibleRegion(), position(p)));
+					text::GraphemeBreakIterator<DocumentCharacterIterator> i(DocumentCharacterIterator(document(p), document(p).accessibleRegion(), position(p)));
 					i.next((direction == Direction::forward()) ? offset : -static_cast<SignedIndex>(offset));
 					return i.base().tell();
 				} else if(characterUnit == locations::GLYPH_CLUSTER) {
@@ -282,6 +320,100 @@ namespace ascension {
 			 */
 			Position nextWordEnd(const PointProxy& p, Direction direction, Index words /* = 1 */) {
 				return nextWord(p, direction, words, text::WordBreakIteratorBase::END_OF_SEGMENT);
+			}
+
+			/**
+			 * Shrinks the given position into the accessible region of the document.
+			 * @param p The source position. This value can be outside of the document
+			 * @return The result
+			 */
+			Position shrinkToAccessibleRegion(const PointProxy& p) BOOST_NOEXCEPT {
+				if(!document(p).isNarrowed())
+					return shrinkToDocumentRegion(p);
+				const auto accessibleRegion(document(p).accessibleRegion());
+				if(position(p) < *boost::const_begin(accessibleRegion))
+					return *boost::const_begin(accessibleRegion);
+				else if(position(p) > *boost::const_end(accessibleRegion))
+					return *boost::const_end(accessibleRegion);
+				return Position(line(p), std::min(offsetInLine(p), document(p).lineLength(line(p))));
+			}
+
+			/**
+			 * Shrinks the given region into the accessible region of the document.
+			 * @param document The document
+			 * @param region The source region. This value can intersect with outside of the document
+			 * @return The result. This may not be normalized
+			 */
+			Region shrinkToAccessibleRegion(const Document& document, const Region& region) BOOST_NOEXCEPT {
+				return Region(
+					shrinkToAccessibleRegion(makePointProxy(document, *boost::const_begin(region))),
+					shrinkToAccessibleRegion(makePointProxy(document, *boost::const_end(region))));
+			}
+
+			/**
+			 * Shrinks the given position into the document region.
+			 * @param p The position
+			 * @return The result
+			 */
+			Position shrinkToDocumentRegion(const PointProxy& p) BOOST_NOEXCEPT {
+				Position q(std::min(line(p), document(p).numberOfLines() - 1), 0);
+				q.offsetInLine = std::min(offsetInLine(q), document(p).lineLength(line(q)));
+				return q;
+			}
+
+			/**
+			 * Shrinks the given region into the document region. The result may not be normalized.
+			 * @param document The document
+			 * @param region The region to shrink
+			 * @return The result
+			 */
+			Region shrinkToDocumentRegion(const Document& document, const Region& region) BOOST_NOEXCEPT {
+				return Region(
+					shrinkToDocumentRegion(makePointProxy(document, *boost::const_begin(region))),
+					shrinkToDocumentRegion(makePointProxy(document, *boost::const_end(region))));
+			}
+
+			/**
+			 * Adapts the specified position to the document change.
+			 * @param position The original position
+			 * @param change The content of the document change
+			 * @param gravity The gravity which determines the direction to which the position should move if a text
+			 *                was inserted at the position. If @c Direction#forward() is specified, the position will
+			 *                move to the start of the inserted text (no movement occur). Otherwise, move to the end of
+			 *                the inserted text
+			 * @return The result position
+			 */
+			Position updatePosition(const Position& position, const DocumentChange& change, Direction gravity) BOOST_NOEXCEPT {
+				Position newPosition(position);
+				if(!boost::empty(change.erasedRegion())) {	// deletion
+					if(position < *boost::const_end(change.erasedRegion())) {	// the end is behind the current line
+						if(position <= *boost::const_begin(change.erasedRegion()))
+							return newPosition;
+						else	// in the region
+							newPosition = *boost::const_begin(change.erasedRegion());
+					}
+					else if(line(position) > line(*boost::const_end(change.erasedRegion())))	// in front of the current line
+						newPosition.line -= boost::size(change.erasedRegion().lines()) - 1;
+					else {	// the end is the current line
+						if(line(position) == line(*boost::const_begin(change.erasedRegion())))	// the region is single-line
+							newPosition.offsetInLine -= offsetInLine(*boost::const_end(change.erasedRegion())) - offsetInLine(*boost::const_begin(change.erasedRegion()));
+						else {	// the region is multiline
+							newPosition.line -= boost::size(change.erasedRegion().lines()) - 1;
+							newPosition.offsetInLine -= offsetInLine(*boost::const_end(change.erasedRegion())) - offsetInLine(*boost::const_begin(change.erasedRegion()));
+						}
+					}
+				}
+				if(!boost::empty(change.insertedRegion())) {	// insertion
+					if(newPosition == *boost::const_begin(change.insertedRegion())) {
+						if(gravity == Direction::forward())
+							newPosition = *boost::const_end(change.insertedRegion());
+					} else if(newPosition > *boost::const_begin(change.insertedRegion())) {
+						if(line(*boost::const_begin(change.insertedRegion())) == line(newPosition))
+							newPosition.offsetInLine += offsetInLine(*boost::const_end(change.insertedRegion())) - offsetInLine(*boost::const_begin(change.insertedRegion()));
+						newPosition.line += boost::size(change.insertedRegion().lines()) - 1;
+					}
+				}
+				return newPosition;
 			}
 		}
 	}
