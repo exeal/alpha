@@ -2,7 +2,7 @@
  * @file locations.hpp
  * Defines @c ascension#kernel#locations namespace.
  * @author exeal
- * @see viewer/locations.hpp
+ * @see viewer/visual-locations.hpp
  * @date 2003-2015 Was document.hpp.
  * @date 2016-05-22 Separated from document.hpp.
  */
@@ -35,7 +35,10 @@ namespace ascension {
 				GLYPH_CLUSTER		///< A glyph is a character (not implemented).
 			};
 
-			/// Describes a position in the document.
+			/**
+			 * Describes a position in the document.
+			 * @see viewer#locations#PointProxy
+			 */
 			typedef std::pair<const Document&, Position> PointProxy;
 
 			/**
@@ -49,6 +52,7 @@ namespace ascension {
 			}
 
 			/// @defgroup special_locations_in_document Special Locations in Document
+			/// Free functions related to special locations.
 			/// @note All functions are *affected* by accessible region of the document.
 			/// @{
 			Position beginningOfDocument(const PointProxy& p);
@@ -72,6 +76,7 @@ namespace ascension {
 			/// @}
 
 			/// @defgroup regions_of_document Regions of Document
+			/// Free functions related to document's region.
 			/// @{
 			bool isOutsideOfDocumentRegion(const PointProxy& p) BOOST_NOEXCEPT;
 			Position shrinkToDocumentRegion(const PointProxy& p) BOOST_NOEXCEPT;
@@ -79,6 +84,7 @@ namespace ascension {
 			/// @}
 
 			/// @defgroup accessible_regions_of_document Accessible Regions of Document
+			/// Free functions related to document's accessible region.
 			/// @{
 //			bool isOutsideOfAccessibleRegion(const PointProxy& p) BOOST_NOEXCEPT;
 			Position shrinkToAccessibleRegion(const PointProxy& p) BOOST_NOEXCEPT;
