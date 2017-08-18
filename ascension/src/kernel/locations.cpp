@@ -375,10 +375,32 @@ namespace ascension {
 
 			/**
 			 * Adapts the specified position to the document change.
+			 *
+			 * <h3>Insertion</h3>
+			 * When "DEF" is inserted between "abc" and "ghi" ('|' is the position to update):
+			 * <table>
+			 *   <tr><th>Gravity</th><th>Before</th><th>After</th></tr>
+			 *   <tr><td>Any</td><td><code>a b|c g h i</code></td><td><code>a b|c <em>D E F</em> g h i</code></td></tr>
+			 *   <tr><td>Direction#forward()</td><td><code>a b c|g h i</code></td><td><code>a b c <em>D E F</em>|g h i</code></td></tr>
+			 *   <tr><td>Direction#backward()</td><td><code>a b c|g h i</code></td><td><code>a b c|<em>D E F</em> g h i</code></td></tr>
+			 *   <tr><td>Any</td><td><code>a b c g|h i</code></td><td><code>a b c <em>D E F</em> g|h i</code></td></tr>
+			 * </table>
+			 *
+			 * <h3>Deletion</h3>
+			 * When "DEF" is erased from "abcDEFghi" ('|' is the position to update):
+			 * <table>
+			 *   <tr><th>Gravity</th><th>Before</th><th>After</th></tr>
+			 *   <tr><td>Any</td><td><code>a b|c <em>D E F</em> g h i</code></td><td><code>a b|c g h i</code></td></tr>
+			 *   <tr><td>Any</td><td><code>a b c|<em>D E F</em> g h i</code></td><td><code>a b c|g h i</code></td></tr>
+			 *   <tr><td>Any</td><td><code>a b c <em>D</em>|<em>E F</em> g h i</code></td><td><code>a b c|g h i</code></td></tr>
+			 *   <tr><td>Any</td><td><code>a b c <em>D E F</em>|g h i</code></td><td><code>a b c|g h i</code></td></tr>
+			 *   <tr><td>Any</td><td><code>a b c <em>D E F</em> g|h i</code></td><td><code>a b c g|h i</code></td></tr>
+			 * </table>
+			 *
 			 * @param position The original position
 			 * @param change The content of the document change
 			 * @param gravity The gravity which determines the direction to which the position should move if a text
-			 *                was inserted at the position. If @c Direction#forward() is specified, the position will
+			 *                was inserted at the position. If @c Direction#backward() is specified, the position will
 			 *                move to the start of the inserted text (no movement occur). Otherwise, move to the end of
 			 *                the inserted text
 			 * @return The result position
@@ -391,8 +413,7 @@ namespace ascension {
 							return newPosition;
 						else	// in the region
 							newPosition = *boost::const_begin(change.erasedRegion());
-					}
-					else if(line(position) > line(*boost::const_end(change.erasedRegion())))	// in front of the current line
+					} else if(line(position) > line(*boost::const_end(change.erasedRegion())))	// in front of the current line
 						newPosition.line -= boost::size(change.erasedRegion().lines()) - 1;
 					else {	// the end is the current line
 						if(line(position) == line(*boost::const_begin(change.erasedRegion())))	// the region is single-line

@@ -30,18 +30,16 @@ namespace ascension {
 		 * @see kernel#locations
 		 */
 		namespace locations {
+			/**
+			 * Describes a position in the @c TextArea.
+			 * @see kernel#locations#PointProxy
+			 */
 			typedef std::pair<const TextArea&, TextHit> PointProxy;
 
-			bool isEndOfVisualLine(const PointProxy& p);
-			bool isFirstPrintableCharacterOfLine(const PointProxy& p);
-			bool isFirstPrintableCharacterOfVisualLine(const PointProxy& p);
-			bool isLastPrintableCharacterOfLine(const PointProxy& p);
-			bool isLastPrintableCharacterOfVisualLine(const PointProxy& p);
-			bool isBeginningOfVisualLine(const PointProxy& p);
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			viewer::VisualDestinationProxy backwardPage(const PointProxy& p, Index pages = 1);
-			viewer::VisualDestinationProxy backwardVisualLine(const PointProxy& p, Index lines = 1);
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
+			/// @defgroup special_locations_in_text_area Special Locations in Text Area
+			/// Free functions related to special locations in @c TextArea.
+			/// @note All functions are *affected* by accessible region of the document.
+			/// @{
 			TextHit beginningOfVisualLine(const PointProxy& p);
 			TextHit contextualBeginningOfLine(const PointProxy& p);
 			TextHit contextualBeginningOfVisualLine(const PointProxy& p);
@@ -50,24 +48,39 @@ namespace ascension {
 			TextHit endOfVisualLine(const PointProxy& p);
 			TextHit firstPrintableCharacterOfLine(const PointProxy& p);
 			TextHit firstPrintableCharacterOfVisualLine(const PointProxy& p);
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			viewer::VisualDestinationProxy forwardPage(const PointProxy& p, Index pages = 1);
-			viewer::VisualDestinationProxy forwardVisualLine(const PointProxy& p, Index lines = 1);
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
+			bool isEndOfVisualLine(const PointProxy& p);
+			bool isFirstPrintableCharacterOfLine(const PointProxy& p);
+			bool isFirstPrintableCharacterOfVisualLine(const PointProxy& p);
+			bool isLastPrintableCharacterOfLine(const PointProxy& p);
+			bool isLastPrintableCharacterOfVisualLine(const PointProxy& p);
+			bool isBeginningOfVisualLine(const PointProxy& p);
 			TextHit lastPrintableCharacterOfLine(const PointProxy& p);
 			TextHit lastPrintableCharacterOfVisualLine(const PointProxy& p);
+			/// @}
+
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
+			/// @defgroup motions_in_text_area Motions in Text Area
+			/// @note All functions are *affected* by accessible region of the document.
+			/// @{
+			viewer::VisualDestinationProxy backwardPage(const PointProxy& p, Index pages = 1);
+			viewer::VisualDestinationProxy backwardVisualLine(const PointProxy& p, Index lines = 1);
+			viewer::VisualDestinationProxy forwardPage(const PointProxy& p, Index pages = 1);
+			viewer::VisualDestinationProxy forwardVisualLine(const PointProxy& p, Index lines = 1);
 			viewer::VisualDestinationProxy leftCharacter(
 				const PointProxy& p, CharacterUnit unit, Index characters = 1);
 			boost::optional<TextHit> leftWord(const PointProxy& p, Index words = 1);
 			boost::optional<TextHit> leftWordEnd(const PointProxy& p, Index words = 1);
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			viewer::VisualDestinationProxy rightCharacter(
 				const VisualPoint& p, CharacterUnit unit, Index characters = 1);
 			boost::optional<Position> rightWord(const PointProxy& p, Index words = 1);
 			boost::optional<Position> rightWordEnd(const PointProxy& p, Index words = 1);
+			/// @}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
+
+			/// @defgroup miscellaneous_visual_locational_functions Miscellaneous Visual Locational Functions
+			/// @{
+			TextHit updateTextHit(const TextHit& position, const kernel::DocumentChange& change, Direction gravity) BOOST_NOEXCEPT;
+			/// @}
 		}
 	}
 }

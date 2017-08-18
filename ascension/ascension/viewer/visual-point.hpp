@@ -37,8 +37,11 @@ namespace ascension {
 		TextHit otherHit(const VisualPoint& p);
 
 		namespace locations {
+			/// @addtogroup motions_in_text_area Motions in Text Area
+			/// @{
 			VisualDestinationProxy nextPage(const VisualPoint& p, Direction direction, Index pages = 1);
 			VisualDestinationProxy nextVisualLine(const VisualPoint& p, Direction direction, Index lines = 1);
+			/// @}
 		}
 
 		// documentation is visual-point.cpp
