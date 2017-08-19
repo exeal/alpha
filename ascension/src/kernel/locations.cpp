@@ -379,22 +379,22 @@ namespace ascension {
 			 * <h3>Insertion</h3>
 			 * When "DEF" is inserted between "abc" and "ghi" ('|' is the position to update):
 			 * <table>
-			 *   <tr><th>Gravity</th><th>Before</th><th>After</th></tr>
-			 *   <tr><td>Any</td><td><code>a b|c g h i</code></td><td><code>a b|c <em>D E F</em> g h i</code></td></tr>
-			 *   <tr><td>Direction#forward()</td><td><code>a b c|g h i</code></td><td><code>a b c <em>D E F</em>|g h i</code></td></tr>
-			 *   <tr><td>Direction#backward()</td><td><code>a b c|g h i</code></td><td><code>a b c|<em>D E F</em> g h i</code></td></tr>
-			 *   <tr><td>Any</td><td><code>a b c g|h i</code></td><td><code>a b c <em>D E F</em> g|h i</code></td></tr>
+			 *   <tr><th>@a gravity</th><th>Before</th><th>After</th></tr>
+			 *   <tr><td>Any</td><td><code>a b|c g h i</code></td><td><code>a b|c D E F g h i</code></td></tr>
+			 *   <tr><td>@c Direction#forward()</td><td><code>a b c|g h i</code></td><td><code>a b c D E F|g h i</code></td></tr>
+			 *   <tr><td>@c Direction#backward()</td><td><code>a b c|g h i</code></td><td><code>a b c|D E F< g h i</code></td></tr>
+			 *   <tr><td>Any</td><td><code>a b c g|h i</code></td><td><code>a b c D E F g|h i</code></td></tr>
 			 * </table>
 			 *
 			 * <h3>Deletion</h3>
 			 * When "DEF" is erased from "abcDEFghi" ('|' is the position to update):
 			 * <table>
-			 *   <tr><th>Gravity</th><th>Before</th><th>After</th></tr>
-			 *   <tr><td>Any</td><td><code>a b|c <em>D E F</em> g h i</code></td><td><code>a b|c g h i</code></td></tr>
-			 *   <tr><td>Any</td><td><code>a b c|<em>D E F</em> g h i</code></td><td><code>a b c|g h i</code></td></tr>
-			 *   <tr><td>Any</td><td><code>a b c <em>D</em>|<em>E F</em> g h i</code></td><td><code>a b c|g h i</code></td></tr>
-			 *   <tr><td>Any</td><td><code>a b c <em>D E F</em>|g h i</code></td><td><code>a b c|g h i</code></td></tr>
-			 *   <tr><td>Any</td><td><code>a b c <em>D E F</em> g|h i</code></td><td><code>a b c g|h i</code></td></tr>
+			 *   <tr><th>Case</th><th>@a gravity</th><th>Before</th><th>After</th></tr>
+			 *   <tr><td>(D-1a)</td><td>Any</td><td><code>a b|c D E F g h i</code></td><td><code>a b|c g h i</code></td></tr>
+			 *   <tr><td>(D-1b)</td><td>Any</td><td><code>a b c|D E F g h i</code></td><td><code>a b c|g h i</code></td></tr>
+			 *   <tr><td>(D-2)</td><td>Any</td><td><code>a b c D|E F g h i</code></td><td><code>a b c|g h i</code></td></tr>
+			 *   <tr><td>(D-3a)</td><td>Any</td><td><code>a b c D E F|g h i</code></td><td><code>a b c|g h i</code></td></tr>
+			 *   <tr><td>(D-3b)</td><td>Any</td><td><code>a b c D E F g|h i</code></td><td><code>a b c g|h i</code></td></tr>
 			 * </table>
 			 *
 			 * @param position The original position
@@ -404,6 +404,7 @@ namespace ascension {
 			 *                move to the start of the inserted text (no movement occur). Otherwise, move to the end of
 			 *                the inserted text
 			 * @return The result position
+			 * @see viewer#locations#updateTextHit
 			 */
 			Position updatePosition(const Position& position, const DocumentChange& change, Direction gravity) BOOST_NOEXCEPT {
 				Position newPosition(position);
