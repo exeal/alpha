@@ -58,7 +58,7 @@ namespace ascension {
 
 		/**
 		 * A changed content of the document.
-		 * @see DocumentListener, PositionUpdater
+		 * @see DocumentListener, locations#updatePosition, viewer#locations#updateTextHit
 		 */
 		class DocumentChange : private boost::noncopyable {
 		public:
@@ -74,7 +74,6 @@ namespace ascension {
 			const Region& insertedRegion() const BOOST_NOEXCEPT {return insertedRegion_;}
 		private:
 			explicit DocumentChange(const Region& erasedRegion, const Region& insertedRegion) BOOST_NOEXCEPT;
-			~DocumentChange() BOOST_NOEXCEPT;
 			const Region erasedRegion_, insertedRegion_;
 			friend class Document;
 		};

@@ -140,10 +140,6 @@ namespace ascension {
 				BOOST_NOEXCEPT : erasedRegion_(erasedRegion), insertedRegion_(insertedRegion) {
 		}
 
-		/// Private destructor.
-		DocumentChange::~DocumentChange() BOOST_NOEXCEPT {
-		}
-
 
 		// DocumentPartitioner ////////////////////////////////////////////////////////////////////////////////////////
 
