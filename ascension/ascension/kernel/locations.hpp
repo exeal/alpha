@@ -97,6 +97,11 @@ namespace ascension {
 			CodePoint characterAt(const PointProxy& p, bool useLineFeed = false);
 			Position updatePosition(const Position& position, const DocumentChange& change, Direction gravity) BOOST_NOEXCEPT;
 			/// @}
+
+			namespace detail {
+				Position updatePositionForDeletion(const Position& position, const Region& region, Direction gravity) BOOST_NOEXCEPT;
+				Position updatePositionForInsertion(const Position& position, const Region& region, Direction gravity) BOOST_NOEXCEPT;
+			}
 		}
 	}
 }
