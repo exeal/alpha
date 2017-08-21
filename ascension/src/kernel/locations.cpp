@@ -14,6 +14,7 @@
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/locations.hpp>
+#include <boost/core/ignore_unused.hpp>
 
 
 namespace ascension {
@@ -287,7 +288,7 @@ namespace ascension {
 				inline Position nextWord(const PointProxy& p, Direction direction, Index words, text::WordBreakIteratorBase::Component component) {
 					text::WordBreakIterator<DocumentCharacterIterator> i(
 						DocumentCharacterIterator(document(p), document(p).accessibleRegion(), position(p)),
-						component, detail::identifierSyntax(p));	// this may throw BadPositionException
+						component, kernel::detail::identifierSyntax(p));	// this may throw BadPositionException
 					if(direction == Direction::forward())
 						i += words;
 					else
@@ -379,11 +380,11 @@ namespace ascension {
 			 * <h3>Insertion</h3>
 			 * When "DEF" is inserted between "abc" and "ghi" ('|' is the position to update):
 			 * <table>
-			 *   <tr><th>@a gravity</th><th>Before</th><th>After</th></tr>
-			 *   <tr><td>Any</td><td><code>a b|c g h i</code></td><td><code>a b|c D E F g h i</code></td></tr>
-			 *   <tr><td>@c Direction#forward()</td><td><code>a b c|g h i</code></td><td><code>a b c D E F|g h i</code></td></tr>
-			 *   <tr><td>@c Direction#backward()</td><td><code>a b c|g h i</code></td><td><code>a b c|D E F< g h i</code></td></tr>
-			 *   <tr><td>Any</td><td><code>a b c g|h i</code></td><td><code>a b c D E F g|h i</code></td></tr>
+			 *   <tr><th>Case</th><th>@a gravity</th><th>Before</th><th>After</th></tr>
+			 *   <tr><td>(I-1)</td><td>Any</td><td><code>a b|c g h i</code></td><td><code>a b|c D E F g h i</code></td></tr>
+			 *   <tr><td>(I-2a)</td><td>@c Direction#forward()</td><td><code>a b c|g h i</code></td><td><code>a b c D E F|g h i</code></td></tr>
+			 *   <tr><td>(I-2b)</td><td>@c Direction#backward()</td><td><code>a b c|g h i</code></td><td><code>a b c|D E F g h i</code></td></tr>
+			 *   <tr><td>(I-3)</td><td>Any</td><td><code>a b c g|h i</code></td><td><code>a b c D E F g|h i</code></td></tr>
 			 * </table>
 			 *
 			 * <h3>Deletion</h3>
@@ -407,35 +408,47 @@ namespace ascension {
 			 * @see viewer#locations#updateTextHit
 			 */
 			Position updatePosition(const Position& position, const DocumentChange& change, Direction gravity) BOOST_NOEXCEPT {
-				Position newPosition(position);
-				if(!boost::empty(change.erasedRegion())) {	// deletion
-					if(position < *boost::const_end(change.erasedRegion())) {	// the end is behind the current line
-						if(position <= *boost::const_begin(change.erasedRegion()))
-							return newPosition;
-						else	// in the region
-							newPosition = *boost::const_begin(change.erasedRegion());
-					} else if(line(position) > line(*boost::const_end(change.erasedRegion())))	// in front of the current line
-						newPosition.line -= boost::size(change.erasedRegion().lines()) - 1;
-					else {	// the end is the current line
-						if(line(position) == line(*boost::const_begin(change.erasedRegion())))	// the region is single-line
-							newPosition.offsetInLine -= offsetInLine(*boost::const_end(change.erasedRegion())) - offsetInLine(*boost::const_begin(change.erasedRegion()));
-						else {	// the region is multiline
-							newPosition.line -= boost::size(change.erasedRegion().lines()) - 1;
-							newPosition.offsetInLine -= offsetInLine(*boost::const_end(change.erasedRegion())) - offsetInLine(*boost::const_begin(change.erasedRegion()));
+				return detail::updatePositionForInsertion(
+					detail::updatePositionForDeletion(
+						position, change.erasedRegion(), gravity), change.insertedRegion(), gravity);
+			}
+
+			namespace detail {
+				/// @internal Implements @c updatePosition function.
+				Position updatePositionForDeletion(const Position& position, const Region& region, Direction gravity) BOOST_NOEXCEPT {
+					boost::ignore_unused(gravity);
+					assert(*boost::const_begin(region) <= *boost::const_end(region));
+					Position p(position);
+					if(!boost::empty(region)) {
+						const auto& b = *boost::const_begin(region), e = *boost::const_end(region);
+						if(p > b) {	// !(D-1)
+							if(p <= e)	// (D-2)
+								p = b;
+							else {	// (D-3)
+								p.offsetInLine -= (line(position) == line(e) ? offsetInLine(e) : 0) - (line(position) == line(b) ? offsetInLine(b) : 0);
+								p.line -= boost::size(region.lines()) - 1;
+							}
 						}
 					}
+					return p;
 				}
-				if(!boost::empty(change.insertedRegion())) {	// insertion
-					if(newPosition == *boost::const_begin(change.insertedRegion())) {
-						if(gravity == Direction::forward())
-							newPosition = *boost::const_end(change.insertedRegion());
-					} else if(newPosition > *boost::const_begin(change.insertedRegion())) {
-						if(line(*boost::const_begin(change.insertedRegion())) == line(newPosition))
-							newPosition.offsetInLine += offsetInLine(*boost::const_end(change.insertedRegion())) - offsetInLine(*boost::const_begin(change.insertedRegion()));
-						newPosition.line += boost::size(change.insertedRegion().lines()) - 1;
+
+				/// @internal Implements @c updatePosition function.
+				Position updatePositionForInsertion(const Position& position, const Region& region, Direction gravity) BOOST_NOEXCEPT {
+					assert(*boost::const_begin(region) <= *boost::const_end(region));
+					Position p(position);
+					if(!boost::empty(region)) {
+						const auto& b = *boost::const_begin(region), e = *boost::const_end(region);
+						if(gravity == Direction::forward())	// (I-2a)
+							p = e;
+						else if(p > b) {	// (I-3) & !(I-1) & !(I-2b)
+							if(line(p) == line(b))
+								p.offsetInLine += offsetInLine(e) - offsetInLine(b);
+							p.line += boost::size(region.lines()) - 1;
+						}
 					}
+					return p;
 				}
-				return newPosition;
 			}
 		}
 	}
