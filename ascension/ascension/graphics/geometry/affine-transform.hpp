@@ -38,24 +38,36 @@ namespace ascension {
 			 */
 
 			 /// Represents 2D affine transform.
-			typedef boost::geometry::strategy::transform::ublas_transformer<double, 2, 2> AffineTransform;
+			typedef boost::geometry::strategy::transform::matrix_transformer<double, 2, 2> AffineTransform;
 
 			/**
 			 * @defgroup affine_transform_accesors Accesors
 			 * @{
 			 */
 			 /// Returns the X coordinate scaling element.
-			inline double scaleX(const AffineTransform& tx) BOOST_NOEXCEPT { return tx.matrix()(0, 0); }
+			inline double scaleX(const AffineTransform& tx) BOOST_NOEXCEPT {
+				return boost::qvm::A<0, 0>(tx.matrix());
+			}
 			/// Returns the Y coordinate scaling element.
-			inline double scaleY(const AffineTransform& tx) BOOST_NOEXCEPT { return tx.matrix()(1, 1); }
+			inline double scaleY(const AffineTransform& tx) BOOST_NOEXCEPT {
+				return boost::qvm::A<1, 1>(tx.matrix());
+			}
 			/// Returns the X coordinate shearing element.
-			inline double shearX(const AffineTransform& tx) BOOST_NOEXCEPT { return tx.matrix()(0, 1); }
+			inline double shearX(const AffineTransform& tx) BOOST_NOEXCEPT {
+				return boost::qvm::A<0, 1>(tx.matrix());
+			}
 			/// Returns the Y coordinate shearing element.
-			inline double shearY(const AffineTransform& tx) BOOST_NOEXCEPT { return tx.matrix()(1, 0); }
+			inline double shearY(const AffineTransform& tx) BOOST_NOEXCEPT {
+				return boost::qvm::A<1, 0>(tx.matrix());
+			}
 			/// Returns the X coordinate translation element.
-			inline double translateX(const AffineTransform& tx) BOOST_NOEXCEPT { return tx.matrix()(0, 2); }
+			inline double translateX(const AffineTransform& tx) BOOST_NOEXCEPT {
+				return boost::qvm::A<0, 2>(tx.matrix());
+			}
 			/// Returns the Y coordinate translation element.
-			inline double translateY(const AffineTransform& tx) BOOST_NOEXCEPT { return tx.matrix()(1, 2); }
+			inline double translateY(const AffineTransform& tx) BOOST_NOEXCEPT {
+				return boost::qvm::A<1, 2>(tx.matrix());
+			}
 			/// @}
 
 			/**
@@ -238,7 +250,7 @@ namespace ascension {
 
 			/// Returns @c true if the two represents the same affine coordinate transform.
 			inline bool equals(const AffineTransform& lhs, const AffineTransform& rhs) {
-				return boost::equal(lhs.matrix().data(), rhs.matrix().data());
+				return lhs.matrix() == rhs.matrix();
 			}
 
 			/// Implements the hash function for @c AffineTransform.

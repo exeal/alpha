@@ -2763,9 +2763,8 @@ namespace ascension {
 							if(isVertical(wm.blockFlowDirection)) {
 //								geometry::quadrantRotate(typographicalToPhysicalMapping, (resolveTextOrientation(writingMode()) != presentation::SIDEWAYS_LEFT) ? -1 : +1);
 								typographicalToPhysicalMapping = AffineTransform(
-									boost::numeric::ublas::prod(
-										typographicalToPhysicalMapping.matrix(), 
-										geometry::makeQuadrantRotationTransform((resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT) ? -1 : +1).matrix()));
+									typographicalToPhysicalMapping.matrix()
+									* geometry::makeQuadrantRotationTransform((resolveTextOrientation(wm) != presentation::SIDEWAYS_LEFT) ? -1 : +1).matrix());
 							}
 							BOOST_FOREACH(const graphics::Rectangle& typographicBounds, runBlackBoxBounds) {
 								// map typographic rectangle into physical coordinates

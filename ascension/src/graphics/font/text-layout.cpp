@@ -28,6 +28,7 @@
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <boost/foreach.hpp>
+#include <boost/geometry/algorithms/intersection.hpp>
 #include <boost/range/algorithm/sort.hpp>
 #include <boost/range/numeric.hpp>	// boost.accumulate
 #include <limits>	// std.numeric_limits

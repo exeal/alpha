@@ -29,10 +29,18 @@ BOOST_AUTO_TEST_SUITE(construction)
 		BOOST_TEST(boost::equal(d.accessibleRegion(), k::Region::zero()));
 		BOOST_TEST(d.length() == 0u);
 		BOOST_TEST(d.lineContent(0u).revisionNumber() == 0u);
-		BOOST_TEST(d.lineContent(0u).text() == ascension::String());
+#if 1
+		BOOST_TEST(d.lineContent(0u).text().empty());
+#else
+		BOOST_TEST(d.lineContent(0u).text() == ascension::String());	// C2338 at VS14
+#endif
 		BOOST_TEST(d.lineLength(0u) == 0u);
 		BOOST_TEST(d.lineOffset(0u) == 0u);
-		BOOST_TEST(d.lineString(0u) == ascension::String());
+#if 1
+		BOOST_TEST(d.lineString(0u).empty());
+#else
+		BOOST_TEST(d.lineString(0u) == ascension::String());	// C2338 at VS14
+#endif
 		BOOST_TEST(d.numberOfLines() == 1u);
 		BOOST_TEST(boost::equal(d.region(), k::Region::zero()));
 		BOOST_TEST(d.revisionNumber() == 0u);
@@ -59,7 +67,7 @@ BOOST_AUTO_TEST_SUITE(modifications)
 		BOOST_TEST(e == k::Position(0u, 5u));
 		BOOST_TEST(d.accessibleRegion().equal(k::Region::makeSingleLine(0u, boost::irange(0u, 5u))));
 		BOOST_TEST(d.length() == 5u);
-		BOOST_TEST(d.lineContent(0u).text() == fromLatin1("first"));
+		BOOST_CHECK_EQUAL(d.lineContent(0u).text(), fromLatin1("first"));
 		BOOST_TEST(d.lineLength(0u) == 5u);
 		BOOST_TEST(d.lineOffset(0u) == 0u);
 		BOOST_TEST(d.lineString(0u) == fromLatin1("first"));
@@ -458,50 +466,4 @@ BOOST_AUTO_TEST_CASE(reset_test) {
 	BOOST_REQUIRE(d.isNarrowed());
 	BOOST_REQUIRE(d.isReadOnly());
 	BOOST_REQUIRE(d.revisionNumber() > 0u);
-}
-
-BOOST_AUTO_TEST_CASE(positions_api_test) {
-	k::Document d;
-	k::insert(d, k::Position::zero(), fromLatin1(
-		"abc\n"
-		"d[e\r\n"
-		"f]g\n"
-		"hij"
-	));
-	d.narrowToRegion(k::Region(k::Position(1u, 1u), k::Position(2u, 2u)));
-	const k::Position before(0u, 2u), middle(2u, 0u), after(3u, 1u), outside(9u, 9u);
-
-	// absoluteOffset
-	BOOST_TEST(k::positions::absoluteOffset(d, before, false) == 2u);
-	BOOST_CHECK_THROW(k::positions::absoluteOffset(d, before, true), k::DocumentAccessViolationException);
-	BOOST_TEST(k::positions::absoluteOffset(d, after, false) == 13u);
-	BOOST_TEST(k::positions::absoluteOffset(d, after, true) == 8u);
-	BOOST_CHECK_THROW(k::positions::absoluteOffset(d, outside, false), k::BadPositionException);
-
-	// isOutsideOfDocumentRegion
-	BOOST_TEST(!k::positions::isOutsideOfDocumentRegion(d, *boost::const_begin(d.region())));
-	BOOST_TEST(!k::positions::isOutsideOfDocumentRegion(d, before));
-	BOOST_TEST(!k::positions::isOutsideOfDocumentRegion(d, after));
-	BOOST_TEST(!k::positions::isOutsideOfDocumentRegion(d, *boost::const_end(d.region())));
-	BOOST_TEST( k::positions::isOutsideOfDocumentRegion(d, outside));
-
-	// shrinkToAccessibleRegion(Position)
-	BOOST_TEST(k::positions::shrinkToAccessibleRegion(d, before) == *boost::const_begin(d.accessibleRegion()));
-	BOOST_TEST(k::positions::shrinkToAccessibleRegion(d, middle) == middle);
-	BOOST_TEST(k::positions::shrinkToAccessibleRegion(d, after) == *boost::const_end(d.accessibleRegion()));
-	BOOST_TEST(k::positions::shrinkToAccessibleRegion(d, outside) == *boost::const_end(d.accessibleRegion()));
-
-	// shrinkToAccessibleRegion(Region)
-	BOOST_TEST((k::positions::shrinkToAccessibleRegion(d, k::Region(before, after)) == d.accessibleRegion()));
-	BOOST_TEST((k::positions::shrinkToAccessibleRegion(d, k::Region(middle, outside)) == k::Region(middle, *boost::const_end(d.accessibleRegion()))));
-
-	// shrinkToDocumentRegion(Position)
-	BOOST_TEST(k::positions::shrinkToDocumentRegion(d, before) == before);
-	BOOST_TEST(k::positions::shrinkToDocumentRegion(d, middle) == middle);
-	BOOST_TEST(k::positions::shrinkToDocumentRegion(d, after) == after);
-	BOOST_TEST(k::positions::shrinkToDocumentRegion(d, outside) == *boost::const_end(d.region()));
-
-	// shrinkToDocumentRegion(Region)
-	BOOST_TEST((k::positions::shrinkToDocumentRegion(d, k::Region(before, after)) == k::Region(before, after)));
-	BOOST_TEST((k::positions::shrinkToDocumentRegion(d, k::Region(middle, outside)) == k::Region(middle, *boost::const_end(d.region()))));
 }
