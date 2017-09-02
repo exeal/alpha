@@ -9,6 +9,7 @@
 #include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/font/text-run.hpp>
 #include <ascension/graphics/geometry/point-xy.hpp>
+#include <boost/geometry/algorithms/make.hpp>
 
 namespace ascension {
 	namespace graphics {

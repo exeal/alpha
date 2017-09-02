@@ -160,3 +160,49 @@ BOOST_FIXTURE_TEST_CASE(next_bookmark_test, Fixture) {
 	BOOST_REQUIRE((result != boost::none));
 	BOOST_TEST(boost::get(result) == k::Position(2u, 0u));
 }
+
+BOOST_AUTO_TEST_CASE(positions_api_test) {
+	k::Document d;
+	k::insert(d, k::Position::zero(), fromLatin1(
+		"abc\n"
+		"d[e\r\n"
+		"f]g\n"
+		"hij"
+	));
+	d.narrowToRegion(k::Region(k::Position(1u, 1u), k::Position(2u, 2u)));
+	const k::Position before(0u, 2u), middle(2u, 0u), after(3u, 1u), outside(9u, 9u);
+
+	// absoluteOffset
+	BOOST_TEST(k::locations::absoluteOffset(k::locations::makePointProxy(d, before), false) == 2u);
+	BOOST_CHECK_THROW(k::locations::absoluteOffset(k::locations::makePointProxy(d, before), true), k::DocumentAccessViolationException);
+	BOOST_TEST(k::locations::absoluteOffset(k::locations::makePointProxy(d, after), false) == 13u);
+	BOOST_TEST(k::locations::absoluteOffset(k::locations::makePointProxy(d, after), true) == 8u);
+	BOOST_CHECK_THROW(k::locations::absoluteOffset(k::locations::makePointProxy(d, outside), false), k::BadPositionException);
+
+	// isOutsideOfDocumentRegion
+	BOOST_TEST(!k::locations::isOutsideOfDocumentRegion(k::locations::makePointProxy(d, *boost::const_begin(d.region()))));
+	BOOST_TEST(!k::locations::isOutsideOfDocumentRegion(k::locations::makePointProxy(d, before)));
+	BOOST_TEST(!k::locations::isOutsideOfDocumentRegion(k::locations::makePointProxy(d, after)));
+	BOOST_TEST(!k::locations::isOutsideOfDocumentRegion(k::locations::makePointProxy(d, *boost::const_end(d.region()))));
+	BOOST_TEST(k::locations::isOutsideOfDocumentRegion(k::locations::makePointProxy(d, outside)));
+
+	// shrinkToAccessibleRegion(Position)
+	BOOST_TEST(k::locations::shrinkToAccessibleRegion(k::locations::makePointProxy(d, before)) == *boost::const_begin(d.accessibleRegion()));
+	BOOST_TEST(k::locations::shrinkToAccessibleRegion(k::locations::makePointProxy(d, middle)) == middle);
+	BOOST_TEST(k::locations::shrinkToAccessibleRegion(k::locations::makePointProxy(d, after)) == *boost::const_end(d.accessibleRegion()));
+	BOOST_TEST(k::locations::shrinkToAccessibleRegion(k::locations::makePointProxy(d, outside)) == *boost::const_end(d.accessibleRegion()));
+
+	// shrinkToAccessibleRegion(Region)
+	BOOST_TEST((k::locations::shrinkToAccessibleRegion(d, k::Region(before, after)) == d.accessibleRegion()));
+	BOOST_TEST((k::locations::shrinkToAccessibleRegion(d, k::Region(middle, outside)) == k::Region(middle, *boost::const_end(d.accessibleRegion()))));
+
+	// shrinkToDocumentRegion(Position)
+	BOOST_TEST(k::locations::shrinkToDocumentRegion(k::locations::makePointProxy(d, before)) == before);
+	BOOST_TEST(k::locations::shrinkToDocumentRegion(k::locations::makePointProxy(d, middle)) == middle);
+	BOOST_TEST(k::locations::shrinkToDocumentRegion(k::locations::makePointProxy(d, after)) == after);
+	BOOST_TEST(k::locations::shrinkToDocumentRegion(k::locations::makePointProxy(d, outside)) == *boost::const_end(d.region()));
+
+	// shrinkToDocumentRegion(Region)
+	BOOST_TEST((k::locations::shrinkToDocumentRegion(d, k::Region(before, after)) == k::Region(before, after)));
+	BOOST_TEST((k::locations::shrinkToDocumentRegion(d, k::Region(middle, outside)) == k::Region(middle, *boost::const_end(d.region()))));
+}
