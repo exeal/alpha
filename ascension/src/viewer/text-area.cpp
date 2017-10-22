@@ -292,7 +292,7 @@ namespace ascension {
 		}
 
 		/// @see kernel#DocumentListener#documentAboutToBeChanged
-		void TextArea::documentAboutToBeChanged(const kernel::Document&) {
+		void TextArea::documentAboutToBeChanged(const kernel::Document&, const kernel::DocumentChange& change) {
 			// does nothing
 		}
 

@@ -477,6 +477,126 @@ namespace ascension {
 				return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
 			}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
+
+			/**
+			 * Adapts the specified @c TextHit to the document change.
+			 *
+			 * <h3>Insertion</h3>
+			 * When "DEF" is inserted between "abc" and "ghi" (underlined is the character-index and '|' is the
+			 * insertion-index):
+			 * <table>
+			 *   <tr><th>Case</th><th>@a gravity</th><th>Before</th><th>After</th></tr>
+			 *   <tr>
+			 *     <td>(I-1)</td><td>Any</td>
+			 *     <td><code>a b<span style="text-decoration:underline">|c</span> g h i</code></td>
+			 *     <td><code>a b<span style="text-decoration:underline">|c</span> D E F g h i</code></td>
+			 *   </tr>
+			 *   <tr>
+			 *     <td>(I-2a)</td><td>@c Direction#forward()</td>
+			 *     <td><code>a b <span style="text-decoration:underline">c|</span>g h i</code></td>
+			 *     <td><code>a b c D E <span style="text-decoration:underline">F|</span>g h i</code></td>
+			 *   </tr>
+			 *   <tr>
+			 *     <td>(I-2b)</td><td>@c Direction#backward()</td>
+			 *     <td><code>a b <span style="text-decoration:underline">c|</span>g h i</code></td>
+			 *     <td><code>a b <span style="text-decoration:underline">c|</span>D E F g h i</code></td>
+			 *   </tr>
+			 *   <tr>
+			 *     <td>(I-3a)</td><td>@c Direction#forward()</td>
+			 *     <td><code>a b c<span style="text-decoration:underline">|g</span> h i</code></td>
+			 *     <td><code>a b c D E F<span style="text-decoration:underline">|g</span> h i</code></td>
+			 *   </tr>
+			 *   <tr>
+			 *     <td>(I-3b)</td><td>@c Direction#backward()</td>
+			 *     <td><code>a b c<span style="text-decoration:underline">|g</span> h i</code></td>
+			 *     <td><code>a b c<span style="text-decoration:underline">|D</span> E F g h i</code></td>
+			 *   </tr>
+			 *   <tr>
+			 *     <td>(I-4)</td><td>Any</td>
+			 *     <td><code>a b c <span style="text-decoration:underline">g|</span>h i</code></td>
+			 *     <td><code>a b c D E F <span style="text-decoration:underline">g|</span>h i</code></td>
+			 *  </tr>
+			 * </table>
+			 *
+			 * <h3>Deletion</h3>
+			 * When "DEF" is erased from "abcDEFghi" (underlined is the character-index and '|' is the
+			 * insertion-index):
+			 * <table>
+			 *   <tr><th>Case</th><th>@a gravity</th><th>Before</th><th>After</th></tr>
+			 *   <tr>
+			 *     <td>(D-1)</td><td>Any</td>
+			 *     <td><code>a b <span style="text-decoration:underline">c|</span>D E F g h i</code></td>
+			 *     <td><code>a b <span style="text-decoration:underline">c|</span>g h i</code></td>
+			 *   </tr>
+			 *   <tr>
+			 *     <td>(D-2a)</td><td>Any</td>
+			 *     <td><code>a b c<span style="text-decoration:underline">|D</span> E F g h i</code></td>
+			 *     <td><code>a b c<span style="text-decoration:underline">|g</span> h i</code></td>
+			 *   </tr>
+			 *   <tr>
+			 *     <td>(D-2b)</td><td>Any</td>
+			 *     <td><code>a b c <span style="text-decoration:underline">D|</span>E F g h i</code></td>
+			 *     <td><code>a b c<span style="text-decoration:underline">|g</span> h i</code></td>
+			 *   </tr>
+			 *   <tr>
+			 *     <td>(D-2c)</td><td>Any</td>
+			 *     <td><code>a b c D<span style="text-decoration:underline">|E</span> F g h i</code></td>
+			 *     <td><code>a b c<span style="text-decoration:underline">|g</span> h i</code></td>
+			 *   </tr>
+			 *   <tr>
+			 *     <td>(D-3)</td><td>Any</td>
+			 *     <td><code>a b c D E <span style="text-decoration:underline">F|</span>g h i</code></td>
+			 *     <td><code>a b <span style="text-decoration:underline">c|</span>g h i</code></td>
+			 *   </tr>
+			 *   <tr>
+			 *     <td>(D-4)</td><td>Any</td>
+			 *     <td><code>a b c D E F<span style="text-decoration:underline">|g</span> h i</code></td>
+			 *     <td><code>a b c<span style="text-decoration:underline">|g</span> h i</code></td>
+			 *   </tr>
+			 * </table>
+			 *
+			 * @param hit The original text hit
+			 * @param document The document
+			 * @param change The content of the document change
+			 * @param gravity See @c kernel#locations#updatePosition method and tables above
+			 * @return The result text hit
+			 * @throw ... Any exception @c kernel#DocumentCharacterIterator throws
+			 * @note This function creates and uses @c kernel#DocumentCharacterIterator instance. After @a change is
+			 *       processed by @a document, some exception may occur.
+			 * @see kernel#locations#updatePosition
+			 */
+			TextHit updateTextHit(const TextHit& hit, const kernel::Document& document, const kernel::DocumentChange& change, Direction gravity) {
+				TextHit h(hit);
+				if(!boost::empty(change.erasedRegion())) {	// deletion
+					assert(*boost::const_begin(change.erasedRegion()) <= *boost::const_end(change.erasedRegion()));
+					const auto& b = *boost::const_begin(change.erasedRegion()), e = *boost::const_end(change.erasedRegion());
+					if(h.characterIndex() >= b && h.characterIndex() < e) {	// (D-2) or (D-3)
+						if(insertionPosition(document, h) < e)	// (D-2)
+							h = TextHit::leading(e);
+						else {	// (D-3)
+							kernel::DocumentCharacterIterator i(document, b);
+							h = TextHit::trailing((--i).tell());
+						}
+					} else { // (D-1) or (D-4)
+						const auto p(kernel::locations::detail::updatePositionForDeletion(h.characterIndex(), change.erasedRegion(), gravity));
+						h = h.isLeadingEdge() ? TextHit::leading(p) : TextHit::trailing(p);
+					}
+				}
+				if(!boost::empty(change.insertedRegion())) {	// insertion
+					assert(*boost::const_begin(change.insertedRegion()) <= *boost::const_end(change.insertedRegion()));
+					const auto& b = *boost::const_begin(change.insertedRegion()), e = *boost::const_end(change.insertedRegion());
+					const auto ip(insertionPosition(document, h));
+					if(ip == b) {	// (I-2) or (I-3)
+						h = TextHit::leading((gravity == Direction::forward()) ? e : b);
+						if(!h.isLeadingEdge())	// (I-2)
+							h = otherHit(document, h);
+					} else {	// (I-1) or (I-4)
+						const auto p(kernel::locations::detail::updatePositionForInsertion(h.characterIndex(), change.insertedRegion(), gravity));
+						h = h.isLeadingEdge() ? TextHit::leading(p) : TextHit::trailing(p);
+					}
+				}
+				return h;
+			}
 		}
 	}
 }

@@ -105,6 +105,7 @@ namespace ascension {
 			virtual void moved(const TextHit& from) BOOST_NOEXCEPT;
 			// kernel.AbstractPoint
 			virtual void contentReset() override;
+			virtual void documentAboutToBeChanged(const kernel::DocumentChange& change) override;
 			virtual void documentChanged(const kernel::DocumentChange& change) override;
 		private:
 			void buildVisualLineCaches();
@@ -124,6 +125,7 @@ namespace ascension {
 			MotionSignal motionSignal_;
 			boost::optional<graphics::Scalar> positionInVisualLine_;	// see rememberPositionInVisualLine
 			bool crossingLines_;	// true only when the point is moving across the different lines
+			boost::optional<TextHit> hitAfterChange_;
 			boost::optional<graphics::font::VisualLine> lineNumberCaches_;	// caches
 			friend class TextArea;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08

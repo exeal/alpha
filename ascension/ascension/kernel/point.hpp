@@ -39,9 +39,11 @@ namespace ascension {
 		private:
 			// AbstractPoint
 			void contentReset() override;
+			void documentAboutToBeChanged(const DocumentChange& change) override;
 			void documentChanged(const DocumentChange& change) override;
 		private:
 			Position position_;
+			boost::optional<Position> destination_;
 			MotionSignal motionSignal_;
 		};
 

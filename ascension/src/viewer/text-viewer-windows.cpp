@@ -154,7 +154,7 @@ namespace ascension {
 
 			private:
 				// DocumentListener
-				void documentAboutToBeChanged(const kernel::Document& document) override;
+				void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 				void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			private:
 				TextViewer& viewer_;
@@ -243,7 +243,7 @@ namespace ascension {
 		}
 
 		/// @see DocumentListener#documentAboutToBeChanged
-		void AccessibleProxy::documentAboutToBeChanged(const kernel::Document&) {
+		void AccessibleProxy::documentAboutToBeChanged(const kernel::Document&, const kernel::DocumentChange&) {
 			// do nothing
 		}
 

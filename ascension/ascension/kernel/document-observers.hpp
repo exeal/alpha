@@ -29,8 +29,10 @@ namespace ascension {
 			/**
 			 * The document is about to be changed.
 			 * @param document The document
+			 * @param change The modification content. Both @c change.erasedRegion() and @c change.insertedRegion() may
+			 *               return an empty
 			 */
-			virtual void documentAboutToBeChanged(const Document& document) = 0;
+			virtual void documentAboutToBeChanged(const Document& document, const DocumentChange& change) = 0;
 			/**
 			 * The text was deleted or inserted.
 			 * @param document The document

@@ -325,7 +325,7 @@ namespace ascension {
 			void setPatternToSearcher(bool pushToHistory);
 			bool update();
 			// kernel.DocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document);
+			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// kernel.BookmarkListener
 			void bookmarkChanged(Index line);

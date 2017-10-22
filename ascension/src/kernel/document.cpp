@@ -318,28 +318,35 @@ namespace ascension {
 		void Document::doResetContent() {
 		}
 
-		void Document::fireDocumentAboutToBeChanged() BOOST_NOEXCEPT {
-			if(partitioner_.get() != nullptr)
-				partitioner_->documentAboutToBeChanged();
-			BOOST_FOREACH(DocumentListener* listener, prenotifiedListeners_)
-				listener->documentAboutToBeChanged(*this);
-			BOOST_FOREACH(DocumentListener* listener, listeners_)
-				listener->documentAboutToBeChanged(*this);
+		namespace {
+			template<typename PartitionerMethod, typename ListenerMethod, typename PointMethod>
+			inline void fireDocumentListeners(
+					const Document& document, const DocumentChange& change,
+					std::unique_ptr<DocumentPartitioner>& partitioner, std::list<DocumentListener*>& prenotifiedListeners, std::list<DocumentListener*>& listeners, std::set<AbstractPoint*>& points,
+					PartitionerMethod partitionerMethod, ListenerMethod listenerMethod, PointMethod pointMethod) {
+				if(partitioner.get() != nullptr)
+					(partitioner.get()->*partitionerMethod)(change);
+				if(pointMethod != nullptr) {
+					BOOST_FOREACH(AbstractPoint* p, points) {
+						if(p->adaptsToDocument())
+							(p->*pointMethod)(change);
+					}
+				}
+				BOOST_FOREACH(DocumentListener* listener, prenotifiedListeners)
+					(listener->*listenerMethod)(document, change);
+				BOOST_FOREACH(DocumentListener* listener, listeners)
+					(listener->*listenerMethod)(document, change);
+			}
+		}
+
+		void Document::fireDocumentAboutToBeChanged(const DocumentChange& c, bool updateAllPoints /* = true */) BOOST_NOEXCEPT {
+			fireDocumentListeners(*this, c, partitioner_, prenotifiedListeners_, listeners_, points_,
+				&DocumentPartitioner::documentAboutToBeChanged, &DocumentListener::documentAboutToBeChanged, updateAllPoints ? &AbstractPoint::documentAboutToBeChanged : nullptr);
 		}
 
 		void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) BOOST_NOEXCEPT {
-			if(partitioner_.get() != nullptr)
-				partitioner_->documentChanged(c);
-			if(updateAllPoints) {
-				BOOST_FOREACH(AbstractPoint* p, points_) {
-					if(p->adaptsToDocument())
-						p->documentChanged(c);
-				}
-			}
-			BOOST_FOREACH(DocumentListener* listener, prenotifiedListeners_)
-				listener->documentChanged(*this, c);
-			BOOST_FOREACH(DocumentListener* listener, listeners_)
-				listener->documentChanged(*this, c);
+			fireDocumentListeners(*this, c, partitioner_, prenotifiedListeners_, listeners_, points_,
+				&DocumentPartitioner::documentChanged, &DocumentListener::documentChanged, updateAllPoints ? &AbstractPoint::documentChanged : nullptr);
 		}
 
 		/**
@@ -525,8 +532,9 @@ namespace ascension {
 						p->contentReset();
 				}
 				bookmarker_->clear();
-		
-				fireDocumentAboutToBeChanged();
+
+				const DocumentChange c(region(), Region::makeEmpty(*boost::const_begin(region())));
+				fireDocumentAboutToBeChanged(c, false);
 				if(length_ != 0) {
 					assert(!lines_.empty());
 					for(std::size_t i = 0, c = lines_.size(); i < c; ++i)
@@ -536,8 +544,7 @@ namespace ascension {
 					length_ = 0;
 					++revisionNumber_;
 				}
-				const DocumentChange ca(region(), Region::makeEmpty(*boost::const_begin(region())));
-				fireDocumentChanged(ca, false);
+				fireDocumentChanged(c, false);
 			}
 		
 			setReadOnly(false);
@@ -709,7 +716,7 @@ namespace ascension {
 		}
 
 		/// @see DocumentPartitioner#documentAboutToBeChanged
-		void NullPartitioner::documentAboutToBeChanged() BOOST_NOEXCEPT {
+		void NullPartitioner::documentAboutToBeChanged(const DocumentChange&) BOOST_NOEXCEPT {
 		}
 
 		/// @see DocumentPartitioner#documentChanged

@@ -57,8 +57,11 @@ namespace ascension {
 			DocumentPartitioner() BOOST_NOEXCEPT;
 			void notifyDocument(const Region& changedRegion);
 		private:
-			/// The document is about to be changed.
-			virtual void documentAboutToBeChanged() BOOST_NOEXCEPT = 0;
+			/**
+			 * The document is about to be changed.
+			 * @param change The modification content
+			 */
+			virtual void documentAboutToBeChanged(const DocumentChange& change) BOOST_NOEXCEPT = 0;
 			/**
 			 * The document was changed.
 			 * @param change The modification content
@@ -87,7 +90,7 @@ namespace ascension {
 		public:
 			NullPartitioner() BOOST_NOEXCEPT;
 		private:
-			void documentAboutToBeChanged() BOOST_NOEXCEPT override;
+			void documentAboutToBeChanged(const DocumentChange& change) BOOST_NOEXCEPT override;
 			void documentChanged(const DocumentChange& change) BOOST_NOEXCEPT override;
 			void doGetPartition(const Position& at, DocumentPartition& partition) const BOOST_NOEXCEPT override;
 			void doInstall() BOOST_NOEXCEPT override;

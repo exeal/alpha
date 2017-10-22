@@ -133,7 +133,7 @@ namespace ascension {
 		}
 
 		/// @see kernel#DocumentListener#documentAboutToBeChanged
-		void DefaultContentAssistant::documentAboutToBeChanged(const kernel::Document&) {
+		void DefaultContentAssistant::documentAboutToBeChanged(const kernel::Document&, const kernel::DocumentChange&) {
 			// do nothing
 		}
 

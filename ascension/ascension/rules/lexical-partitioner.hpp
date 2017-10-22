@@ -60,7 +60,7 @@ namespace ascension {
 				const StringPiece& line, Index offsetInLine, const kernel::ContentType& contentType) const BOOST_NOEXCEPT;
 			void verify() const;
 			// DocumentPartitioner
-			void documentAboutToBeChanged() BOOST_NOEXCEPT override;
+			void documentAboutToBeChanged(const kernel::DocumentChange& change) BOOST_NOEXCEPT override;
 			void documentChanged(const kernel::DocumentChange& change) BOOST_NOEXCEPT override;
 			void doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const BOOST_NOEXCEPT override;
 			void doInstall() BOOST_NOEXCEPT override;
