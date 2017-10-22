@@ -13,6 +13,7 @@
 #include <ascension/corelib/text/newline.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/viewer/caret-painter.hpp>
+#include <ascension/viewer/point-proxy.hpp>
 #include <ascension/viewer/selected-region.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #include <ascension/viewer/detail/input-method.hpp>
@@ -78,10 +79,10 @@ namespace ascension {
 
 			/// @name The Anchor and The Caret
 			/// @{
-			const VisualPoint& anchor() const BOOST_NOEXCEPT;
-			const VisualPoint& beginning() const BOOST_NOEXCEPT;
+			locations::PointProxy anchor() const BOOST_NOEXCEPT;
+			locations::PointProxy beginning() const BOOST_NOEXCEPT;
 			Caret& enableAutoShow(bool enable = true) BOOST_NOEXCEPT;
-			const VisualPoint& end() const BOOST_NOEXCEPT;
+			locations::PointProxy end() const BOOST_NOEXCEPT;
 			bool isAutoShowEnabled() const BOOST_NOEXCEPT;
 			/// @}
 
@@ -311,11 +312,13 @@ namespace ascension {
 		// inline implementations /////////////////////////////////////////////////////////////////
 
 		/// Returns the anchor of the selection.
-		inline const VisualPoint& Caret::anchor() const BOOST_NOEXCEPT {return *anchor_;}
+		inline locations::PointProxy Caret::anchor() const BOOST_NOEXCEPT {
+			return locations::PointProxy(textArea(), boost::get_optional_value_or(anchor_, hit()));
+		}
 
 		/// Returns the neighborhood to the beginning of the document among the anchor and this point.
-		inline const VisualPoint& Caret::beginning() const BOOST_NOEXCEPT {
-			return std::min(static_cast<const VisualPoint&>(*this), static_cast<const VisualPoint&>(*anchor_));
+		inline locations::PointProxy Caret::beginning() const BOOST_NOEXCEPT {
+			return locations::PointProxy(textArea(), std::min(hit(), anchor().hit));
 		}
 
 		/**
@@ -341,8 +344,8 @@ namespace ascension {
 		}
 
 		/// Returns the neighborhood to the end of the document among the anchor and this point.
-		inline const VisualPoint& Caret::end() const BOOST_NOEXCEPT {
-			return std::max(static_cast<const VisualPoint&>(*this), static_cast<const VisualPoint&>(*anchor_));
+		inline locations::PointProxy Caret::end() const BOOST_NOEXCEPT {
+			return locations::PointProxy(textArea(), std::max(hit(), anchor().hit));
 		}
 
 		/// Returns @c true if the point will be shown automatically when moved. Default is @c true.
@@ -426,6 +429,34 @@ namespace ascension {
 	} // namespace viewer
 
 	namespace kernel {
+		template<>
+		struct DocumentAccess<viewer::Caret> {
+			static Document& get(viewer::Caret& p) BOOST_NOEXCEPT {
+				return p.document();
+			}
+		};
+
+		template<>
+		struct PositionAccess<viewer::Caret> {
+			static Position get(viewer::Caret& p) BOOST_NOEXCEPT {
+				return viewer::insertionPosition(p);
+			}
+		};
+
+		template<>
+		struct DocumentAccess<const viewer::Caret> {
+			static const Document& get(const viewer::Caret& p) BOOST_NOEXCEPT {
+				return p.document();
+			}
+		};
+
+		template<>
+		struct PositionAccess<const viewer::Caret> {
+			static Position get(const viewer::Caret& p) BOOST_NOEXCEPT {
+				return viewer::insertionPosition(p);
+			}
+		};
+
 		/**
 		 * @overload
 		 * @note There is no @c offsetInLine for @c viewer#Caret.

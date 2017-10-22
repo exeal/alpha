@@ -15,6 +15,7 @@
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/locations.hpp>
+#include <ascension/kernel/point-proxy.hpp>
 #include <boost/core/ignore_unused.hpp>
 
 
@@ -22,20 +23,6 @@ namespace ascension {
 	namespace kernel {
 		namespace locations {
 			namespace {
-				template<typename T>
-				inline const Document& document(const T& p) BOOST_NOEXCEPT {
-					return std::get<0>(p);
-				}
-				template<typename T>
-				inline const Position& position(const T& p) BOOST_NOEXCEPT {
-					return std::get<1>(p);
-				}
-				inline Index line(const PointProxy& p) BOOST_NOEXCEPT {
-					return kernel::line(position(p));
-				}
-				inline Index offsetInLine(const PointProxy& p) BOOST_NOEXCEPT {
-					return kernel::offsetInLine(position(p));
-				}
 				template<typename T>
 				inline void throwIfOutsideOfDocument(const T& p) {
 					if(isOutsideOfDocumentRegion(p))
@@ -89,7 +76,7 @@ namespace ascension {
 			 */
 			Position beginningOfLine(const PointProxy& p) {
 				throwIfOutsideOfDocument(p);
-				return shrinkToAccessibleRegion(makePointProxy(document(p), Position::bol(position(p))));
+				return shrinkToAccessibleRegion(PointProxy(document(p), Position::bol(position(p))));
 			}
 
 			/**
@@ -124,7 +111,7 @@ namespace ascension {
 			Position endOfLine(const PointProxy& p) {
 				throwIfOutsideOfDocument(p);
 				const auto ln = line(p);
-				return shrinkToAccessibleRegion(makePointProxy(document(p), Position(ln, document(p).lineLength(ln))));
+				return shrinkToAccessibleRegion(PointProxy(document(p), Position(ln, document(p).lineLength(ln))));
 			}
 
 			/**
@@ -343,8 +330,8 @@ namespace ascension {
 			 */
 			Region shrinkToAccessibleRegion(const Document& document, const Region& region) BOOST_NOEXCEPT {
 				return Region(
-					shrinkToAccessibleRegion(makePointProxy(document, *boost::const_begin(region))),
-					shrinkToAccessibleRegion(makePointProxy(document, *boost::const_end(region))));
+					shrinkToAccessibleRegion(PointProxy(document, *boost::const_begin(region))),
+					shrinkToAccessibleRegion(PointProxy(document, *boost::const_end(region))));
 			}
 
 			/**
@@ -364,8 +351,8 @@ namespace ascension {
 			 */
 			Region shrinkToDocumentRegion(const Document& document, const Region& region) BOOST_NOEXCEPT {
 				return Region(
-					shrinkToDocumentRegion(makePointProxy(document, *boost::const_begin(region))),
-					shrinkToDocumentRegion(makePointProxy(document, *boost::const_end(region))));
+					shrinkToDocumentRegion(PointProxy(document, *boost::const_begin(region))),
+					shrinkToDocumentRegion(PointProxy(document, *boost::const_end(region))));
 			}
 
 			/**

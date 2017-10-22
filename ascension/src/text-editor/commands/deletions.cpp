@@ -76,11 +76,11 @@ namespace ascension {
 						if(direction_ == Direction::forward())
 							region = kernel::Region(
 								*boost::const_begin(region),
-								kernel::locations::nextCharacter(caret->end(),
+								kernel::locations::nextCharacter(viewer::insertionPosition(caret->end()),
 									Direction::forward(), kernel::locations::GRAPHEME_CLUSTER, viewer::isSelectionEmpty(*caret) ? n : (n - 1)));
 						else
 							region = kernel::Region(
-								kernel::locations::nextCharacter(caret->beginning(),
+								kernel::locations::nextCharacter(viewer::insertionPosition(caret->beginning()),
 									Direction::backward(), kernel::locations::UTF32_CODE_UNIT, viewer::isSelectionEmpty(*caret) ? n : (n - 1)),
 								*boost::const_end(region));
 						try {

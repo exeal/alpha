@@ -40,9 +40,9 @@ namespace ascension {
 				viewer::TextViewer& viewer = target();
 				abortModes();
 				const auto document(viewer::document(viewer));
-				const auto& peos = viewer.textArea()->caret()->end();
+				const auto peos(viewer.textArea()->caret()->end());
 				const auto eos(*boost::const_end(viewer.textArea()->caret()->selectedRegion()));
-				if(kernel::locations::isBeginningOfLine(peos) || (document->isNarrowed() && eos == *boost::const_begin(document->accessibleRegion())))
+				if(kernel::locations::isBeginningOfLine(viewer::insertionPosition(peos)) || (document->isNarrowed() && eos == *boost::const_begin(document->accessibleRegion())))
 					return false;
 
 				const auto caret(viewer.textArea()->caret());
@@ -55,7 +55,7 @@ namespace ascension {
 					return false;
 				}
 				viewer::AutoFreeze af(&viewer);
-				caret->select(viewer::_anchor = kernel::Position(kernel::line(eos), kernel::offsetInLine(eos) - ((c > 0xffffu) ? 2 : 1)), viewer::_caret = peos.hit());
+				caret->select(viewer::_anchor = kernel::Position(kernel::line(eos), kernel::offsetInLine(eos) - ((c > 0xffffu) ? 2 : 1)), viewer::_caret = peos);
 				try {
 					caret->replaceSelection(hex, false);
 				} catch(const kernel::DocumentInput::ChangeRejectedException&) {
@@ -83,9 +83,9 @@ namespace ascension {
 				const auto document(viewer::document(target()));
 				const auto textArea(target().textArea());
 				const auto caret(textArea->caret());
-				const auto& peos = caret->end();
+				const auto peos(caret->end());
 				const auto eos(*boost::const_end(caret->selectedRegion()));
-				if(kernel::locations::isBeginningOfLine(peos) || (document->isNarrowed() && eos == *boost::const_begin(document->accessibleRegion())))
+				if(kernel::locations::isBeginningOfLine(viewer::insertionPosition(peos)) || (document->isNarrowed() && eos == *boost::const_begin(document->accessibleRegion())))
 					return false;
 
 				const String& lineString = document->lineString(kernel::line(eos));
@@ -115,7 +115,7 @@ namespace ascension {
 							if(i >= 2 && lineString[i - 1] == L'+' && (lineString[i - 2] == L'U' || lineString[i - 2] == L'u'))
 								i -= 2;
 							viewer::AutoFreeze af(&target());
-							caret->select(viewer::_anchor = kernel::Position(kernel::line(eos), i), viewer::_caret = peos.hit());
+							caret->select(viewer::_anchor = kernel::Position(kernel::line(eos), i), viewer::_caret = peos);
 							try {
 								caret->replaceSelection(s, false);
 							}

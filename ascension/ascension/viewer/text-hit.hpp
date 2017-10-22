@@ -18,9 +18,17 @@
 namespace ascension {
 	namespace kernel {
 		class Document;
+
+		namespace locations {
+			struct PointProxy;
+		}
 	}
 
 	namespace viewer {
+		namespace locations {
+			struct PointProxy;
+		}
+
 		/**
 		 * Used by procedures which move @c VisualPoint.
 		 * @see graphics#font#TextHit

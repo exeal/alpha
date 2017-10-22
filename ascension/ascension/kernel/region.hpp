@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_REGION_HPP
 #define ASCENSION_REGION_HPP
-#include <ascension/kernel/position.hpp>
+#include <ascension/kernel/access.hpp>
 #include <boost/range/irange.hpp>
 #include <utility>	// std.max, std.min, std.pair, std.swap
 

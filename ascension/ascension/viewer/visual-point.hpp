@@ -12,10 +12,12 @@
 #ifndef ASCENSION_VISUAL_POINT_HPP
 #define ASCENSION_VISUAL_POINT_HPP
 #include <ascension/kernel/point.hpp>
+#include <ascension/kernel/point-proxy.hpp>
 #include <ascension/graphics/font/visual-line.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/viewer/detail/weak-reference-for-points.hpp>
+#include <ascension/viewer/point-proxy.hpp>
 #include <ascension/viewer/visual-destination-proxy.hpp>
 
 namespace ascension {
@@ -67,8 +69,8 @@ namespace ascension {
 			explicit VisualPoint(const graphics::font::TextHit<kernel::Point>& other);
 			VisualPoint(const VisualPoint& other);
 			virtual ~VisualPoint() BOOST_NOEXCEPT;
-			operator std::pair<const kernel::Document&, kernel::Position>() const;
-			operator std::pair<const TextArea&, TextHit>() const;
+			operator kernel::locations::PointProxy() const;
+			operator locations::PointProxy() const;
 
 			/// @name Installation
 			/// @{
@@ -155,13 +157,13 @@ namespace ascension {
 		}
 
 		/// Conversion operator into @c kernel#locations#PointProyx.
-		inline VisualPoint::operator std::pair<const kernel::Document&, kernel::Position>() const {
-			return std::make_pair(std::ref(document()), insertionPosition(*this));
+		inline VisualPoint::operator kernel::locations::PointProxy() const {
+			return kernel::locations::PointProxy(document(), insertionPosition(*this));
 		}
 
 		/// Conversion operator into @c viewer#locations#PointProxy.
-		inline VisualPoint::operator std::pair<const TextArea&, TextHit>() const {
-			return std::make_pair(std::ref(textArea()), hit());
+		inline VisualPoint::operator locations::PointProxy() const {
+			return locations::PointProxy(textArea(), hit());
 		}
 
 		/**
@@ -256,6 +258,34 @@ namespace ascension {
 	} // namespace viewer
 
 	namespace kernel {
+		template<>
+		struct DocumentAccess<viewer::VisualPoint> {
+			static Document& get(viewer::VisualPoint& p) BOOST_NOEXCEPT {
+				return p.document();
+			}
+		};
+
+		template<>
+		struct DocumentAccess<const viewer::VisualPoint> {
+			static const Document& get(const viewer::VisualPoint& p) BOOST_NOEXCEPT {
+				return p.document();
+			}
+		};
+
+		template<>
+		struct PositionAccess<viewer::VisualPoint> {
+			static Position get(viewer::VisualPoint& p) BOOST_NOEXCEPT {
+				return viewer::insertionPosition(p);
+			}
+		};
+
+		template<>
+		struct PositionAccess<const viewer::VisualPoint> {
+			static Position get(const viewer::VisualPoint& p) BOOST_NOEXCEPT {
+				return viewer::insertionPosition(p);
+			}
+		};
+
 		/**
 		 * @overload
 		 * @note There is no @c offsetInLine for @c viewer#VisualPoint.
