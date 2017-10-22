@@ -946,5 +946,25 @@ namespace ascension {
 				}
 			}
 		}
+
+		kernel::locations::PointProxy insertionPosition(const locations::PointProxy& p) {
+			return kernel::locations::PointProxy(*kernel::document(p), insertionPosition(*kernel::document(p), p.hit));
+		}
+	}
+
+	std::shared_ptr<kernel::Document> kernel::DocumentAccess<viewer::TextArea>::get(viewer::TextArea& textArea) BOOST_NOEXCEPT {
+		return kernel::document(textArea.textViewer());
+	}
+
+	std::shared_ptr<const kernel::Document> kernel::DocumentAccess<const viewer::TextArea>::get(const viewer::TextArea& textArea) BOOST_NOEXCEPT {
+		return kernel::document(textArea.textViewer());
+	}
+
+	std::shared_ptr<const kernel::Document> kernel::DocumentAccess<const viewer::locations::PointProxy>::get(const viewer::locations::PointProxy& p) BOOST_NOEXCEPT {
+		return kernel::document(p.textArea);
+	}
+
+	kernel::Position kernel::PositionAccess<const viewer::locations::PointProxy>::get(const viewer::locations::PointProxy& p) BOOST_NOEXCEPT {
+		return viewer::insertionPosition(p);
 	}
 }

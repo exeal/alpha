@@ -7,7 +7,7 @@
 #ifndef ASCENSION_KERNEL_POINT_HPP
 #define ASCENSION_KERNEL_POINT_HPP
 #include <ascension/kernel/abstract-point.hpp>
-#include <ascension/kernel/position.hpp>
+#include <ascension/kernel/point-proxy.hpp>
 #include <boost/operators.hpp>
 
 namespace ascension {
@@ -19,7 +19,7 @@ namespace ascension {
 			explicit Point(Document& document, const Position& position = kernel::Position::zero());
 			Point(const Point& other);
 			virtual ~Point() BOOST_NOEXCEPT;
-			operator std::pair<const Document&, Position>() const;
+			operator locations::PointProxy() const;
 
 			/// @name Core Attribute
 			const Position& position() const BOOST_NOEXCEPT;
@@ -60,17 +60,12 @@ namespace ascension {
 			return lhs.position() < rhs.position();
 		}
 
-		/// @overload
-		inline const Position& position(const Point& p) BOOST_NOEXCEPT {
-			return p.position();
-		}
-
 
 		// Point method inline implementation /////////////////////////////////////////////////////
 
 		/// Conversion operator for convenience.
-		inline Point::operator std::pair<const Document&, Position>() const {
-			return std::make_pair(std::ref(document()), position());
+		inline Point::operator locations::PointProxy() const {
+			return locations::PointProxy(document(), position());
 		}
 
 		/**

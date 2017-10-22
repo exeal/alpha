@@ -166,7 +166,7 @@ namespace ascension {
 					return false;
 				}
 				document->insertUndoBoundary();
-				caret->moveTo(caret->anchor().hit());
+				caret->moveTo(caret->anchor());
 				return true;
 			}
 

@@ -182,7 +182,7 @@ namespace ascension {
 		/// @see VisualPoint#aboutToMove
 		void Caret::aboutToMove(TextHit& to) {
 			const auto ip(insertionPosition(document(), to));
-			if(kernel::locations::isOutsideOfDocumentRegion(kernel::locations::makePointProxy(document(), ip)))
+			if(kernel::locations::isOutsideOfDocumentRegion(kernel::locations::PointProxy(document(), ip)))
 				throw kernel::BadPositionException(ip, "Caret tried to move outside of document.");
 			VisualPoint::aboutToMove(to);
 		}
@@ -499,7 +499,7 @@ namespace ascension {
 			if(validateSequence) {
 				if(const texteditor::Session* const session = doc.session()) {
 					if(const std::shared_ptr<const texteditor::InputSequenceCheckers> checker = session->inputSequenceCheckers()) {
-						const auto ip(insertionPosition(document(), beginning().hit()));
+						const auto ip(insertionPosition(document(), beginning()));
 						const Char* const lineString = doc.lineString(kernel::line(ip)).data();
 						if(!checker->check(StringPiece(lineString, kernel::offsetInLine(ip)), character)) {
 							eraseSelection(*this);
@@ -524,8 +524,7 @@ namespace ascension {
 				destructiveInsert(*this, StringPiece(buffer, (character < 0x10000u) ? 1 : 2));
 				doc.insertUndoBoundary();
 			} else {
-				const bool alpha = kernel::detail::identifierSyntax(
-					static_cast<std::pair<const kernel::Document&, kernel::Position>>(*this)).isIdentifierContinueCharacter(character);
+				const bool alpha = kernel::detail::identifierSyntax(*this).isIdentifierContinueCharacter(character);
 				if(context_.lastTypedPosition != boost::none && (!alpha || boost::get(context_.lastTypedPosition) != insertionPosition(*this))) {
 					// end sequential typing
 					doc.insertUndoBoundary();
@@ -621,7 +620,7 @@ namespace ascension {
 			const StringPiece lineString(document().lineString(kernel::line(hit().characterIndex())));
 			StringPiece::const_iterator position(lineString.cbegin());
 			if(boost::size(selectedRegion().lines()) == 1)
-				position += kernel::offsetInLine(insertionPosition(document(), beginning().hit()));
+				position += kernel::offsetInLine(insertionPosition(document(), beginning()));
 			return std::make_pair(lineString, position);
 		}
 

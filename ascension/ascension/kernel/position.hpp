@@ -112,40 +112,6 @@ namespace ascension {
 		private:
 			const boost::optional<Position> requestedPosition_;
 		};
-
-		/// @defgroup position_accessors Position Accessors
-		/// @{
-		/**
-		 * Returns the line number of the given positional object.
-		 * @tparam T The type of @a p. This should be able to pass to @c position function
-		 * @param p The positional object
-		 * @return The line number
-		 */
-		template<typename T>
-		BOOST_CONSTEXPR inline Index line(const T& p) BOOST_NOEXCEPT {
-			return position(p).line;
-		}
-
-		/**
-		 * Returns the offset in the line of the given positional object.
-		 * @tparam T The type of @a p. This should be able to pass to @c position function
-		 * @param p The positional object
-		 * @return The offset in the line
-		 */
-		template<typename T>
-		BOOST_CONSTEXPR inline Index offsetInLine(const T& p) BOOST_NOEXCEPT {
-			return position(p).offsetInLine;
-		}
-
-		/**
-		 * Returns the position value of the given positional object.
-		 * @param p The positional object
-		 * @return The position value
-		 */
-		inline const Position& position(const Position& p) BOOST_NOEXCEPT {
-			return p;
-		}
-		/// @}
 	}
 } // namespace ascension.kernel
 

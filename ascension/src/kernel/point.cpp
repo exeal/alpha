@@ -11,6 +11,7 @@
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/locations.hpp>
 #include <ascension/kernel/point.hpp>
+#include <ascension/kernel/point-proxy.hpp>
 #include <boost/core/ignore_unused.hpp>
 
 
@@ -157,11 +158,11 @@ namespace ascension {
 		Point& Point::moveTo(const Position& to) {
 			if(isDocumentDisposed())
 				throw DocumentDisposedException();
-			else if(locations::isOutsideOfDocumentRegion(locations::makePointProxy(document(), to)))
+			else if(locations::isOutsideOfDocumentRegion(locations::PointProxy(document(), to)))
 				throw BadPositionException(to);
 			Position destination(to);
 			aboutToMove(destination);
-			destination = locations::shrinkToDocumentRegion(locations::makePointProxy(document(), destination));
+			destination = locations::shrinkToDocumentRegion(locations::PointProxy(document(), destination));
 			const Position from(position());
 			position_ = destination;
 			moved(from);

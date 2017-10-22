@@ -12,6 +12,7 @@
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport-base.hpp>
 #include <ascension/graphics/font/visual-lines-listener.hpp>
+#include <ascension/kernel/access.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/presentation/flow-relative-two-axes.hpp>
 #include <ascension/viewer/detail/weak-reference-for-points.hpp>
@@ -158,12 +159,6 @@ namespace ascension {
 				caretMotionConnection_, defaultFontChangedConnection_, matchBracketsChangedConnection_, selectionShapeChangedConnection_;
 		};
 
-		/// @addtogroup shortcuts_to_main_objects
-		/// @{
-		kernel::Document& document(TextArea& textArea);
-		const kernel::Document& document(const TextArea& textArea);
-		/// @}
-
 		
 		/// Returns the caret, or @c nullptr if not installed.
 		inline std::shared_ptr<Caret> TextArea::caret() BOOST_NOEXCEPT {
@@ -204,6 +199,17 @@ namespace ascension {
 		inline std::shared_ptr<const graphics::font::TextViewport> TextArea::viewport() const BOOST_NOEXCEPT {
 			return viewport_;
 		}
+	}
+
+	namespace kernel {
+		template<>
+		struct DocumentAccess<viewer::TextArea> {
+			static std::shared_ptr<Document> get(viewer::TextArea& textArea) BOOST_NOEXCEPT;
+		};
+		template<>
+		struct DocumentAccess<const viewer::TextArea> {
+			static std::shared_ptr<const Document> get(const viewer::TextArea& textArea) BOOST_NOEXCEPT;
+		};
 	}
 }
 

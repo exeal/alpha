@@ -529,12 +529,14 @@ namespace ascension {
 
 		/**
 		 * Returns the content type of the partition contains the specified position.
+		 * @tparam The type of @a p (@c locations#PointProxy)
 		 * @param p The position in the document
 		 * @throw ... Any exception thrown by @c DocumentPartitioner#contentType method
 		 * @return The content type
 		 */
-		inline ContentType contentType(const std::pair<const Document&, Position>& p) {
-			return std::get<0>(p).partitioner().contentType(std::get<1>(p));
+		template<typename T>
+		inline ContentType contentType(const T& p) {
+			return document(p).partitioner().contentType(position(p));
 		}
 		
 		/**
@@ -566,8 +568,9 @@ namespace ascension {
 
 		namespace detail {
 			/// @internal Returns the @c text#IdentifierSyntax object corresponds to the given point.
-			inline const text::IdentifierSyntax& identifierSyntax(const std::pair<const Document&, Position>& p) {
-				return std::get<0>(p).contentTypeInformation().getIdentifierSyntax(contentType(p));
+			template<typename T>
+			inline const text::IdentifierSyntax& identifierSyntax(const T& p) {
+				return document(p).contentTypeInformation().getIdentifierSyntax(contentType(p));
 			}
 		}
 	}

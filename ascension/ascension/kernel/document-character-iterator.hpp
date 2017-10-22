@@ -103,10 +103,12 @@ namespace ascension {
 			return position_;
 		}
 
-		/// @overload
-		inline const Position& position(const DocumentCharacterIterator& i) BOOST_NOEXCEPT {
-			return i.tell();
-		}
+		template<>
+		struct PositionAccess<const DocumentCharacterIterator> {
+			static const Position& get(const DocumentCharacterIterator& i) BOOST_NOEXCEPT {
+				return i.tell();
+			}
+		};
 	}
 } // namespace ascension.kernel
 

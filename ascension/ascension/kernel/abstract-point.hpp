@@ -10,6 +10,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/signals.hpp>
 #include <ascension/direction.hpp>
+#include <ascension/kernel/access.hpp>
 
 namespace ascension {
 	namespace kernel {

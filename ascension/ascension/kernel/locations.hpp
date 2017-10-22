@@ -35,21 +35,7 @@ namespace ascension {
 				GLYPH_CLUSTER		///< A glyph is a character (not implemented).
 			};
 
-			/**
-			 * Describes a position in the document.
-			 * @see viewer#locations#PointProxy
-			 */
-			typedef std::pair<const Document&, Position> PointProxy;
-
-			/**
-			 * Returns a @c PointProxy from the given document and position.
-			 * @param document The document
-			 * @param position The position
-			 * @return A @c PointProxy
-			 */
-			inline PointProxy makePointProxy(const Document& document, const Position& position) BOOST_NOEXCEPT {
-				return std::make_pair(std::ref(document), position);
-			}
+			struct PointProxy;
 
 			/// @defgroup special_locations_in_document Special Locations in Document
 			/// Free functions related to special locations.
