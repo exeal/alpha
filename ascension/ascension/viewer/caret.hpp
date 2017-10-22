@@ -210,21 +210,7 @@ namespace ascension {
 			// detail.InputMethodQueryEventHandler
 			std::pair<const StringPiece, StringPiece::const_iterator> querySurroundingText() const BOOST_NOEXCEPT override;
 		private:
-			class SelectionAnchor : public VisualPoint {
-			public:
-				SelectionAnchor(kernel::Document& document, const kernel::Position& position);
-				explicit SelectionAnchor(const kernel::Point& other);
-				explicit SelectionAnchor(const VisualPoint& other);
-				SelectionAnchor(TextArea& textArea, const kernel::Position& position);
-				void beginInternalUpdate(const kernel::DocumentChange& change) BOOST_NOEXCEPT;
-				void endInternalUpdate() BOOST_NOEXCEPT;
-				bool isInternalUpdating() const BOOST_NOEXCEPT;
-				const kernel::Position& positionBeforeInternalUpdate() const BOOST_NOEXCEPT;
-			private:
-				using kernel::Point::adaptToDocument;
-				boost::optional<kernel::Position> positionBeforeUpdate_;
-			};
-			std::unique_ptr<SelectionAnchor> anchor_;
+			boost::optional<TextHit> anchor_;
 			std::unique_ptr<CaretPainter> painter_;
 #if BOOST_OS_WINDOWS
 			LCID clipboardLocale_;
@@ -248,13 +234,11 @@ namespace ascension {
 			} shapeCache_;
 			struct Context {
 				bool yanking;			// true when right after pasted by using clipboard ring, and waiting for next cycle of ring
-				bool leaveAnchorNext;	// true if should leave the anchor at the next movement
-				bool leadingAnchor;		// true if in anchor_->moveTo calling, and ignore pointMoved
 				std::unique_ptr<VirtualBox> selectedRectangle;	// for rectangular selection. null when the selection is linear
 				bool typing;			// true when inputCharacter called (see prechangeDocument)
+				boost::optional<TextHit> anchorDestination;
 				bool inputMethodCompositionActivated, inputMethodComposingCharacter;
 				boost::optional<kernel::Position> lastTypedPosition;	// the position the caret input character previously
-				boost::optional<SelectedRegion> regionBeforeMoved;
 				boost::optional<std::pair<kernel::Position, kernel::Position>> matchBrackets;	// matched brackets' positions. boost.none for none
 				Context() BOOST_NOEXCEPT;
 			} context_;
