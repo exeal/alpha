@@ -231,7 +231,7 @@ namespace ascension {
 
 		private:
 //			void doSetModified(bool modified) BOOST_NOEXCEPT;
-			void fireDocumentAboutToBeChanged() BOOST_NOEXCEPT;
+			void fireDocumentAboutToBeChanged(const DocumentChange& c, bool updateAllPoints = true) BOOST_NOEXCEPT;
 			void fireDocumentChanged(const DocumentChange& c, bool updateAllPoints = true) BOOST_NOEXCEPT;
 			void initialize();
 			void partitioningChanged(const Region& changedRegion) BOOST_NOEXCEPT;
