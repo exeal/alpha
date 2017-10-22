@@ -136,7 +136,7 @@ namespace ascension {
 			void visualLinesModified(const boost::integer_range<Index>& lines,
 				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT override;
 			// kernel.DocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document) override;
+			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			// graphics.font.LineRenderingOptions
 			std::unique_ptr<const graphics::font::InlineObject> endOfLine(Index line) const BOOST_NOEXCEPT override;

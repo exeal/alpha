@@ -55,7 +55,7 @@ namespace ascension {
 		}
 
 		/// @see DocumentListener#documentAboutToBeChanged
-		void Bookmarker::documentAboutToBeChanged(const Document&) {
+		void Bookmarker::documentAboutToBeChanged(const Document&, const DocumentChange&) {
 			// do nothing
 		}
 

@@ -279,16 +279,24 @@ namespace ascension {
 			moveTo(TextHit::leading(kernel::Position::zero()));
 		}
 
+		/// @see AbstractPoint#documentAboutToBeChanged
+		void VisualPoint::documentAboutToBeChanged(const kernel::DocumentChange& change) {
+			assert(!isDocumentDisposed());
+			assert(adaptsToDocument());
+			assert(hitAfterChange_ == boost::none);
+			hitAfterChange_ = locations::updateTextHit(hit(), document(), change, gravity());
+		}
+
 		/// @see AbstractPoint#documentChanged
 		void VisualPoint::documentChanged(const kernel::DocumentChange& change) {
 			assert(!isDocumentDisposed());
 			assert(adaptsToDocument());
-//			normalize();
-			const auto ip(insertionPosition(*this));
-			const auto newPosition(kernel::positions::updatePosition(ip, change, gravity()));
-			const TextHit newHit((hit().isLeadingEdge() || includes(change.erasedRegion(), ip)) ? TextHit::leading(newPosition) : TextHit::trailing(newPosition));
-			if(newHit != hit())
-				moveTo(newHit);	// TODO: this may throw...
+			if(hitAfterChange_ != boost::none) {
+				const auto newHit(boost::get(hitAfterChange_));
+				hitAfterChange_ = boost::none;
+				if(newHit != hit())
+					moveTo(newHit);	// TODO: this may throw...
+			}
 		}
 
 		/**

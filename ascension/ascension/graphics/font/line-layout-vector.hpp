@@ -118,7 +118,7 @@ namespace ascension {
 				void presentationStylistChanged();
 				void updateLongestLine(boost::optional<Index> line, Scalar measure) BOOST_NOEXCEPT;
 				// kernel.DocumentListener
-				void documentAboutToBeChanged(const kernel::Document& document);
+				void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 				void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 				// kernel.DocumentPartitioningListener
 				void documentPartitioningChanged(const kernel::Region& changedRegion);

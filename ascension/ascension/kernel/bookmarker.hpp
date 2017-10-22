@@ -88,7 +88,7 @@ namespace ascension {
 		private:
 			ascension::detail::GapVector<Index>::iterator find(Index line) const BOOST_NOEXCEPT;
 			// DocumentListener
-			void documentAboutToBeChanged(const Document& document) override;
+			void documentAboutToBeChanged(const Document& document, const DocumentChange& change) override;
 			void documentChanged(const Document& document, const DocumentChange& change) override;
 		private:
 			explicit Bookmarker(Document& document) BOOST_NOEXCEPT;

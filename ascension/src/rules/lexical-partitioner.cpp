@@ -40,7 +40,7 @@ namespace ascension {
 		}
 		
 		/// @see kernel#DocumentPartitioner#documentAboutToBeChanged
-		void LexicalPartitioner::documentAboutToBeChanged() BOOST_NOEXCEPT {
+		void LexicalPartitioner::documentAboutToBeChanged(const kernel::DocumentChange&) BOOST_NOEXCEPT {
 		}
 		
 		/// @see kernel#DocumentPartitioner#documentChanged

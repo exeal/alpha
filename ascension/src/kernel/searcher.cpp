@@ -828,7 +828,7 @@ namespace ascension {
 		}
 
 		/// @see kernel#DocumentListener#documentAboutToBeChanged
-		void IncrementalSearcher::documentAboutToBeChanged(const kernel::Document&) {
+		void IncrementalSearcher::documentAboutToBeChanged(const kernel::Document&, const kernel::DocumentChange&) {
 			abort();
 		}
 

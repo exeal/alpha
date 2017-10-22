@@ -181,6 +181,7 @@ namespace ascension {
 			void adjustInputMethodCompositionWindow();
 			bool canPastePlatformData() const;
 			void checkMatchBrackets();
+			void documentAboutToBeChanged(const kernel::DocumentChange& change) override;
 			void documentChanged(const kernel::DocumentChange& change) override;
 			void fireCaretMoved(const SelectedRegion& regionBeforeMotion);
 			void internalExtendSelection(void (*algorithm)(void));
@@ -198,7 +199,7 @@ namespace ascension {
 			// VisualPoint.MotionSignal
 			void pointMoved(const VisualPoint& self, const TextHit& oldHit);
 			// kernel.DocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document) override;
+			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			// detail.InputMethodEventHandler
 			void commitString(widgetapi::event::InputMethodEvent& event) BOOST_NOEXCEPT override;

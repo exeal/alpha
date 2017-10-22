@@ -26,6 +26,7 @@
 #include <ascension/viewer/text-viewer-model-conversion.hpp>
 #include <ascension/viewer/text-viewer-utility.hpp>
 #include <ascension/viewer/virtual-box.hpp>
+#include <ascension/viewer/visual-locations.hpp>
 #include <boost/range/algorithm/binary_search.hpp>
 
 namespace ascension {
@@ -36,8 +37,7 @@ namespace ascension {
 		}
 
 		/// @internal Default constructor.
-		Caret::Context::Context() BOOST_NOEXCEPT : yanking(false), leaveAnchorNext(false), leadingAnchor(false),
-				typing(false), inputMethodCompositionActivated(false), inputMethodComposingCharacter(false) {
+		Caret::Context::Context() BOOST_NOEXCEPT : yanking(false), typing(false), inputMethodCompositionActivated(false), inputMethodComposingCharacter(false) {
 		}
 
 		// TODO: rewrite this documentation.
@@ -122,8 +122,7 @@ namespace ascension {
 		 * @param position The initial position of the caret
 		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 */
-		Caret::Caret(kernel::Document& document, const TextHit& position /* = TextHit::leading(kernel::Position::zero()) */) :
-				VisualPoint(document, position), anchor_(new SelectionAnchor(document, insertionPosition(document, position))),
+		Caret::Caret(kernel::Document& document, const TextHit& position /* = TextHit::leading(kernel::Position::zero()) */) : VisualPoint(document, position),
 #if BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
@@ -136,12 +135,7 @@ namespace ascension {
 		 * @param other The point used to initialize kernel part of the new object
 		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 */
-		Caret::Caret(const graphics::font::TextHit<kernel::Point>& other) :
-				VisualPoint(other),
-				anchor_(new SelectionAnchor(
-					const_cast<kernel::Document&>(other.characterIndex().document()),
-					insertionPosition(other.characterIndex().document(),
-						other.isLeadingEdge() ? TextHit::leading(other.characterIndex().position()) : TextHit::trailing(other.characterIndex().position())))),
+		Caret::Caret(const graphics::font::TextHit<kernel::Point>& other) : VisualPoint(other),
 #if BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
@@ -154,8 +148,7 @@ namespace ascension {
 		 * @param other The point used to initialize kernel part of the new object
 		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 */
-		Caret::Caret(const VisualPoint& other) :
-				VisualPoint(other), anchor_(new SelectionAnchor(other)),
+		Caret::Caret(const VisualPoint& other) : VisualPoint(other),
 #if BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
@@ -169,8 +162,7 @@ namespace ascension {
 		 * @param position The initial position of the point
 		 * @throw kernel#BadPositionException The constructor of @c kernel#Point class threw this exception
 		 */
-		Caret::Caret(TextArea& textArea, const TextHit& position /* = TextHit::leading(kernel::Position::zero()) */) :
-				VisualPoint(textArea, position), anchor_(new SelectionAnchor(textArea, position.characterIndex())),
+		Caret::Caret(TextArea& textArea, const TextHit& position /* = TextHit::leading(kernel::Position::zero()) */) : VisualPoint(textArea, position),
 #if BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
 #endif // BOOST_OS_WINDOWS
@@ -255,7 +247,6 @@ namespace ascension {
 		/// Clears the selection. The anchor will move to the caret.
 		void Caret::clearSelection() {
 			endRectangleSelection();
-			context_.leaveAnchorNext = false;
 			moveTo(hit());
 		}
 
@@ -284,25 +275,27 @@ namespace ascension {
 		}
 
 		/// @see kernel#DocumentListener#documentAboutToBeChanged
-		void Caret::documentAboutToBeChanged(const kernel::Document&) {
+		void Caret::documentAboutToBeChanged(const kernel::Document&, const kernel::DocumentChange&) {
 			// does nothing
+		}
+
+		/// @see VisualPoint#documentAboutToBeChanged
+		void Caret::documentAboutToBeChanged(const kernel::DocumentChange& change) {
+			assert(context_.anchorDestination == boost::none);
+			if(anchor_ != boost::none)
+				context_.anchorDestination = locations::updateTextHit(boost::get(anchor_), document(), change, gravity());
+			VisualPoint::documentAboutToBeChanged(change);
 		}
 
 		/// @see VisualPoint#documentChanged
 		void Caret::documentChanged(const kernel::DocumentChange& change) {
-			// notify the movement of the anchor and the caret concurrently when the document was changed
-			context_.leaveAnchorNext = context_.leadingAnchor = true;
-			anchor_->beginInternalUpdate(change);
 			VisualPoint::documentChanged(change);
-			anchor_->endInternalUpdate();
-			context_.leaveAnchorNext = context_.leadingAnchor = false;
 		}
 
 		/// @see kernel#DocumentListener#documentChanged
 		void Caret::documentChanged(const kernel::Document&, const kernel::DocumentChange&) {
 			context_.yanking = false;
-			if(context_.regionBeforeMoved != boost::none)
-				updateVisualAttributes();
+			updateVisualAttributes();
 		}
 
 		/**
@@ -401,14 +394,14 @@ namespace ascension {
 		 * @param to The destination position
 		 */
 		void Caret::extendSelectionTo(const TextHit& to) {
-			context_.leaveAnchorNext = true;
+			context_.anchorDestination = anchor();
 			try {
 				moveTo(to);
 			} catch(...) {
-				context_.leaveAnchorNext = false;
+				context_.anchorDestination = boost::none;
 				throw;
 			}
-			context_.leaveAnchorNext = false;
+			context_.anchorDestination = boost::none;
 		}
 
 		/**
@@ -416,14 +409,14 @@ namespace ascension {
 		 * @param to The destination position
 		 */
 		void Caret::extendSelectionTo(const VisualDestinationProxy& to) {
-			context_.leaveAnchorNext = true;
+			context_.anchorDestination = anchor();
 			try {
 				moveTo(to);
 			} catch(...) {
-				context_.leaveAnchorNext = false;
+				context_.anchorDestination = boost::none;
 				throw;
 			}
-			context_.leaveAnchorNext = false;
+			context_.anchorDestination = boost::none;
 		}
 
 		/// @internal Invokes @c MotionSignal.
@@ -562,11 +555,6 @@ namespace ascension {
 		void Caret::install(TextArea& textArea) {
 			const bool installed = isInstalled();
 			VisualPoint::install(textArea);
-			if(!installed) {
-				anchor_->install(textArea);
-				anchorMotionSignalConnection_ = anchor_->motionSignal().connect(
-					std::bind(&Caret::pointMoved, this, std::placeholders::_1, std::placeholders::_2));
-			}
 			setPainter(std::unique_ptr<CaretPainter>());
 			show();
 		}
@@ -583,18 +571,13 @@ namespace ascension {
 
 		/// @see VisualPoint#moved
 		void Caret::moved(const TextHit& from) BOOST_NOEXCEPT {
-			context_.regionBeforeMoved = SelectedRegion(
-				_document = document(),
-				_anchor = anchor_->isInternalUpdating() ? anchor_->positionBeforeInternalUpdate() : insertionPosition(*anchor_),
-				_caret = from);
-			if(context_.leaveAnchorNext)
-				context_.leaveAnchorNext = false;
-			else {
-				context_.leadingAnchor = true;
-				anchor_->moveTo(hit());
-				context_.leadingAnchor = false;
-			}
+			const SelectedRegion selectionBeforeMotion(_document = document(), _anchor = insertionPosition(document(), anchor()), _caret = from);
 			VisualPoint::moved(from);
+			anchor_ = context_.anchorDestination;
+			context_.anchorDestination = boost::none;
+			if(anchor_ != boost::none && boost::get(anchor_) == hit())
+				anchor_ = boost::none;
+			fireCaretMoved(selectionBeforeMotion);
 			if(!document().isChanging())
 				updateVisualAttributes();
 		}
@@ -610,18 +593,6 @@ namespace ascension {
 					painter_->paintIfShows(context, *layout,
 						modelToView(textArea().textViewer(), graphics::font::TextHit<kernel::Position>::leading(kernel::Position::bol(ip))));
 			}
-		}
-
-		/// @see VisualPoint#MotionSignal
-		void Caret::pointMoved(const VisualPoint& self, const TextHit& hitBeforeMotion) {
-			assert(&self == &*anchor_);
-			context_.yanking = false;
-			if(context_.leadingAnchor)	// calling anchor_->moveTo in this->moved
-				return;
-			const auto insertionPositionBeforeMotion(insertionPosition(document(), hitBeforeMotion));
-			if((insertionPositionBeforeMotion == insertionPosition(document(), hit())) != isSelectionEmpty(*this))
-				checkMatchBrackets();
-			fireCaretMoved(SelectedRegion(_document = document(), _anchor = insertionPositionBeforeMotion, _caret = hit()));
 		}
 
 		/// @internal Should be called before change the document.
@@ -739,25 +710,10 @@ namespace ascension {
 			else if(!encompasses(document().region(), static_cast<const kernel::Region&>(region)))
 				throw kernel::BadRegionException(region);
 			context_.yanking = false;
-			if(region.anchor() != insertionPosition(*anchor_) || region.caret() != hit()) {
-				const SelectedRegion oldRegion(selectedRegion());
-				context_.leadingAnchor = true;
-				anchor_->moveTo(TextHit::leading(region.anchor()));
-				context_.leadingAnchor = false;
-				context_.leaveAnchorNext = true;
-				try {
-					VisualPoint::moveTo(region.caret());	// TODO: this may throw...
-				} catch(...) {
-					context_.leaveAnchorNext = false;
-					throw;
-				}
-				if(isSelectionRectangle())
-					context_.selectedRectangle->update(selectedRegion());
-				if(autoShow_)
-					utils::show(*this);
-				fireCaretMoved(oldRegion);
+			if(region.anchor() != insertionPosition(document(), anchor()) || region.caret() != hit()) {
+				context_.anchorDestination = TextHit::leading(region.anchor());
+				VisualPoint::moveTo(region.caret());	// TODO: this may throw...
 			}
-			checkMatchBrackets();
 		}
 
 		/**
@@ -774,7 +730,7 @@ namespace ascension {
 
 		/// @internal
 		SelectedRegion Caret::selection() const BOOST_NOEXCEPT {
-			return SelectedRegion(_document = document(), _anchor = insertionPosition(anchor()), _caret = hit());
+			return SelectedRegion(_document = document(), _anchor = insertionPosition(document(), anchor()), _caret = hit());
 		}
 
 		/// Returns the @c SelectionShapeChangedSignal signal connector.
@@ -825,8 +781,6 @@ namespace ascension {
 		void Caret::uninstall() BOOST_NOEXCEPT {
 			try {
 				painter_.reset();
-				anchor_->uninstall();
-				anchorMotionSignalConnection_.disconnect();
 				shapeCache_.image.reset();
 				context_.Context::Context();
 			} catch(...) {
@@ -873,52 +827,9 @@ namespace ascension {
 		inline void Caret::updateVisualAttributes() {
 			if(isSelectionRectangle())
 				context_.selectedRectangle->update(selectedRegion());
-			if(context_.regionBeforeMoved != boost::none
-					&& (context_.regionBeforeMoved->anchor() != insertionPosition(document(), hit()) || context_.regionBeforeMoved->caret() != hit()))
-				fireCaretMoved(*context_.regionBeforeMoved);
 			if(autoShow_)
 				utils::show(*this);
 			checkMatchBrackets();
-			context_.regionBeforeMoved = boost::none;
-		}
-
-
-		Caret::SelectionAnchor::SelectionAnchor(kernel::Document& document, const kernel::Position& position) : VisualPoint(document, TextHit::leading(position)) {
-			adaptToDocument(false);
-		}
-
-		Caret::SelectionAnchor::SelectionAnchor(const kernel::Point& other) : VisualPoint(graphics::font::makeLeadingTextHit(other)) {
-			adaptToDocument(false);
-		}
-
-		Caret::SelectionAnchor::SelectionAnchor(const VisualPoint& other) : VisualPoint(other) {
-			adaptToDocument(false);
-		}
-		
-		Caret::SelectionAnchor::SelectionAnchor(TextArea& textArea, const kernel::Position& position) : VisualPoint(textArea, TextHit::leading(position)) {
-			adaptToDocument(false);
-		}
-		
-		inline void Caret::SelectionAnchor::beginInternalUpdate(const kernel::DocumentChange& change) BOOST_NOEXCEPT {
-			assert(!isInternalUpdating());
-			positionBeforeUpdate_ = insertionPosition(*this);
-			adaptToDocument(true);
-			documentChanged(change);
-			adaptToDocument(false);
-		}
-
-		inline void Caret::SelectionAnchor::endInternalUpdate() BOOST_NOEXCEPT {
-			assert(isInternalUpdating());
-			positionBeforeUpdate_ = boost::none;
-		}
-
-		inline bool Caret::SelectionAnchor::isInternalUpdating() const BOOST_NOEXCEPT {
-			return positionBeforeUpdate_ != boost::none;
-		}
-
-		inline const kernel::Position& Caret::SelectionAnchor::positionBeforeInternalUpdate() const BOOST_NOEXCEPT {
-			assert(isInternalUpdating());
-			return *positionBeforeUpdate_;
 		}
 	}
 }

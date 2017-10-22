@@ -491,7 +491,7 @@ namespace ascension {
 		}
 		
 		/// @see kernel#DocumentListener#documentAboutToBeChanged
-		void Presentation::documentAboutToBeChanged(const kernel::Document& document) {
+		void Presentation::documentAboutToBeChanged(const kernel::Document&, const kernel::DocumentChange&) {
 			// TODO: not implemented.
 		}
 		

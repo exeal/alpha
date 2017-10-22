@@ -616,7 +616,7 @@ namespace ascension {
 		 */
 		Position Document::replace(const Region& region, const StringPiece& text) {
 			if(changing_)
-				throw IllegalStateException("called in IDocumentListeners' notification.");
+				throw IllegalStateException("called in DocumentListeners' notification.");
 			else if(isReadOnly())
 				throw ReadOnlyDocumentException();
 			else if(kernel::line(*boost::const_end(region)) >= numberOfLines()
@@ -632,7 +632,6 @@ namespace ascension {
 			// preprocess. these can't throw
 			ascension::detail::ValueSaver<bool> writeLock(changing_);
 			changing_ = true;
-			fireDocumentAboutToBeChanged();
 
 			// change the content
 			const Position& beginning = *boost::const_begin(region);
@@ -640,28 +639,29 @@ namespace ascension {
 			StringPiece::const_iterator nextNewline((text.cbegin() != nullptr) ? boost::find_first_of(text, text::NEWLINE_CHARACTERS) : text.cend());
 			std::basic_stringbuf<Char> erasedString;
 			Index erasedStringLength = 0, insertedStringLength = 0;
-			Position endOfInsertedString;
+			Region insertedRegion;
 			try {
 				// simple cases: both erased region and inserted string are single line
 				if(kernel::line(beginning) == kernel::line(end) && (text.cbegin() == nullptr || text.empty())) {	// erase in single line
+					insertedRegion = Region::makeEmpty(beginning);
+					fireDocumentAboutToBeChanged(DocumentChange(region, insertedRegion));
 					Line& line = *lines_[beginning.line];
 					erasedString.sputn(line.text().data() + offsetInLine(beginning), static_cast<std::streamsize>(offsetInLine(end) - offsetInLine(beginning)));
 					line.text_.erase(offsetInLine(beginning), offsetInLine(end) - offsetInLine(beginning));
 					erasedStringLength += offsetInLine(end) - offsetInLine(beginning);
-					endOfInsertedString = beginning;
 				} else if(boost::empty(region) && nextNewline == text.cend()) {	// insert single line
+					insertedRegion = Region::makeSingleLine(kernel::line(beginning), boost::irange(offsetInLine(beginning), offsetInLine(beginning) + text.length()));
+					fireDocumentAboutToBeChanged(DocumentChange(region, insertedRegion));
 					lines_[kernel::line(beginning)]->text_.insert(offsetInLine(beginning), text.cbegin(), text.length());
 					insertedStringLength += text.length();
-					endOfInsertedString.line = kernel::line(beginning);
-					endOfInsertedString.offsetInLine = offsetInLine(beginning) + text.length();
 				} else if(kernel::line(beginning) == kernel::line(end) && nextNewline == text.cend()) {	// replace in single line
+					insertedRegion = Region::makeSingleLine(kernel::line(beginning), boost::irange(offsetInLine(beginning), offsetInLine(beginning) + text.length()));
+					fireDocumentAboutToBeChanged(DocumentChange(region, insertedRegion));
 					Line& line = *lines_[beginning.line];
 					erasedString.sputn(line.text().data() + offsetInLine(beginning), static_cast<std::streamsize>(offsetInLine(end) - offsetInLine(beginning)));
 					line.text_.replace(offsetInLine(beginning), offsetInLine(end) - offsetInLine(beginning), text.cbegin(), text.length());
 					erasedStringLength += offsetInLine(end) - offsetInLine(beginning);
 					insertedStringLength += text.length();
-					endOfInsertedString.line = kernel::line(beginning);
-					endOfInsertedString.offsetInLine = offsetInLine(beginning) + text.length();
 				}
 				// complex case: erased region and/or inserted string are/is multi-line
 				else {
@@ -683,9 +683,10 @@ namespace ascension {
 								break;
 						}
 					}
+
 					// 2. allocate strings (lines except first) to insert newly. only when inserted string was multiline
 					std::vector<Line*> allocatedLines;
-					const StringPiece::const_iterator firstNewline(nextNewline);
+					insertedRegion = Region::makeEmpty(beginning);
 					if(text.cbegin() != nullptr && nextNewline != text.cend()) {
 						try {
 							StringPiece::const_iterator p(std::next(nextNewline, text::eatNewline(nextNewline, text.cend())->asString().length()));
@@ -704,8 +705,7 @@ namespace ascension {
 							}
 							// merge last line
 							Line& lastAllocatedLine = *allocatedLines.back();
-							endOfInsertedString.line = kernel::line(beginning) + allocatedLines.size();
-							endOfInsertedString.offsetInLine = lastAllocatedLine.text().length();
+							insertedRegion = Region(*boost::const_begin(insertedRegion), Position(kernel::line(beginning) + allocatedLines.size(), lastAllocatedLine.text().length()));
 							const Line& lastLine = *lines_[kernel::line(end)];
 							const auto n = lastLine.text().length() - offsetInLine(end);
 							lastAllocatedLine.text_.append(lastLine.text(), offsetInLine(end), n);
@@ -716,16 +716,24 @@ namespace ascension {
 								delete line;
 							throw;
 						}
-					} else
-						endOfInsertedString = beginning;
+					}
+					const StringPiece::const_iterator firstNewline(nextNewline);
+					const Index insertedLength = firstNewline - text.cbegin();
+					if(allocatedLines.empty()) {
+						auto temp(*boost::end(insertedRegion));
+						temp.offsetInLine += insertedLength;
+						insertedRegion = Region(*boost::const_begin(insertedRegion), temp);
+					}
+					fireDocumentAboutToBeChanged(DocumentChange(region, insertedRegion));
+
 					try {
 						// 3. insert allocated strings
 						if(!allocatedLines.empty())
 							lines_.insert(std::begin(lines_) + kernel::line(end) + 1, std::begin(allocatedLines), std::end(allocatedLines));
+
 						// 4. replace first line
 						Line& firstLine = *lines_[kernel::line(beginning)];
 						const Index erasedLength = firstLine.text().length() - offsetInLine(beginning);
-						const Index insertedLength = firstNewline - text.cbegin();
 						try {
 							if(!allocatedLines.empty())
 								firstLine.text_.replace(offsetInLine(beginning), erasedLength, text.cbegin(), insertedLength);
@@ -735,7 +743,6 @@ namespace ascension {
 								const Line& lastLine = *lines_[kernel::line(end)];
 								temp.append(lastLine.text(), offsetInLine(end), lastLine.text().length() - offsetInLine(end));
 								firstLine.text_.replace(offsetInLine(beginning), erasedLength, temp);
-								endOfInsertedString.offsetInLine += insertedLength;
 							}
 						} catch(...) {
 							const ascension::detail::GapVector<Line*>::const_iterator b(std::begin(lines_) + kernel::line(end) + 1);
@@ -753,6 +760,7 @@ namespace ascension {
 							delete line;
 						throw;
 					}
+
 					// 5. remove lines to erase
 					if(!boost::empty(region)) {
 						const auto b(std::begin(lines_) + kernel::line(beginning) + 1), e(std::begin(lines_) + kernel::line(end) + 1);
@@ -770,11 +778,11 @@ namespace ascension {
 			if(isRecordingChanges()) {
 				std::unique_ptr<AtomicChange> c;
 				if(boost::empty(region))
-					c.reset(new DeletionChange(Region(beginning, endOfInsertedString)));
+					c.reset(new DeletionChange(insertedRegion));
 				else if(text.cbegin() == nullptr || text.empty())
 					c.reset(new InsertionChange(beginning, erasedString.str()));
 				else
-					c.reset(new ReplacementChange(Region(beginning, endOfInsertedString), erasedString.str()));
+					c.reset(new ReplacementChange(insertedRegion, erasedString.str()));
 				undoManager_->addUndoableChange(std::move(c));
 			}
 			const bool modified = isModified();
@@ -782,12 +790,12 @@ namespace ascension {
 			length_ += insertedStringLength;
 			length_ -= erasedStringLength;
 
-			const DocumentChange change(region, Region(beginning, endOfInsertedString));
+			const DocumentChange change(region, insertedRegion);
 			fireDocumentChanged(change);
 			if(!rollbacking_ && !modified)
 				modificationSignChangedSignal_(*this);
 
-			return endOfInsertedString;
+			return *boost::const_end(insertedRegion);
 		}
 
 		/**

@@ -186,7 +186,7 @@ namespace ascension {
 			}
 
 			/// @see kernel#DocumentListener#documentAboutToBeChanged
-			void LineLayoutVector::documentAboutToBeChanged(const kernel::Document&) {
+			void LineLayoutVector::documentAboutToBeChanged(const kernel::Document&, const kernel::DocumentChange& change) {
 				documentChangePhase_ = ABOUT_TO_CHANGE;
 			}
 

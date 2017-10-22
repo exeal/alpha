@@ -113,14 +113,24 @@ namespace ascension {
 			moveTo(Position::zero());
 		}
 
+		/// @see AbstractPoint#documentAboutToBeChanged
+		void Point::documentAboutToBeChanged(const DocumentChange& change) {
+			assert(!isDocumentDisposed());
+			assert(adaptsToDocument());
+			assert(destination_ == boost::none);
+			destination_ = locations::updatePosition(position(), change, gravity());
+		}
+
 		/// @see AbstractPoint#documentChanged
 		void Point::documentChanged(const DocumentChange& change) {
 			assert(!isDocumentDisposed());
 			assert(adaptsToDocument());
-//			normalize();
-			const Position newPosition(locations::updatePosition(position(), change, gravity()));
-			if(newPosition != position())
-				moveTo(newPosition);	// TODO: this may throw...
+			if(destination_ != boost::none) {
+				const auto newPosition(boost::get(destination_));
+				destination_ = boost::none;
+				if(newPosition != position())
+					moveTo(boost::get(destination_));	// TODO: this may throw...
+			}
 		}
 
 		/**

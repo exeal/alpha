@@ -57,9 +57,14 @@ namespace ascension {
 			/// Called when @c Document#resetContent of the document was called.
 			virtual void contentReset() = 0;
 			/**
-				* Called when the content of the document was changed.
-				* @param change The change
-				*/
+			 * Called when the content of the document is about to be changed.
+			 * @param change The change
+			 */
+			virtual void documentAboutToBeChanged(const DocumentChange& change) = 0;
+			/**
+			 * Called when the content of the document was changed.
+			 * @param change The change
+			 */
 			virtual void documentChanged(const DocumentChange& change) = 0;
 			/// Called when the document is disposed.
 			void documentDisposed() BOOST_NOEXCEPT;

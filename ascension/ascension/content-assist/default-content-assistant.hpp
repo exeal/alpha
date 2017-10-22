@@ -62,7 +62,7 @@ namespace ascension {
 			void uninstall() override;
 			void viewerBoundsChanged() BOOST_NOEXCEPT override;
 			// kernel.DocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document) override;
+			void documentAboutToBeChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			// viewer.Caret.MotionSignal
 			void caretMoved(const viewer::Caret& caret, const kernel::Region& regionBeforeMotion);
