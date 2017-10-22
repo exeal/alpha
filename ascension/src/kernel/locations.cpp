@@ -7,6 +7,7 @@
  * @date 2016-05-22 Separated from point.cpp.
  */
 
+#include <ascension/corelib/numeric-range-algorithm/clamp.hpp>
 #include <ascension/corelib/text/character-property.hpp>	// text.ucd.BinaryProperty
 #include <ascension/corelib/text/grapheme-break-iterator.hpp>
 #include <ascension/corelib/text/word-break-iterator.hpp>
@@ -331,12 +332,7 @@ namespace ascension {
 			Position shrinkToAccessibleRegion(const PointProxy& p) BOOST_NOEXCEPT {
 				if(!document(p).isNarrowed())
 					return shrinkToDocumentRegion(p);
-				const auto accessibleRegion(document(p).accessibleRegion());
-				if(position(p) < *boost::const_begin(accessibleRegion))
-					return *boost::const_begin(accessibleRegion);
-				else if(position(p) > *boost::const_end(accessibleRegion))
-					return *boost::const_end(accessibleRegion);
-				return Position(line(p), std::min(offsetInLine(p), document(p).lineLength(line(p))));
+				return clamp(position(p), document(p).accessibleRegion());
 			}
 
 			/**
@@ -357,9 +353,7 @@ namespace ascension {
 			 * @return The result
 			 */
 			Position shrinkToDocumentRegion(const PointProxy& p) BOOST_NOEXCEPT {
-				Position q(std::min(line(p), document(p).numberOfLines() - 1), 0);
-				q.offsetInLine = std::min(offsetInLine(q), document(p).lineLength(line(q)));
-				return q;
+				return std::min(position(p), *boost::const_end(document(p).region()));
 			}
 
 			/**
