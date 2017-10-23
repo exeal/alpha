@@ -157,12 +157,21 @@ namespace ascension {
 			}
 
 			/**
+			 * Returns @c true if the given position is outside of the accessible region of the document.
+			 * @param p The point to check
+			 * @return true if @a p is outside of the document
+			 */
+			bool isOutsideOfAccessibleRegion(const PointProxy& p) BOOST_NOEXCEPT {
+				return shrinkToAccessibleRegion(p) != position(p);
+			}
+
+			/**
 			 * Returns @c true if the given position is outside of the document.
 			 * @param p The point to check
 			 * @return true if @a p is outside of the document
 			 */
 			bool isOutsideOfDocumentRegion(const PointProxy& p) BOOST_NOEXCEPT {
-				return line(p) >= document(p).numberOfLines() || offsetInLine(p) > document(p).lineLength(line(p));
+				return shrinkToDocumentRegion(p) != position(p);
 			}
 
 			/**

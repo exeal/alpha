@@ -72,7 +72,7 @@ namespace ascension {
 			/// @defgroup accessible_regions_of_document Accessible Regions of Document
 			/// Free functions related to document's accessible region.
 			/// @{
-//			bool isOutsideOfAccessibleRegion(const PointProxy& p) BOOST_NOEXCEPT;
+			bool isOutsideOfAccessibleRegion(const PointProxy& p) BOOST_NOEXCEPT;
 			Position shrinkToAccessibleRegion(const PointProxy& p) BOOST_NOEXCEPT;
 			Region shrinkToAccessibleRegion(const Document& document, const Region& region) BOOST_NOEXCEPT;
 			/// @}

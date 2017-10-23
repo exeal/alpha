@@ -29,14 +29,23 @@ namespace ascension {
 		/// Base class of @c Point and @c viewer#VisualPoint.
 		class AbstractPoint {
 		public:
+			/**
+			 * Adaptation levels.
+			 * @see #adaptationLevel, #setAdaptationLevel
+			 */
+			enum AdaptationLevel {
+				/// The point is moved automatically according to the document change.
+				ADAPT_TO_DOCUMENT,
+				/// @c ADAPT_TO_DOCUMENT and the point is shrunk to the accessible region of the document.
+				ADAPT_TO_DOCUMENT_ACCESSIBLE_REGION
+			};
+
 			explicit AbstractPoint(Document& document);
 			AbstractPoint(const AbstractPoint& other);
 			virtual ~AbstractPoint() BOOST_NOEXCEPT;
 
 			/// @name Document
 			/// @{
-			bool adaptsToDocument() const BOOST_NOEXCEPT;
-			AbstractPoint& adaptToDocument(bool adapt) BOOST_NOEXCEPT;
 			Document& document();
 			const Document& document() const;
 			bool isDocumentDisposed() const BOOST_NOEXCEPT;
@@ -44,7 +53,9 @@ namespace ascension {
 
 			/// @name Behaviors
 			/// @{
+			const boost::optional<AdaptationLevel>& adaptationLevel() const BOOST_NOEXCEPT;
 			Direction gravity() const BOOST_NOEXCEPT;
+			AbstractPoint& setAdaptationLevel(const boost::optional<AdaptationLevel>& level);
 			AbstractPoint& setGravity(Direction gravity);
 			/// @}
 
@@ -55,41 +66,22 @@ namespace ascension {
 			/// @}
 
 		private:
-			/// Called when @c Document#resetContent of the document was called.
+			virtual void adaptationLevelChanged() BOOST_NOEXCEPT;
 			virtual void contentReset() = 0;
-			/**
-			 * Called when the content of the document is about to be changed.
-			 * @param change The change
-			 */
 			virtual void documentAboutToBeChanged(const DocumentChange& change) = 0;
-			/**
-			 * Called when the content of the document was changed.
-			 * @param change The change
-			 */
 			virtual void documentChanged(const DocumentChange& change) = 0;
-			/// Called when the document is disposed.
 			void documentDisposed() BOOST_NOEXCEPT;
 			friend class Document;
 		private:
 			Document* document_;	// weak reference
-			bool adapting_;
+			boost::optional<AdaptationLevel> adaptationLevel_;
 			Direction gravity_;
 			DestructionSignal destructionSignal_;
 		};
 
 		/// Returns @c true if the point is adapting to the document change.
-		inline bool AbstractPoint::adaptsToDocument() const BOOST_NOEXCEPT {
-			return adapting_;
-		}
-
-		/**
-		 * Adapts the point to the document change.
-		 * @param adapt
-		 * @post #adaptsToDocument() == adapt
-		 */
-		inline AbstractPoint& AbstractPoint::adaptToDocument(bool adapt) BOOST_NOEXCEPT {
-			adapting_ = adapt;
-			return *this;
+		inline const boost::optional<AbstractPoint::AdaptationLevel>& AbstractPoint::adaptationLevel() const BOOST_NOEXCEPT {
+			return adaptationLevel_;
 		}
 
 		/// Returns the @c AbstractPoint#DestructionSignal signal connector.
@@ -118,19 +110,17 @@ namespace ascension {
 		}
 
 		/**
-		 * @internal The document is in destruction.
-		 * @post #isDocumentDisposed() == true
+		 * Returns the gravity.
+		 * @see #setGravity
 		 */
-		inline void AbstractPoint::documentDisposed() BOOST_NOEXCEPT {
-			document_ = nullptr;
-		}
-
-		/// Returns the gravity.
 		inline Direction AbstractPoint::gravity() const BOOST_NOEXCEPT {
 			return gravity_;
 		}
 
-		/// Returns @c true if the document is already disposed.
+		/**
+		 * Returns @c true if the document is already disposed.
+		 * @see #DestructionSignal
+		 */
 		inline bool AbstractPoint::isDocumentDisposed() const BOOST_NOEXCEPT {
 			return document_ == nullptr;
 		}

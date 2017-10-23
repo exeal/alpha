@@ -452,8 +452,8 @@ namespace ascension {
 			void destructiveInsert(Caret& caret, const StringPiece& text, bool keepNewline = true) {
 				if(text.cbegin() == nullptr || text.cend() == nullptr)
 					throw NullPointerException("text");
-				const bool adapts = caret.adaptsToDocument();
-				caret.adaptToDocument(false);
+				const boost::optional<kernel::AbstractPoint::AdaptationLevel> adaptationLevel(caret.adaptationLevel());
+				caret.setAdaptationLevel(boost::none);
 				const auto p(insertionPosition(caret));
 				kernel::Position e((keepNewline && kernel::locations::isEndOfLine(caret)) ?
 					p : kernel::locations::nextCharacter(caret, Direction::forward(), kernel::locations::GRAPHEME_CLUSTER));
@@ -461,12 +461,12 @@ namespace ascension {
 					try {
 						e = caret.document().replace(kernel::Region(p, e), text);
 					} catch(...) {
-						caret.adaptToDocument(adapts);
+						caret.setAdaptationLevel(adaptationLevel);
 						throw;
 					}
 					caret.moveTo(TextHit::leading(e));
 				}
-				caret.adaptToDocument(adapts);
+				caret.setAdaptationLevel(adaptationLevel);
 			}
 		} // namespace @0
 
