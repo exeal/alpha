@@ -107,17 +107,23 @@ namespace ascension {
 			boost::ignore_unused(to);
 		}
 
+		/// @see AbstractPoint#adaptationLevelChanged
+		void Point::adaptationLevelChanged() BOOST_NOEXCEPT {
+			if(adaptationLevel() != boost::none && boost::get(adaptationLevel()) == ADAPT_TO_DOCUMENT_ACCESSIBLE_REGION && locations::isOutsideOfAccessibleRegion(*this))
+				moveTo(locations::shrinkToAccessibleRegion(*this));
+		}
+
 		/// @see AbstractPoint#contentReset
 		void Point::contentReset() {
 			assert(!isDocumentDisposed());
-			assert(adaptsToDocument());
+			assert(adaptationLevel() != boost::none);
 			moveTo(Position::zero());
 		}
 
 		/// @see AbstractPoint#documentAboutToBeChanged
 		void Point::documentAboutToBeChanged(const DocumentChange& change) {
 			assert(!isDocumentDisposed());
-			assert(adaptsToDocument());
+			assert(adaptationLevel() != boost::none);
 			assert(destination_ == boost::none);
 			destination_ = locations::updatePosition(position(), change, gravity());
 		}
@@ -125,7 +131,7 @@ namespace ascension {
 		/// @see AbstractPoint#documentChanged
 		void Point::documentChanged(const DocumentChange& change) {
 			assert(!isDocumentDisposed());
-			assert(adaptsToDocument());
+			assert(adaptationLevel() != boost::none);
 			if(destination_ != boost::none) {
 				const auto newPosition(boost::get(destination_));
 				destination_ = boost::none;

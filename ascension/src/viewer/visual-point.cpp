@@ -248,6 +248,12 @@ namespace ascension {
 			uninstall();
 		}
 
+		/// @see AbstractPoint#adaptationLevelChanged
+		void VisualPoint::adaptationLevelChanged() BOOST_NOEXCEPT {
+			if(adaptationLevel() != boost::none && boost::get(adaptationLevel()) == ADAPT_TO_DOCUMENT_ACCESSIBLE_REGION && kernel::locations::isOutsideOfAccessibleRegion(*this))
+				moveTo(TextHit::leading(kernel::locations::shrinkToAccessibleRegion(*this)));
+		}
+
 		/**
 		 * See @c kernel#Point#aboutToMove. @c VisualPoint#aboutToMove does nothing.
 		 * @param to The destination position
@@ -276,14 +282,14 @@ namespace ascension {
 		/// @see AbstractPoint#contentReset
 		void VisualPoint::contentReset() {
 			assert(!isDocumentDisposed());
-			assert(adaptsToDocument());
+			assert(adaptationLevel() != boost::none);
 			moveTo(TextHit::leading(kernel::Position::zero()));
 		}
 
 		/// @see AbstractPoint#documentAboutToBeChanged
 		void VisualPoint::documentAboutToBeChanged(const kernel::DocumentChange& change) {
 			assert(!isDocumentDisposed());
-			assert(adaptsToDocument());
+			assert(adaptationLevel() != boost::none);
 			assert(hitAfterChange_ == boost::none);
 			hitAfterChange_ = locations::updateTextHit(hit(), document(), change, gravity());
 		}
@@ -291,7 +297,7 @@ namespace ascension {
 		/// @see AbstractPoint#documentChanged
 		void VisualPoint::documentChanged(const kernel::DocumentChange& change) {
 			assert(!isDocumentDisposed());
-			assert(adaptsToDocument());
+			assert(adaptationLevel() != boost::none);
 			if(hitAfterChange_ != boost::none) {
 				const auto newHit(boost::get(hitAfterChange_));
 				hitAfterChange_ = boost::none;
@@ -530,13 +536,13 @@ namespace ascension {
 
 		/// @see VisualLinesListener#visualLinesDeleted
 		void VisualPoint::visualLinesDeleted(const boost::integer_range<Index>& lines, Index, bool) BOOST_NOEXCEPT {
-			if(!adaptsToDocument() && includes(lines, kernel::line(hit().characterIndex())))
+			if(adaptationLevel() == boost::none && includes(lines, kernel::line(hit().characterIndex())))
 				lineNumberCaches_ = boost::none;
 		}
 
 		/// @see VisualLinesListener#visualLinesInserted
 		void VisualPoint::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
-			if(!adaptsToDocument() && includes(lines, kernel::line(hit().characterIndex())))
+			if(adaptationLevel() == boost::none && includes(lines, kernel::line(hit().characterIndex())))
 				lineNumberCaches_ = boost::none;
 		}
 

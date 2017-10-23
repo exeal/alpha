@@ -38,6 +38,7 @@ namespace ascension {
 			virtual void moved(const Position& from) BOOST_NOEXCEPT;
 		private:
 			// AbstractPoint
+			void adaptationLevelChanged() BOOST_NOEXCEPT override;
 			void contentReset() override;
 			void documentAboutToBeChanged(const DocumentChange& change) override;
 			void documentChanged(const DocumentChange& change) override;

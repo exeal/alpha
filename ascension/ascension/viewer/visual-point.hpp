@@ -106,6 +106,7 @@ namespace ascension {
 			virtual void aboutToMove(TextHit& to);
 			virtual void moved(const TextHit& from) BOOST_NOEXCEPT;
 			// kernel.AbstractPoint
+			virtual void adaptationLevelChanged() BOOST_NOEXCEPT override;
 			virtual void contentReset() override;
 			virtual void documentAboutToBeChanged(const kernel::DocumentChange& change) override;
 			virtual void documentChanged(const kernel::DocumentChange& change) override;

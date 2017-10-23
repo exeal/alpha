@@ -328,7 +328,7 @@ namespace ascension {
 					(partitioner.get()->*partitionerMethod)(change);
 				if(pointMethod != nullptr) {
 					BOOST_FOREACH(AbstractPoint* p, points) {
-						if(p->adaptsToDocument())
+						if(p->adaptationLevel() != boost::none)
 							(p->*pointMethod)(change);
 					}
 				}
@@ -528,7 +528,7 @@ namespace ascension {
 			else {
 				widen();
 				BOOST_FOREACH(AbstractPoint* p, points_) {
-					if(p->adaptsToDocument())
+					if(p->adaptationLevel() != boost::none)
 						p->contentReset();
 				}
 				bookmarker_->clear();
