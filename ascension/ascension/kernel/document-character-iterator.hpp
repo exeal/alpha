@@ -18,6 +18,10 @@ namespace ascension {
 	namespace kernel {
 		class Document;
 
+		namespace locations {
+			struct PointProxy;
+		}
+
 		class DocumentCharacterIterator : public boost::iterators::iterator_facade<
 			DocumentCharacterIterator, CodePoint,
 			boost::iterators::bidirectional_traversal_tag, const CodePoint, std::ptrdiff_t
@@ -25,8 +29,10 @@ namespace ascension {
 		public:
 			DocumentCharacterIterator() BOOST_NOEXCEPT;
 			DocumentCharacterIterator(const Document& document, const Position& position);
+			explicit DocumentCharacterIterator(const locations::PointProxy& point);
 			DocumentCharacterIterator(const Document& document, const Region& region);
 			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
+			DocumentCharacterIterator(const locations::PointProxy& point, const Region& region);
 			DocumentCharacterIterator(const DocumentCharacterIterator& other) BOOST_NOEXCEPT;
 
 			/// @name Position
