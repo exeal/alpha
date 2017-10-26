@@ -10,6 +10,7 @@
 #include <ascension/corelib/numeric-range-algorithm/encompasses.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/kernel/point-proxy.hpp>
 
 namespace ascension {
 	namespace kernel {
@@ -37,7 +38,7 @@ namespace ascension {
 		 * @param document The document to iterate
 		 * @param position The position at which the iteration starts
 		 * @throw BadPositionException @a position is outside of the @c #region of the @a document
-		 * @post &amp;document() == &document
+		 * @post &amp;document() == &amp;document
 		 * @post region() == document.region()
 		 * @post tell() == position
 		 * @post offset() == 0
@@ -49,11 +50,26 @@ namespace ascension {
 		}
 
 		/**
+		 * Constructor. The iteration area is the @c #region of the document.
+		 * @param point The document to iterate and the position at which the iteration starts
+		 * @throw BadPositionException The given position is outside of the @c #region of the given document
+		 * @post &amp;document() == &amp;document(point)
+		 * @post region() == document(point).region()
+		 * @post tell() == position(point)
+		 * @post offset() == 0
+		 */
+		DocumentCharacterIterator::DocumentCharacterIterator(const locations::PointProxy& point)
+				: document_(&kernel::document(point)), region_(kernel::document(point).region()), position_(position(point)) {
+			if(!encompasses(region_, position_))
+				throw BadPositionException(position_);
+		}
+
+		/**
 		 * Constructor. The iteration is started at `*boost#const_begin(region)`.
 		 * @param document The document to iterate
 		 * @param region The region to iterate
 		 * @throw BadRegionException @a region intersects outside of the document
-		 * @post &amp;document() == &document
+		 * @post &amp;document() == &amp;document
 		 * @post region() == region
 		 * @post tell() == *boost::const_begin(region)
 		 * @post offset() == 0
@@ -71,7 +87,7 @@ namespace ascension {
 		 * @param position The position at which the iteration starts
 		 * @throw BadRegionException @a region intersects outside of the document
 		 * @throw BadPositionException @a position is outside of @a region
-		 * @post &amp;document() == &document
+		 * @post &amp;document() == &amp;document
 		 * @post region() == region
 		 * @post tell() == position
 		 * @post offset() == 0
@@ -79,6 +95,25 @@ namespace ascension {
 		DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, const Region& region, const Position& position)
 				: document_(&document), region_(region), position_(position) {
 			if(!encompasses(document.region(), region_))
+				throw BadRegionException(region_);
+			else if(!encompasses(region_, position_))
+				throw BadPositionException(position_);
+		}
+
+		/**
+		 * Constructor.
+		 * @param point The document to iterate and the position at which the iteration starts
+		 * @param region The region to iterate
+		 * @throw BadRegionException @a region intersects outside of the document
+		 * @throw BadPositionException The given position is outside of @a region
+		 * @post &amp;document() == &amp;document(point)
+		 * @post region() == region
+		 * @post tell() == position(point)
+		 * @post offset() == 0
+		 */
+		DocumentCharacterIterator::DocumentCharacterIterator(const locations::PointProxy& point, const Region& region)
+				: document_(&kernel::document(point)), region_(region), position_(position(point)) {
+			if(!encompasses(document_->region(), region_))
 				throw BadRegionException(region_);
 			else if(!encompasses(region_, position_))
 				throw BadPositionException(position_);
@@ -133,14 +168,8 @@ namespace ascension {
 			const String& s = lineString();
 			if(kernel::offsetInLine(tell()) == s.length())
 				return text::LINE_SEPARATOR;
-			else {
-				const auto p(std::begin(s) + offsetInLine(tell()));
-				if(line(tell()) == line(*boost::const_end(region()))) {
-					if(offsetInLine(tell()) + 1 == offsetInLine(*boost::const_end(region())))
-						return text::utf::decodeFirst(p, std::next(p));
-				}
-				return text::utf::decodeFirst(p, std::end(s));
-			}
+			else
+				return text::utf::decodeFirst(std::begin(s) + offsetInLine(tell()), std::end(s));
 		}
 
 		/**
