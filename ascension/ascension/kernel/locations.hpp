@@ -80,7 +80,6 @@ namespace ascension {
 			/// @defgroup miscellaneous_locational_functions Miscellaneous Locational Functions
 			/// @{
 			Index absoluteOffset(const PointProxy& p, bool fromAccessibleStart);
-			CodePoint characterAt(const PointProxy& p, bool useLineFeed = false);
 			Position updatePosition(const Position& position, const DocumentChange& change, Direction gravity) BOOST_NOEXCEPT;
 			/// @}
 

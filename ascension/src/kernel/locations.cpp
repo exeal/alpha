@@ -80,20 +80,6 @@ namespace ascension {
 			}
 
 			/**
-			 * Returns the code point of the current character.
-			 * @param p The base point
-			 * @param useLineFeed Set @c true to return LF (U+000A) when the current position is the end of the line.
-			 *                    Otherwise LS (U+2008)
-			 * @return The code point of the character, or @c INVALID_CODE_POINT if @a p is the end of the document
-			 */
-			CodePoint characterAt(const PointProxy& p, bool useLineFeed /* = false */) {
-				const auto& lineString = document(p).lineString(line(p));
-				if(offsetInLine(p) == lineString.length())
-					return (line(p) == document(p).numberOfLines() - 1) ? text::INVALID_CODE_POINT : (useLineFeed ? text::LINE_FEED : text::LINE_SEPARATOR);
-				return text::utf::decodeFirst(std::begin(lineString) + offsetInLine(p), std::end(lineString));
-			}
-
-			/**
 			 * Returns the end of the document.
 			 * @param p The base point
 			 * @return The destination

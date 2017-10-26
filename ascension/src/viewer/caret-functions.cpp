@@ -384,7 +384,7 @@ namespace ascension {
 			kernel::Position pos[3];
 			const kernel::Region region(caret.document().accessibleRegion());
 
-			if(text::ucd::BinaryProperty::is<text::ucd::BinaryProperty::GRAPHEME_EXTEND>(kernel::locations::characterAt(caret)))	// not the start of a grapheme
+			if(text::ucd::BinaryProperty::is<text::ucd::BinaryProperty::GRAPHEME_EXTEND>(*kernel::DocumentCharacterIterator(caret)))	// not the start of a grapheme
 				return false;
 			const auto ip(insertionPosition(caret));
 			if(!encompasses(region, ip))	// inaccessible
