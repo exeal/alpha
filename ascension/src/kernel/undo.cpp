@@ -745,8 +745,8 @@ namespace ascension {
 								firstLine.text_.replace(offsetInLine(beginning), erasedLength, temp);
 							}
 						} catch(...) {
-							const ascension::detail::GapVector<Line*>::const_iterator b(std::begin(lines_) + kernel::line(end) + 1);
-							const ascension::detail::GapVector<Line*>::const_iterator e(b + allocatedLines.size());
+							const auto b(std::next(std::begin(lines_), kernel::line(end) + 1));
+							const auto e(std::next(b, allocatedLines.size()));
 							std::for_each(b, e, std::default_delete<Line>());
 							lines_.erase(b, e);
 							throw;
@@ -763,7 +763,7 @@ namespace ascension {
 
 					// 5. remove lines to erase
 					if(!boost::empty(region)) {
-						const auto b(std::begin(lines_) + kernel::line(beginning) + 1), e(std::begin(lines_) + kernel::line(end) + 1);
+						const auto b(std::next(std::begin(lines_), kernel::line(beginning) + 1)), e(std::next(std::begin(lines_), kernel::line(end) + 1));
 						std::for_each(b, e, std::default_delete<Line>());
 						lines_.erase(b, e);
 					}
