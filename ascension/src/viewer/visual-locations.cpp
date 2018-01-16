@@ -567,7 +567,7 @@ namespace ascension {
 					const auto& b = *boost::const_begin(change.erasedRegion()), e = *boost::const_end(change.erasedRegion());
 					if(h.characterIndex() >= b && h.characterIndex() < e) {	// (D-2) or (D-3)
 						if(insertionPosition(document, h) < e)	// (D-2)
-							h = TextHit::leading(e);
+							h = TextHit::leading(b);
 						else {	// (D-3)
 							kernel::DocumentCharacterIterator i(document, b);
 							h = TextHit::trailing((--i).tell());
